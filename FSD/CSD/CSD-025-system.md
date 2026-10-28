@@ -14,9 +14,9 @@ owner: CIRISClient
 unwell" from "I could not read myself" from "you are not allowed to ask" —
 five distinct states, never four.**
 
-This is the surface `FSD/RCA_INGEST_REJECTION_2026-08-05.md` was written
-about: the trace plane was dead for 71 hours and every layer was individually
-right, because nothing turned "nothing is arriving" into a signal a human saw.
+This is the surface that turns "nothing is arriving" into a signal a human
+sees (`FSD/RCA_INGEST_REJECTION_2026-08-05.md`: a trace plane can be dead for
+days while every layer is individually right).
 `NodeOperatorState.kt`'s header states the rule this screen keeps — no field is
 nullable-because-convenient, and a standing token this client does not
 recognise parses to `null` rather than to a healthy default.
@@ -142,9 +142,7 @@ says in a comment which three it is leaving out.
 | queue / cognitive state | `GET /v1/system/health` | CIRISAgent | live; **absent on the node's response** |
 | environmental metrics | `GET /v1/telemetry/overview` | CIRISAgent | live (`telemetry.py`) — **wrong-host on a node build** |
 | channels | `GET /v1/agent/channels` | CIRISAgent | live (`agent.py`) — **wrong-host on a node build** |
-| pause / resume | `POST /v1/system/runtime/{action}` | CIRISAgent | **not called here any more** — folded into Runtime (CSD-024); this card links there (`btn_system_open_runtime`) |
-
-Agent tree last commit 2026-08-15.
+| pause / resume | `POST /v1/system/runtime/{action}` | CIRISAgent | **not called here** — Runtime (CSD-024) is the one runtime control; this card links there (`btn_system_open_runtime`) |
 
 ## 4. Flow (how)
 
@@ -156,8 +154,6 @@ expect:
   visible: [node_state_headline, node_state_ingest, node_state_trace_plane, node_state_signals]
   absent: [system_channels, system_environmental, btn_pause_runtime]
 ```
-
-The `absent:` line fails today.
 
 Point the app at a node too old to serve the operator surface.
 
@@ -198,18 +194,13 @@ default."
 
 ## 6. Card vs API vs CC — the delta
 
-1. **Two cards are wearing one surface.** The node-state half is the node's
-   (`GET /v1/node/state`, five states, twelve real tags). The processor /
-   queue / environmental / channels half is the agent's and 404s on a node
-   build with no visible consequence — those sections simply render zeros.
-   **Ask (this repo): gate the agent half on `hasAgent` inside `SystemScreen`,
-   or split it into its own card.** The surface itself stays every build's,
-   because the node-state reading is the reason it exists.
-2. **The good half has no error state of its own for the agent half.**
-   `SystemViewModel._error` is modelled; the agent-side sections render
-   defaults. The node-state half does not have this problem, which is exactly
-   the contrast worth naming: one half was built to the standard and the other
-   was not, in the same file.
+1. **Two cards are wearing one surface — gated.** The node-state half is the
+   node's (`GET /v1/node/state`, five states, twelve real tags). The processor /
+   queue / environmental / channels half is the agent's and is asked only with
+   an agent attached (§7). The surface itself stays every build's, because the
+   node-state reading is the reason it exists.
+2. **The agent half has an error state of its own** (`ReadFailureBlock`, §7),
+   not defaults that read as health.
 3. **CC is satisfied, unusually.** `system:*` is reserved substrate-self-report
    (CC 3.4.3) and this screen renders it as a self-report, with the emitter's
    own tokens preserved. `health:liveness:{version}` (CC 3.1.9.4) is the right
@@ -223,39 +214,39 @@ default."
 5. **Recommended placement: unchanged.** This card is where a person goes when
    something feels wrong, and My things → This node is where they will look.
 
-## 7. Review — runtime group (2026-09-27, branch `review/runtime`)
+## 7. Review — runtime group
 
-Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origin/main**. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, all shown red against the old behaviour first.
+Card checked against CIRISAgent `main` and CIRISServer `main`. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`.
 
-**Duplicate resolved (System ↔ Runtime CSD-024).** Pause/resume removed from
-this card; one runtime control, Runtime's. The processor card is read-only
-(`system_processor`, the cognitive state or "—") with `btn_system_open_runtime`.
+**One runtime control (System ↔ Runtime CSD-024).** This card has no
+pause/resume; Runtime is the one runtime control. The processor card is
+read-only (`system_processor`, the cognitive state or "—") with
+`btn_system_open_runtime`.
 
-**Closed here (§6.1 and §6.2)**
+**Closed (§6.1 and §6.2)**
 - *The agent half on a bare node.* `SystemViewModel.setAgentAttached` (from the
   probed `ClientMode`): without an agent, `/v1/telemetry/overview`,
   `/v1/agent/channels` and the runtime routes are not asked at all, and the
-  screen says why (`system_agent_half_absent`). The §4 `absent:` line now holds.
-- *Defaults that read as health.* `cognitiveState` defaulted to `"WORK"`; the
-  telemetry mapper hard-codes `memory_percent = 0` ("0% utilized"); a failed
-  telemetry read drew zeros. Now: no state is "—", the percentage is not drawn,
-  and a failed agent read is `ReadFailureBlock` (`system_agent_error` /
-  `system_agent_not_on_this_node`).
-- *`getProcessorStatus` could never be right* (`isPaused = status == "paused"`,
-  a value health never carries; queue depth from a key the wire lacks). Removed;
-  Runtime owns processor state and queue depth.
-- *Channels:* a 403/500 became an empty list. Now `getChannelsOrThrow` and
-  `system_channels_error`; `system_channels` / `system_environmental` are real tags.
-- *Back arrow* went to Interact; now the placed parent.
+  screen says why (`system_agent_half_absent`). The §4 `absent:` line holds.
+- *No defaults that read as health.* No state is "—", not `"WORK"`; the
+  telemetry mapper's hard-coded `memory_percent = 0` is not drawn; a failed
+  agent read is `ReadFailureBlock` (`system_agent_error` /
+  `system_agent_not_on_this_node`), not zeros.
+- *No processor status from health.* Health never carries a `"paused"` status or
+  a queue depth, so this card derives neither; Runtime owns processor state and
+  queue depth.
+- *Channels:* a 403/500 is `system_channels_error` (`getChannelsOrThrow`), not
+  an empty list; `system_channels` / `system_environmental` are real tags.
+- *Back arrow* goes to the placed parent.
 
 **Still open**
 - The services health grid never renders: `/v1/telemetry/overview` carries no
   per-service map and the client passes `emptyMap()`. `blocked_by: CIRISAgent#1208`.
-- `getNodeOperatorState` still reads `$baseUrl`. On CIRISAgent main the agent
-  forwards `/v1/node/state` to its folded node (`app.py:392`, `node_proxy.py`),
-  so it works when a node is folded; with none, a 404 reads `NotOffered` ("older
-  node") when it means "no node here". Not changed: moving it to
-  `LOCAL_NODE_URL` would break remote-node profiles. Recorded, not closed.
+- `getNodeOperatorState` reads `$baseUrl`. The agent forwards
+  `/v1/node/state` to its folded node (`app.py:392`, `node_proxy.py`), so it
+  works when a node is folded; with none, a 404 reads `NotOffered` ("older
+  node") when it means "no node here". Moving it to `LOCAL_NODE_URL` would break
+  remote-node profiles.
 - `node_state_loading` / `_not_offered` / `_unreachable` remain as §2 says.
 
 **Stage:** building → building.

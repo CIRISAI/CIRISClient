@@ -1,9 +1,9 @@
 # CSD-109 — Contact requests (someone added you; you say yes, or ignore it)
 
-**CSD**: CSD-109 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the maintainer's ask of 2026-10-25 to lock membership invitations down end to end, contact requests included (CIRISServer `FSD/MEMBERSHIP_INVITES.md` §8; CIRISServer#819, #820)
+**CSD**: CSD-109 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: membership invitations locked down end to end, contact requests included (CIRISServer `FSD/MEMBERSHIP_INVITES.md` §8; CIRISServer#819, #820)
 **Extends**: CSD-005 (People — the request section sits above the contact list). **No new card** (§2).
 **Reads with**: CSD-092 (the contact code that starts a request), CSD-091 (the pair chat a new contact can open), CSD-106 (the group-invitation inbox, which this does not merge into)
-**Flow**: `testing/flows/drafts/csd-109-contact-requests.yaml` (floor `unreleased`: no released client carries these tags, and no released node serves these routes — ciris-server 0.5.237 will)
+**Flow**: `testing/flows/drafts/csd-109-contact-requests.yaml` (floor `unreleased`: no released client carries these tags, and no released node serves these routes; they need ciris-server 0.5.237)
 **Built**: `ContactRequestsViewModel`, `ui/screens/ContactRequestsSection.kt` (drawn by `ContactsScreen` above every list state), `ClientContactRequestsApi`; tested by `ContactRequestsViewModelTest` (commonTest) and `ContactRequestsWireTest` (desktopTest)
 
 ```yaml csd:stage
@@ -20,10 +20,10 @@ contact, or ignore it, which they are never told and which you can undo.
 Nothing about you changes until you accept.**
 
 A contact is a pair of `consent:replication:v1` grants, one each way (CSD-005).
-Adding someone writes only your half. Until 0.5.237 the other person's node
-held that half and the person had no way to see it: they learned they had been
-added only if the adder told them, and adding back was the only answer. A
-request is that one-sided grant made visible to the person it names. Serves
+Adding someone writes only your half. A request makes that one-sided grant
+visible to the person it names (ciris-server 0.5.237); without it they learn
+they were added only if the adder tells them, and adding back is the only
+answer. Serves
 **Contextual Integrity**: accepting changes who can exchange messages with you,
 so it must be the person's own act. Ignore exists because "not now, and don't
 tell them" is a legitimate answer that a public "no" would deny: a decline that
@@ -134,13 +134,13 @@ error:     {tag: "contact_requests_error", renders: "'Couldn't read your request
 
 Node-owned, at the node URL (`ContactsViewModel.nodeUrl`, as CSD-005 calls
 the contact routes), never `$baseUrl`. **CIRISServer 0.5.237**, unreleased:
-CIRISServer#819 (requests and accept) and #820 (ignore, stacked on #819); spec
+CIRISServer#819 (requests and accept) and #820 (ignore); spec
 `FSD/MEMBERSHIP_INVITES.md` §8 and §8.1.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
 | the requests | `GET /v1/contacts/requests` → `{requests: [entry], total, ignored: [entry + ignore_id]}`; entry = `{kind: "contact", requester_key_id, requester_label, grant_attestation_id, granted_by_key_id, granted_to_key_id, requested_at, grant, accept: {method: "POST", path: "/v1/contacts", body: {key_id}}, ignore: {method: "POST", path}}` | CIRISServer | **0.5.237, unreleased** (#819; `ignored`, `ignore` and `requester_label` from #820). A request is a grant naming you from someone you have not granted back: **one entry per person** (the newest live grant), keyed by `grant_attestation_id`. A withdraw and re-add is a new grant and a new request. **No TTL**: a request lasts as long as its grant (withdrawn, expired, or past `grant.valid_until`). It leaves the list once they are your contact. **The only read this card makes** |
-| whether a contact is mutual | `GET /v1/contacts` rows gain `mutual: bool` — has that person added this owner back | CIRISServer | **0.5.237, unreleased** (#820 @ `b784f8f9`). The requester's row for the other person is `mutual: false` (CSD-005's pending row) until they accept, then `true`; ignore never changes it. Absent on older nodes, where CSD-005 is unchanged |
+| whether a contact is mutual | `GET /v1/contacts` rows gain `mutual: bool` — has that person added this owner back | CIRISServer | **0.5.237, unreleased** (#820). The requester's row for the other person is `mutual: false` (CSD-005's pending row) until they accept, then `true`; ignore never changes it. Absent on older nodes, where CSD-005 is unchanged |
 | the same requests, in the invitation inbox | `GET /v1/self/invites` → `contact_requests: [entry]` beside `invites` | CIRISServer | **0.5.237, not read here.** Pending only, no `ignored`. CSD-106's inbox model reads this route for groups; it ignores `contact_requests`, so a request is never drawn twice |
 | accept | the entry's `accept`: `POST /v1/contacts {key_id}` | CIRISServer | **live since 0.5.185** (CSD-005's add). The client sends the entry's body as given rather than building it. The outcomes are CSD-005's: added, `freshly_emitted: false`, or 202 `contacts.awaiting_key_body` (a pending row; unlikely here, since the grant was admitted, but possible while the add ladder waits on the person's key body) |
 | ignore | `POST /v1/contacts/requests/{grant_attestation_id}/ignore` → 200 `{state: "ignored", grant_attestation_id, ignore_id}` | CIRISServer | **0.5.237, unreleased** (#820). Private: the requester's node never learns. Reversible |
@@ -201,10 +201,9 @@ node cannot observe either.
 
 ## 6. Delta — card vs API vs CC
 
-**Signed off by CIRISServer, 2026-10-25** (CIRISServer#820 @ `b784f8f9`). The
-five questions this card asked, as answered:
+**Five questions, answered on CIRISServer#820:**
 
-1. **The requester's name**: `grant` carries key ids only; the server added
+1. **The requester's name**: `grant` carries key ids only; the entry carries
    `requester_label`, the person's own unverified label, null for a key not of
    the `<label>-<fingerprint>` form (§2).
 2. **A 202 on accept**: unlikely but possible; CSD-005's pending row stays.
@@ -217,9 +216,7 @@ five questions this card asked, as answered:
 **Deferred, by design:**
 
 * **Decline** waits on CIRISPersist#1121 (an addressed decline only the
-  requester's node can see). Until it lands, Accept and Ignore are the only
+  requester's node can see). Without it, Accept and Ignore are the only
   answers, and no control suggests a "no" the requester would see.
 * **No push channel.** The 15 s poll is the client's choice; the server offers
   to scope a stream if it is wanted.
-</content>
-</invoke>

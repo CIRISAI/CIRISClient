@@ -16,8 +16,8 @@ configuration — and the two must not be confused, because one of them works
 without an agent and the other does not.**
 
 `Screen.Settings` is the only surface in the app that both builds reach and
-that a person must be able to reach (CIRISClient#51: before the fix, a
-run-without-AI owner could not sign out on any platform). That makes it the
+that a person must be able to reach: it is where a run-without-AI owner signs
+out. That makes it the
 app's floor, and a floor that silently offers agent-only doors is not a floor.
 
 ## 2. Surface (what)
@@ -41,12 +41,12 @@ a different label, which `EpistemicNav.kt:139` explains.
 | **the PERSON's, on the node** | ground (location), sign out, re-run setup, data management, consent | sign out yes; **ground no** |
 | **the AGENT's** | AI configuration → LLM, agent mode, attestation | no |
 
-Since the setup review the screen gates the agent's plane — agent mode, AI
+The screen gates the agent's plane — agent mode, AI
 configuration, the Interface entry — and the ground search on the probed
 `ClientMode` (`SettingsPlanes`, `hasAgent` threaded from `CIRISApp.kt`). On a
 node build the ground section says why it is absent
 (`txt_settings_location_needs_agent`) instead of offering a search its node
-cannot serve. The three planes are still one scroll (§6.3).
+cannot serve. The three planes are one scroll (§6.3).
 
 ```yaml csd:shows
 registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
@@ -119,12 +119,12 @@ error:     {tag: "proposed:settings_error", renders: "`SettingsViewModel._errorM
 | search a place | `GET /v1/setup/location-search` | CIRISAgent | live (`setup/location.py:216`) — `CIRISApiClient.searchLocations` (`CIRISApiClient.kt:13285`) from `SettingsViewModel.kt:1086` — **wrong-host on a node build** |
 | set your ground | `POST /v1/setup/location` | CIRISAgent | live (`setup/location.py:407`) — `updateUserLocation` (`CIRISApiClient.kt:13407`) from `SettingsViewModel.kt:1111` — **wrong-host on a node build** |
 | read your ground | `GET /v1/setup/location` | CIRISAgent | live (`setup/location.py:444`) — `getCurrentLocation` (`CIRISApiClient.kt:13463`) from `SettingsViewModel.kt:1143` — **wrong-host on a node build** |
-| the country list | `GET /v1/setup/countries` | CIRISAgent (`setup/location.py:237`) | live, **wired and unreached, deliberately left so** (setup review). It returns 252 countries with currency codes. The place picker is search-only (`location-search` already returns the country of each hit), and the currency dropdown is a device preference with its own list; neither needs it, and no CC clause asks for a country list. Wiring it would be a second source for a value that already has one (AGENTS.md). Candidate for removal from `CIRISApiClientProtocol` — reported, not done |
-| the agent's mode (proxy / server) | `GET` · `PUT /v1/system/agent-mode` | **CIRISAgent** (`routes/system/agent_mode.py`; PUT is SYSTEM_ADMIN) | live — `AgentModeSection`, agent builds only. **This card owns it** (route map duplicate pair 9): it is the agent's configuration, like the AI configuration beside it, and nothing a node serves. The Network hub's `ModeCard` (LayerGlobalCommons, CSD-051) is the duplicate: a cohort surface calling an agent-only route, which 404s on a node build. Reported to CSD-051's owner |
+| the country list | `GET /v1/setup/countries` | CIRISAgent (`setup/location.py:237`) | live, **wired and unreached, deliberately**. It returns 252 countries with currency codes. The place picker is search-only (`location-search` already returns the country of each hit), and the currency dropdown is a device preference with its own list; neither needs it, and no CC clause asks for a country list. Wiring it would be a second source for a value that already has one (AGENTS.md). Candidate for removal from `CIRISApiClientProtocol` |
+| the agent's mode (proxy / server) | `GET` · `PUT /v1/system/agent-mode` | **CIRISAgent** (`routes/system/agent_mode.py`; PUT is SYSTEM_ADMIN) | live — `AgentModeSection`, agent builds only. **This card owns it** (route map duplicate pair 9): it is the agent's configuration, like the AI configuration beside it, and nothing a node serves. The Network hub's `ModeCard` (LayerGlobalCommons, CSD-051) is the duplicate: a cohort surface calling an agent-only route, which 404s on a node build |
 | the LLM config read-back | `GET /v1/setup/config` | CIRISAgent | live (`setup/config.py`) — client node-skips it (`CIRISApiClient.kt:7486`) |
 | language / currency / theme / viz | — | **device** | `SecureStorage`; no route, correctly |
 | self-attestation | `GET /v1/setup/verify-status` · `/attestation-status` | CIRISAgent | live (`setup/attestation.py`); the node's `/v1/system/verify-status` is a different route |
-| this build's locale manifest | — **nothing emits it** | **CIRISClient** | **missing, and ours.** CIRISVerify SHIPPED the verifier: `provenance:build_manifest:{target}:locale:{lang_code}` is live from v3.8.0 (CIRISVerify#37, CLOSED) — `ciris-verify-core/src/federation_provenance.rs:56`, constructor `:160`, longest-prefix dispatch `:432`; CIRISRegistry#28/#29 both CLOSED. What is absent is the PRODUCER: `grep -rl build_manifest` over this repo, excluding `FSD/CSD/`, returns zero files — no workflow, no packaging script, no pinned `ciris-verify`. We ship the 29 bundles (AGENTS.md: "`localization/` — the OTHER thing this repo owns"), so only we can sign them. **CIRISClient#102** |
+| this build's locale manifest | — **nothing emits it** | **CIRISClient** | **missing, and ours.** CIRISVerify verifies `provenance:build_manifest:{target}:locale:{lang_code}` from v3.8.0 — `ciris-verify-core/src/federation_provenance.rs:56`, constructor `:160`, longest-prefix dispatch `:432`. What is absent is the PRODUCER: nothing in this repo outside `FSD/CSD/` names `build_manifest` — no workflow, no packaging script, no pinned `ciris-verify`. We ship the 29 bundles (AGENTS.md: "`localization/` — the OTHER thing this repo owns"), so only we can sign them. **CIRISClient#102** |
 
 ### 3.1 Every route this screen calls (generated)
 
@@ -142,7 +142,7 @@ error:     {tag: "proposed:settings_error", renders: "`SettingsViewModel._errorM
 
 `CIRISServer` serves `/v1/setup/status`, `/root`, `/connect-node`,
 `/owned-nodes`, `/claim-remote`, `/consent-disclosure`, `/reset-device-auth` —
-**and no `/v1/setup/location*`**. Agent tree last commit 2026-08-15.
+**and no `/v1/setup/location*`**.
 
 ## 4. Flow (how)
 
@@ -155,7 +155,7 @@ expect:
   absent: [btn_llm_settings, btn_viz_settings]
 ```
 
-The `absent:` line holds since the setup review (§6.1).
+The `absent:` line is pinned by `SettingsPlanesTest` (§6.1).
 
 Change the language.
 
@@ -180,9 +180,9 @@ expect:
 
 ## 5. QA plan
 
-**Platforms.** All five, and this is the surface where that matters most: the
-#51 regression was platform-shaped (desktops appeared to escape it only because
-a stale `clientMode=AGENT` landed them on Interact by accident, #48).
+**Platforms.** All five, and this is the surface where that matters most: sign
+out must work on every platform, and a stale `clientMode=AGENT` can put one
+platform on Interact and hide a node-build defect there.
 
 **Not tested here.** Play Integrity / App Attest cannot be satisfied in CI, so
 the attestation card is driven to its unverified rung and the rung is asserted;
@@ -190,33 +190,24 @@ the verified rung is a device test.
 
 ## 6. Card vs API vs CC — the delta
 
-1. **A test asserts the thing this screen defeats.**
-   `CirclesNavTest.settingsLivesUnderThisDeviceOnEveryBuild` (line 158) ends
-   with `assertFalse(NavSurface.LLMSettings in inst.surfaces(hasAgent = false),
-   "a node build has no model to configure")`, and
-   `theNodeBuildIsASubsetOfTheAgentBuild` (line 71) pins the same property for
-   the whole tree. Both pass. But `SettingsScreen` renders `btn_llm_settings`
-   (line 302) and `btn_viz_settings` (line 387) with no `hasAgent` condition,
-   so both surfaces are reachable on a node build through a door the rail
-   closed — the tests assert the *nav tree*, not *reachability*. `hasAgent` is
-   threaded into the shell only (`CIRISApp.kt:4823`); `SettingsScreen` never
-   receives it. **Ask (this repo): thread `hasAgent` into `SettingsScreen`,
-   gate the agent plane on it, and extend the test to assert reachability
-   rather than membership.** **Closed in the setup review:** `hasAgent` is
-   threaded in, the agent plane is gated on it, and `SettingsPlanesTest` pins
-   reachability (red against the ungated screen). The back arrow also returns
-   to `homeTarget`, not Interact, on a node build.
-   (Note in passing: `EpistemicNav.kt:135` cites this test as
-   `narrowingIsPurelySubtractive`, a name that no longer exists — the comment
-   outlived the rename.)
+1. **Reachability, not membership — closed.**
+   `CirclesNavTest.settingsLivesUnderThisDeviceOnEveryBuild` and
+   `theNodeBuildIsASubsetOfTheAgentBuild` assert the *nav tree*: a node build
+   has no LLM settings. `SettingsScreen` is a second door to `btn_llm_settings`
+   and `btn_viz_settings` that the tree does not see, so `hasAgent` is threaded
+   into `SettingsScreen`, the agent plane is gated on it, and
+   `SettingsPlanesTest` pins *reachability*. The back arrow returns to
+   `homeTarget`, not Interact, on a node build.
+   (`EpistemicNav.kt:135` cites the nav test as `narrowingIsPurelySubtractive`,
+   a name that does not exist.)
 2. **Ground is agent-only and is not marked.** `LocationSection` is rendered
    unconditionally and calls three `/v1/setup/location*` routes the node does
    not serve. On a node build the section loads nothing and offers a search
    that cannot succeed. This is the card the Locked Spec calls "ground" — it
    belongs to the PERSON and should work on every build. **Ask (CIRISServer):
    serve `/v1/setup/location`, or move the person's ground off the agent.**
-   The client half is closed: a node build no longer offers the search, and
-   says why. The server half is CIRISServer#668 (open), which also asks for the
+   The client half is closed: a node build does not offer the search, and
+   says why. The server half is CIRISServer#668, which also asks for the
    agent mode as a node fact; when a node answers it, `SettingsPlanes` widens
    to offer both on a node build.
 3. **The three planes are one scroll.** A person cannot tell that language is

@@ -1,6 +1,6 @@
 # CSD-046 — The peer set as a graph (the Trust graph tile; the Map tile folded in)
 
-**CSD**: CSD-046 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the route map (PR #111): two screens with routes and no CSD
+**CSD**: CSD-046 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the route map
 **Covers**: `Screen.NetworkTrustGraph` (`ui/screens/federation/NetworkTrustGraphScreen.kt` + `viewmodels/federation/NetworkTrustGraphViewModel.kt`). **`Screen.NetworkMap` is retired into it** (below).
 **Reads with**: CSD-033 (the same peers as a list), CSD-104 (tapping a node opens the peer detail), CSD-051 (the hub)
 **Flow**: `testing/flows/drafts/csd-046-network-trust-graph.yaml` (floor `>=0.5.225`)
@@ -10,15 +10,14 @@ stage: building
 owner: CIRISClient
 ```
 
-**Why the Map was folded (the dedup rule, PR #111).** `NetworkMapScreen` and
-`NetworkTrustGraphScreen` called the same routes (`/v1/federation/peers`,
-`/v1/federation/identity`, `/v1/federation/peers/{}`) and drew the same peer set
-in the same three tiers — canonical, trusted, the rest. The Map's own view model
-said so: "no transport surfaces geo telemetry … so we deliberately do NOT
-fabricate locations. Instead we project the peer list into three concentric
-tiers." That is the trust graph with the labels off. The Map screen, its view
-model and its tile are removed; CSD-034 was reserved for it and is left unused.
-When a geo pipeline exists, a map is a new card with a new route, not this one.
+**Why there is no Map card (the dedup rule).** A map of the peer set calls the
+same routes (`/v1/federation/peers`, `/v1/federation/identity`,
+`/v1/federation/peers/{}`) and draws the same peer set in the same three tiers —
+canonical, trusted, the rest: no transport surfaces geo telemetry, so a map that
+does not fabricate locations projects the peer list into three concentric
+tiers. That is the trust graph with the labels off. CSD-034 was reserved for it
+and is unused. When a geo pipeline exists, a map is a new card with a new route,
+not this one.
 
 ## 1. Mission (why)
 
@@ -65,12 +64,12 @@ error:     {tag: federation_trust_graph_error, renders: "the read-failure block;
 
 ## 3. Contracts (who)
 
-Verified against CIRISServer `origin/main` 046e1b39 (0.5.217).
+Verified against CIRISServer 0.5.217.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
 | the peer set | `GET /v1/federation/peers` (`src/federation_peers.rs:1435`) | CIRISServer | live — `listFederationPeers` (node URL). **The primary read**: the graph is drawn from it alone |
-| the centre label | `GET /v1/federation/identity` (`src/federation_surface.rs:696`) | CIRISServer | live — `getFederationIdentity`; **secondary**: its failure no longer fails the graph |
+| the centre label | `GET /v1/federation/identity` (`src/federation_surface.rs:696`) | CIRISServer | live — `getFederationIdentity`; **secondary**: its failure does not fail the graph |
 | per-peer reachability (capped) | `GET /v1/federation/peers/{key_id}` (`src/federation_peers.rs`, `get_peer`) | CIRISServer | live — `fetchReachabilityCapped`, best-effort |
 
 ## 4. Flow (how)
@@ -93,7 +92,7 @@ expect:
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-046-network-trust-graph.yaml`, floor `>=0.5.225`); promotes to `testable` when it runs on the matrix. **Not moved to `testing/flows/` on the 0.5.225 run (2026-09-29):** `Screen.NetworkTrustGraph` is flow-only — `nav_map` derives no hop to it, so the runner only waits for it after sign-in lands on Contacts, and the flow would be `cannot-start` (red) on every leg. To move it: start on LayerGlobalCommons and tap its trust-graph tile, as csd-047 does.
+Flow written (`testing/flows/drafts/csd-046-network-trust-graph.yaml`, floor `>=0.5.225`); it promotes to `testable` when it runs on the matrix. **It stays in `drafts/`:** `Screen.NetworkTrustGraph` is flow-only — `nav_map` derives no hop to it, so the runner waits for it after sign-in reaches Contacts, and the flow is `cannot-start` (red) on every leg. To move it: start on LayerGlobalCommons and tap its trust-graph tile, as csd-047 does.
 
 **Platforms.** All five; the canvas has no per-vertex tags, so the populated
 assertion is the canvas and the count is not assertable (the list, CSD-033,
@@ -103,7 +102,8 @@ carries the count).
 
 ## 6. Delta — card vs API vs CC
 
-* **Two cards, one act, folded.** See the head of this file.
-* **An identity failure failed the graph, fixed.** `runApi` wrapped both reads,
-  so an unreadable identity drew a readable peer list as an error.
-* **Error looked like empty, fixed.**
+* **One act, one card.** See the head of this file.
+* **An identity failure does not fail the graph — fixed.** The two reads fail
+  separately, so an unreadable identity draws '—' at the centre, never a
+  readable peer list as an error.
+* **Error is not empty — fixed.**

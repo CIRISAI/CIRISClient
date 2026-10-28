@@ -1,6 +1,6 @@
 # CSD-095 — Changes to your devices (the self-key roster's held changes)
 
-**CSD**: CSD-095 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: CIRISServer#794 (CC 3.3.6.3), pushed as CIRISServer#802 (`feat/multi-device-csd4` @ `e1201b69`; same code as the `9ffcb65b` the client was built against, the tree differs in one CI comment). The rule, the rows and the executor are persist's (`self_roster`, CIRISPersist v59.0.0)
+**CSD**: CSD-095 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: CIRISServer#794 (CC 3.3.6.3), in CIRISServer#802 (`feat/multi-device-csd4`). The rule, the rows and the executor are persist's (`self_roster`, CIRISPersist v59.0.0)
 **Pairs with**: CSD-094 (Approve a new device: from two devices its approval IS an add proposal) · CSD-037 (My Identity: the revoke on the roster IS an evict proposal) · CSD-093 (the new device, which waits while the add is held)
 **Flow**: unwritten. The quorum path (three keys) can be driven; the lone path cannot until persist's `W_self` seam ships (CIRISPersist#1111, §5). The server QA runs it on T10, three tests (§5)
 **Card**: `ui/screens/SelfRosterCard.kt` (`SelfRosterCard`, `RosterTags`), placed on `ui/screens/IdentityManagementScreen.kt` directly below the Approve card; `viewmodels/SelfRosterViewModel.kt`; wire `api/SelfRosterApi.kt` + `CIRISApiClient.{getRosterProposals,answerRosterProposal}`; shapes `models/federation/SelfRoster.kt`; tests `SelfRosterViewModelTest` (commonTest), `SelfRosterWireTest`, `RosterHeldWireTest.aHeldApprovalAnswers202AndIsHeldNotApproved` (desktopTest)
@@ -40,7 +40,7 @@ answer stayed on the person's own devices, the canonical node could land by
 the lone path a change the devices had refused (`:1471-1476`).
 
 **#793 in this client.** Nothing in the client treats only the first device as
-the owner. Searched for owner, primary and founding gating: `IdentityManagementViewModel.load`
+the owner: `IdentityManagementViewModel.load`
 takes the identity from `owned-nodes.owner` (the fedID, the same on every
 device), and no action is gated on the node key equalling the owner. A joined
 device gets this card and its answers like any other.
@@ -52,8 +52,8 @@ surface: identity-management
 screen: IdentityManagement
 ```
 
-**Where it lives, decided by routes.** No card called `/v1/self/roster/*`
-before this one, so it is not a duplicate. Its proposals are made by two
+**Where it lives, decided by routes.** No other card calls `/v1/self/roster/*`,
+so it is not a duplicate. Its proposals are made by two
 existing controls, and it sits beside them on My Identity
 (`btn_my_things -> nav_instrument_devices_keys -> nav_epistemic_identity_management`):
 CSD-094's Approve, and CSD-037's revoke on the roster. Neither control gets a
@@ -189,8 +189,8 @@ A node without CIRISServer#794 answers the list with a bare 404: the card says
 
 ## 3. Contracts (who)
 
-Verified against CIRISServer#802 @ `e1201b69` (`src/self_devices.rs`,
-`src/add_device.rs`; line numbers equal to `9ffcb65b`'s) and CIRISPersist
+Verified against CIRISServer#802 (`src/self_devices.rs`,
+`src/add_device.rs`) and CIRISPersist
 v59.0.0 (`src/federation/self_roster.rs`, `src/federation/two_path.rs`). Every
 route is owner-session gated (`owner_caller`, `false` = no delegate), with the
 bearer, on the ACTIVE node read at call time (`ClientSelfRoster`, as
@@ -241,7 +241,7 @@ waiting" as done, and C's approval is delivered by `resume_when_landed`.
 * a change this device proposed (by a 202 proposal id, or by a held revoke's
   target) offers no answer and is not counted on the badge;
 * a 409 own-proposal is learned;
-* settled history: LANDED by the roster or by a landing decision, CLOSED (upgraded to LANDED when a lagging roster catches up; red before the fix: `expected:<LANDED> but was:<CLOSED>`), or REFUSED with its reason,
+* settled history: LANDED by the roster or by a landing decision, CLOSED (upgraded to LANDED when a lagging roster catches up), or REFUSED with its reason,
   never repeated;
 * a bare 404 is the version fact;
 * the signature arithmetic.
@@ -253,8 +253,8 @@ handlers' shapes:
 * both refusals, in the server's English;
 * a bare 404.
 
-`RosterHeldWireTest.aHeldApprovalAnswers202AndIsHeldNotApproved` was red on
-main: `a 202 held approval is held, never Approved: Approved(label=Tablet, matchCode=111222)`.
+`RosterHeldWireTest.aHeldApprovalAnswers202AndIsHeldNotApproved`: a 202 held
+approval is held, never Approved.
 
 **A real run (T10, the server session's harness).** Three nodes, the quorum
 path. The drive tags, in order, are:
@@ -265,11 +265,11 @@ path. The drive tags, in order, are:
 5. `btn_self_roster_object_<id>` → `btn_confirm_roster_answer_confirm`;
 6. on the approving device, `btn_approve_device_<id>` → `btn_confirm_device_request_confirm`, read `text_approve_device_outcome = held` and `text_approve_device_held_window`.
 
-**The server's QA runs this card on topology T10** (CIRISServer#802 @
-`v0.5.233` (`7bcbee42`; the catalogue is a release asset, unchanged since v0.5.232), catalogue version 3,
+**The server's QA runs this card on topology T10** (CIRISServer `v0.5.233`,
+whose release asset is the catalogue, version 3,
 `harness/native/topologies/catalog/requirements.yaml:48-74`, through
-`harness.native run --csd CSD-095`). Catalogue v3 adds the atom
-`key.membership.proposed_add` (CC rc9 `01b47e75`). It has three tests:
+`harness.native run --csd CSD-095`). Catalogue v3 carries the atom
+`key.membership.proposed_add` (CC rc9). It has three tests:
 
 ```yaml csd:tests
 CSD-095:
@@ -290,26 +290,25 @@ CSD-095:
 ```
 
 This is the server's entry, typed (`csd:tests`, CSD4.md §1). `check_csd_v3.py`
-binds it through `packaging/check_csd4.py` (#219). Each atom is checked against
+binds it through `packaging/check_csd4.py`. Each atom is checked against
 the pinned catalogue's version-3 vocabulary, every test must be reachable at one
 instant in the server model's trace, and the block must match `requirements.yaml`'s
 CSD-095 entry exactly (`packaging/csd4/`, pinned per PIN.md).
 
-The same T10 mesh also passed this client's code live:
-* at `a09c3c83`/`caf94d07`, a held evict;
-* at `caf94d07`, a held ADD. This is what `add_held` asks: proposal
-  `e655eaaa…` was pending on A2; after A2 assented, the third device went from
-  `requested` to `approved` in about 6 s, and the history read LANDED on both
-  devices.
+The same T10 mesh has passed this client's code live:
+* a held evict;
+* a held ADD, which is what `add_held` asks: a proposal pending on A2; after
+  A2 assented, the third device went from `requested` to `approved` in about
+  6 s, and the history read LANDED on both devices.
 
-**Not in T10 yet.** The lone path is T11 (two devices lost; the person
+**Not in T10.** The lone path is T11 (two devices lost; the person
 recovers alone after `W_self`). One card names one topology (CSD/4 §1), and
 T10 does not reach it. It also waits on persist's test-anchor `W_self` seam
 (CIRISPersist#1111).
 
-**The lone path is not drivable yet.** There is no `W_self` test override:
-persist's `CIRIS_TEST_W_SELF_SECS` is in its next cut, so a one-day window
-cannot be run in CI.
+**The lone path is not drivable in CI.** No released persist has a `W_self`
+test override (`CIRIS_TEST_W_SELF_SECS`, CIRISPersist#1111), so a one-day
+window cannot be run.
 
 ## 6. Delta — card vs API vs CC
 

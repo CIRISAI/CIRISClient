@@ -30,7 +30,7 @@ and how far along each part is. The item IDs (F, S, N, B, G) are the execution p
   `unopened_reason` handled), **consent / data** (one owner for the accord-settings write, logout
   clears the previous owner's consent record, four-state watchlist, every irreversible act behind
   a three-fact confirm), **adapters / hubs** (the households dispatcher split so each act has one
-  screen; moderators "could not read" distinct from "none"). #129 fixed Codex's five findings on it
+  screen; moderators "could not read" distinct from "none"). #129 fixed five review findings on it
   (consent reset races, owner-lookup failure, Enable after a failed read, chat pinned to its node,
   YubiKey probe states); #127 replaced English left in six locale bundles.
 - **The cards that were in review are in:** #77 Files and Notes (B3), #121 communities, #122
@@ -74,7 +74,7 @@ flowchart TD
 
     BASE["Done: F1 F3 F4 F5 foundation, N1-N10 shell and spine, G2 atlas, G4 nav contract, B1 People, B2 receipt sheet, bug lane released in 0.5.224, a CSD for every card PR 90, fix wave PRs 92-95"]:::done
     WAVE["Done 09-26 to 09-28: state tags and drift test PR 100, route gate PRs 111 119, citations PR 107, QR PR 99, consent withdraw PR 112, contact code PR 113, key verification PRs 117 118, partnership and connectors PR 120, erase traces PR 123, review batch 1 PR 124"]:::done
-    WAVE2["Done 09-28 to 09-29: B3 Files and Notes PR 77, communities PR 121, households PR 122, review batch 2 PR 126 with CSD-105, Codex fixes PR 129, translations PR 127, promotion-readiness list PR 128"]:::done
+    WAVE2["Done 09-28 to 09-29: B3 Files and Notes PR 77, communities PR 121, households PR 122, review batch 2 PR 126 with CSD-105, review fixes PR 129, translations PR 127, promotion-readiness list PR 128"]:::done
     FLOWS["Done: F7 and G3, the flow runner on the five-platform matrix PR 97, one live flow, 37 drafts"]:::done
     TWO_NODE["Done: two-node fixture on all five legs PR 130"]:::done
     REL["Release 0.5.225, PR 131, tag follows CI"]:::review

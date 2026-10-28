@@ -21,8 +21,8 @@ claim, and the person's login survives it.
 `Screen.Setup` because they happen to lack a fed-ID would run a one-time claim
 against a node that is already claimed — the PIN no longer exists, and the
 wizard's completion path reconfigures the runtime underneath them. This screen
-is the catch-up that exists for exactly that state (`CIRISApp.kt:2572-2592`,
-Codex PR #6), and the routing decides between the two on `isFirstRun`.
+is the catch-up that exists for exactly that state (`CIRISApp.kt:2572-2592`),
+and the routing decides between the two on `isFirstRun`.
 
 **The gate is the session, and that is the right gate.** Minting an identity for
 an owner requires proving you are that owner — the same rule as entering as one.
@@ -40,9 +40,8 @@ entry: "Login `btn_federation_create` (CIRISApp.kt:2591); the post-login catch-u
 exit: "`addFederationIdReturnScreen` — wherever it was called from (CIRISApp.kt:534). It interrupts; it does not relocate"
 ```
 
-`screenToSurface` maps this Screen to `null` explicitly (`CIRISApp.kt:5964`),
-which is what CSD-085 §2 shows the five flow-only screens above it should have
-done. CSD-080 §2 records why `flow_only:` is a checked key.
+`screenToSurface` maps this Screen to `null` explicitly (`CIRISApp.kt:5964`).
+CSD-080 §2 records why `flow_only:` is a checked key.
 
 **Three entries**, and only two of them are controls:
 
@@ -57,15 +56,16 @@ every other card here it returns to wherever it was called from
 (`addFederationIdReturnScreen`, `CIRISApp.kt:534`), which is the shape a
 catch-up should have: it interrupts, it does not relocate.
 
-**Entry 2 has no control, and it is the one that regressed.** A
+**Entry 2 has no control, and it is the one most easily lost.** A
 `LaunchedEffect` gated on `currentScreen == homeTarget`, an authenticated
 session (or `isHAAddonMode` — an ingress-header session keeps
 `currentAccessToken` null by design) and `ownerHasFedId == false` pushes this
 screen automatically, once, via the `fedIdCatchupPrompted` latch. It is keyed on
-the **probed landing screen**, not on `Screen.Interact` — when node mode's home
-moved to Contacts, a legacy owner with no fed-ID stopped being offered the
-catch-up and landed on a Contacts surface they could not use, which is the exact
-state this effect exists to prevent (`CIRISApp.kt:975-983`). A flow that only
+the **probed landing screen**, not on `Screen.Interact`: node mode's home is
+Contacts, and keyed on Interact a legacy owner with no fed-ID would never be
+offered the catch-up and would land on a Contacts surface they cannot use,
+which is the exact state this effect exists to prevent
+(`CIRISApp.kt:975-983`). A flow that only
 drives `btn_federation_create` never touches it.
 
 ```yaml csd:shows
@@ -122,7 +122,7 @@ fields:
 reporting the whole thing as a failure would be a lie in the other direction.
 But the screen leaves via `onDone()` on a clean completion, so the notice is
 surfaced by the node-management surface rather than here — and there is no tag
-on it anywhere. A person who half-succeeded currently finds out on a different
+on it anywhere. A person who half-succeeded finds out on a different
 screen, if at all.
 
 ```yaml csd:states
@@ -140,21 +140,16 @@ error:     {tag: txt_fedid_error, renders: "the node's own refusal, in an error 
 | re-root the node on it | `POST /v1/self/upgrade-owner` | CIRISServer (`src/claim_remote.rs:1246`) | live — non-destructive, login preserved (`NodeSwitcherViewModel.kt:563`) |
 | announce the owner-binding | `POST /v1/federation/announce` | CIRISServer (registered `src/claim_remote.rs:1251`; handler `src/claim_remote.rs:1077`) | live — takes effect next boot (`NodeSwitcherViewModel.kt:573`). The answer's `promoted_owner_binding_attestation_id` was read as `promoted_attestation_id` (always null) and `federation_discoverable` was dropped; both fixed (`AnnounceOwnershipWireTest`) |
 | is this node already owned, and by whom | `GET /v1/setup/owned-nodes` | CIRISServer `src/auth/bootstrap.rs` (loopback-only) | live — `NodeSwitcherViewModel.kt:141`, the owner the catch-up upgrades from |
-| trace opt-in | — (was `PUT /v1/my-data/accord-settings`, step 4) | CIRISAgent, via **CSD-039** | **not this card's, since 2026-09-28.** The write was issued from three screens (this catch-up, Manage Consent, Data); the Data card reads it back, so it owns it, and this screen says where it lives (`txt_fedid_traces_elsewhere`). Every remaining row is on the node. |
+| trace opt-in | — (was `PUT /v1/my-data/accord-settings`, step 4) | CIRISAgent, via **CSD-039** | **not this card's.** The Data card reads it back, so it owns the write, and this screen says where it lives (`txt_fedid_traces_elsewhere`). Every remaining row is on the node. |
 
-**Every row is on the right host now, and the fourth row used to be the one that
-was not.** Step 4 was issued against `baseUrl` while steps 1-3 pin
-`CIRISApiClient.LOCAL_NODE_URL`. `PUT /v1/my-data/accord-settings` is
-CIRISAgent-only (`git grep 'my-data' origin/main -- src/` in CIRISServer returns
-only `/v1/my-data/capacity` and `/v1/my-data/lens-identifier`), so on a
-run-without-AI install — the class CSD-083 exists to describe — there was no
-host for it, the failure was non-fatal and swallowed, and a person who ticked
-*send traces* was told nothing. The fix was neither of the upstream asks this
-row used to carry: the write is gone from here, with the toggle
-(`AnnounceDecisionCard(showTraceOptIn = false)`), and the route checker's
-duplicate-mutation ratchet no longer lists this screen on it. What remains is
-the announce decision, which is the node's and which announcing traces depends
-on. No upstream ask on this card.
+**Every row is on the node.** Steps 1-3 pin `CIRISApiClient.LOCAL_NODE_URL`.
+The trace opt-in, `PUT /v1/my-data/accord-settings`, is CIRISAgent-only
+(CIRISServer serves only `/v1/my-data/capacity` and
+`/v1/my-data/lens-identifier`), so on a run-without-AI install (CSD-083) it has
+no host. This screen therefore neither writes it nor shows its toggle
+(`AnnounceDecisionCard(showTraceOptIn = false)`). What remains is the announce
+decision, which is the node's and which announcing traces depends on. No
+upstream ask on this card.
 
 ## 4. Flow (how)
 
@@ -234,13 +229,12 @@ expect:
 **Platforms.** All five. `input_fed_label` declares its sink at
 `AddFederationIdScreen.kt:117` and dispatches it on the next line, so it is
 drivable — and the comment there says why the registration sits on that exact
-line: "so it cannot be forgotten separately". Three screens in this area forgot
-it anyway (CSD-084, CSD-085).
+line: "so it cannot be forgotten separately".
 
 **Not tested here.** The upgrade itself needs an owner session against a node
 that is owned the legacy way — a state `testing/gate/node_fixture.py` does not
-produce, because `session_fixture` always mints a fed-ID during the wizard. That
-same gap is why the auto-entry in §4 has never been driven: there is no fixture
+produce, because `session_fixture` always mints a fed-ID during the wizard. The
+same gap is why the auto-entry in §4 is not driven: there is no fixture
 that can produce `ownerHasFedId == false`. The announce (takes effect next
 boot); the four-step progress (unreported).
 

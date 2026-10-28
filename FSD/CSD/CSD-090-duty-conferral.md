@@ -180,14 +180,12 @@ loading:   {tag: duty_source_loading, renders: "'Reading the conferring authorit
 error:     {tag: duty_source_error, renders: "the node's own refusal, bold and in error colour, with 'Nothing can be conferred until this node can name who is granting it.' The top-of-card banner `duty_error` carries the propose/cosign failure separately"}
 ```
 
-**`empty` and `error` were one tag, one colour and one sentence until
-2026-09-27, and the ViewModel knew they were different.** Its comment on the
-404 ("a THIRD state, distinct from both success and failure … conflating it
-with a transport error would send the operator debugging a network that is
-working fine") was the specification; the assignment to `_sourceError` was
-the defect. The 404 now sets `sourceAbsent`, the card draws it in the neutral
-tone under its own tag, and `ModerationCatalogueTest.no_accord_family_is_empty_not_error`
-pins it.
+**`empty` and `error` are two tags, two colours and two sentences.** The
+ViewModel's comment on the 404 is the specification: "a THIRD state, distinct
+from both success and failure … conflating it with a transport error would send
+the operator debugging a network that is working fine". The 404 sets
+`sourceAbsent`, the card draws it in the neutral tone under its own tag, and
+`ModerationCatalogueTest.no_accord_family_is_empty_not_error` pins it.
 
 ## 3. Contracts (who)
 
@@ -199,14 +197,13 @@ pins it.
 | the holder registry | `GET /v1/accord-holders` | CIRISServer (`src/accord.rs:2601`) | live — the same source the quorum is counted from, which is why the holder is a dropdown and not a text box |
 | token readiness | `GET /v1/accord/yubikey-status` | CIRISServer (`src/accord_provision.rs:3770`) | live |
 | prefill the subject | `GET /v1/setup/owned-nodes` | CIRISServer | live, **loopback-only** — off-host it 403s (CSD-084 measured it on 0.5.190), so on a remote node the subject field is simply blank and the screen does not say why |
-| the conferrable vocabulary | `CONFERRABLE_DUTIES` | CIRISPersist `federation/admission.rs:6385` (`DELEGATED_DUTY_SCOPES`, v48.0.0) | live — re-exported, not re-listed (`CIRISServer src/accord_duty.rs:96` is literally `= ciris_persist::federation::admission::DELEGATED_DUTY_SCOPES`, validated `:287-300`). The list is SEVEN: `consent_revocation, moderate, takedown, review, slash, license, grant` (`license` and `grant` since persist v42.0.0). Persist's own doc comment at `admission.rs:6338-6345` records the failure this card had: "a hand-picked mirror of another crate's vocabulary drifts the moment that vocabulary grows" |
-| **the conferrable vocabulary, as the node serves it** | `GET /v1/vocabulary` → `delegation_scope.moderation` | CIRISServer `src/vocabulary_surface.rs:50` (ROUTE), body `:61-79`; **ungated** (`:81-89`), identical on `integ/0.5.218` | **live and READ** (CIRISClient#108 closed 2026-09-27): `DutyConferralViewModel.loadCatalogues()` → `CIRISApiClient.getVocabulary` → `dutyMenu(served, ALL_DUTIES)` (`models/NodeCatalogue.kt`). The node serves persist's sets "sourced, never spelled" (`:63`); at the pinned tag `delegation_scope::MODERATION` IS `DELEGATED_DUTY_SCOPES` (`CIRISPersist src/federation/types.rs:1160`), all seven. `ALL_DUTIES` is display order only; a served member it lacks follows under its token; a ticked duty the node stops serving is unticked. A node without the route keeps the compiled five and says so (`duty_vocabulary_fallback`); a failed read likewise. `grep -rn '"license"\|"grant"' commonMain` finds them only in `ACCORD_CANNOT_CONFER`, the CC 4.2.1 wall (next row), never as vocabulary. `NodeCatalogueTest` + `ModerationCatalogueTest` are the issue's acceptance tests, red on the old code |
+| the conferrable vocabulary | `CONFERRABLE_DUTIES` | CIRISPersist `federation/admission.rs:6385` (`DELEGATED_DUTY_SCOPES`, v48.0.0) | live — re-exported, not re-listed (`CIRISServer src/accord_duty.rs:96` is literally `= ciris_persist::federation::admission::DELEGATED_DUTY_SCOPES`, validated `:287-300`). The list is SEVEN: `consent_revocation, moderate, takedown, review, slash, license, grant` (`license` and `grant` since persist v42.0.0). Persist's own doc comment at `admission.rs:6338-6345` gives the reason: "a hand-picked mirror of another crate's vocabulary drifts the moment that vocabulary grows" |
+| **the conferrable vocabulary, as the node serves it** | `GET /v1/vocabulary` → `delegation_scope.moderation` | CIRISServer `src/vocabulary_surface.rs:50` (ROUTE), body `:61-79`; **ungated** (`:81-89`), identical on `integ/0.5.218` | **live and READ** (CIRISClient#108): `DutyConferralViewModel.loadCatalogues()` → `CIRISApiClient.getVocabulary` → `dutyMenu(served, ALL_DUTIES)` (`models/NodeCatalogue.kt`). The node serves persist's sets "sourced, never spelled" (`:63`); at the pinned tag `delegation_scope::MODERATION` IS `DELEGATED_DUTY_SCOPES` (`CIRISPersist src/federation/types.rs:1160`), all seven. `ALL_DUTIES` is display order only; a served member it lacks follows under its token; a ticked duty the node stops serving is unticked. A node without the route keeps the compiled five and says so (`duty_vocabulary_fallback`); a failed read likewise. `grep -rn '"license"\|"grant"' commonMain` finds them only in `ACCORD_CANNOT_CONFER`, the CC 4.2.1 wall (next row), never as vocabulary. `NodeCatalogueTest` + `ModerationCatalogueTest` are the issue's acceptance tests |
 | **what the accord may not confer** | `ACCORD_CANNOT_CONFER` = `consent_revocation, license, grant` | this client, from CC 4.2.1 ("accord authority cannot reach the consent or licensure planes"; "accord keys cannot sign grants or licenses") | the three are OFFERED (the node serves them) and cannot be TICKED; the sentence under each names the clause. Persist and the server admit all three (below), which is why the client says it: nothing downstream will |
-| **what the duties unlock, from the node** | `GET /v1/operations` | CIRISServer `src/operations_catalogue.rs:50` | **live and read** — the "What this unlocks" read-out lists the tiers whose SERVED scope the ticked duties carry (`LadderRung.tiersUnlockedBy`), so the tier-2 `slash` disagreement in the next section is the node's table, not this app's opinion; a tier the bundle has no sentence for lists the node's op tokens. Tags are `duty_ladder_t{n}` (they were `duty_ladder_duty.ladder_t{n}`, the localization key verbatim) |
+| **what the duties unlock, from the node** | `GET /v1/operations` | CIRISServer `src/operations_catalogue.rs:50` | **live and read** — the "What this unlocks" read-out lists the tiers whose SERVED scope the ticked duties carry (`LadderRung.tiersUnlockedBy`), so the tier-2 `slash` disagreement in the next section is the node's table, not this app's opinion; a tier the bundle has no sentence for lists the node's op tokens. Tags are `duty_ladder_t{n}` |
 | **which community the duty is over** | **no field** — `conferral_envelope` carries `dimension` + `scope` + `subject_key_id` and nothing else (`src/accord_duty.rs`, the envelope builder) | CIRISServer / CIRISPersist | **missing** — see the CC delta below |
 
-**The accord's half, re-verified at the accord review (2026-09-28, `origin/main`
-0.5.217 `046e1b39`).** `ProposeRequest` is `{holder{key_id, mldsa_usb_path,
+**The accord's half, verified against 0.5.217.** `ProposeRequest` is `{holder{key_id, mldsa_usb_path,
 pkcs11}, subject_key_id, duties[], duty?, sub_delegation, sub_delegation_depth?}`
 (`src/accord_duty.rs:115-133`) and `proposeDutyConferral` sends exactly those
 (`DutyConferralViewModel.kt:431-439`); `CosignRequest` is `{holder, partial}`
@@ -223,7 +220,7 @@ already_signed, refused}`, `:227-541`) and `friendly()`
 (`DutyConferralViewModel.kt:510-521`) matches on the HTTP status text, so
 `already_signed` and `holder_identity_mismatch` — the two a second holder is
 most likely to hit — render as the node's English rather than by id. Moderation
-owns that screen; recorded here, not fixed here.
+owns that screen; the gap is recorded here.
 
 ### The CC delta, stated plainly
 
@@ -239,7 +236,7 @@ trust root. A `trust:confers:v1` row carrying `scope: ["moderate"]` and a
 `subject_key_id` is a different envelope on a different plane, and the server's
 own module header says so: the trust-root card confers roles "co-scrubbed INTO a
 key record, which is the CEREMONY plane, a different plane entirely." CIRISServer#392
-added a sixth accord power; CC 4.2.1 still enumerates five. CC 4.2 is
+adds a sixth accord power; CC 4.2.1 enumerates five. CC 4.2 is
 **entrenched** (CC 4.5.1.2), and CC 4.2.1's own rule for widening reach is
 "pre-committed powers only, never act-then-ratify", with a 72 h severance window
 during which a bound node may cut its edge.
@@ -251,8 +248,8 @@ refuses "an issuance whose delegator does not itself hold the underlying
 authority" at admission, not merely unweighted. The accord family holds no
 consent authority over anyone's Contributions.
 
-**Persist does NOT refuse the resulting grant — that question is answered, and
-the answer makes the objection sharper, not weaker.** `consent_revocation` is a
+**Persist does NOT refuse the resulting grant, which makes the objection
+sharper, not weaker.** `consent_revocation` is a
 first-class member of the delegated-duty ladder (`CIRISPersist
 src/federation/admission.rs:6245` defines it, `:6367` is its entry in
 `DELEGATED_DUTY_SCOPES`) and `:6332` documents what it grants: "proxy revocation
@@ -340,7 +337,7 @@ expect:
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-090-duty-conferral.yaml`, floor `>=0.5.224`); promotes to `testable` when it runs on the matrix. **Not moved to `testing/flows/` on the 0.5.225 run (2026-09-29):** `Screen.DutyConferral` is flow-only — `nav_map` derives no hop to it, so the runner only waits for it after sign-in lands on Contacts, and the flow would be `cannot-start` (red) on every leg. To move it: start on the screen that confers the duty and open the conferral from there.
+Spec complete and flow written (`testing/flows/drafts/csd-090-duty-conferral.yaml`, floor `>=0.5.224`); it becomes `testable` when it runs on the matrix. **It stays in `drafts/`:** `Screen.DutyConferral` is flow-only — `nav_map` derives no hop to it, so the runner only waits for it after sign-in lands on Contacts, and the flow would be `cannot-start` (red) on every leg. To promote it, start on the screen that confers the duty and open the conferral from there.
 
 **Platforms.** Desktop only, and not end to end. The ceremony needs two accord
 holders' YubiKeys, two humans and two PIV PINs; `testing/gate/node_fixture.py`
@@ -349,27 +346,23 @@ the source card, the duty set, the ladder mapping, the depth options and both
 refusals.
 
 **`input_duty_subject` is drivable.** It carries `rememberTextInputDriver("input_duty_subject", …)`
-(`DutyConferralScreen.kt:260`); an earlier revision of this section said it had
-no sink, which was true of the file at the time and is not now.
+(`DutyConferralScreen.kt:260`).
 
 **The PIN is cleared between holders.** `clearPinBetweenHolders()` is called
-from `applyResult` after every successful scrub (2026-09-27). It carried the
-reasoning — "leaving holder A's PIN in the box invites holder B to press submit
-without noticing whose credential is in it" — and had no call site; a
-documented safety property that does not happen is worse than one nobody
-thought of, because the comment reads as evidence it was handled.
+from `applyResult` after every successful scrub: leaving holder A's PIN in the
+box invites holder B to press submit without noticing whose credential is in
+it.
 
-**The ladder tags are `duty_ladder_t0`…`duty_ladder_t4`.** They were the
-localization key verbatim (`duty_ladder_duty.ladder_t0`); the read-out is now
-built from the node's tiers, and the tag is the tier number. The `duty_ladder_*`
-glob in §4 still matches.
+**The ladder tags are `duty_ladder_t0`…`duty_ladder_t4`.** The read-out is
+built from the node's tiers, and the tag is the tier number. The
+`duty_ladder_*` glob in §4 matches.
 
 **Nine `duty.*` strings ship in 29 locales with no call site.**
 `duty.holder_label`, `duty.holder_placeholder`, `duty.usb_label`,
 `duty.usb_placeholder`, `duty.usb_browse`, `duty.usb_guidance`,
-`duty.verb_label`, `duty.verb_help` and `duty.ladder_preview` were left behind
-when the card adopted the shared `HolderSignInputs` component, which uses
-`mobile.accord_scrub_*` instead. Nine keys × 29 bundles.
+`duty.verb_label`, `duty.verb_help` and `duty.ladder_preview` have no caller:
+the card uses the shared `HolderSignInputs` component, whose strings are
+`mobile.accord_scrub_*`. Nine keys × 29 bundles.
 
 **Not tested here.** The propose/cosign round trip (two tokens); the adoption
 transition (`duty_adopted` / `duty_conferred`, which needs quorum);

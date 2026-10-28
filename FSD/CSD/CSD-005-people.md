@@ -2,7 +2,7 @@
 
 **CSD**: CSD-005 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, wave 0
 **Flow**: `testing/flows/csd-005-people.yaml` (floor `>=0.5.225`)
-**Reads with**: CSD-006 (the receipt it opens), CSD-091 (the chat a row opens), CSD-092 (the code card in its header), CSD-104 (the key check a row will offer once CIRISServer#683 lands)
+**Reads with**: CSD-006 (the receipt it opens), CSD-091 (the chat a row opens), CSD-092 (the code card in its header), CSD-104 (the key check a row offers; blocked on CIRISServer#683)
 
 ```yaml csd:stage
 stage: testable
@@ -43,12 +43,10 @@ Family, Neighbours and Communities and Businesses it is one card among siblings
 — the household roster (`HouseholdMembers`, CSD-101), the community and
 affiliation rosters (`CommunityRoster` / `AffiliationsRoster`, CSD-103) and, in
 Communities and Businesses, `Users` — so the tab is a list and the chain is
-`circle_<circle> -> tab_people -> nav_epistemic_contacts`. "Contacts IS the
-People tab in every circle" was true at wave 0 and stopped being true when the
-rosters landed (PR #121, #122); the atlas that still shows the two-hop chain was
-captured before them (`docs/atlas.json`, 2026-09-23, AGENT mode). The screen
-class, the nav id and every `contacts_*` tag are unchanged from the surface
-this replaces; the visible title is "People".
+`circle_<circle> -> tab_people -> nav_epistemic_contacts` (`docs/atlas.json`
+predates the rosters and shows the two-hop chain). The visible title is
+"People"; the screen class, the nav id and every `contacts_*` tag keep the
+Contacts name.
 
 ```yaml csd:shows
 registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
@@ -117,9 +115,9 @@ fields:
 ```
 
 **The receipt renders all five facts every time, and reads all five off the
-wire.** CIRISServer#616 closed 2026-09-25 and shipped in 0.5.217: `GET
-/v1/contacts` attaches `grant_receipt` per row (`src/contacts_chat.rs:1754`
-on `integ/0.5.218`, `:1704-1712` on `main`; built at `src/peer.rs:1524-1559`)
+wire.** Since ciris-server 0.5.217, `GET /v1/contacts` attaches
+`grant_receipt` per row (`src/contacts_chat.rs:1704-1712`; built at
+`src/peer.rs:1524-1559`)
 carrying `attestation_id`, `attesting_key_id`, `dimension`, `subject_key_ids`,
 `cohort_scope`, `for_key_id`, `consent_prefixes`, `asserted_at`, `valid_until`
 and `row_expires_at`; the row's key is `grant`, `null` when the node holds no
@@ -135,25 +133,21 @@ and `ui/screens/PeopleSupport.kt::contactReceipt` reads every fact from it:
 older than 0.5.217, or a `grant: null` row, the subject is the row's own key
 (wire); the dimension is `ByRule` — a contact IS a `consent:replication:v1`
 grant (CC 3.3.7) and the route serves nothing else; and the attester, the scope
-and the rule are `NotSent`. The scope USED to be `ByRule("federation")` and
-that was a guess: the grant's `cohort_scope` is the consent audience the person
-chose (`peer.rs::add_contact`: `audience … unwrap_or(FEDERATION)`), so a
-grant-less row cannot know it. Fixed here, red first
-(`aContactReceiptWithoutAGrantSaysWhatItKnowsAndWhatItDoesNot`). A member the
-grant carries but leaves empty is likewise `NotSent`.
+and the rule are `NotSent`. The scope is not `ByRule`: the grant's
+`cohort_scope` is the consent audience the person chose
+(`peer.rs::add_contact`: `audience … unwrap_or(FEDERATION)`), so a grant-less
+row cannot know it (`aContactReceiptWithoutAGrantSaysWhatItKnowsAndWhatItDoesNot`).
+A member the grant carries but leaves empty is likewise `NotSent`.
 
-**Add contact is reachable whatever the list holds (CIRISClient#187).** The
-header carries a LABELLED action, `btn_contacts_add_open` ("Add contact", with
-the invite glyph), in browse mode on every list — empty, populated, or holding
-only pending rows. It toggles the add card. Over an empty, unsearched list the
-card is forced open as well (the flows depend on that); over a populated list
-it is what opens it. Before this the header had the same tag on a bare,
-dim glyph, and a person on desktop could not find it: once one contact exists
-there was "no Add contact anywhere" (0.5.228, two installs) — and since the
-canonical shows up as a contact on every trace-sending node (CIRISServer#775)
-the empty-list case is the rare one. The card also stays up while the last
-add's outcome is showing, so a first add from the forced card no longer
-vanishes with its "Open chat" the moment the list stops being empty.
+**Add contact is reachable whatever the list holds.** The header carries a
+LABELLED action, `btn_contacts_add_open` ("Add contact", with the invite
+glyph), in browse mode on every list — empty, populated, or holding only
+pending rows. It toggles the add card. Over an empty, unsearched list the card
+is forced open as well (the flows depend on that); over a populated list it is
+what opens it. The populated list is the common case: the canonical shows up as
+a contact on every trace-sending node (CIRISServer#775). The card stays up
+while the last add's outcome is showing, so a first add from the forced card
+does not vanish with its "Open chat" the moment the list stops being empty.
 
 ```yaml csd:states
 populated: {tag: contacts_list}
@@ -170,26 +164,26 @@ tone, the `error` glyph, a hairline box and an uppercase label, and empty the
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| contacts | `GET /v1/contacts` at the **node URL** | CIRISServer | live since 0.5.185. It read `$baseUrl` until this review, which the route gate charged to the agent front door and which, on a with-AI install, asked an agent that before 2.12.1 did not forward `/v1/contacts` (CIRISAgent#1213, closed by #1215; forwarded from agent 2.12.1). Now `listContacts(nodeUrl)`, on the same active-node provider as the add, the code and the removal (`ContactsViewModel.nodeUrl`); pinned by `ContactCodeViewModelTest.theContactListIsReadFromTheNodeNotTheAgentFrontDoor`. Calling the node URL directly works on every agent version, so it stays |
-| the picker's identities (Delegations reaches this screen in picker mode) | `GET /v1/federation/peers` | CIRISServer | live. A delegation target need not be a contact, so the picker reads the wider peer store; cited here because this screen calls it, and the checker had it as this screen's one uncited route |
+| contacts | `GET /v1/contacts` at the **node URL** | CIRISServer | live since 0.5.185. Read at the node URL, never `$baseUrl`: `listContacts(nodeUrl)`, on the same active-node provider as the add, the code and the removal (`ContactsViewModel.nodeUrl`). An agent older than 2.12.1 does not forward `/v1/contacts`, and the node URL works on every agent version. Pinned by `ContactCodeViewModelTest.theContactListIsReadFromTheNodeNotTheAgentFrontDoor` |
+| the picker's identities (Delegations reaches this screen in picker mode) | `GET /v1/federation/peers` | CIRISServer | live. A delegation target need not be a contact, so the picker reads the wider peer store; cited here because this screen calls it |
 | add a contact | `POST /v1/contacts` | CIRISServer | live; returns `consent_prefixes` |
-| add by contact code | `POST /v1/contacts` with the code in `key_id` | CIRISServer | **live**: `AddContactRequest.key_id` takes a fed-ID **or** a fedcode and also accepts the aliases `code` and `contact` (`src/contacts_chat.rs:1732-1742` @ `046e1b39`). The client sends `key_id` (`CIRISApiClient.kt:1490`), so no client change is needed to send a code |
+| add by contact code | `POST /v1/contacts` with the code in `key_id` | CIRISServer | **live**: `AddContactRequest.key_id` takes a fed-ID **or** a fedcode and also accepts the aliases `code` and `contact` (`src/contacts_chat.rs:1732-1742`). The client sends `key_id` (`CIRISApiClient.kt:1490`), so no client change is needed to send a code |
 | adding the same person twice | same route; `freshly_emitted: false` | CIRISServer | **live**: the standing grant already covers every prefix, so nothing is written (`contacts_chat.rs:1775-1778`). The card reads it as `proposed:contacts_add_already` |
-| a code whose key this node does not hold yet | same route; **202** `{reason_id: contacts.awaiting_key_body, key_id, fed_id, converges_on_its_own: true}`, built by `refuse_with(StatusCode::ACCEPTED, …)` — nothing written | CIRISServer (`src/contacts_chat.rs:2499-2512` @ `f2bbb63`) · CIRISClient (the pending row) | **live, both halves.** The client read any 2xx as added (`CIRISApiClient.addContact` decoded the body as a contact; the log said `contact added freshly_emitted=false`, `listContacts` returned 0, `POST /v1/chat` failed 403 `chat.not_a_contact` — CIRISClient#188). Now `AddContactResponse.pending` is "carries a `reason_id`", `AddContactOutcome.PENDING` never shows "added", the code is kept as a `PendingContact` row and POSTed again on a bounded backoff (`ContactsViewModel.startPendingLoop`: 2 s doubling to 60 s, 20 asks, a list refresh wakes or restarts it) until the node answers without a `reason_id` or refuses. **What the node does meanwhile depends on its version:** 0.5.221 (client 0.5.228's pin) wrote nothing and never finished the contact — the re-POST IS the contract there; since **0.5.231** (`pending_contacts`, `contacts_chat.rs:5257` @ `f2bbb63`, CIRISServer#777 still open on the tracker) the node holds the pasted code in memory for 24 h and re-runs the add itself every 10 s once the key is in its directory, so the contact completes with no second request — but a node restart drops that table, so the client's loop stays as the fallback. A pending whose key appears in `GET /v1/contacts` is dropped at the next list read (`settlePendingAgainst`); pinned by `PendingContactTest` and, on a real socket, `PendingContactWireTest` (202 → row → re-POST → 201 → added) |
-| the person-facing copy of the contact refusals (CIRISClient#188 §2, CIRISServer#776) | the bundle's `contacts.*` entries, rendered by `reason_id` | CIRISClient (bundle) · CIRISServer (the English the node emits) | **partly blocked.** `contacts.unknown_fed_id` ("Admit the key first (peering) — an announced-but-unadmitted bookmark…"), `unreachable`, `awaiting_consent`, `consent_not_granted`, `code_commitment_mismatch` and `unresolvable` are plain now (re-synced with the server's #776 rewrite in PR #190; pinned by `ContactCodeWireTest.theFedIdRefusalAndThePendingRowSpeakPlainly`). `contacts.awaiting_key_body` ("…fetched from the mesh…"), `key_pull_unavailable`, `malformed_code`, `prior_rung_incomplete` and `self_contact` are still the server's operator sentence at the pin, and `check_localization_sync.py`'s `server-id-text` REQUIRES the bundle's English to equal what the server emits (a locale translated from a sentence the node does not say is the failure that check exists for) — so they change on the server first and re-sync here, `evidence/blocked_upstream.tsv` row 776. The pending row's own lines (`mobile.contacts_pending_*`, `mobile.contacts_add_pending`) are this repo's and are plain |
-| the add entry point on a populated list (CIRISClient#187) | — (`btn_contacts_add_open`, header) | **CIRISClient** | **live** — a labelled text action (`CirisTextButton` with the invite glyph) in place of the bare dim glyph; same tag, same toggle. Driven with one contact present by `csd-005-people.yaml::add_contact_is_still_offered_with_a_contact_listed` |
-| "That isn't a person's code" | refusal `contacts.unresolvable` (400) | CIRISServer (id) · CIRISClient (copy) | the id is **live** (`contacts_chat.rs:529`); the bundle's copy is still "That identifier does not resolve to a contact." (`en.json:644`). **Ask (CIRISClient card):** "That isn't a person's code. Ask them for their contact code: People › Share my contact code." |
+| a code whose key this node does not hold yet | same route; **202** `{reason_id: contacts.awaiting_key_body, key_id, fed_id, converges_on_its_own: true}`, built by `refuse_with(StatusCode::ACCEPTED, …)` — nothing written | CIRISServer (`src/contacts_chat.rs:2499-2512`) · CIRISClient (the pending row) | **live, both halves.** A 2xx is not an add: after a 202 `listContacts` returns nothing for the code and `POST /v1/chat` fails 403 `chat.not_a_contact`. `AddContactResponse.pending` is "carries a `reason_id`", `AddContactOutcome.PENDING` never shows "added", the code is kept as a `PendingContact` row and POSTed again on a bounded backoff (`ContactsViewModel.startPendingLoop`: 2 s doubling to 60 s, 20 asks, a list refresh wakes or restarts it) until the node answers without a `reason_id` or refuses. **What the node does meanwhile depends on its version:** 0.5.221 writes nothing and never finishes the contact — the re-POST IS the contract there; from **0.5.231** (`pending_contacts`, `contacts_chat.rs:5257`, CIRISServer#777) the node holds the pasted code in memory for 24 h and re-runs the add itself every 10 s once the key is in its directory, so the contact completes with no second request — but a node restart drops that table, so the client's loop stays as the fallback. A pending whose key appears in `GET /v1/contacts` is dropped at the next list read (`settlePendingAgainst`); pinned by `PendingContactTest` and, on a real socket, `PendingContactWireTest` (202 → row → re-POST → 201 → added) |
+| the person-facing copy of the contact refusals (CIRISClient#188 §2, CIRISServer#776) | the bundle's `contacts.*` entries, rendered by `reason_id` | CIRISClient (bundle) · CIRISServer (the English the node emits) | **partly blocked.** `contacts.unknown_fed_id` ("Admit the key first (peering) — an announced-but-unadmitted bookmark…"), `unreachable`, `awaiting_consent`, `consent_not_granted`, `code_commitment_mismatch` and `unresolvable` are plain (they match the server's wording, CIRISServer#776; pinned by `ContactCodeWireTest.theFedIdRefusalAndThePendingRowSpeakPlainly`). `contacts.awaiting_key_body` ("…fetched from the mesh…"), `key_pull_unavailable`, `malformed_code`, `prior_rung_incomplete` and `self_contact` are the server's operator sentence at the pin, and `check_localization_sync.py`'s `server-id-text` REQUIRES the bundle's English to equal what the server emits (a locale translated from a sentence the node does not say is the failure that check exists for) — so they change on the server first and re-sync here, `evidence/blocked_upstream.tsv` row 776. The pending row's own lines (`mobile.contacts_pending_*`, `mobile.contacts_add_pending`) are this repo's and are plain |
+| the add entry point on a populated list (CIRISClient#187) | — (`btn_contacts_add_open`, header) | **CIRISClient** | **live** — a labelled text action (`CirisTextButton` with the invite glyph). Driven with one contact present by `csd-005-people.yaml::add_contact_is_still_offered_with_a_contact_listed` |
+| "That isn't a person's code" | refusal `contacts.unresolvable` (400) | CIRISServer (id) · CIRISClient (copy) | the id is **live** (`contacts_chat.rs:529`); the bundle's copy is "That identifier does not resolve to a contact." (`en.json:644`). **Ask (CIRISClient card):** "That isn't a person's code. Ask them for their contact code: People › Share my contact code." |
 | a code that does not decode | refusal `contacts.malformed_code` (400) | CIRISServer | live (`contacts_chat.rs:520`); bundle key present |
 | a fed-ID this directory does not know | refusal `contacts.unknown_fed_id` (404) | CIRISServer | live; the bundle's copy says "Admit the key first (peering)". With codes available, the node's own detail is the better steer: "If they handed you a CODE, paste that instead" (`contacts_chat.rs:488-491`). **Ask (CIRISClient card):** point at the contact code, as for `unresolvable` |
-| a pasted code on a separate node | same route, end to end | CIRISServer | **built, unreleased** (0.5.218, CIRISServer#673 still open): readable on `origin/integ/0.5.218` — `AddContactRequest.key_id` takes a fedcode and resolves it through `ciris_edge::contact::resolve` (`src/contacts_chat.rs`). Ships with 0.5.218 |
-| remove a contact | `DELETE /v1/contacts/{key_id}`, signed by the person, never the node; the response lists `remaining_grants` | CIRISServer | **built, unreleased** (0.5.218, CIRISServer#657 still open; readable on `origin/integ/0.5.218`, `src/contacts_chat.rs` router `"/v1/contacts/{key_id}"` → `remove_contact`). The client side is live (PR #115): `btn_receipt_act_remove_{keyId}` on the receipt sheet behind a ConfirmSheet (`contacts_remove_confirm` / `contacts_remove_cancel`), at the node URL (`ConsentWithdrawApi`). **Grants the node wrote before the person re-signed them cannot be withdrawn and stay live.** Each one in `remaining_grants` renders as a row in `contacts_remove_remaining` reading "Still active: written by this node before you signed your contacts, so it can't be withdrawn here", and the contact is NOT reported as removed while any remain; `contacts_remove_done` says "Removed" only when `remaining_grants` is empty. A node without the route (bare 404) shows `contacts_remove_unsupported` |
-| scan a code | `QrScanAction` primitive, `btn_scan_contact_code` | CIRISClient | **live** (PR #99): `ui/primitives/QrScanAction.kt`; it fills `input_contacts_add_key` and never submits. Paste does not depend on it |
-| the grant's envelope on the list route | `GET /v1/contacts` → `grant` (built by `peer.rs::grant_receipt`) | CIRISServer | **live since 0.5.217** (#616 closed); `src/contacts_chat.rs:1704-1712` on `main`, `:1754` on `integ/0.5.218` |
+| a pasted code on a separate node | same route, end to end | CIRISServer | **0.5.218**: `AddContactRequest.key_id` takes a fedcode and resolves it through `ciris_edge::contact::resolve` (`src/contacts_chat.rs`) |
+| remove a contact | `DELETE /v1/contacts/{key_id}`, signed by the person, never the node; the response lists `remaining_grants` | CIRISServer | **0.5.218** (`src/contacts_chat.rs` router `"/v1/contacts/{key_id}"` → `remove_contact`). The client side is live: `btn_receipt_act_remove_{keyId}` on the receipt sheet behind a ConfirmSheet (`contacts_remove_confirm` / `contacts_remove_cancel`), at the node URL (`ConsentWithdrawApi`). **Grants the node wrote before the person re-signed them cannot be withdrawn and stay live.** Each one in `remaining_grants` renders as a row in `contacts_remove_remaining` reading "Still active: written by this node before you signed your contacts, so it can't be withdrawn here", and the contact is NOT reported as removed while any remain; `contacts_remove_done` says "Removed" only when `remaining_grants` is empty. A node without the route (bare 404) shows `contacts_remove_unsupported` |
+| scan a code | `QrScanAction` primitive, `btn_scan_contact_code` | CIRISClient | **live**: `ui/primitives/QrScanAction.kt`; it fills `input_contacts_add_key` and never submits. Paste does not depend on it |
+| the grant's envelope on the list route | `GET /v1/contacts` → `grant` (built by `peer.rs::grant_receipt`) | CIRISServer | **live since 0.5.217**; `src/contacts_chat.rs:1704-1712` |
 | reading that envelope into the sheet | — | **CIRISClient** | **live** — `Contact.kt` decodes `grant` and `PeopleSupport.contactReceipt` renders all five facts from it (§2); a grant-less row says "This node did not send this" for the attester, the scope and the rule, never a guess |
-| an invitation to talk (0.5.218) | `GET /v1/self/invites` at the node URL — the pair-room rows (`is_pair_room`, `group_id` with the `chat:pair:v1:` prefix) | CIRISServer (`src/membership_invites.rs::inbox` @ `53d1ffb5`) | **0.5.218, called** — read after every contact list (`ContactsViewModel.refreshPairInvites`), keyed by contact. A node without the route (bare 404) means "no invitations" and the list still shows; any other failure is logged and the rows stay as they are. Read through CSD-106's ONE inbox model and client method (`InviteInbox` / `InboxInvite`, `listMyInvites`), narrowed by `InviteInbox.pairRooms` (`PairRoomInvitationTest`) |
-| accept it | `POST /v1/chat {key_id}` (CSD-091) | CIRISServer (`src/contacts_chat.rs::start_chat`, step 1) | **0.5.218, called** — the person's own `POST /v1/chat` for that contact IS their consent to that pair room (the maintainer's ruling, `pair_intents.rs`); it accepts only an invitation whose proposer resolves to that contact. Reached only through the accept ConfirmSheet |
+| an invitation to talk (0.5.218) | `GET /v1/self/invites` at the node URL — the pair-room rows (`is_pair_room`, `group_id` with the `chat:pair:v1:` prefix) | CIRISServer (`src/membership_invites.rs::inbox`) | **0.5.218, called** — read after every contact list (`ContactsViewModel.refreshPairInvites`), keyed by contact. A node without the route (bare 404) means "no invitations" and the list still shows; any other failure is logged and the rows stay as they are. Read through CSD-106's ONE inbox model and client method (`InviteInbox` / `InboxInvite`, `listMyInvites`), narrowed by `InviteInbox.pairRooms` (`PairRoomInvitationTest`) |
+| accept it | `POST /v1/chat {key_id}` (CSD-091) | CIRISServer (`src/contacts_chat.rs::start_chat`, step 1) | **0.5.218, called** — the person's own `POST /v1/chat` for that contact IS their consent to that pair room (`pair_intents.rs`); it accepts only an invitation whose proposer resolves to that contact. Reached only through the accept ConfirmSheet |
 | decline it | `POST /v1/self/invites/{proposal_id}/decline` at the node URL | CIRISServer (`src/membership_invites.rs::answer`) | **0.5.218, called** — signed with the person's own pen; final for that invitation; the server forgets the person's standing request for that room. **Two doors on purpose, one client method (`declineInvite`):** pair-room invitations (one contact asking to talk) are declined here on that contact's row, beside Accept; group invitations (households, communities) are declined on the hubs' inbox (CSD-106). Recorded as a deliberate duplicate in `packaging/csd_routes_baseline.json`. Refusals by id (`membership.invite_expired`, `membership.already_answered`, …) |
-| check a contact's key in person (CSD-104's ceremony from a People row) | `GET /v1/federation/peers/{key_id}/sas` over (my identity key, their identity key) | CIRISServer | **blocked: CIRISServer#683** (open). The node computes the code over its OWN node key and the other side's PERSON key, so two honest people never see the same code. No control is offered on the row until it lands; when it does, the row gets a control that sets `Screen.NetworkPeerDetail(contact.keyId)` — one line in `CIRISApp.kt`, no copy of that screen (CSD-104 §2) |
+| check a contact's key in person (CSD-104's ceremony from a People row) | `GET /v1/federation/peers/{key_id}/sas` over (my identity key, their identity key) | CIRISServer | **blocked: CIRISServer#683** (open). The node computes the code over its OWN node key and the other side's PERSON key, so two honest people never see the same code. No control is offered on the row while it is open; the row's control, once offered, sets `Screen.NetworkPeerDetail(contact.keyId)` — one line in `CIRISApp.kt`, no copy of that screen (CSD-104 §2) |
 
 ## 4. Flow (how)
 
@@ -217,7 +211,7 @@ it in.
 
 With a contact already listed, the add entry point is still there: the header's
 `btn_contacts_add_open` is visible over the populated list, and clicking it
-opens the add card (CIRISClient#187).
+opens the add card.
 
 ```yaml
 expect:
@@ -280,22 +274,19 @@ again. On a fresh node with no contacts → `card_contacts_add` and no
 
 ## 5. QA plan
 
-**`testable`** since the five-platform run 36775704425 (2026-09-30, `flows/matrix-0.5.225` at efdac2a2, node v0.5.217): the flow (`testing/flows/csd-005-people.yaml`, floor `>=0.5.225`, `fixture: two_node`) passed on all five legs — Linux, macOS and Windows desktop, the Android emulator and the iOS simulator. What follows is how it got there. Linux desktop leg run locally the way `five-platform-live-qa.yml` runs it (2026-09-29, candidate 0.5.225, node v0.5.217, `--flows testing/flows`, the two-node fixture): **11/12 passed, 1 skipped** — the list, the seeded row with its trust chip and hamburger, the five-fact receipt and its close, the empty search and its clearing, the add card, the node-code refusal by name, and the code card from the header; `a_scan_is_offered_where_there_is_a_camera` skipped as designed (desktop has no `btn_scan_contact_code`). The matrix run of the same day (36588619656) failed this flow on every desktop leg for csd-092's open contact-code card, which now closes itself (`cleanup:`), and its fixture waited only for the peer's owner key, not the binding (`reachable_nodes`, CIRISServer#699) — both fixed. Not yet run on the other four legs. On the second matrix run (36600766576) it passed 11/12 on Linux and macOS (the scan step skipped, no camera) and could not start on Windows (the fixture's console crash, fixed in the gate); its last steps left the add card open with a refusal in it, which on macOS's shorter window pushed the list below the fold for csd_006 — the flow's `cleanup:` now clears the refusal and closes the card (`when:` guards the header toggle).
+**`testable`**: the flow (`testing/flows/csd-005-people.yaml`, floor `>=0.5.225`, `fixture: two_node`) passes on all five legs of five-platform run 36775704425 (node v0.5.217) — Linux, macOS and Windows desktop, the Android emulator and the iOS simulator. On desktop `a_scan_is_offered_where_there_is_a_camera` skips by design (no camera, so no `btn_scan_contact_code`). The fixture waits for the peer's binding, not only its owner key (`reachable_nodes`, CIRISServer#699). The flow's `cleanup:` closes csd-092's contact-code card, clears any refusal and closes the add card (`when:` guards the header toggle), so on a short window the list is not pushed below the fold for csd_006.
 
 **Platforms.** All five. The Contacts entry screen is what CIRISAgent's
 five-platform gate leans on; no tag it drives has changed.
 
 **An invitation to talk is pinned below the flow** (0.5.218): showing one needs a second person who opened a chat with the leg's person first, which the two-node fixture does not stage yet, so the row flag, the matching by room id, the 0.5.217 404 and the decline are pinned in `PairRoomInvitationTest` and on the wire in `Server218ChatEvictWireTest`. Not run on any leg.
 
-**The pending row is pinned below the flow too** (CIRISClient#188): a 202 needs a v3 code whose key body the leg's node does not hold, and the two-node fixture waits for the peer's key to cross BEFORE it adds (that is the point of the fixture), so the 202 → pending → re-POST → 201 path is pinned on a real socket in `PendingContactWireTest` (the server's exact 202 body shape) and the never-"added" rule, the backoff schedule, the bound, the refusal arm, the drop-on-list-read and the session clear in `PendingContactTest`. The header action with a contact present IS driven on the matrix (`add_contact_is_still_offered_with_a_contact_listed`).
+**The pending row is pinned below the flow too**: a 202 needs a v3 code whose key body the leg's node does not hold, and the two-node fixture waits for the peer's key to cross BEFORE it adds (that is the point of the fixture), so the 202 → pending → re-POST → 201 path is pinned on a real socket in `PendingContactWireTest` (the server's exact 202 body shape) and the never-"added" rule, the backoff schedule, the bound, the refusal arm, the drop-on-list-read and the session clear in `PendingContactTest`. The header action with a contact present IS driven on the matrix (`add_contact_is_still_offered_with_a_contact_listed`).
 
 **Not tested here.** The long-press gesture (no `/long-press` endpoint); the
 hamburger is the drivable equivalent. The camera half of the scan: it needs the
 QrScanAction test double, and until that exists the paste path is the tested
-path. The removal end to end and the pasted code from another node, until
-0.5.218 is released (the flow's node floor). The `input_contact_code` tag is
+path. The removal end to end and the pasted code from another node: both need
+ciris-server >= 0.5.218 on the fixture's nodes. The `input_contact_code` tag is
 deliberately NOT minted: the field already exists as `input_contacts_add_key`,
 and renaming it would break the tag the five-platform gate drives.
-
-**Stated limit.** The flow is written against real tags with a version floor;
-it has not yet run on the matrix, so this card stays at `building`.

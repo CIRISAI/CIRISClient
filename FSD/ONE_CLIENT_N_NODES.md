@@ -100,8 +100,7 @@ retires in favor of merge-based pulls, recorded there.
 
 - Producer: this branch. Consumer: CIRISServer and CIRISAgent (as future wheel
   consumers), every client PR. Check: `packaging/check_vendoring.py`
-  (reworked: tracked-files-only digest, per-delta hashes so a declared file
-  cannot drift silently — the two Codex P1s against it).
+  (a tracked-files-only digest, so no file can drift silently).
 
 ## §4 The capability lattice **[proposed]**
 
@@ -150,7 +149,7 @@ per the `BudgetCapability` pattern) — and says it is guessing.
   every screen; the compat matrix (§6); CIRISConformance's client lane.
   Check: `nav-gate-registry` extended (no dead entries, no ungated surface);
   a new `capability-coverage` gate — every registry entry's operations appear
-  in the spec the node serves, **[unimplemented]** until §5 lands.
+  in the spec the node serves, **[unimplemented]** until §5 is built.
 
 **Why this is the rapid-release mechanism**: with degradation as every
 surface's default state, client cadence decouples from node rollout — a
@@ -219,8 +218,7 @@ Hardened, in the order pieces retire each other:
 1. **Structural validation as a merge gate**: placeholder integrity against
    the English source, plural forms, no raw keys, **value-level** cross-mirror
    comparison, and a non-empty language manifest checked against
-   `SUPPORTED_LANGUAGES`. Makes the #1086 class unmergeable. (Absorbs three
-   Codex findings against `check_localization_sync.py`.)
+   `SUPPORTED_LANGUAGES`. Makes the #1086 class unmergeable.
 2. **Fail-closed intake**: a key entering via §8 without all 29 translations
    fails `locale-parity`. Pre-translation may be machine-generated against the
    glossary; *quality review* is threshold-triggered — but *presence* is
@@ -283,7 +281,7 @@ acknowledged it. **(6)** The release carries the signed `ciris-capability/v1`
   drift) and their numbers recorded in the evidence registry.
   *Accept when*: the merged tree builds (one artifact — the two-flavor form of
   this criterion was retired with the flavor, CIRISServer#479); the gate board runs;
-  every Codex finding on PR #1 is fixed or carries an evidence row saying why
+  every review finding on PR #1 is fixed or carries an evidence row saying why
   not.
 - **Phase 1 — consumers flip**: Server and Agent depend on `ciris-client`
   (one distribution — the `[node|agent]` extras were never cut, because the
@@ -325,8 +323,8 @@ one needs. Do not invert it.
 
 - CIRISConformance#86 — the parent FSD (requisite classes, client lane,
   strict-xfail machine, `ciris-capability/v1`).
-- CIRISClient PR #1 — the extraction and packaging model; its Codex review
-  findings are §3/§7 inputs.
+- CIRISClient PR #1 — the extraction and packaging model; its review findings
+  are §3/§7 inputs.
 - CIRISServer#451 (edge-v18 umbrella: video, voting substrate, private
   groups), #464 (contacts + user chat + the 2.9.28 re-vendor).
 - Prior art the lattice is checked against: Matrix `/versions` +

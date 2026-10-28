@@ -119,11 +119,11 @@ three states off `proposed:`, which is the whole reason to write this file at
 | value | endpoint | owner | state |
 |---|---|---|---|
 | the ladder | `GET /v1/system/verify-status` | CIRISServer | live (`src/health.rs:683`) |
-| substrate fabric versions | `GET /v1/system/fabric` (best-effort, never gates the page, `TrustPage.kt:119`) | **CIRISAgent** (`routes/system/fabric.py:74`) | live, **agent-only** — the owner was wrong: CIRISServer has zero `system/fabric` literals, and it is not in `NODE_OWNED_PREFIXES` either, so a node build never answers it |
+| substrate fabric versions | `GET /v1/system/fabric` (best-effort, never gates the page, `TrustPage.kt:119`) | **CIRISAgent** (`routes/system/fabric.py:74`) | live, **agent-only** — CIRISServer has zero `system/fabric` literals, and it is not in `NODE_OWNED_PREFIXES` either, so a node build never answers it |
 | the mobile device attestation (Play Integrity / App Attest) | `GET /v1/setup/verify-status` | **CIRISAgent** (`routes/setup/attestation.py:292` on `main`) | live, and agent-only — correctly gated off on a node (`TrustPage.kt:87, 130`) |
 | Android: Play Integrity nonce → verify → report failure | `GET /v1/setup/play-integrity/nonce`, `POST …/verify`, `POST …/failed` | CIRISAgent `routes/setup/attestation.py:539, 610, 653` | **live** — `CIRISApiClient.getPlayIntegrityNonce` / `verifyPlayIntegrity` / `reportPlayIntegrityFailed` (`CIRISApiClient.kt:12108, 12163, 12235`), driven by `androidApp/.../integrity/PlayIntegrityManager.kt:41, 96, 80`. The token then rides `GET /v1/setup/verify-status?mode=full` (`CIRISApiClient.kt:7138`) |
 | iOS: App Attest nonce → verify, and its status | `GET /v1/setup/app-attest/nonce`, `POST /v1/setup/app-attest/verify`, `GET /v1/setup/attestation-status` | CIRISAgent `routes/setup/attestation.py:364, 437, 331` | live, **not called — there is no iOS half in the client at all**, not dead code: zero `app-attest` or `AppAttest` call sites in `shared/` (the only `DCAppAttest` mention is a doc comment, `models/federation/SelfLogin.kt:44`). An iPhone therefore never climbs the device rung Android can |
-| (not this card) emit a CEG attestation | `POST /v1/auth/attestation` | CIRISServer `src/auth/attestation.rs:176` — a local/federation-tier attestation EMIT (module doc `:1-16`), not a device attestation | live, **correctly not called.** The route-coverage report filed it here as "device attestation to the node"; it is not. The client used to GET it for verify status and took a 405 every 30 s (`CIRISApiClient.kt:7141-7147` records the fix); the read is `/v1/system/verify-status`, row one |
+| (not this card) emit a CEG attestation | `POST /v1/auth/attestation` | CIRISServer `src/auth/attestation.rs:176` — a local/federation-tier attestation EMIT (module doc `:1-16`), not a device attestation | live, **correctly not called.** It is not a "device attestation to the node", and it is not a read: verify status is `/v1/system/verify-status`, row one (`CIRISApiClient.kt:7141-7147`) |
 | which family each rung IS | — | CIRISVerify | **both are emitted** — `attestation:license_validity` at `ciris-verify-core/src/federation_provenance.rs:107` (bundle field `attest_bundle.rs:160-162`), `provenance:build_manifest:{target}` via `BuildManifest::to_attestation_entries`. And there is no upstream "L4" to bind to: **CIRISVerify dropped the L1–L5 numbering from its wire strings in v3.7.0** (`docs/THREAT_MODEL.md:761` — "the ladder concept … now it lives only in consumer-side policy, where it belongs"). |
 
 **The last row is why the five rungs are consumer-side policy, and the CSD must
@@ -144,10 +144,10 @@ static (`TrustPage.kt:96-101`).
 
 ### A superseded manifest (design note, from CIRISPersist#1029)
 
-**What happened.** Persist registered CanonicalBuild manifests that carried the
-wrong wheel hash: 20 rows across aarch64-linux and windows, for 53.0.1 through
-53.1.8. Before CIRISVerify 20.1.0, a v29 wheel passed as v53.1.8. The fix
-re-posts the corrected rows. CIRISRegistry upserts on
+**The case.** A registered CanonicalBuild manifest can carry the wrong wheel
+hash: CIRISPersist#1029 is 20 rows across aarch64-linux and windows, for 53.0.1
+through 53.1.8, under which a verifier older than CIRISVerify 20.1.0 passes a
+v29 wheel as v53.1.8. The remedy re-posts the corrected rows. CIRISRegistry upserts on
 `(project, version, target)` and keeps no history, so the re-post replaces the
 bad row silently. CIRISRegistry#144 asks for append-only history and a
 `superseded: [{previous_binary_hash, previous_manifest_hash, superseded_at}]`
@@ -167,7 +167,7 @@ that member exists:**
   result older than `superseded_at` reads "Checked against a manifest since
   replaced. Re-run." It is never shown as a pass or a fail.
 
-**What the card does today.** Nothing: the node's `verify-status` carries no
+**What the card does.** Nothing: the node's `verify-status` carries no
 manifest identity, and the registry carries no history. So this is a design
 note, not a `shows:` row. The same three readings apply to CSD-087's lookup
 when its `build:registered:{target}` record grows the member. **It is not a
@@ -200,7 +200,7 @@ shows that `LayerHubScreen` already has a section called Trust meaning
 `trust:{job}:{version}`, in the same tab, so today the Rules tab of every circle
 contains two different things called Trust and neither is the one about people.
 
-## Review, 2026-09-27 (identity group)
+## Known defects
 
 * `GET /v1/system/verify-status` is served by the NODE (`health.rs:612`) and
   proxied by the agent; `/v1/setup/verify-status` and `/v1/system/fabric` are
@@ -210,7 +210,6 @@ contains two different things called Trust and neither is the one about people.
   failed (`TrustPage.kt:577, 698, 1703`). The node's own `checks{verify_loaded,
   key_registered, audit_chain, hardware_backed}` and `role` are dropped.
 * **Errors swallowed.** `getVerifyStatus` catches everything and returns
-  `loaded=false`, so the page's error state never fires. Both open; they are the
-  next change on this card.
+  `loaded=false`, so the page's error state never fires. Both are open.
 * Node side: hardware type is hard-coded `SOFTWARE_ONLY` (0.5.218
   `compose.rs:1235`), so `max_level` never exceeds 2.

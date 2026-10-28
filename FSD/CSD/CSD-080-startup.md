@@ -36,9 +36,9 @@ exit: "Login; or Setup directly under the HA addon"
 must say how a person arrives, since no hop can
 (`check_csd_v3.py`, `SURFACE_KEYS` and the `flow_only` branch).
 
-**It got there the hard way, and the history is worth keeping.** These eight
-cards first wrote `screen_class:` — a key the checker did not read, so
-`surface.get("screen")` returned `None` and both reachability branches were
+**Why an unknown key is a load error.** A key the checker does not read is
+silently ignored: with `screen_class:` in place of `screen:`,
+`surface.get("screen")` returns `None` and both reachability branches are
 skipped. Measured on CSD-035, a genuinely placed card, one line changed per run:
 
 ```
@@ -50,7 +50,7 @@ screen: Telemetry          ->  [FAIL] surface: 'nodes' derives 'nav_epistemic_no
 ```
 
 A wrong screen passed, and a fat-finger was indistinguishable from intent —
-AGENTS.md's loud-failure rule at the key-name layer. `SURFACE_KEYS` now refuses
+AGENTS.md's loud-failure rule at the key-name layer. `SURFACE_KEYS` refuses
 any key it does not read, so all three of those greens are red.
 
 **There is no nav hop, and that is the defining property of this card.**
@@ -60,7 +60,7 @@ any key it does not read, so all three of those greens are red.
 The gate names the same set: `Startup` is in `FLOW_ONLY`
 (`testing/gate/screen_atlas.py:42`) and in `docs/atlas.json`'s `flow_only`.
 
-CSD/3 §2.0 assumed every surface was in the sidebar and had no shape for a
+CSD/3 §2.0 assumes every surface is in the sidebar and has no shape for a
 pre-shell one. `flow_only:` is that shape, and all eight cards in the
 CSD-080..087 range carry it. What it still cannot be cross-checked against is in
 §5.
@@ -114,7 +114,7 @@ fields:
 phase word, the elapsed counter, the prep lights, the service lights and the
 service count are all untagged, so every value this screen exists to show is
 `proposed:`. That is the honest state and it is also the gap: `screen_startup`
-was added because "/tree is empty" was indistinguishable from "nothing
+exists because "/tree is empty" is indistinguishable from "nothing
 composed", and the same argument applies one level down — a harness can today
 assert that Startup composed, and nothing about what it says.
 
@@ -136,8 +136,8 @@ element that exists in one and not the other.
 |---|---|---|---|
 | liveness + service map + `data.agent.{folded,reachable}` | `GET /v1/system/health` | CIRISServer (`src/health.rs`, 0.5.168+) | live |
 | `ClientMode` (NODE / AGENT / undetermined) | derived from the above, `models/ClientMode.kt` | CIRISClient | live |
-| the node's own health, never enriched | `GET /v1/health` | CIRISServer `src/health.rs:585` — deliberately node-only (`:573-575`) and the boot drift-witness for the contract hashes it serves (`:563-565`) | live, **not called, correctly**: it cannot answer the folded question, which is why `getNodeHealth` moved to `/v1/system/health` (`CIRISApiClient.kt:6098-6103`, CIRISServer#390). The comments that said Startup probes `/v1/health` (`CIRISApp.kt`, the node-vs-agent gate; `StartupViewModel.kt`, `clientMode` and `setClientMode`) were corrected in the setup review to name `/v1/system/health` |
-| boot progress, as the agent reports it | `GET /v1/system/startup-status` | CIRISAgent `routes/system/health.py:947` | live, **not called** — Startup counts services from the backend's console lines (`[SERVICE n/m]`, `StartupViewModel.kt:180`), from `service_status.json` on iOS with `/v1/telemetry/unified` as its fallback (`PythonRuntime.ios.kt:230, 313-318`), and as one pseudo-service on a node (`PythonRuntime.desktop.kt:683-689`). `StartupViewModel.startFastAPIServer`'s KDoc said this route was polled; corrected in the setup review. `PythonRuntime.ios.kt:313` still says so — platform source, reported. It is the agent's own answer to "how far along am I" |
+| the node's own health, never enriched | `GET /v1/health` | CIRISServer `src/health.rs:585` — deliberately node-only (`:573-575`) and the boot drift-witness for the contract hashes it serves (`:563-565`) | live, **not called, correctly**: it cannot answer the folded question, which is why `getNodeHealth` moved to `/v1/system/health` (`CIRISApiClient.kt:6098-6103`, CIRISServer#390). The comments on the node-vs-agent gate (`CIRISApp.kt`) and on `clientMode` / `setClientMode` (`StartupViewModel.kt`) name `/v1/system/health` |
+| boot progress, as the agent reports it | `GET /v1/system/startup-status` | CIRISAgent `routes/system/health.py:947` | live, **not called** — Startup counts services from the backend's console lines (`[SERVICE n/m]`, `StartupViewModel.kt:180`), from `service_status.json` on iOS with `/v1/telemetry/unified` as its fallback (`PythonRuntime.ios.kt:230, 313-318`), and as one pseudo-service on a node (`PythonRuntime.desktop.kt:683-689`). `PythonRuntime.ios.kt:313`'s comment says this route is polled; it is not (platform source, reported). It is the agent's own answer to "how far along am I" |
 | is setup still required | `GET /v1/setup/status` | **both**: CIRISAgent `routes/setup/status.py:45` and CIRISServer `src/auth/bootstrap.rs` | live on the agent; **loopback-only on the node** (`src/auth/loopback.rs:44`, 403 off-host) |
 | "the node answers, so setup is done" | node reachability probe on `:4243` | CIRISClient | live — `CIRISApp.kt:5051-5078` stops asking `:8080` after the run-without-AI hand-off (CIRISClient#48, **CLOSED**) |
 
@@ -198,9 +198,9 @@ addon) without a further press.
 Startup and nothing about what it says); the prep and service lights (untagged);
 the language rotation; the HA-addon branch (no fixture). Every `proposed:` tag
 above is a one-line `.testable(...)` away and none of them is asserted until
-they land.
+it is tagged.
 
-**What is still open, and it is not in this document.** `flow_only:` now has a
+**What is still open, and it is not in this document.** `flow_only:` has a
 second source that disagrees with it. `EpistemicNav.kt:395` lists five ids —
 `startup`, `login`, `setup`, `server-connection`, `accord-ceremony` — and its
 KDoc calls it "a single authoritative inventory for the no-orphans test in

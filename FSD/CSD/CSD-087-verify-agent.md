@@ -1,7 +1,7 @@
 # CSD-087 — Verify an agent build (the surface shipped ahead of its API)
 
 **CSD**: CSD-087 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, B10 (a flow-only screen)
-**Overlaps**: reached only from ManageNodes, so it touches the node-identity area; raised with that card's author before writing
+**Overlaps**: reached only from ManageNodes, so it touches the node-identity area
 **Flow**: `testing/flows/drafts/csd-087-verify-agent.yaml` (floor `>=0.5.224`); `input_verify_hash` is not drivable (see §5), so it drives the refusal only
 
 ```yaml csd:stage
@@ -123,12 +123,10 @@ the code states it three times over — `CapabilityState`, `LookupResult` and
 `unknown_capabilities_are_null_not_an_empty_list` (`src/conformance.rs:969-978`)
 holds it, so the client's UNDETERMINED-vs-ABSENT split is safe to assert.
 
-**The one upstream ask, with the right number.** **CIRISServer#669** — "`registry:lookup`
-can be advertised on the conformance wire and cannot be served". **CIRISServer#499
-is CLOSED**: it was the declaration, and it shipped as the `capabilities` field in
-the row above. The previous text ("the route itself has no owner yet") was written
-before #669 existed.
-Until then every node on earth renders `card_verify_capability` and the form
+**The one upstream ask.** **CIRISServer#669** — "`registry:lookup`
+can be advertised on the conformance wire and cannot be served". The declaration
+(CIRISServer#499, closed) is the `capabilities` field in the row above.
+Until the route is served, every node renders `card_verify_capability` and the form
 never appears — which is the designed behaviour, not a bug, and is why this CSD
 is `sketched` rather than blocked.
 
@@ -192,13 +190,12 @@ without a node at all, and nothing does that today.
 `client/tools/check_ui_drivable.py --list` names it: it is
 `Modifier.testable("input_verify_hash")` with no `rememberInputSinks` anywhere
 in `VerifyAgentScreen.kt`. The fix is `CirisTextField`
-(`ui/primitives/Controls.kt:91`), which declares its own sink. Same defect as
-CSD-084 and CSD-085 — three flow-only screens, one missing line each, and the
-tool has all three in its baseline of 199.
+(`ui/primitives/Controls.kt:91`), which declares its own sink — the same defect
+as CSD-085's three fields, one missing line each.
 
-## Review, 2026-09-27 (identity group)
+## Verification
 
-§3 verified: `GET /v1/registry/lookup` has no route on CIRISServer main or
+§3: `GET /v1/registry/lookup` has no route on CIRISServer main or
 `integ/0.5.218` (`registry:lookup` exists only as a token, `mesh_genesis.rs`),
 CIRISServer#669 is open, and the client is gated on the capability. Nothing to
 compare field by field until the route exists.

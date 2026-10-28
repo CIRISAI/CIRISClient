@@ -1,22 +1,12 @@
 # CSD-002 — Environment graph (what this circle has, wants and can lend)
 
-**CSD**: CSD-002 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: CIRISClient#45,
-**rebound** at the circles redesign
+**CSD**: CSD-002 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: CIRISClient#45
 **Flow**: tools/qa_runner/flows/environment_card.yaml — **stale**, see §4
 
 ```yaml csd:stage
 stage: building
 owner: CIRISClient
 ```
-
-> **Rebound, not rewritten-from-nothing.** This CSD was written against the old
-> shell and named `surface: layer-local-community` / `screen: LayerLocalCommunity`
-> — the *hub the card sat on*, because in that shell the environment page was
-> reached from a hub tile. Wave 1 made the surface a card in a tab, and the
-> question a CSD answers ("can you get there and back") is now derived rather
-> than asserted. So the document is rebound to the surface it was always about,
-> and its mission has had to grow: an entry that can be left is table stakes,
-> and it is not what this screen is for.
 
 ## 1. Mission (why)
 
@@ -104,10 +94,8 @@ what the node actually writes is a graph node in the `environment` scope, not an
 the CSD says so rather than binding `emit` to a reserved prefix it does not
 touch.
 
-**`mesh_config:{key}` is gone from this document.** The previous cut bound
-`mesh_config:{key}` with `{key: environment}` and rendered "Environment — local
-community". That was a claim about a node's declared configuration; this screen
-is about a community's things. Two different objects that shared a word.
+**`mesh_config:{key}` is not bound here.** It is a claim about a node's declared
+configuration; this screen is about a community's things.
 
 ```yaml csd:states
 populated: {tag: "proposed:list_env_items", renders: "the chips with their counts, then one card per item"}
@@ -128,9 +116,7 @@ none is a state.
 
 ## 3. Contracts (who)
 
-Verified against ciris-server `origin/main` at 0.5.217 (2026-09-25) and the
-`~/CIRISAgent` working tree, whose last commit is **2026-08-15** — six weeks
-stale, so the agent rows are "true of that tree".
+Verified against ciris-server 0.5.217 and CIRISAgent `main`.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
@@ -140,33 +126,29 @@ stale, so the agent rows are "true of that tree".
 | context enrichment | `GET /v1/system/adapters/context-enrichment?refresh=true` | CIRISAgent `routes/system/adapters.py:757` | **agent-only, and unguarded.** There is no `nodeSkip` on `getContextEnrichment` (`CIRISApiClient.kt:11112`), so on a node build the call 404s and throws |
 | a Postgres-backed node | all five memory routes | CIRISServer `src/memory_api.rs:1274-1320` | **503 by design** — "memory API requires SQLite backend" |
 
-**This card is placed as though it worked on a node and two-thirds of it does
-not.** `Placement(NavSurface.EnvironmentGraph, Tab.DECISIONS,
-setOf(LOCAL_COMMUNITY))` carries no `agentOnly` flag (`CirclesNav.kt:125`), so
-the node build offers `btn_add_item` and a delete action on every item card
-against routes the node does not mount, and opens the screen with an enrichment
-read that throws.
+**The card is placed on both builds and two-thirds of it is agent-only.**
+`Placement(NavSurface.EnvironmentGraph, Tab.DECISIONS, setOf(LOCAL_COMMUNITY))`
+carries no `agentOnly` flag (`CirclesNav.kt:125`), so the add and delete controls
+and the enrichment read are gated on an attached agent inside the screen (§7).
 
-**Two asks, and they point at different repos:**
+**Two asks:**
 * **CIRISServer** — mount the environment scope's write side
   (`POST /v1/memory/store`, `DELETE /v1/memory/{node_id}`), or say the node's
-  graph is read-only on purpose so the client can hide the controls honestly.
-* **CIRISClient** — `getContextEnrichment` needs a `nodeSkip` guard *that
-  announces itself* rather than one that returns an empty map. CSD-071 §2.1 is
-  the cautionary case: a fabricated empty is worse than a raised error, because
-  it becomes a sentence blaming the reader.
+  graph is read-only on purpose.
+* **CIRISClient** — where `getContextEnrichment` is skipped, the skip must
+  *announce itself* rather than return an empty map. CSD-071 §2.1 is the
+  cautionary case: a fabricated empty is worse than a raised error, because it
+  becomes a sentence blaming the reader.
 
 The Postgres row is a third, quieter state: five routes that answer 503 with a
 specific reason, and a client that will render whatever its `catch` writes.
 
 ## 4. Flow (how)
 
-`tools/qa_runner/flows/environment_card.yaml` is **stale**: it was two steps —
-click the tile on the Local Community hub, then assert back returns to the hub
-rather than `homeTarget`, which CIRISClient#48 established the hard way. Neither
-step exists now. The hub tile is gone; the shell's `btn_nav_back` is the only
-back and the shell owns where it goes, so the bug that flow was written for
-cannot recur in the same shape and the flow asserts a chain nobody walks.
+`tools/qa_runner/flows/environment_card.yaml` is **stale**: its two steps click
+a Local Community hub tile and assert back returns to the hub rather than
+`homeTarget`. There is no hub tile; the shell's `btn_nav_back` is the only back
+and the shell owns where it goes, so the flow asserts a chain nobody walks.
 
 What replaces it, using real tags:
 
@@ -193,9 +175,8 @@ expect:
   count: {of: "enrichment_header_*", min: 1}
 ```
 
-**On a node build the second step is the interesting one and it is not written,**
-because what should happen is that `btn_add_item` is absent (§3) and today it is
-present.
+**On a node build the second step is the interesting one and it is not written:**
+there `btn_add_item` must be absent (§3).
 
 ## 5. QA plan
 
@@ -210,8 +191,7 @@ environment case in any corner.
 4. The enrichment section is absent rather than erroring where no adapter reports.
 
 **Not tested here.**
-* **Acceptance 2**, entirely — the controls are offered on a build that cannot
-  serve them (§3).
+* **Acceptance 2** — no flow asserts the controls are absent on a node build (§4).
 * **All four states** — every tag is `proposed:` (§2).
 * **The 503 Postgres path.** A real second backend, no fixture, and the client's
   rendering of it is whatever the generic `catch` produces.
@@ -219,31 +199,30 @@ environment case in any corner.
   the `environment` scope; whether that projects to the open-call family is the
   substrate's business and is asserted nowhere.
 
-## 7. Review — runtime group (2026-09-27, branch `review/runtime`)
+## 7. Review — runtime group
 
-Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origin/main**. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, all shown red against the old behaviour first.
+Card checked against CIRISAgent `main` and CIRISServer `main`. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`.
 
 **Duplicate pair (EnvironmentInfo ↔ Memory CSD-027): two doors onto one read,
 kept** — see CSD-027 §7. This card is the scoped, circle-facing door and the only
 one that writes.
 
-**Closed here (§3's "wrong-host" rows)**
+**Closed (§3's "wrong-host" rows)**
 - *Writes offered where they cannot succeed.* `btn_add_item` and each item's
-  delete (now `btn_delete_item_<id>`, drivable) are shown only with an agent
+  delete (`btn_delete_item_<id>`, drivable) are shown only with an agent
   attached (`EnvironmentInfoScreenState.agentAttached`, from the probed
   `ClientMode`); the node's memory API is read-only.
 - *Enrichment asked of a bare node.* Not asked without an agent.
-- *Error drawn as empty.* A failed items read became an empty list, "no items".
-  Now `environment_items_error` / `_not_on_this_node`.
+- *Error drawn as empty.* A failed items read renders
+  `environment_items_error` / `_not_on_this_node`, never an empty list.
 
 **Still open**
 - **A denied write looks created.** CIRISAgent answers `POST /v1/memory/store`
   and `DELETE /v1/memory/{id}` with HTTP 200 and `{data:{status:"denied"}}` when
   the write fails (`memory_service.py:84-87`); the client builds the item locally.
-  Needs the client to read `data.status` (next pass) and the agent to use a status
-  code: draft issue in the review report.
+  Needs the client to read `data.status` and the agent to use a status code.
 - `communityShared` is hard-coded `false` (no wire field); `?refresh=true` re-runs
   every enrichment tool per screen load.
-- The Postgres 503 path is still the generic catch.
+- The Postgres 503 path is the generic catch.
 
 **Stage:** building → building.

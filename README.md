@@ -3,18 +3,17 @@
 The CIRIS Kotlin Multiplatform client — the surface where a person meets the
 mesh — and the gates that say whether it is fit to build.
 
-The client source is now **here**, under [`client/`](client/), vendored from
-CIRISAgent with its provenance recorded in
-[`client/VENDORING.md`](client/VENDORING.md). It is built once — one artifact
-that narrows itself against the node it is attached to — and consumed as a
-dependency. CIRISServer and CIRISAgent still carry their own
-copies today; deleting them is what finishes this.
+The client source lives here, under [`client/`](client/); its recorded state is
+the digest in [`client/VENDORING.md`](client/VENDORING.md) §1. It is built once —
+one artifact that narrows itself against the node it is attached to — and
+consumed as a dependency: CIRISServer and CIRISAgent install `ciris-client` and
+carry no copy of the source.
 
 ## Install
 
 ```bash
 pip install ciris-client            # the desktop client for your OS
-pip install ciris-client-wasm       # the browser bundle, on its own (6.8 MiB)
+pip install ciris-client-wasm       # the browser bundle, on its own (7.4 MiB)
 ```
 
 **One artifact per wheel.** PyPI's size limit is per file, so the question is
@@ -22,8 +21,8 @@ never "does the release fit" but "should this consumer download this payload".
 
 | distribution | carries | size | who wants it |
 |---|---|---|---|
-| `ciris-client` | that OS's desktop uber-jar | 63.0% of the limit | anyone launching the desktop client |
-| `ciris-client-wasm` | the WebAssembly browser bundle | 6.8 MiB | CIRISHome, and any node serving the web UI |
+| `ciris-client` | that OS's desktop uber-jar | 67–74% of the limit | anyone launching the desktop client |
+| `ciris-client-wasm` | the WebAssembly browser bundle | 7.4 MiB | CIRISHome, and any node serving the web UI |
 
 `ciris-client` ships one wheel per OS — Linux x86-64, macOS arm64, macOS
 x86-64, Windows x86-64 — because the desktop runtime inside is built per
@@ -48,8 +47,7 @@ ciris_client.locale_bundle()   # -> a directory of en.json + 28 locales + manife
 CIRISServer emits operator messages as `{id, text}`, where `id` is a
 localization key with no Kotlin call site, and its release gates assert those
 ids **resolve** against this bundle — the check that stops an operator reading
-a raw token. Those gates used to read a vendored `client/` tree; once the
-client is a dependency, the bundle lives inside the shipped jar. This extracts
+a raw token. The bundle lives inside the shipped jar; this extracts
 it once, caches it keyed by version and jar digest (`CIRIS_CLIENT_CACHE` to
 choose where, with a fallback if that is unwritable), and refuses to hand back
 a partial bundle — a gate must not read an incomplete extraction as an
@@ -70,7 +68,7 @@ pip install -e ".[readiness]"
 **One client. One distribution. One install.**
 
 ```bash
-pip install ciris-client        # 62.97 MiB, carries the built client
+pip install ciris-client        # carries the built client for this OS
 ```
 
 There is no node flavor and no agent flavor to choose between, because the
@@ -80,11 +78,8 @@ from the node it is attached to, which ones to offer. Install the agent beside
 a node and the same client reveals Interact, Tools, Memory and the agent
 settings on its next probe — nothing to reinstall, nothing to re-pin.
 
-`CIRISBuild.HAS_AGENT` is **deleted** (CIRISServer#479). It survived one
-release as a build ceiling and that was one release too many: a constant
-nothing reads invites the next compile-time branch, which is the thing that
-had to stop being possible. What a user's sidebar depends on is `ClientMode`,
-probed from the node — see
+There is no compile-time agent switch. What a user's sidebar depends on is
+`ClientMode`, probed from the node — see
 [`FSD/ONE_CLIENT_N_NODES.md`](FSD/ONE_CLIENT_N_NODES.md) §4.
 
 ### Asking it things
@@ -92,7 +87,7 @@ probed from the node — see
 ```python
 import ciris_client
 
-ciris_client.__version__            # '0.5.188' — pairs with ciris-server 0.5.188
+ciris_client.__version__            # e.g. '0.5.234'; the compatible server range is in compat/matrix.json
 ciris_client.artifacts()            # [{'kind': 'desktop-uber-jar', 'bytes': …, 'sha256': …}]
 ciris_client.artifact_path('desktop-uber-jar')
 ciris_client.manifest()['vendored_from']   # {'repo': …, 'commit': …}
@@ -103,20 +98,13 @@ version split between the package and the bundles it carries, an artifact built
 for another OS — each raises and says what to do. The one thing it will never do
 is hand back a path to a placeholder.
 
-### The size arithmetic, and why one wheel now fits
+### The size arithmetic
 
-Measured, not estimated. The desktop uber-jar is **66.99 MiB** and the wheel
-carrying it is **66,031,198 bytes — 63.0% of PyPI's 104,857,600-byte limit**,
-with 37.03 MiB of headroom. (104,857,600 is 100 MiB, not 100 MB; the 4.8 MiB
-difference has been the whole remaining margin before now.) ProGuard would cut
-most of the jar and is blocked on ktor 3.x (CIRISServer#379), so treat the size
-as fixed.
-
-Two of those in one wheel — which is what shipping a node build *and* an agent
-build together would have meant — does **not** fit, and that arithmetic is why
-the client shipped as three distributions for a while. Gating the agent surfaces
-at runtime instead removed the second copy rather than the limit: one build, one
-wheel, comfortably inside.
+PyPI's per-file limit is 104,857,600 bytes (100 MiB). The 0.5.234 platform
+wheels are 70.3–77.3 MB, 67–74% of it. ProGuard would cut most of the jar and is
+blocked on ktor 3.x (CIRISServer#379), so treat the size as fixed. Two desktop
+builds in one wheel would not fit, which is one more reason there is one build
+with the agent surfaces gated at runtime.
 
 **Localization is the product and is never cut to save size.** 29 languages are
 29 audiences. If a wheel stops fitting, split a target;
@@ -131,25 +119,21 @@ There is one Gradle build and one artifact:
 ./gradlew -p client :desktopApp:packageUberJarForCurrentOS
 ```
 
-`-PhasAgent` existed for two days and is gone with the constant it selected.
-It was a real improvement on a hand-edited `const val` — it gave the fork a
-name and made both sides buildable — but it kept the premise that the answer
-is a property of the artifact, and that premise is the bug CIRISServer#479
-reported: a node that gains a brain keeps the node UX until someone
-reinstalls. `stage_artifacts.py` still takes `--flavor`, but only to record
+Which surfaces are offered is never a property of the artifact: a node that
+gains a brain shows the agent surfaces on the next probe, with nothing to
+reinstall (CIRISServer#479). `stage_artifacts.py` takes `--flavor` only to record
 which build produced the staged jar.
 
-`:shared:generateBuildFlavor` now writes exactly one file, `ClientVersion.kt`.
+`:shared:generateBuildFlavor` writes exactly one file, `ClientVersion.kt`.
 `CLIENT_VERSION` comes from the repo-root `VERSION` file — the same file the
 wheel version comes from. So `ciris-client==X` pairs with `ciris-server==X`,
 and the version-mismatch banner cannot disagree with the package that shipped
-it. Full rationale, including why generating it does not re-open
-CIRISServer#272: [`client/VENDORING.md`](client/VENDORING.md) §4.
+it. Rationale: [`client/VENDORING.md`](client/VENDORING.md) §4.
 
 ### Localization: three lanes, one direction
 
 This repo owns the localization corpus as well as the client — 29 languages,
-3,853 keys, four byte-identical runtime bundles, and the glossaries that decide
+5,726 keys, four byte-identical runtime bundles, and the glossaries that decide
 what the words are.
 
 ```
@@ -190,26 +174,15 @@ Three things are worth knowing before reading the code:
   `draft` / `machine_reviewed` — machine-translated, MQM-reviewed by a judge of a
   different model family than the writer. There is no native-reviewer pipeline.
 
-### Migrating off a vendored copy
+### Consumers
 
-For each of CIRISServer and CIRISAgent:
-
-1. Add `ciris-client` to requirements, pinned to the matching `ciris-server`
-   version. Both consumers install the same thing.
-2. Replace reads of the vendored tree with `ciris_client.artifact_path(...)`.
-3. Delete `client/`, and with it the hand-edited `CLIENT_VERSION`, the
-   localization-mirror duplication, and the numbered `NODE VENDOR DRIFT`
-   markers that exist only because a re-vendor can silently revert local work.
-4. Keep the substrate where it belongs: `androidApp/wheels/`, jniLibs, the iOS
-   Resources tree and the xcframeworks are `ciris-server` and `ciris-verify`
-   release artifacts and are **not** in this repo
-   ([`client/VENDORING.md`](client/VENDORING.md) §2). A device build re-hydrates
-   them from those releases.
-
-**Until step 3 happens on both sides, this repo is a third tree** — the cost
-`AGENTS.md` warned about, worth paying only because it ends. The obligation is a
-row in [`evidence/blocked_upstream.tsv`](evidence/blocked_upstream.tsv) with a
-scannable predicate, not a note in someone's memory.
+CIRISServer and CIRISAgent depend on `ciris-client` and resolve artifacts through
+`ciris_client.artifact_path(...)`; neither carries a `client/` tree. The
+substrate stays where it belongs: `androidApp/wheels/`, jniLibs, the iOS
+Resources tree and the xcframeworks are `ciris-server` and `ciris-verify` release
+artifacts and are **not** in this repo
+([`client/VENDORING.md`](client/VENDORING.md) §2). A device build re-hydrates
+them from those releases.
 
 ---
 
@@ -233,18 +206,17 @@ Without a Gradle run, `--placeholder "<reason>"` stages a payload that **raises
 on every artifact lookup and names the reason**. A build that cannot produce a
 client should say so, not produce something that installs and does nothing.
 
-### Build the iOS XCFramework locally, before you tag
+### The iOS XCFramework
+
+CI builds it: `publish.yml`'s `ios-xcframework` leg runs on `macos-15-intel` and
+is most of a publish's wall clock (about three hours). Release linking is
+whole-program LLVM optimisation over all of Compose Multiplatform, bound by
+single-core speed and memory. Building it on an Apple-silicon desktop first is an
+optional shortcut:
 
 ```bash
-packaging/build_xcframework_local.sh     # ~45 min on Apple silicon; then push the tag
+packaging/build_xcframework_local.sh     # ~45 min on Apple silicon; run it before pushing the tag
 ```
-
-The release XCFramework is two sequential Kotlin/Native release links and
-essentially nothing else — **~161 minutes measured on `macos-14`**, which is a
-3-core M1 with 7 GB. Release linking is whole-program LLVM optimisation over all
-of Compose Multiplatform, so it is bound by single-core speed and memory
-headroom, and a current Apple-silicon desktop has several times both. Recent
-publishes ran 3h15m and 3h40m end to end; the iOS leg was all of it.
 
 The script builds the same Gradle task and uploads the zip to the
 `xcframework-prebuilt` prerelease under a content-addressed name from
@@ -257,7 +229,7 @@ Two things to know:
   because `generateBuildFlavor` compiles `CLIENT_VERSION` into `commonMain`, so
   a new version genuinely is a different binary. Run it after the tag and you
   are racing the job you meant to spare.
-- **Nothing depends on it.** A miss just builds, exactly as before. There is no
+- **Nothing depends on it.** A miss just builds. There is no
   per-job cancel on GitHub — `gh run cancel` takes the wheels and the release
   assets with it — so the leg has to decline the work itself, and a prebuilt is
   how you let it.
@@ -267,16 +239,16 @@ Two things to know:
 | check | asks | cost |
 |---|---|---|
 | `client/tools/check_localization_sync.py --strict` | do the four bundles agree, and does every key referenced in commonMain resolve in `en.json`? | seconds |
-| `packaging/check_vendoring.py` | has anything under `client/` drifted from upstream without a row in `VENDORING.md` §3? | seconds |
+| `packaging/check_vendoring.py` | does `client/` match the state digest in `VENDORING.md` §1, with no never-vendor class (§2) present? | seconds |
 | `packaging/check_wheel_size.py` | does each wheel fit under 104,857,600 bytes? | seconds |
 | `python -m readiness` | the build-readiness gates below | seconds |
 | `client/tools/check_test_vm_stop.py` | does every test that builds a view model and resets `Dispatchers.Main` call `stopViewModels(...)` (cancel AND join) first, or carry `// lint: test-scheduler-main` because its Main is a `StandardTestDispatcher`? A hard zero; `--self-test` plants the defect | seconds |
-| `client/tools/check_colour_literals.py` | has any file outside `ui/theme/CirisTokens.kt` gained a colour literal? A baseline (933 in 46 files at landing) that can only fall | seconds |
+| `client/tools/check_colour_literals.py` | has any file outside `ui/theme/CirisTokens.kt` gained a colour literal? A baseline that can only fall | seconds |
 | `client/tools/gen_dimension_table.py --check` | is `ceg/Dimensions.kt` byte-identical to what the pinned registry (CC v1.0-rc6, 158 families) + glosses + renderer overrides generate, does the registry hash to its own `registry_sha256`, and does every emitted localization key resolve? | seconds |
 | `client/tools/gen_glyphs.py --check` | is `ui/glyphs/CirisGlyphs.kt` byte-identical to what `client/design/icon-paths.json` generates? | seconds |
 | `packaging/check_csd_v3.py FSD/CSD/*.md --registry client/ceg/namespace_registry.json` | does every CSD's typed block validate against the registry it pins (`registry_sha256` = the grammar hash)? | seconds |
 | `packaging/check_csd_routes.py` | does every route a screen calls (heuristic closure over `CIRISApp.kt` → composables → view models → `CIRISApiClient`) appear in §3 of a CSD on that screen or a sibling screen (same host composable, e.g. the four `LayerHubScreen` hubs), and has no new pair of cards started calling the same mutating route? A baseline that can only fall and must be re-recorded when it does; `--report` is the route map, `--print CSD-NNN` generates §3 rows | seconds A `reset*`/`clear*`/`forget*`/`dismiss*` member call does not charge the model's init-time reads to the caller. |
-| `packaging/check_csd4.py --self-test` · `--verify-pin` (and, per card, through `check_csd_v3.py`) | does a card's CSD/4 `csd:tests` block name a catalogue entry in T0–T19, atoms in the pinned vocabulary (catalogue v3), atoms some entry holds at one instant (the server model's own trace), and exactly the topology, tests, atoms and probes the server's `requirements.yaml` carries for that CSD? Catalogue pinned in `packaging/csd4/PIN.md` (CIRISServer#802 @ `003871fd` until a release carries it; re-vendor with `packaging/vendor_csd4.py --from-release <tag>`, which checks the `csd4-*` assets against the release's `SHA256SUMS` and cosign and runs no server code); `--self-test` plants each defect | seconds |
+| `packaging/check_csd4.py --self-test` · `--verify-pin` (and, per card, through `check_csd_v3.py`) | does a card's CSD/4 `csd:tests` block name a catalogue entry in T0–T19, atoms in the pinned vocabulary, atoms some entry holds at one instant (the server model's own trace), and exactly the topology, tests, atoms and probes the server's `requirements.yaml` carries for that CSD? Catalogue pinned in `packaging/csd4/PIN.md` (re-vendor with `packaging/vendor_csd4.py --from-release <tag>`, which checks the `csd4-*` assets against the release's `SHA256SUMS` and cosign and runs no server code); `--self-test` plants each defect | seconds |
 | `packaging/gen_csd_roster.py --check` | is `FSD/CSD/README.md` — every card number, adopted, reserved (`FSD/CSD/numbers.tsv`) or retired — current, and does no card sit on a reserved or retired number? | seconds |
 
 All of them run in [`.github/workflows/build.yml`](.github/workflows/build.yml).
@@ -297,9 +269,8 @@ python -m readiness --node http://127.0.0.1:4243       # enable node-dependent g
 python -m readiness --json out.json
 ```
 
-The default client tree is this repo's `client/`. The two vendored copies still
-exist and still diverge, so keep grading them too — a result from one tree is
-not a result about the client.
+The default client tree is this repo's `client/`; `--client-tree` grades any
+other checkout.
 
 | id | class | asks |
 |---|---|---|
@@ -333,38 +304,18 @@ Three gates need care when you read them:
   absence: this tree cannot produce a device build, and a gate that passes on a
   known-empty directory is a gate that has learned to say yes.
 
-## What is not here yet
+## Known limits
 
-- Android AAR and iOS framework artifacts in the wheels. Only the desktop
-  uber-jar is staged today; the manifest carries a `kind` per artifact so adding
-  them is a staging line, not a schema change.
+- The Android AAR and the iOS XCFramework are GitHub release assets, not wheels.
+  The manifest carries a `kind` per artifact, so staging them in a wheel is a
+  staging line, not a schema change.
 - `generated-api` regeneration and drift detection: the generator is not in the
   build graph, so spec drift is silent (`client/VENDORING.md` §7).
-- Anything reading the substrate's signed locale Merkle root. Until then the
-  four-bundle byte-identity check stands in for it.
-- ~~Publication.~~ **Done 2026-08-22**: on PyPI via Trusted Publishing (no
-  tokens) — `ciris-client 0.5.186` as four platform wheels (Linux x86-64,
-  macOS arm64, macOS x86-64, Windows x86-64) and `ciris-client-wasm 0.5.186`
-  (6.75 MiB). Every file carries a signed publish attestation. What remains is
-  the consumers adopting it — CIRISServer#471, CIRISAgent#1089.
-- One wart on that release: the very first upload was a `py3-none-any` wheel,
-  cut before the split, so it carries a Linux jar AND pre-split code. pip
-  prefers the platform wheels wherever one matches, so it is only reachable on
-  a platform with no specific wheel — but it is a stale fallback rather than an
-  honest one, and it should be deleted from the 0.5.186 release on PyPI.
+- Nothing reads the substrate's signed locale Merkle root; the four-bundle
+  byte-identity check stands in for it.
+- Translations are `draft` / `machine_reviewed`: machine-translated and
+  MQM-reviewed by a judge of a different model family. Native fluency, dialect
+  coverage, cultural adaptation and legal review are not claimed.
 
-## Status
-
-Working, not scaffold, and **ready to evaluate** — see
-[`EVALUATION.md`](EVALUATION.md) for the runnable path and the decision it asks
-for.
-
-The tree is the superset of both consumers' latest tags: CIRISServer
-`v0.5.188` and CIRISAgent `v2.9.36-stable`, merged per
-[`client/VENDORING.md`](client/VENDORING.md) §8. One build compiles and passes
-`:shared:desktopTest` (432 tests), produces the desktop uber-jar named for the
-*derived* version (`CIRIS-linux-x64-1.5.188.jar`, from release 0.5.188), and is
-packaged into a wheel that installs into a clean venv and resolves through
-`ciris_client.artifact_path`.
-
-The gaps above are real and named.
+Every release is gated on a five-platform run with AI and recorded, one row per
+release, in [`compat/matrix.json`](compat/matrix.json).

@@ -21,8 +21,8 @@ rules are visible rather than described:
   one-time claim PIN is: proof of physical custody, read from the node's own
   0600 `claim_pin` file, which never travels over HTTP. Since ciris-server
   0.5.227 the boot banner names that file instead of printing the PIN, so the
-  PIN is in no log (operator ruling: "the claim PIN is a file on disk, never
-  the log"; CIRISClient#184).
+  PIN is in no log: the claim PIN is a file on disk, never the log
+  (CIRISClient#184).
 * `ownership:*` is owner-only, because "a third party asserting your responsible
   party is a **seizure by attestation**" (CC 3.4.5). **The app performs no
   crypto.** It hands `{node_code, claim_pin, cohort_scope}` to the *local* node;
@@ -99,7 +99,7 @@ on its own line — and leave `showSidebar` alone: **both of this screen's real
 entries are in-shell**, so suppressing the chrome would hide the nav on a screen
 the person reached by navigating.
 
-**The wrinkle, stated so a reviewer does not "fix" it back.** The two entries
+**The wrinkle.** The two entries
 have different parents: this screen is entered both from ManageNodes
 (`CIRISApp.kt:4042`) and from an InteractScreen affordance
 (`CIRISApp.kt:2969-2971`), and from either one the lit row is Nodes rather than
@@ -192,9 +192,9 @@ error:     {tag: "proposed:txt_claim_error", renders: "the node's own refusal �
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| is the local signer up | `GET /v1/identity` via `isLocalNodeUp` | CIRISServer `src/compose.rs:3132` (static JSON, a liveness probe) | live — `NodeSwitcherViewModel.kt:839` (this row said `:4243/health` at `:836`; it probes `/v1/identity`) |
+| is the local signer up | `GET /v1/identity` via `isLocalNodeUp` | CIRISServer `src/compose.rs:3132` (static JSON, a liveness probe) | live — `NodeSwitcherViewModel.kt:839` |
 | the code to claim | `GET /v1/federation/node-code` | CIRISServer `src/federation_nodecode.rs` — `{code, qr_payload, key_id, alias_hint}` | live — `getNodeCode` (`NodeSwitcherViewModel.kt:675`), this device's own code for the other side to scan |
-| the claimed device picks up its session | `POST /v1/setup/claimed-session {claim_pin}` | CIRISServer 0.5.218 (loopback, 15-minute hold; commits `90c62819`, `97900cf5`) | **not called — 0.5.218 work.** A claim by another device now succeeds WITHOUT a session (`session_pickup: "local"`); the claimed device collects it here. `ClaimRemoteResponse` lacks `cohort_scope`, `owner_binding_attestation_id`, `session_pickup`, `claimer_key_admitted`, `local_directory_updated`, and nothing handles a claim that succeeds with no session. Belongs with the 0.5.218 "approve a new device" pass (brief Flow 2) |
+| the claimed device picks up its session | `POST /v1/setup/claimed-session {claim_pin}` | CIRISServer 0.5.218 (loopback, 15-minute hold) | **not called from this screen.** A claim by another device succeeds WITHOUT a session (`session_pickup: "local"`); the claimed device collects it here. `ClaimRemoteResponse` lacks `cohort_scope`, `owner_binding_attestation_id`, `session_pickup`, `claimer_key_admitted`, `local_directory_updated`, and nothing handles a claim that succeeds with no session. Belongs with the approve-a-new-device pass |
 | decode + pin the target | NodeCode decode, then the target's identity probe | CIRISServer | live |
 | sign and deliver the claim | `POST {local}/v1/setup/claim-remote` | CIRISServer (`src/claim_remote.rs:386`, integ `:405`) | live — **loopback-only and first-run-gated**; owner-gated once owned. The request also takes `target_url`, which `ClaimRemoteRequest` lacks; on 0.5.218 a code with no transport hint refuses `claim.no_route` and the client has no way to give an address. 0.5.218 types every refusal (`claim.*` ×10 and `auth.claim.*` ×10); en.json has none of the `claim.*` and most of the `auth.claim.*`, and `classifyClaimFailure` string-matches a message truncated at 200 chars that can cut the id off. Queued with the 0.5.218 ids on CIRISClient#78 |
 | receive the claim | `POST {target}/v1/setup/root` | CIRISServer (`src/auth/ownership.rs`, `src/auth/bootstrap.rs`) | live — the **one** setup route reachable off-host (405 from the LAN, not 403: measured on 0.5.190, `docs/FSD-remote-first-run-claim.md` §3.1) |
@@ -281,9 +281,9 @@ and the two error kinds. (3) A two-node fixture, or an explicit statement in
 `testing/README.md` that the remote claim is manual. (4) **CIRISServer**: the
 missing cohort scopes, and an off-host claim-posture read.
 
-**One note that belongs on the record.** `btn_claim_node_another` and
+**One open defect.** `btn_claim_node_another` and
 `btn_claim_node_to_consent` pass an empty lambda to `testableClickable`
 (`ClaimNodeScreen.kt:320, 331`) — the real work is in the Button's own
 `onClick`. A `/click` on either registers and does nothing, which is the
 "a no-op click is indistinguishable from success" failure of CIRISClient#28,
-still present on two controls.
+present on two controls.

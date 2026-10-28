@@ -59,14 +59,14 @@ write is `notes_write_error` in words, beside the field, and the draft stays.
 
 ## 3. Contracts (who)
 
-Sources: CIRISServer `origin/main` 046e1b39 (0.5.217), `src/drive.rs`. Every
+Sources: CIRISServer `v0.5.217`, `src/drive.rs`. Every
 call goes to the node URL (`ClientDrive`), never `$baseUrl`.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
 | the notes | `GET /v1/notes` | CIRISServer `src/drive.rs:3020` (handler `read_notes`); owner session only; `state` is one of `drive::BYTE_STATES` (`:193-201`) | called — `viewmodels/NotesViewModel.kt:43` |
 | write a note | `POST /v1/notes` `{body}` | CIRISServer `src/drive.rs:3020` (handler `write_note`); an empty body is `notes.empty`; since 0.5.217 the body goes through the same write gate as a file (CIRISServer#642) | called — `viewmodels/NotesViewModel.kt:62` |
-| which of the person's devices a note is on | `GET /v1/files/{id}/custody?cohort=self` | CIRISServer — the custody PR, unmerged, unreleased | called — `ui/screens/files/NotesScreen.kt:138`, from the note's receipt hamburger (`btn_receipt_<id>`, new: a note is a signed row like any file) → **Where is this file** (`btn_receipt_act_where_<id>`); the card is CSD-107's |
+| which of the person's devices a note is on | `GET /v1/files/{id}/custody?cohort=self` | CIRISServer v0.5.218 (CSD-007 §3) | called — `ui/screens/files/NotesScreen.kt:138`, from the note's receipt hamburger (`btn_receipt_<id>`: a note is a signed row like any file) → **Where is this file** (`btn_receipt_act_where_<id>`); the card is CSD-107's |
 | edit a note | `PUT /v1/notes/{id}` | CIRISServer `src/drive.rs:3023` (handler `:2793`) — new row, old withdrawn | live, **not called** |
 | withdraw a note | `DELETE /v1/notes/{id}` | CIRISServer `src/drive.rs:3023` (handler `:2843`) | live, **not called** |
 
@@ -88,11 +88,11 @@ The new note is **not** listed under Files (CSD-007: `DriveEntry.isNote`).
 
 ## 5. QA plan
 
-**`testable`** since the five-platform run 36775704425 (2026-09-30, `flows/matrix-0.5.225` at efdac2a2, node v0.5.217): the flow (`testing/flows/csd-008-notes-to-self.yaml`, floor `>=0.5.225`) passed on all five legs — Linux, macOS and Windows desktop, the Android emulator and the iOS simulator. What follows is how it got there. Linux desktop leg run locally the way `five-platform-live-qa.yml` runs it (2026-09-29, candidate 0.5.225, node v0.5.217, `--flows testing/flows`, the two-node fixture): **2/2 passed**. On the matrix run of the same day (36588619656) it passed on Linux and could not start on macOS — `circle_agent -> tab_chats` landed on Rooms because the tab was clicked before the circle hop had landed (a node client signs in under Neighbours); the runner now verifies each hop against `/state`. Not yet run on the other four legs since.
+**`testable`**: the flow (`testing/flows/csd-008-notes-to-self.yaml`, floor `>=0.5.225`) passes on all five legs of five-platform run 36775704425 (node v0.5.217) — Linux, macOS and Windows desktop, the Android emulator and the iOS simulator. The runner verifies each hop against `/state`: a node client signs in under Neighbours, and a tab clicked before its circle hop completes opens the wrong circle's tab (Rooms instead of Chats).
 
-**Verified live** (desktop, scratch ciris-server 0.5.215, 2026-09-24): writing
-a note from the UI and reading it back from `/v1/notes`; a readable note
-rendering its body (the `open` / `here` token bug, fixed with a test).
+**Verified live** (desktop, ciris-server 0.5.215): writing a note from the UI
+and reading it back from `/v1/notes`; a readable note rendering its body (the
+`open` / `here` token, pinned by a test).
 `NotesViewModelTest` covers the blank note and the trimmed write with a
 re-read. **Not tested:** a note on a second device (`not_fetched`), edit and
 withdraw (not wired).

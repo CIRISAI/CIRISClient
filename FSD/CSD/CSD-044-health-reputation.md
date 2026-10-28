@@ -39,11 +39,9 @@ screen: HealthReputation
 ```
 
 `nav_map` derives `circle_local_community -> tab_decisions ->
-nav_epistemic_health_reputation`. **CSD-004 §2's prose is stale on this point**
-— it says "Neighbours › Decisions, where the tab's only card is this screen", and
-`EnvironmentGraph` is placed in the same circle and tab
-(`CirclesNav.kt`), so the chain ends on the row, not the tab. The typed block
-still passes because `expected_tail` is derived; only the sentence is wrong.
+nav_epistemic_health_reputation`. `EnvironmentGraph` is placed in the same
+circle and tab (`CirclesNav.kt`), so the chain ends on the row, not the tab
+(CSD-004 §2).
 
 The placement is `NEIGHBOURS_OUT` — **Neighbours, Communities and Businesses, and
 Everyone**. One card, three circles, and the same bytes in all three.
@@ -122,7 +120,7 @@ error:     {tag: federation_capacity_local_only, renders: "CSD-004 owns this: /v
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| five factors, composite, fragility, category | `GET /v1/my-data/capacity?scope=both` | CIRISAgent `routes/my_data.py:1220` | live on the brain (tree of 2026-08-15) — **another CSD's card**: CSD-004 owns the read, and it is made by `InteractViewModel.cellVizState`, collected outside this screen's arm (`capacityForCard`), so the route walker sees no call from `Screen.HealthReputation` |
+| five factors, composite, fragility, category | `GET /v1/my-data/capacity?scope=both` | CIRISAgent `routes/my_data.py:1220` | live on the brain — **another CSD's card**: CSD-004 owns the read, and it is made by `InteractViewModel.cellVizState`, collected outside this screen's arm (`capacityForCard`), so the route walker sees no call from `Screen.HealthReputation` |
 | capacity rows with attesters | `GET /v1/my-data/capacity` | CIRISServer `src/system_data.rs:390` | live, unauthenticated — **another CSD's card** (CSD-004), same read |
 | `coherence_standing:{cohort}` for a named cohort | — | CIRISLensCore | **missing** — no route on either host |
 | `manifold_conformity:{cohort}` for a named cohort | — | CIRISLensCore | **missing** |
@@ -148,9 +146,9 @@ expect:
   visible: [txt_capacity_not_per_circle]
 ```
 
-The card now says, in both circles, that the number is not the circle's. The
+The card says, in both circles, that the number is not the circle's. The
 assertion this CSD exists for — two circles, two standings,
-`relation: {left: "coherence_standing:{cohort}", op: ne, …}` — still cannot be
+`relation: {left: "coherence_standing:{cohort}", op: ne, …}` — cannot be
 written: there is no second value to compare, because the card has no cohort
 parameter at all (CIRISLensCore#25).
 
@@ -183,9 +181,9 @@ sub-section, the `min_of` relation, the maturity note, the attester row. The
   CIRISServer):** serve `coherence_standing:{cohort}` and
   `manifold_conformity:{cohort}` for the cohort the client is standing in.
   **Ask (CIRISClient):** pass the current `CohortScope` into the screen and name
-  it on the card. **Done as an interim:** the card now carries
+  it on the card. Without a cohort read, the card carries
   `txt_capacity_not_per_circle`, "One score for the agent, the same in every
-  circle", so a repeated identical card no longer teaches the person that the
+  circle", so a repeated identical card does not teach the person that the
   circles do not matter. Placing it in one circle instead of three stays the
   recommendation (a nav change, `CirclesNav.kt`, not made here).
 * **The pre-fetch factors are the most flattering possible reading.** Five rows
@@ -206,7 +204,7 @@ sub-section, the `min_of` relation, the maturity note, the attester row. The
   CC 2.4.1.1 forbids subject-side withdrawal of a third-party `capacity:*` row,
   and points at CC 4.5.5 `reconsideration:{grounds}` as the contest path. This
   card is where a "contest this" affordance belongs.
-* **Placement.** Decisions is the right tab. **Three** circles is wrong until the
-  card varies by circle; recommended interim is Neighbours only, because that is
+* **Placement.** Decisions is the right tab. **Three** circles is wrong while the
+  card does not vary by circle; the recommendation is Neighbours only, because that is
   the smallest cohort CC 4.4.3.2.1 gives a non-self scope to and the one a person
   can actually check a standing against.

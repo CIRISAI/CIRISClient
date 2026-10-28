@@ -104,20 +104,11 @@ error:     {tag: viz_settings_error, renders: "a WRITE failure — SecureStorage
 |---|---|---|---|
 | every slider | — | **device** (`SecureStorage`, `viz_config_*`) | live, no route (`CellVizConfigStore.kt:28`, load `:186-193`, save `:199-206`) |
 | the thing being tuned | `GET /v1/memory/timeline?hours=…` | **both** | live (node `src/memory_api.rs:1266`, agent `routes/memory.py:488`); the configured `hours` reaches it from `CellVisualization.kt:421-426`, **not** `LiveGraphBackground` |
-| a failed persist | — | **this repo** | **live since the setup review** — `CellVizConfigStore.save` returns the keys that did not persist (still best-effort per key), `SettingsViewModel.cellVizSaveError` carries it, and the screen renders `viz_settings_error`. `CellVizConfigWriteFailureTest` was red against the fire-and-forget save |
+| a failed persist | — | **this repo** | **live** — `CellVizConfigStore.save` returns the keys that did not persist (best-effort per key), `SettingsViewModel.cellVizSaveError` carries it, and the screen renders `viz_settings_error` (`CellVizConfigWriteFailureTest`) |
 
 No node or agent route backs this screen. That is the whole contract.
 
-**The third row said `unconfirmed`, was confirmed missing, and is now closed.** What it was:
-`SecureStorage.save` returns `Result<Unit>` (`platform/SecureStorage.kt:43`).
-`CellVizConfigStore.save` drops it on the floor one line at a time, and the only
-caller logs a warning at `SettingsViewModel.kt:977` with no StateFlow behind it.
-Nothing reaches `VizSettingsScreen`, so there is no failed-persist state to tag —
-`proposed:viz_settings_error` names a state the screen cannot currently enter.
-There is nothing to ask upstream and no issue to cite: this is a CIRISClient gap
-and it belongs in this repo's backlog, not in `evidence/blocked_upstream.tsv`.
-
-**Correction to §2:** `viz_settings_memoryLoadWindowHours` is consumed at
+**Where the window is read.** `viz_settings_memoryLoadWindowHours` is consumed at
 `CellVisualization.kt:426` (`hours = cfg.memoryLoadWindowHours`).
 `LiveGraphBackground.kt:303-304` hardcodes `hours = 24` and ignores the slider.
 Both are composed from `InteractScreen.kt:577` and `:601`, so a flow that moves
@@ -169,25 +160,19 @@ pretend otherwise.
    has no "this device" instrument, so This node is the least-wrong shelf;
    recorded rather than proposed, because inventing a sixth instrument for one
    card is worse.
-2. **`agentOnly` is defensible and leaked; closed.** Settings now gates
-   `btn_viz_settings` on `hasAgent` (CSD-022 §6.1, `SettingsPlanesTest`).
-   `switch_live_background` sits in the device-preferences section and is
-   still rendered on a node build — a harmless, inert switch, reported. What
-   the note said: `LiveGraphBackground` is composed
+2. **`agentOnly`, at both doors — closed.** `LiveGraphBackground` is composed
    only from `InteractScreen` (`InteractScreen.kt:601`), which is agent-only,
    so on a node build there is nothing to tune and hiding the card is right.
-   But `SettingsScreen` renders `btn_viz_settings` (line 387) and
-   `switch_live_background` unconditionally, so a node-build owner is offered
-   the entry and the toggle for a surface the rail hid and a renderer that
-   never runs. Same defect as CSD-022 §6.1; one fix covers both.
-3. **No write-failure state — closed (§3).** A slider that does not persist looks identical
-   to one that does until the next launch. **Ask (this repo): have
-   `CellVizConfigStore` surface a write failure and render it.**
-4. **Title was hardcoded English — closed** (`mobile.viz_settings_title`). The
-   24 slider labels still are; they are the next pass, not this one. `VizSettingsScreen.kt:87` —
-   `Text("Visualization")`, not `localizedString(...)`, in a repo that keeps
-   29 bundles at parity by check. Small, and exactly the kind of thing that
-   survives because nobody re-reads it.
+   Settings gates its `btn_viz_settings` door on `hasAgent` too (CSD-022 §6.1,
+   `SettingsPlanesTest`). `switch_live_background` sits in the
+   device-preferences section and is rendered on a node build — a harmless,
+   inert switch.
+3. **Write failures are shown — closed (§3).** A slider that does not persist
+   would look identical to one that does until the next launch, so
+   `CellVizConfigStore` surfaces a write failure and the screen renders it.
+4. **Title localized — closed** (`mobile.viz_settings_title`). The 24 slider
+   labels are hardcoded English, in a repo that keeps 29 bundles at parity by
+   check.
 5. **CC: nothing to bind, deliberately.** No family, no scope, no attester. A
    device preference is not a claim. This is the one card in this area where
    "no CEG binding" is the correct answer rather than a gap, and the

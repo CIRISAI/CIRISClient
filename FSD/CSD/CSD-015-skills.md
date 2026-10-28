@@ -20,15 +20,14 @@ artifact-integrity class and states the reason it is not consent-gated: *a
 forger never consents to verification.*
 
 The falsifiable claim: **a green "SAFE TO IMPORT" banner means a verifier said
-so.** It still fails on the attester half. The scan is run by the importing
-agent itself (`routes/system/skill_import.py:385-421` on `main`,
+so.** It fails on the attester half. The scan is run by the importing
+agent itself (`routes/system/skill_import.py:385-421`,
 `SkillSecurityScanner`), not by CIRISVerify, which CC 3.1.2 names as the owner
 of the family — so the verdict is a self-report about a third party's code, with
-no attester shown and no signature to check. That is CIRISAgent#1203 (OPEN).
+no attester shown and no signature to check (CIRISAgent#1203).
 
-The fail-open half is closed on both sides of the wire. The agent's
-`SecurityReportResponse` now defaults `safe_to_import` to `False`
-(`skill_import.py:71`, "fails closed (#1203)"), and the client matches: the
+Both sides of the wire fail closed. The agent's `SecurityReportResponse`
+defaults `safe_to_import` to `False` (`skill_import.py:71`), and the client matches: the
 model default is `false` (`models/SkillImport.kt`), the wire parse reads an
 absent field as `false` (`api/SkillImportWire.kt`), and a preview that carries
 no report at all is drawn as an error with Import blocked — a scan nobody ran
@@ -46,19 +45,16 @@ screen: SkillStudio
 nav_epistemic_skills`. `agentOnly` (`CirclesNav.kt:155`) — correct: there is
 nothing to import a skill into on a bare node.
 
-**One card, two doors.** Until 2026-09-27 this was two Screens:
-`Screen.SkillStudio` (write a skill here, then `validate` and `import`) and
-`Screen.SkillImport` (paste a SKILL.md somebody else wrote, `preview`, then
-`import`), both reached from the Adapters card, both ending in
-`POST /v1/system/adapters/import-skill`. The route map named them a duplicate
-pair, and this CSD described the paste door's routes as "never called" because
-it only looked at one of the two. They are one act — a skill crossing into the
-agent — with two ways of arriving at the SKILL.md, so `Screen.SkillImport` is
-retired and its dialog (`SkillImportDialog`, `SkillImportViewModel`) is hosted
-by `Screen.SkillStudio`, which now also lists what the agent already carries
-(`SkillsHeldSection`) and lets the person remove a skill behind a ConfirmSheet.
-`screenToSurface` maps the one screen to `NavSurface.Skills`; the Adapters
-card's "Import skill" affordance opens the paste door on the Skills screen.
+**One card, two doors.** Importing a skill is one act — a skill crossing into
+the agent — with two ways of arriving at the SKILL.md: write it here (the
+Studio: `validate`, then `import`) or paste one somebody else wrote (the paste
+door: `preview`, then `import`). Both end in
+`POST /v1/system/adapters/import-skill`. `Screen.SkillStudio` hosts both: the
+paste door is its dialog (`SkillImportDialog`, `SkillImportViewModel`), and the
+screen also lists what the agent already carries (`SkillsHeldSection`) and lets
+the person remove a skill behind a ConfirmSheet. `screenToSurface` maps the one
+screen to `NavSurface.Skills`; the Adapters card's "Import skill" affordance
+opens the paste door on the Skills screen.
 
 ```yaml csd:shows
 registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
@@ -121,13 +117,13 @@ fields:
     tag: card_skills_held
 ```
 
-**The security-report strings on the Studio path are still hardcoded
-English.** "Skill Studio", "Preview", "Security Report", "SAFE TO IMPORT" /
+**The security-report strings on the Studio path are hardcoded English.**
+"Skill Studio", "Preview", "Security Report", "SAFE TO IMPORT" /
 "ISSUES FOUND" and "Import" / "Blocked" (`SkillStudioScreen.kt`) are literals,
-not `localizedString` keys. The paste door is localized (`mobile.skill_*`), and
-the strings added in this pass (`mobile.skill_held_*`, `skill_scan_missing*`,
-`skill_import_blocked`, `skill_remove_*`, `skill_paste_door`) are keys. The
-Studio literals remain a client ask.
+not `localizedString` keys. The paste door is localized (`mobile.skill_*`), as
+are the held list, the scan-missing state and removal (`mobile.skill_held_*`,
+`skill_scan_missing*`, `skill_import_blocked`, `skill_remove_*`,
+`skill_paste_door`). The Studio literals are a client ask.
 
 ```yaml csd:states
 populated: {tag: card_skills_held, renders: "the held list above the editor — metadata, tools, environment — with `btn_skill_preview` to the rendered SKILL.md and `btn_skill_paste` to the paste door"}
@@ -138,7 +134,7 @@ error:     {tag: skills_held_error, renders: "the held list could not be read: S
 
 The held list is the first part of this card with all four states on distinct
 tags; the Studio's own `Loading` / `Error` composables are distinct in code but
-still carry no `testTag`.
+carry no `testTag`.
 
 **Removal is behind a ConfirmSheet** (`sheet_skill_remove`, facts
 `skill_remove_fact_1..3`, `btn_skill_remove_confirm` / `_cancel`): which skill,
@@ -149,18 +145,18 @@ matters: the only way back is a fresh import, with a fresh scan.
 
 ## 3. Contracts (who)
 
-Rows generated by `python3 packaging/check_csd_routes.py --print CSD-015` and annotated. All five routes are the agent's (`routes/system/skill_import.py` on `main` 29371660de), all `require_admin` (`:30`).
+Rows generated by `python3 packaging/check_csd_routes.py --print CSD-015` and annotated. All five routes are the agent's (`routes/system/skill_import.py`), all `require_admin` (`:30`).
 
 | value | endpoint | owner | state |
 |---|---|---|---|
 | validate + scan a draft | `POST /v1/system/adapters/import-skill/validate` | CIRISAgent (`skill_import.py:492`) | live — `validateSkill` (`CIRISApiClient.kt`), `SkillStudioViewModel.kt:498`. Response `SkillValidateResponse` (`:104-111`): `valid`, `errors[]`, `warnings[]`, `security` (required), `preview?`; parsed by `SkillImportWire` |
-| preview a pasted SKILL.md | `POST /v1/system/adapters/import-skill/preview` | CIRISAgent (`:456`) | live — `previewSkillImport`, `SkillImportViewModel.kt:135`. Response `SkillPreviewResponse` (`:78-91`) INCLUDING `security` — the client parse dropped that field until this pass, so the paste door showed the tools and requirements and no scan |
+| preview a pasted SKILL.md | `POST /v1/system/adapters/import-skill/preview` | CIRISAgent (`:456`) | live — `previewSkillImport`, `SkillImportViewModel.kt:135`. Response `SkillPreviewResponse` (`:78-91`) INCLUDING `security`, which the client parses, so the paste door shows the scan beside the tools and requirements |
 | import it | `POST /v1/system/adapters/import-skill` | CIRISAgent (`:604`) | live — `importSkill`, from both doors (`SkillImportViewModel.kt:161`, `SkillStudioViewModel.kt:525`). The agent re-scans and answers **400** with `{message, findings[]}` when `safe_to_import` is false (`:640-652`); the client refuses the same before asking (`importAllowed()`), so the 400 is the backstop, not the UX. Request `SkillImportRequest` (`:38-45`); the client sends `skill_md_content`, `source_url?`, `auto_load` |
 | what is already imported | `GET /v1/system/adapters/imported-skills` | CIRISAgent (`:685`) | live — `listImportedSkills`, `SkillImportViewModel.kt:87`, drawn by `SkillsHeldSection`. `ImportedSkillsListResponse` `{skills[], total}` (`:143-147`); `ImportedSkillInfo` (`:130-140`) maps field-for-field to `ImportedSkillData`. It scans `~/ciris/adapters/imported_*/manifest.json` with `metadata.imported_from == "openclaw"`, so a skill imported by another path is invisible here |
-| remove one | `DELETE /v1/system/adapters/imported-skills/{module_name}` | CIRISAgent (`:740`) | live — `deleteImportedSkill`, `SkillImportViewModel.kt:199`, behind the ConfirmSheet. 404 when the name is not `imported_*` or the directory is gone; 500 when `rmtree` fails; the client now RAISES with the agent's reason instead of returning `false` |
+| remove one | `DELETE /v1/system/adapters/imported-skills/{module_name}` | CIRISAgent (`:740`) | live — `deleteImportedSkill`, `SkillImportViewModel.kt:199`, behind the ConfirmSheet. 404 when the name is not `imported_*` or the directory is gone; 500 when `rmtree` fails; the client RAISES with the agent's reason rather than returning `false` |
 | an attested import provenance | **no route** — `provenance:skill_import:{source}`, CC 3.1.2 | CIRISVerify | **missing**; blocks `building` for `proposed:skill_provenance`. `blocked_by: CIRISAgent#1203` |
 
-**Host check.** All five routes are the brain's. `CIRISServer origin/main` has
+**Host check.** All five routes are the brain's. CIRISServer has
 no `/v1/system/adapters` literal in `src/`; its only `/v1/system/*` routes are
 `health`, `data*` and `verify-status`. The card is `agentOnly`, so a bare node
 never asks.
@@ -170,8 +166,8 @@ two-element `["skill:{name}", "skill:{name}:info"]` (`:397`), not the tools the
 SKILL.md declares — the paste door's "What it can do" card therefore names the
 wrapper tools, and the Studio's per-tool cards are the only place the declared
 tools appear. `SkillImportResponse.tools_created` (`:122`) is the same pair.
-Nothing is dropped on the client side any more: `SkillImportWire` parses every
-field of all four response models.
+Nothing is dropped on the client side: `SkillImportWire` parses every field of
+all four response models.
 
 **Wrong owner, stated plainly.** CC 3.1.2 assigns `provenance:skill_import:*`
 to the `attestation` component, repo CIRISVerify. The scan that produces the
@@ -237,13 +233,9 @@ CSD-014's inventory, one refresh later. Whether the scanner catches any
 particular class of hostile skill: the client asserts that findings are shown
 and that the button is blocked, never that the scan is good.
 
-**Closed in this pass (2026-09-27).** `Screen.SkillImport` folded into
-`SkillStudio` (this CSD now describes what the code does); the paste door shows
-the scan and fails closed; the held list and removal exist; the three response
-parses share `SkillImportWire`; the tag collision between the two doors'
-`btn_skill_preview` is resolved (`btn_skill_analyze` on the paste door);
-`btn_show_source_url`, `btn_skill_import_confirm`, `btn_skill_import_done` are
-`testableClickable`.
+**Tags.** The paste door's analyze button is `btn_skill_analyze`, distinct from
+the Studio's `btn_skill_preview`; `btn_show_source_url`,
+`btn_skill_import_confirm` and `btn_skill_import_done` are `testableClickable`.
 
 **Upstream asks.**
 CIRISVerify / CIRISAgent — emit `provenance:skill_import:{source}` with an

@@ -1,8 +1,8 @@
 # CSD-047 — Fetch content from a peer by its digest (the Content tile)
 
-**CSD**: CSD-047 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the route map (PR #111): a screen with routes and no CSD
+**CSD**: CSD-047 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the route map
 **Covers**: `Screen.NetworkContent` (`ui/screens/federation/NetworkContentScreen.kt` + `viewmodels/federation/NetworkContentViewModel.kt`)
-**Reads with**: CSD-051 (the hub), CSD-033 (the peer list it picks from), `PENDING-CSD-007` (Files, where a directory of what can be fetched would live; CIRISServer#651)
+**Reads with**: CSD-051 (the hub), CSD-033 (the peer list it picks from), CSD-007 (Files, where a directory of what can be fetched would live; CIRISServer#651)
 **Flow**: `testing/flows/csd-047-network-content.yaml` (floor `>=0.5.225`)
 
 ```yaml csd:stage
@@ -69,7 +69,7 @@ error:     {tag: federation_content_peers_error, renders: "the read-failure bloc
 
 ## 3. Contracts (who)
 
-Verified against CIRISServer `origin/main` 046e1b39 (0.5.217).
+Verified against CIRISServer 0.5.217.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
@@ -108,7 +108,7 @@ expect:
 
 ## 5. QA plan
 
-**`testable`** since the five-platform run 36775704425 (2026-09-30, `flows/matrix-0.5.225` at efdac2a2, node v0.5.217): the flow (`testing/flows/csd-047-network-content.yaml`, floor `>=0.5.225`, `fixture: two_node`) passed on all five legs — Linux, macOS and Windows desktop, the Android emulator and the iOS simulator. What follows is how it got there. It enters from the hub's `tile_federation_content` and picks `peer_pick_row_${PEER_NODE_KEY_ID}`, the peer the fixture admitted. Linux desktop leg run locally the way `five-platform-live-qa.yml` runs it (2026-09-29, candidate 0.5.225, node v0.5.217, `--flows testing/flows`, the two-node fixture): **4/4 passed** — the Content tile (below the fold; the runner now scrolls to an off-screen control), the peer search, the fixture's peer row, the digest step and its refusal of a bad digest. On the matrix run of the same day (36588619656) it could not start on any desktop leg: the tab was clicked before the circle hop had landed, so Everyone › Rules was never shown; fixed in the runner. A real fetch still needs a digest the peer holds, which the fixture does not seed.
+**`testable`**: the flow (`testing/flows/csd-047-network-content.yaml`, floor `>=0.5.225`, `fixture: two_node`) passes on all five legs of five-platform run 36775704425 (node v0.5.217) — Linux, macOS and Windows desktop, the Android emulator and the iOS simulator. It enters from the hub's `tile_federation_content` (below the fold; the runner scrolls to an off-screen control and verifies each hop against `/state`), picks `peer_pick_row_${PEER_NODE_KEY_ID}`, the peer the fixture admitted, and asserts the peer search, the digest step and its refusal of a bad digest. A real fetch needs a digest the peer holds, which the fixture does not seed.
 
 **Platforms.** All five, as the node's owner. A real fetch needs a second node
 holding a known digest; the matrix stands one up.
@@ -117,12 +117,10 @@ holding a known digest; the matrix stands one up.
 
 ## 6. Delta — card vs API vs CC
 
-* **Two untagged, undrivable fields, fixed.** The digest field and the fetch
-  button had no tag and no input sink, so no flow could fetch anything; the
-  search field had a tag and no sink.
-* **The fetch flag cleared before the fetch ran, fixed.** `launchApi` returned
-  immediately, so `fetching` was false throughout and the button never showed a
-  fetch in flight.
-* **Error looked like empty on the pick step, fixed.**
+* **Every field is drivable — fixed.** The digest field, the fetch button and
+  the search field carry tags and input sinks, so a flow can fetch.
+* **The fetch flag spans the fetch — fixed.** `fetching` is true until the
+  fetch returns, so the button shows a fetch in flight.
+* **Error is not empty on the pick step — fixed.**
 * **Who signs.** The route requires the owner session; the card is reached under
   it. The act is a read, not an outward act, so no ConfirmSheet.

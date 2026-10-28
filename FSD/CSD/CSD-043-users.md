@@ -140,8 +140,7 @@ empty gets a plain card), so the fix here is tags, not behaviour.
 CIRISAgent's routes also return **bare** Pydantic models on `/v1/users*` while
 `/v1/wa/*`, `/v1/system/*` and `/v1/my-data/*` return `SuccessResponse[T]`. The
 generated client unwraps per-operation, so this is not a live defect here; it is
-a trap for the next hand-written call. Its tree is dated 2026-08-15 and may be
-stale.
+a trap for the next hand-written call.
 
 ## 4. Flow (how)
 
@@ -219,9 +218,10 @@ page 2; the OAuth avatars, which are third-party fetches.
   (`UsersScreen.kt:445`), not only in the detail sheet. Under CC 2.1 a roster is
   self- and producer-queryable by default; a searchable list of every account's
   email is the disclosure `listed` is meant to gate. **Ask (CIRISClient):** move
-  the email into the detail sheet at minimum, pending the `listed` work above.
+  the email into the detail sheet at minimum; the `listed` work above is the
+  full answer.
 
-## Review, 2026-09-27 (identity group)
+## Review — identity group
 
 * Shapes match: `GET /v1/users` (`routes/users.py:311-365`, a bare
   `PaginatedResponse[UserSummary]`) and `GET /v1/users/{id}` (`:659`) decode field
@@ -231,6 +231,6 @@ page 2; the OAuth avatars, which are third-party fetches.
   permissions (`PUT /{id}/permissions`), `request-permissions`,
   `permission-requests`, `api-keys`, `wa/key-check`. The card is read-only by
   construction; whether it should stay so is a product call, recorded here.
-* CC 2.1 `listed`: the list row still shows email (`UsersScreen.kt:445`), and a
+* CC 2.1 `listed`: the list row shows email (`UsersScreen.kt:445`), and a
   failed load can show the error banner and the empty sentence together
   (`:159`, `:203`) — error looking like empty. Open.

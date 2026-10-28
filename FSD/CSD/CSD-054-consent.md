@@ -20,35 +20,31 @@ over it … `subject_key_ids` adds the missing half — subject authority."* CC
 about the substrate's continued processing of content where that subject
 appears."*
 
-**One defect used to define this card, and it was the flattering kind.** Every
-route the screen calls is served by the **agent** and by nothing else
+**A 404 is never "no consent".** Every route the screen calls is served by the
+**agent** and by nothing else
 (`CIRISAgent routes/consent.py:162, 237, 309, 353, 379, 419`); CIRISServer has
 zero axum registrations for `/v1/consent/*` — its own contract note records the
 node's equivalent as a different, single endpoint, `POST /v1/auth/consent`
 (`FSD/QA_AGAINST_RUST.md:38`). The card is placed in all five circles with no
 `agentOnly` flag (`CirclesNav.kt`, `Placement(NavSurface.Consent, Tab.RULES,
-ALL)`). So on a node build every call 404s — and `ConsentViewModel` used to
-catch the 404 and log *"No consent record found (404), normal for new users"*,
-returning `null`: **a node that cannot answer and a person who has never
-granted anything rendered the same screen.** That was CSD/3 §2.2's prohibition
-stated exactly, with "you have no consent on file" as the flattery.
-
-**Closed.** The 404 is no longer swallowed: the agent answers "no record" with
-`200 + has_consent=false`, so a 404 means *this host has no consent route*, and
-`ConsentViewModel.loadConsentData` now fails the load with a typed
+ALL)`). So on a node build every call 404s, and **a node that cannot answer
+must never render like a person who has never granted anything** (CSD/3
+§2.2). The agent answers "no record" with `200 + has_consent=false`, so a 404
+means *this host has no consent route*, and
+`ConsentViewModel.loadConsentData` fails the load with a typed
 `ReadFailure` that the screen draws ALONE (`ReadFailureBlock`, tag
 `consent_not_on_this_node` for the absent route, `consent_error` for a failed
 read) — nothing below it may render, because "no consent record" is a claim
 about the person and nobody asked. The true empty (`consent_none`) is reached
 only when the agent answers and `hasConsent` is false.
 
-**A second defect of the same class, closed 2026-09-28.** The model is
-app-scoped and outlives the session, and the screen's spinner shows only while
-the model holds NO record — so after a logout the next signer-in read the
-previous owner's stream, expiry, audit trail and partnership queue for the whole
-reload. `ConsentViewModel.resetSession()` is now called from CIRISApp's one
-token effect, keyed and conditioned on `consentSessionAuthenticated(token,
-isHAAddonMode)` exactly as Manage Consent's reset is (CSD-053 §2.1, PR #116):
+**A record never outlives its session.** The model is app-scoped and outlives
+the session, and the screen's spinner shows only while the model holds NO
+record — so without a reset the next signer-in would read the previous owner's
+stream, expiry, audit trail and partnership queue for the whole reload.
+`ConsentViewModel.resetSession()` is called from CIRISApp's one token effect,
+keyed and conditioned on `consentSessionAuthenticated(token, isHAAddonMode)`
+exactly as Manage Consent's reset is (CSD-053 §2.1):
 every way out of a session resets it, and a Home Assistant add-on session — the
 token null by design — does not. `ConsentSessionTest` pins both.
 
@@ -172,7 +168,7 @@ impact report are derived views, not wire dimensions, so they are `x_private:`.
 `consent_loading`, `consent_not_on_this_node` / `consent_error`, the confirm's
 `sheet_stream` + `stream_fact_1..3`, and the §7 partnership tags. Still
 `proposed:`: the stream rows' values, the partnership-pending line, the audit
-list and the impact card — real pixels, untagged. The stage moved to `building`
+list and the impact card — real pixels, untagged. The stage is `building`
 on the states and the contracts (every §3 row is live or names its blocker),
 not on those four; `testable` waits on them and on a release carrying the tags.
 
@@ -183,7 +179,7 @@ loading:   {tag: consent_loading, renders: "the frame with a progress affordance
 error:     {tag: consent_not_on_this_node, renders: "This node doesn't hold consent records. Consent is kept by an agent, and this node runs without one. — drawn ALONE, nothing below it; a failed read that is not an absent route is consent_error (ReadFailureBlock, tagPrefix consent). Neither is ever the empty sentence"}
 ```
 
-**The `error` row was the whole point of this file, and it exists now.** It
+**The `error` row is the point of this file.** It
 follows `contacts_unsupported` (CSD-005 §2) in shape — name the host, say which
 component owns the thing — without naming a version, because the route is not
 "too old" on a node: no node version serves it. `ReadFailure.of` classifies a
@@ -194,7 +190,7 @@ cannot collapse into one rendering.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| consent status | `GET /v1/consent/status` | **CIRISAgent** (`routes/consent.py:162`) | live on the agent; **404 on a node** — no longer swallowed: `ReadFailure.NotOnThisNode`, drawn alone as `consent_not_on_this_node` |
+| consent status | `GET /v1/consent/status` | **CIRISAgent** (`routes/consent.py:162`) | live on the agent; **404 on a node** — `ReadFailure.NotOnThisNode`, drawn alone as `consent_not_on_this_node` |
 | available streams | `GET /v1/consent/streams` | CIRISAgent (`:379`) | same |
 | change stream | `POST /v1/consent/grant` | CIRISAgent (`:237`) | same |
 | impact report | `GET /v1/consent/impact` | CIRISAgent (`:309`) | same; already `try`-guarded to null |
@@ -261,17 +257,15 @@ driven too**, and that run is the one that matters: it is the only way the
 a check whose red path has never run.
 
 **Not tested here.**
-* Anything the screen displays — no value carries a tag.
-* Whether `hasConsent: false` from the agent and a 404 from a node are told apart.
-  They are not, today; that is the defect, and asserting it green would pin it.
+* The values the `proposed:` rows display (the stream rows' values, the
+  partnership-pending line, the audit list and the impact card) — they carry
+  no tag.
 
-**The decision, so it is on the record.** The two options were to mark the
-placement `agentOnly = true` — what `CirclesNav`'s own flag is for and what
-`Interact` does in Chats — or to add the error state and keep the card
-everywhere. Marking it `agentOnly` was the smaller change and the worse one: a
-person's consent record is theirs whether or not a brain is attached, and hiding
-the card on a node says the opposite. The state was added
-(`consent_not_on_this_node`); the placement is unchanged.
+**The placement keeps the card everywhere, with the error state.** It is not
+marked `agentOnly = true` (what `CirclesNav`'s own flag is for and what
+`Interact` does in Chats): a person's consent record is theirs whether or not a
+brain is attached, and hiding the card on a node says the opposite. A node
+build draws `consent_not_on_this_node` instead.
 
 **And it should be one card, not five.** A consent grant is about the person, not
 about a circle: `cohort_scope` and `subject_key_ids` are *independent* envelope
@@ -283,16 +277,14 @@ and is where this belongs.
 
 ## 7. The partnership queue — requests waiting on your agent
 
-**Added with the partnership-decisions work (numbered CSD-107 at assignment,
-folded in here under the no-duplicate-cards rule).** The route-coverage report
-listed `/v1/partnership/*` as "a consent decision with no UI". It is not a
-second card: the Consent card already shows the person's own partnership
-status and files their request (`ConsentViewModel.requestPartnership` →
-`POST /v1/consent/grant` with `stream: partnered`). What was missing is the
-other side of the same object — the requests waiting on the agent — and it
-lives on this card, under the stream list, in `ConsentPartnershipSection.kt`.
+**A section of this card, not a second card** (the no-duplicate-cards rule).
+The Consent card shows the person's own partnership status and files their
+request (`ConsentViewModel.requestPartnership` → `POST /v1/consent/grant` with
+`stream: partnered`). This section is the other side of the same object — the
+requests waiting on the agent — under the stream list, in
+`ConsentPartnershipSection.kt`.
 
-Read from CIRISAgent **main** at `2937166` (2026-09-26).
+Line numbers are CIRISAgent `main`'s.
 
 **What is being decided.** Whether a person's consent moves to the
 `partnered` stream: learning from their interactions with no end date instead
@@ -362,7 +354,7 @@ exists; the flow asserts their absence.
 
 **The delta.**
 1. **`/decide` admits the wrong parties** (`routes/partnership.py:583`). Ask
-   (CIRISAgent, draft in the PR): refuse the subject on a request the subject
+   (CIRISAgent): refuse the subject on a request the subject
    made, and refuse an admin on a request addressed to the agent.
 2. **A request does not say who made it** (`core.py:240-254`). Until it does,
    no row can carry a person's button. Ask: `initiated_by: subject|agent`.

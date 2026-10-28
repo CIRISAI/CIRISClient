@@ -1,7 +1,7 @@
 # CSD-104 — Verify someone's key (the peer detail's short-code ceremony)
 
 **CSD**: CSD-104 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the route-coverage report ("the strongest trust act the client can perform", called and uncited)
-**Covers**: the existing peer detail, `Screen.NetworkPeerDetail` (`NetworkPeerDetailScreen.kt` + `NetworkPeerDetailViewModel.kt`). No CSD owned that screen before this one. It is not a new card.
+**Covers**: the existing peer detail, `Screen.NetworkPeerDetail` (`NetworkPeerDetailScreen.kt` + `NetworkPeerDetailViewModel.kt`). It is not a new card.
 **Reads with**: CSD-051 (the Everyone hub that opens the peer list), CSD-050 (cites `GET /v1/federation/peers` for the circle hub), CSD-005 (People: where the ceremony should also be reachable, §2)
 **Flow**: `testing/flows/drafts/csd-104-key-verification.yaml` (floor `unreleased`)
 
@@ -81,12 +81,12 @@ entry: Everyone › Rules › Global Commons (the Reticulum hub, CSD-051) → th
 exit: back to `Screen.NetworkPeers`; `screenToSurface` keeps `layer-global-commons` lit while it is open
 ```
 
-**This is the existing screen, fixed in place.** Nothing here adds a surface,
-a screen or a view model. The peer detail already read the code
-(`getFederationPeerSAS`), already set trust, and already edited appearance. It
-could not finish the ceremony (§3a). The fix lives in `NetworkPeerDetailScreen.kt`
-and `NetworkPeerDetailViewModel.kt`, and the ceremony card now sits directly
-under the header, above trust, because it is the act that should decide trust.
+**This is the existing peer detail screen.** Nothing here adds a surface, a
+screen or a view model. The peer detail reads the code
+(`getFederationPeerSAS`), sets trust and edits appearance; the ceremony lives
+in `NetworkPeerDetailScreen.kt` and `NetworkPeerDetailViewModel.kt` (§3a), and
+its card sits directly under the header, above trust, because it is the act
+that should decide trust.
 
 **Placement: two ways in, one screen.**
 
@@ -97,18 +97,18 @@ under the header, above trust, because it is the act that should decide trust.
   honest. Entry is unchanged.
 * **Next: a person in People (CSD-005), in every circle, routed to this same
   screen.** A person checks a *person* while talking to them, so the action
-  belongs on that person's row. **It was deliberately not added.** For a
-  person's key, the two sides can never compute the same code (§3, CIRISServer#683).
-  An entry there today would send two honest people into the "they don't
-  match" safety flow every time. Once CIRISServer#683 lands, the People row gets a
-  control that sets `Screen.NetworkPeerDetail(contact.keyId)`: one line in
+  belongs on that person's row. **It is not offered**: for a person's key,
+  the two sides cannot compute the same code (§3, CIRISServer#683), so an entry
+  there would send two honest people into the "they don't match" safety flow
+  every time. When CIRISServer#683 is fixed, the People row gets a control
+  that sets `Screen.NetworkPeerDetail(contact.keyId)`: one line in
   `CIRISApp.kt`, no copy of this screen.
 * **Rejected: a Safety-tab card.** A mismatch is a safety event, and Safety is
   where a frightened person looks (`CirclesNav.kt`: *"one place, because in an
   emergency…"*). But a Safety card would be a second list of the same
   directory keys the peer list already shows, under a different name. The
   mismatch result stays on this screen in the error tone until the person
-  leaves, and it lands as an `untrusted` override that the peer list shows.
+  leaves, and it is recorded as an `untrusted` override that the peer list shows.
 
 ```yaml csd:shows
 registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
@@ -193,7 +193,7 @@ apart without reading copy:
 | **mismatch recorded** | `sas_result_mismatch` | danger tone, above the card, until the screen is left or a later **recorded match** supersedes it: "The codes did not match. Don't share anything private with this key…". It is kept apart from the last outcome (`recordedMismatch`), so a later *refused* answer, which landed nothing corrective, does not make it vanish; a withdrawal keeps it too, because withdrawing a check says nothing about the key. |
 | write refused | `sas_write_error` | the reason by remedy on EITHER step: not the owner (401/403), key not in the directory (404 `PEER_NOT_FOUND`), route absent (bare 404), failed. The trust step keeps its status and body as a `NodeRefusal` for this, like the SAS step. If a mismatch's untrust landed but its record did not, it says the untrust landed. |
 | write in flight | `btn_sas_*` and `seg_trust_state` disabled together | one flag for every sideband write. A manual trust change and a SAS outcome edit the same node row, so neither group is offered while the other's write is in flight, and the view model refuses a second write regardless of what the screen shows. |
-| peer not readable | `peer_detail_error` vs `peer_detail_not_found` | a failed peer read and a 404 no longer render the same "Peer not found" sentence |
+| peer not readable | `peer_detail_error` vs `peer_detail_not_found` | a failed peer read and a 404 never render the same "Peer not found" sentence |
 
 **A mismatch is not a cancel.** Each answer has its own button, tag,
 ConfirmSheet and result. `btn_sas_mismatch` uses the danger fill. Dismissing
@@ -207,7 +207,7 @@ result then stays up.
 ## 3. Contracts (who)
 
 All node-owned, all on the node URL (`LOCAL_NODE_URL`), none proxied by an
-agent. CIRISServer `origin/main` 046e1b39 (0.5.217).
+agent. CIRISServer 0.5.217.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
@@ -220,55 +220,44 @@ agent. CIRISServer `origin/main` 046e1b39 (0.5.217).
 | **the person pair** | `GET …/sas` | CIRISServer | **wrong for people.** `local_pub` is the NODE's signer (`:881-898`). A contact is a *person's* identity key, and a chat pairs `owner.key_id` with the contact (`src/contacts_chat.rs:1693`). A computes `sas(node_A, person_B)` and B computes `sas(node_B, person_A)`: different pairs, so the codes never match. CIRISServer#683. |
 | verification on the peer list | `GET /v1/federation/peers` | CIRISServer | **missing.** `LocalPeerState` has no `sas_verified` (`:331-353`), so the list cannot say which keys you have checked without one request per row. CIRISServer#684. |
 
-### 3a. What the code got wrong, and what this CSD's change fixes
+### 3a. What the screen holds to, and two gaps
 
-1. **Fixed — the ceremony never finished.** `SASModal` showed the words and
-   digits with one button, Close. `PUT …/sas` had no caller in the client, so
-   this app had never recorded a verification. The modal is gone. The card now
-   has "They match" / "They don't match" / "Withdraw my check", each behind a
-   ConfirmSheet naming three facts: whose key, what changes, who signs and who
-   sees.
-2. **Fixed — a recorded verification was invisible.**
-   `FederationPeerSASResponse` dropped `verified` / `verified_at`, which the
-   node sends (`:930-931`). It now decodes them, and the Checked line reads
-   them.
-3. **Fixed — the instructions told the person to do the wrong thing.**
-   `network.peer_detail.sas_instructions` read *"If both sides match, the peer
-   is verified — flip trust to TRUSTED."* Every directory key is already
-   `trusted` (`:411-413`), and trust is not verification. The screen now uses
-   `sas_ceremony_instructions`, and the old key is deleted from every bundle.
-4. **Fixed — a failed code read spun forever.** The error went to a banner
-   behind the dialog, and the dialog's `sas == null` branch was a spinner. The
-   read is now classified (`sasReadFailureOf`): not in the directory, route
-   absent, or failed. Each has its own tag.
-5. **Fixed — a failed peer read said "Peer not found".** `detail == null &&
-   !loading` rendered one sentence whatever the cause. Now a 404 renders
+1. **The ceremony finishes.** The card has "They match" / "They don't match" /
+   "Withdraw my check", each behind a ConfirmSheet naming three facts: whose
+   key, what changes, who signs and who sees. `PUT …/sas` records the answer.
+2. **A recorded verification is visible.** `FederationPeerSASResponse` decodes
+   `verified` / `verified_at`, which the node sends (`:930-931`), and the
+   Checked line reads them.
+3. **The instructions never equate trust with verification.** Every directory
+   key is already `trusted` (`:411-413`), and trust is not verification. The
+   screen uses `sas_ceremony_instructions`.
+4. **A failed code read is classified, never a spinner.** `sasReadFailureOf`:
+   not in the directory, route absent, or failed. Each has its own tag.
+5. **A failed peer read is not "Peer not found".** A 404 renders
    `peer_detail_not_found`, which explains announced-but-unadmitted keys, and
    anything else renders `peer_detail_error` in the danger tone.
-6. **Fixed — the node's refusal was flattened.** `getFederationPeerSAS` threw
-   `RuntimeException("… 404 …")`, which made `PEER_SAS_UNAVAILABLE`
-   indistinguishable from a missing route. It now throws `NodeRefusal`.
-7. **Fixed — a false comment.** `CIRISApiClient.kt`'s federation header said
-   `peers/{key_id}/sas`, `/trust`, `/appearance`, `identity`, `metrics`,
-   `content` and `events` had "NO node route" and that their methods "throw
-   immediately". Both claims were false: all seven have been served since
-   0.5.115 (CIRISServer#261), and every method beneath the comment calls the
-   node. That comment is how a called route came to have no card. It now lists
-   the routes, and names only what is still missing (#683, #684).
-8. **Not fixed — "rename" is not a rename.** The header shows `aliasOverride`,
+6. **The node's refusal is kept.** `getFederationPeerSAS` throws
+   `NodeRefusal`, so `PEER_SAS_UNAVAILABLE` is distinct from a missing route.
+7. **The API client's federation header lists the routes.** `peers/{key_id}/sas`,
+   `/trust`, `/appearance`, `identity`, `metrics`, `content` and `events` are
+   served since 0.5.115 (CIRISServer#261), and every method beneath the comment
+   calls the node. The comment names only what is still missing (#683, #684):
+   a comment that calls a served route absent is how a called route ends up
+   with no card.
+8. **Gap — "rename" is not a rename.** The header shows `aliasOverride`,
    which the node never sets, so every peer is titled by its key id. The
    appearance editor takes free-text hex colours. That is a server gap (no
    alias write, CIRISServer#684) plus a client choice. Neither belongs to the
    ceremony.
-9. **Not fixed — the block confirm is an `AlertDialog`, not a ConfirmSheet.**
-   `confirm_block_*` on the trust control predates the primitives and names
-   no facts.
+9. **Gap — the block confirm is an `AlertDialog`, not a ConfirmSheet.**
+   `confirm_block_*` on the trust control does not use the primitives and
+   names no facts.
 
 ### 3b. Filed issues
 
 | gap | issue | what it blocks |
 |---|---|---|
-| **A** — a SAS mismatch has no record of its own. `PUT …/sas` takes `{verified: bool}`, and `false` is what both a withdrawal and a failed comparison write (`src/federation_peers.rs:807-808`). Until it lands the client writes `trust:untrusted` + `verified:false`, and the mismatch survives only as the trust override. | CIRISServer#684 | `text_sas_state_mismatch` |
+| **A** — a SAS mismatch has no record of its own. `PUT …/sas` takes `{verified: bool}`, and `false` is what both a withdrawal and a failed comparison write (`src/federation_peers.rs:807-808`). Without it the client writes `trust:untrusted` + `verified:false`, and the mismatch survives only as the trust override. | CIRISServer#684 | `text_sas_state_mismatch` |
 | **B** — a person's code is derived over node × person. `get_peer_sas` takes `local_pub` from the node's signer (`:881-898`), while a chat pairs `owner.key_id` with the contact (`src/contacts_chat.rs:1693`), so two people never see the same code. | CIRISServer#683 | the People entry (`btn_people_verify_key`) |
 | **C** — `LocalPeerState` has no `sas_verified` / `sas_verified_at`, though the sideband row holds them (`:240-245`) and `to_peer` already overlays trust and appearance from it (`:411-415`). | CIRISServer#684 | `chip_peer_sas_checked` |
 | the appearance route is not a rename: `alias_override` is always `None` (`:416`) and nothing writes it | CIRISServer#684 | the header's title (§3a.8) |
@@ -337,11 +326,11 @@ exercises the whole screen. The agent build adds nothing.
 
 **Negative-tested**: with three planted defects (a mismatch that writes what a
 withdrawal writes, every 404 read as failed, and a refused write swallowed),
-5 of 14 went red. The eight follow-up tests were run against the merged
-behaviour first: 7 of 8 red. The eighth (a refused trust step keeps its
+5 of 14 go red. Of the eight follow-up tests, 7 are red against the behaviour
+without the fix. The eighth (a refused trust step keeps its
 remedy) is green through the seam whatever the API client does, because the
-fake throws a typed refusal; the API client's own change (`setFederationPeerTrust`
-now throws `NodeRefusal`, not a flattened `RuntimeException`) has no unit
+fake throws a typed refusal; the API client's own behaviour (`setFederationPeerTrust`
+throws `NodeRefusal`, not a flattened `RuntimeException`) has no unit
 harness, as the build carries no Ktor mock engine.
 
 **Not tested here.**

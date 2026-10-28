@@ -1,6 +1,6 @@
 # CSD-093 — Add this device to an existing CIRIS ID (the new device, first run)
 
-**CSD**: CSD-093 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: CIRISServer 0.5.231 `FSD/ADD_DEVICE.md` (CIRISServer#177), Eric's wizard ruling relayed by the CIRISServer session (2026-10-18). Rewritten from the 0.5.218 sketch (a QR of this node's code and claim PIN for the other device to scan), which the server replaced with a peer-to-peer join request
+**CSD**: CSD-093 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: CIRISServer 0.5.231 `FSD/ADD_DEVICE.md` (CIRISServer#177): a peer-to-peer join request, not a QR of this node's code and claim PIN
 **Pairs with**: CSD-094 (Approve a new device, on the device the person already has). This card asks; that one consents
 **Flow**: `testing/flows/drafts/csd-093-add-this-device.yaml` (floor `unreleased`)
 **Card**: `ui/screens/AddDeviceScreens.kt` (`IdentityPathChoice`, `AddThisDeviceSection`, `AddDeviceProgressBlock`, `AddDeviceWaiting`, `AddDeviceTags`), wired into `ui/screens/SetupScreen.kt` (`YouStep`, `CompleteStep`); state `viewmodels/SetupState.kt` (`IdentityPath`, `AddDeviceSetupState`, `AddDevicePhase`); behaviour `viewmodels/SetupViewModel.kt` (the add-device section, `completeAddDevice`, `finishAgentSetup`); wire `api/AddDeviceApi.kt` + `CIRISApiClient.addDevice*`; tests `AddDeviceSetupTest` (commonTest), `AddDeviceWireTest` (desktopTest, a real socket)
@@ -70,7 +70,7 @@ the agent's own setup-complete creates its local user from them.
 step) while the person approves on the other device. Next on YOU opens as soon
 as the request is out (`requested`), not when it is approved.
 
-**A live request locks the first question** (Codex, PR #189). While the
+**A live request locks the first question.** While the
 request is being sent, waiting, or approved and held, "Set up a new CIRIS ID"
 is disabled with 'A request to your other device is still open. Cancel it
 below…' (`txt_setup_identity_path_locked`), and `chooseIdentityPath` refuses
@@ -79,7 +79,7 @@ would otherwise mint and self-claim a SECOND identity over a live join. The
 way out is **Cancel this request** (`btn_add_device_cancel`), behind a
 ConfirmSheet (`confirm_add_device_cancel`), in both `requested` and
 `approved`. It is `DELETE /v1/setup/add-device` (CIRISServer
-`fix/client-copy-0.5.232` `f9d25729`, `cancel` `src/add_device.rs:811-871`,
+`fix/client-copy-0.5.232`, `cancel` `src/add_device.rs:811-871`,
 mounted `:1480`): the node retires its poll, discards a held approval and
 `add_device_pending.json`, removes the request's unused keys, and sends a
 `Withdraw` to the other device (`:283-312`), which drops a pending request
@@ -94,7 +94,7 @@ works after a restart. The confirm's facts say exactly that. Outcomes
   so "there is no request left to cancel"; the path stays locked.
 * a bare 404 or 405 with no `reason_id`: a node at 0.5.231 or older has no
   DELETE (axum answers 405 for a path it knows under other methods). The
-  request is forgotten on this device only, with the old honest wording: the
+  request is forgotten on this device only, and the wording says so: the
   other device keeps listing it until its 15 minutes run out, and an approval
   already verified stays held on this node, unused.
 * anything else: the request stays live and the reason shows
@@ -187,13 +187,13 @@ error:     {tag: add_device_refusal, renders: "the refusal by id with the node's
 wizard is done and the other device has not approved yet. It is not an error
 and does not auto-leave. On this path COMPLETE hands off by itself only once
 the claim APPLIED with no error (`shouldAutoFinishSetup`): a recoverable
-`apply_failed` stays on COMPLETE for Retry (Codex, PR #189). It shows the match code and state line, polls, and finishes by itself
+`apply_failed` stays on COMPLETE for Retry. It shows the match code and state line, polls, and finishes by itself
 when `approved` arrives (`retryAddDeviceFinish`); 'Check again'
 (`btn_add_device_finish_retry`) does the same by hand. **No countdown here**:
 once approved, the approval is held on this node with no expiry and restored
 on reboot (`<home>/add_device_pending.json`, `src/add_device.rs:676-713`), and
 `complete` never contacts the other device, so its window closing or going
-offline no longer matters. `add_device.apply_failed` (502) renders in the
+offline does not matter. `add_device.apply_failed` (502) renders in the
 existing `setup_ownership_error` panel by id, recoverable: the node keeps what
 it held, so Retry re-applies it.
 
@@ -216,16 +216,15 @@ session (`require_loopback`, `:1257`).
 
 **No request this card makes carries the claim PIN off this device.** One
 request carries it, to this device's own node: `claimed-session`, after the
-claim was applied. The new device never shows the PIN on this path (the
-0.5.218 sketch drew it in a QR; that design is retired: the other device
-signs, this node verifies offline and applies through its own `setup/root`
-with its own PIN, `:883-893`). `collectClaimedSession` logs the URL, never the
+claim was applied. The new device never shows the PIN on this path: the other
+device signs, this node verifies offline and applies through its own
+`setup/root` with its own PIN (`:883-893`). `collectClaimedSession` logs the URL, never the
 PIN. `AddDeviceWireTest` asserts the PIN reaches `claimed-session` and only
 after `add-device/complete`.
 
 ### Restart-resume
 
-The server documents this behaviour as the client implements it: CIRISServer `FSD/ADD_DEVICE.md` §4.2 "Restarts" (at `fix/client-copy-0.5.232` `b3e05e27`, `FSD/ADD_DEVICE.md:130`), which also tabulates the HTTP status of every refusal and says the claim carries no owner password.
+The server documents this behaviour as the client implements it: CIRISServer `FSD/ADD_DEVICE.md` §4.2 "Restarts" (at `fix/client-copy-0.5.232`, `FSD/ADD_DEVICE.md:130`), which also tabulates the HTTP status of every refusal and says the claim carries no owner password.
 
 On opening the wizard, `probeAddDevice` asks `GET /v1/setup/add-device` once:
 
@@ -294,10 +293,9 @@ not-approved holds the agent until the approval arrives; restart-resume from
 `approved` and from `requested`; `idle` leaves the question open; a bare 404
 disables the option. `AddDeviceWireTest` (desktopTest, a real socket) repeats
 the request, a refusal, the bare 404, the with-agent order and the 409 on the
-wire. The `f9d25729` round adds: cancel through DELETE in `requested` and in `approved` (withdrawn, nothing applied, the path unlocked), 409 `already_owned` → nothing to cancel, a bare 404/405 → the local cancel, a refused cancel keeping the request live, `unreachable` re-sent until the other device answers, the re-send bound with a manual Retry after it, and Cancel while re-sending asking the node nothing; `AddDeviceWireTest` repeats DELETE's 200, 409 and 404 on a real socket. Each was red on its planted defect (the node never asked; no re-send) first. The Codex round on PR #189 adds: the collected session handed to the app once (and nothing handed when none was collected); a live request locking the first question until a confirmed cancel, which also stops the poll; an applied request offering no cancel; the account reason on a disabled Next with an agent; COMPLETE leaving by itself only on an applied claim. Each was red on its planted defect first. The 0.5.232 round adds: `expired` from the new detail and its new request, the older node's `failed`/"Unknown" read as expired, and a real failure staying a failure. Shown red on planted defects before being believed: a settle-await
+wire. Also covered: cancel through DELETE in `requested` and in `approved` (withdrawn, nothing applied, the path unlocked), 409 `already_owned` → nothing to cancel, a bare 404/405 → the local cancel, a refused cancel keeping the request live, `unreachable` re-sent until the other device answers, the re-send bound with a manual Retry after it, and Cancel while re-sending asking the node nothing (`AddDeviceWireTest` repeats DELETE's 200, 409 and 404 on a real socket); the collected session handed to the app once (and nothing handed when none was collected); a live request locking the first question until a confirmed cancel, which also stops the poll; an applied request offering no cancel; the account reason on a disabled Next with an agent; COMPLETE leaving by itself only on an applied claim; `expired` from the node's detail and its new request, an older node's `failed`/"Unknown" read as expired, and a real failure staying a failure. Each was shown red on a planted defect before being believed, among them: the node never asked, no re-send, a settle-await
 removed, `not_approved` treated as an error, "send a new request" refused
-after `expired`, and a closed window hiding held requests (CSD-094) each
-failed at least one test.
+after `expired`, and a closed window hiding held requests (CSD-094).
 
 **A real two-device run, and what it needs.** `testing/flows/drafts/csd-093-add-this-device.yaml`.
 The other device must be a CLAIMED node with an owner fedID and a mesh
@@ -317,20 +315,23 @@ CIRISEdge#683).
 
 ## 6. Delta — card vs API vs CC
 
-* **Where the server source differed from the FSD, and what became of it.** All six were answered on CIRISServer `fix/client-copy-0.5.232` at `b3e05e27` (this client's pin, `client/VENDORING.md`): (a), (b) and (e) are now documented in `FSD/ADD_DEVICE.md` §4/§4.2; (c) is fixed: the other device no longer holding the request is now `expired` with the detail "your other device no longer holds this request — send a new one" (`src/add_device.rs:649-655`), and the client keeps the `failed`/"Unknown" reading only as the v0.5.231 fallback; (d) is fixed: the request carries `host_device_class()` (`src/add_device.rs:497`, `src/backend.rs:157`), phone on mobile, which CSD-094's rows now show. As found at v0.5.231: (a) `GET` starts at
-  `idle`, not in the FSD's state list (`:344`). (b) A request that has not
-  been approved does not survive a node reboot (only the verified approval
-  does), so "restart mid-wizard is safe" holds for the approval, not for the
-  request; the wizard says "interrupted". (c) If the other device forgets the
-  request (its own 15 minutes ran out, or it restarted), the poll gets
-  `Unknown` and B's state is `failed` with `detail: "Unknown"`
-  (`:639-645`), not `expired`; `expired` is B's own 15-minute deadline
-  (`:582`, `:649`). (d) `device_class` is always `laptop`
-  (`DEVICE_CLASS_LAPTOP`, `:491`), whatever the device is. (e) `mint_failed` and
-  `rng` are 500, `unexpected` 502; the FSD lists them without statuses.
+* **Server behaviour this card relies on.** At this client's pin (CIRISServer
+  `fix/client-copy-0.5.232`, `client/VENDORING.md`), documented in
+  `FSD/ADD_DEVICE.md` §4/§4.2: (a) `GET` starts at `idle` (`:344`). (b) Only a
+  verified approval survives a node reboot, not the request, so the wizard
+  says "interrupted" for a lost request. (e) `mint_failed` and `rng` are 500,
+  `unexpected` 502. Also at the pin: (c) when the other device no longer holds
+  the request (its 15 minutes ran out, or it restarted), the state is
+  `expired` with the detail "your other device no longer holds this request —
+  send a new one" (`src/add_device.rs:649-655`); a v0.5.231 node answers
+  `failed` with `detail: "Unknown"` (`:639-645`), which the client reads as
+  expired. `expired` is also B's own 15-minute deadline (`:582`, `:649`).
+  (d) The request carries `host_device_class()` (`src/add_device.rs:497`,
+  `src/backend.rs:157`), phone on mobile, which CSD-094's rows show; a
+  v0.5.231 node always sends `laptop` (`DEVICE_CLASS_LAPTOP`, `:491`).
 * **The agent hand-off.** On an agent build, setup-complete (CIRISAgent,
   cirisagent-d5) reloads the runtime, which kills the session the add-device
-  calls ride. The client now runs `add-device/complete` → `claimed-session`
+  calls ride. The client runs `add-device/complete` → `claimed-session`
   → the node options → THEN `POST /v1/setup/complete`, the same E9 ≺ E10
   order the self-claim uses. The agent's setup-complete is unchanged; it should
   not assume the node was self-claimed with the account's password (on this

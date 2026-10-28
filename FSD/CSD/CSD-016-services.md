@@ -43,8 +43,8 @@ screen: Services
 nav_epistemic_services`. Services is listed at `CirclesNav.kt:145` and is
 **absent from the `agentOnly` set** at `CirclesNav.kt:153-155`, so a node
 install lists it — while `getServices()` calls the brain's
-`GET /v1/system/services`, which `CIRISServer origin/main` does not serve. §3
-has the consequence.
+`GET /v1/system/services`, which CIRISServer does not serve. §3 has the
+consequence.
 
 ```yaml csd:shows
 registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
@@ -124,19 +124,18 @@ this state.
 | value | endpoint | owner | state |
 |---|---|---|---|
 | the service list | `GET /v1/system/services` | CIRISAgent (`routes/system/services.py:77`) | live on the brain — `CIRISApiClient.kt:11071` |
-| priority, priority group, strategy | `GET /v1/system/services/selection-logic` — "priority groups, priorities, strategies, and circuit breaker behavior" | CIRISAgent (`routes/system_extensions.py:477`, OBSERVER) | **live and never called** — this row said "no route", and one exists on `main` (29371660de). The client still supplies constants (`CIRISApiClient.kt:11092-11097`). Whether the payload carries per-service values or only the policy is not verified here, which is why `config:{scope}` stays `unconfirmed` above; CIRISAgent#1208 is about `/services` itself and does not mention this route |
+| priority, priority group, strategy | `GET /v1/system/services/selection-logic` — "priority groups, priorities, strategies, and circuit breaker behavior" | CIRISAgent (`routes/system_extensions.py:477`, OBSERVER) | **live and never called**. The client supplies constants (`CIRISApiClient.kt:11092-11097`). Whether the payload carries per-service values or only the policy is not verified here, which is why `config:{scope}` stays `unconfirmed` above; CIRISAgent#1208 is about `/services` itself and does not mention this route |
 | change a provider's priority / group / strategy | `PUT /v1/system/services/{provider_name}/priority` | CIRISAgent (`routes/system_extensions.py:388`, ADMIN) | live, **not called** |
 | handler-specific services | **no route** | — | **missing**; `handlers = emptyMap()` (`CIRISApiClient.kt:11103`) |
-| real circuit-breaker state | `GET /v1/system/services/health` — "circuit breaker states, error rates, and recommendations" | CIRISAgent (`routes/system_extensions.py:352`, OBSERVER) | **live and never called** — this row said "no route". The chip is still derived from `healthy` |
-| reset a circuit breaker | `POST /v1/system/services/circuit-breakers/reset` (all, or one service type) | CIRISAgent (`routes/system_extensions.py:444`, ADMIN) | **live and never called** — this row said "no route". The controls that pretended to do it (`btn_reset_all` / `btn_reset_by_type` / `btn_reset_confirm`, wired to a `resetCircuitBreakers` whose whole body was a status string reading `"(API not yet implemented)"`) were **removed in #95**; the card offers no reset. The route exists, so that removal is now the gap rather than the fix |
-| diagnostics | **no route** | CIRISAgent | **missing**. `runDiagnostics` re-counted the list already on screen, so its "open breakers" number was the unhealthy count restated; `btn_services_diagnose` was **removed in #95** |
+| real circuit-breaker state | `GET /v1/system/services/health` — "circuit breaker states, error rates, and recommendations" | CIRISAgent (`routes/system_extensions.py:352`, OBSERVER) | **live and never called**. The chip is derived from `healthy` |
+| reset a circuit breaker | `POST /v1/system/services/circuit-breakers/reset` (all, or one service type) | CIRISAgent (`routes/system_extensions.py:444`, ADMIN) | **live and never called**. The card offers no reset control; the route exists, so the missing control is the gap |
+| diagnostics | **no route** | CIRISAgent | **missing**. The card offers no diagnostics: re-counting the list already on screen would only restate the unhealthy count |
 | the node's own substrate health | `GET /v1/system/health` | CIRISServer (`src/health.rs:589`) | live — **and never called by this screen** |
 
 **Wrong host, and this is the one to fix first.** The card is not `agentOnly`,
 its doc comment calls it *a node-infra keeper* (`EpistemicNav.kt:69`), and its
-only read is the brain's. A grep of every `"/v1/..."` literal in
-`CIRISServer origin/main src/` returns 213 routes; `/v1/system/services` is not
-one of them. On a run-without-AI install `syncBackendFromEnv` re-points the
+only read is the brain's. No `"/v1/..."` literal in CIRISServer `src/` is
+`/v1/system/services`. On a run-without-AI install `syncBackendFromEnv` re-points the
 agent client at the node (`CIRISApp.kt:5032`), `getServices()` is **not**
 `nodeSkip`-guarded (unlike `getMessages`, `getAuditEntries` and six others at
 `CIRISApiClient.kt:798, 7486, 7657, 7745, 8490, 8563, 10621`), so the call goes
@@ -153,8 +152,6 @@ Three fixes, and exactly one of them is right:
 
 (2) is the one that matches what the card says it is.
 
-**CIRISAgent working tree is dated 2026-08-15**, five weeks behind today.
-
 ## 4. Flow (how)
 
 My things → This node → Services, on an agent.
@@ -167,7 +164,7 @@ expect:
   count: {of: "proposed:services_row_*", min: 1}
 ```
 
-No diagnostics and no breaker reset are offered: #95 removed both controls, since neither had a route (§3). They return only with one.
+No diagnostics and no breaker reset are offered (§3).
 
 Point the client at a bare node — a run-without-AI install — and open the card.
 
@@ -187,21 +184,20 @@ is listed, the read 404s, and the screen says `No Services Found`.
 agent-work group where the node mode is a real case rather than a hidden one,
 so a run against a bare node is mandatory here and not a nicety.
 
-**Not tested here.** That a reset does anything — it cannot, there is no route.
+**Not tested here.** That a reset does anything — the card offers none.
 That the priority and strategy shown match the agent's real bus configuration —
 they cannot, they are constants.
 
 **Upstream asks.**
 CIRISAgent — carry `priority`, `priority_group`, `strategy`, `capabilities` and
 the real `circuit_breaker_state` on `GET /v1/system/services`, or the client
-must stop drawing those four columns; and add a breaker-reset route, or the
-client must remove the four controls that pretend to one.
+must stop drawing those four columns.
 CIRISClient — wire `ServicesViewModel._error` into `ServicesScreen`, bind
 `mobile.services_unavailable` to it, and settle the host question above.
 
-## 7. Review — runtime group (2026-09-27, branch `review/runtime`)
+## 7. Review — runtime group
 
-Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origin/main**. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, all shown red against the old behaviour first.
+Card checked against CIRISAgent `main` and CIRISServer `main`. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`.
 
 **Checked:** `GET /v1/system/services` (OBSERVER) matches the model except
 `available`, `uptime_seconds`, `metrics` and `timestamp`, which are dropped.
@@ -213,7 +209,7 @@ Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origi
 - `GET /v1/system/services/health` (circuit breakers), `/selection-logic`,
   `PUT /services/{p}/priority` and `POST /services/circuit-breakers/reset` exist
   and are not called; the comment at `CIRISApiClient.kt` claiming priority and
-  breaker data are "not on the wire" is wrong — they are one route over. Building
-  them is the next pass for this card.
+  breaker data are "not on the wire" is wrong — they are one route over. Wiring
+  them is open client work.
 
-**Stage:** building → building (no client change in this review).
+**Stage:** building → building.

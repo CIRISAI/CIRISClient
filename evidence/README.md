@@ -13,7 +13,7 @@ issue  repo  scan_root  glob  needle  files  lines  kind  predicate
 ```
 
 Each row carries a **scannable predicate** — a needle whose appearance means
-the obligation landed — so the wait is visible to a test rather than to
+the obligation is met — so the wait is visible to a test rather than to
 someone's memory. `kind` ∈ `absence` · `drift` · `untestable`.
 
 Counts measured 2026-08-16 against CIRISConformance `origin/main` @`3ab8b75`

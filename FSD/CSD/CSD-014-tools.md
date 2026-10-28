@@ -39,7 +39,7 @@ no brain has nothing to hold a tool.
 **`EpistemicNav.kt:72` says otherwise and is stale.** Its comment reads *"the
 agent-only Tools child is dropped from the surfaced tree (the Tools object
 remains defined for route compatibility)"*. `CirclesNav.kt:149` lists it and
-`nav_map` reaches it. The comment describes the shell that was deleted.
+`nav_map` reaches it. The comment describes a shell the app does not have.
 
 ```yaml csd:shows
 registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
@@ -115,15 +115,14 @@ the pattern the other six surfaces in this area should copy.
 |---|---|---|---|
 | the tool list | `GET /v1/system/tools` | CIRISAgent (`routes/system/tools.py:119`, prefix `system/__init__.py:39`) | live — direct `client.get` at `CIRISApiClient.kt:9741`, parsed as raw JSON (`:9768-9770`). **Field defect:** the agent sends `parameters` as `{type, properties, required}` (`schemas/adapters/tools.py:27-32`) and the client flattens the top-level keys (`:9772`), so the card shows `type: "object"` and a raw `properties` blob instead of parameter names; the §2 example `["path","encoding"]` is what it should show. **Masking the client cannot see:** no registry → empty 200 (`tools.py:132-133`), a provider that throws is logged and skipped (`:83-84`), duplicate tool names merge their providers into one string (`:98-99`), and `cost` defaults to 0.0 server-side (`system_schemas.py:445`) — so the client-only cost fix is not enough; add to CIRISAgent#1208 |
 | the 22 prohibitions | **no route** — `prohibited:{category}`, CC 3.1.5.4 | CIRISAgent | **missing**; blocks `building` for `proposed:tools_prohibited` |
-| tool balance / purchase | `GET /v1/api/tools/balance`, `POST /v1/api/tools/purchase` | — | **wrong-host and dead**: `ToolsApi.kt` declares five `/v1/api/tools/*` routes; `CIRISApiClient` never constructs a `ToolsApi`, and neither `CIRISServer origin/main src/` nor `CIRISAgent routes/` contains that literal |
+| tool balance / purchase | `GET /v1/api/tools/balance`, `POST /v1/api/tools/purchase` | — | **wrong-host and dead**: `ToolsApi.kt` declares five `/v1/api/tools/*` routes; `CIRISApiClient` never constructs a `ToolsApi`, and neither CIRISServer `src/` nor `CIRISAgent routes/` contains that literal |
 
-**Host check.** `/v1/system/tools` is the brain's. `CIRISServer origin/main`
+**Host check.** `/v1/system/tools` is the brain's. CIRISServer
 serves `/v1/system/health`, `/v1/system/data*` and `/v1/system/verify-status`
 and nothing else under `/v1/system` — so the surface being `agentOnly` is what
 keeps a run-without-AI install from 404ing here.
 
-Handler lines re-read from `main` 29371660de on 2026-09-27. Still open on the
-client: the empty card is guarded on `!isLoading` but not `!isRefreshing`
+Handler lines are CIRISAgent `main`. Open on the client: the empty card is guarded on `!isLoading` but not `!isRefreshing`
 (`ToolsScreen.kt:272`), so the spinner and "No tools available" can show
 together, and the spinner sits above the rows rather than replacing them.
 

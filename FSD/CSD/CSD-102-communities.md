@@ -152,11 +152,11 @@ by the same act.
 
 ## 3. Contracts (who)
 
-Verified against CIRISServer `origin/main` 046e1b39 (0.5.217; the routes landed
-in 0.5.216), `src/communities.rs`. Every call goes to the NODE URL
+Verified against CIRISServer 0.5.217 (the routes exist from 0.5.216),
+`src/communities.rs`. Every call goes to the NODE URL
 (`nodeBaseUrl`, the local node), never `baseUrl` — on a with-AI install that is
-the agent, which proxies these only from agent 2.12.1 (CIRISAgent#1213,
-closed by #1215). The direct node URL works on every agent version, so it stays.
+the agent, which proxies these only from agent 2.12.1 (CIRISAgent#1213). The
+direct node URL works on every agent version.
 `CommunitiesViewModelTest.every_call_goes_to_the_node_url_not_the_base_url`
 pins it.
 
@@ -189,18 +189,18 @@ envelope route returns. Calling both would sign the same change twice.
 
 ### 3.1 What the node does not say, and what the card does instead
 
-* **An unreadable moderator chain reads as none — on the node; the card is
-  ready for the fix.** `room_json` fills `moderators` with
+* **The node reads an unreadable moderator chain as none; the card tells them
+  apart when the node says so.** `room_json` fills `moderators` with
   `appointed_moderators_of(…).unwrap_or_default()` (:1384), so a persist error
-  and "no moderator appointed" are the same `[]` (CIRISServer#688, filed; its
-  ask is `moderators_readable: false` or a failed read). The client now decodes
+  and "no moderator appointed" are the same `[]` (CIRISServer#688 asks for
+  `moderators_readable: false` or a failed read). The client decodes
   `moderators_readable` and `moderatorsShown()` renders four facts four ways:
   `txt_community_moderators_unreadable` (danger tone) when the node says it
   could not read, `txt_community_moderators_not_sent` when the list is absent,
   `txt_community_moderators_none` when it read none, and a row per holder
-  (`ModeratorsShownTest`, red against the old `moderators.orEmpty()`: two
-  failures, `expected Unreadable / NotSent but was None`). Until the node sends
-  the flag, an unreadable chain still arrives as `[]` and reads "No appointed
+  (`ModeratorsShownTest`, red against a plain `moderators.orEmpty()` reading).
+  From a node that does not send the flag, an unreadable chain arrives as `[]`
+  and reads "No appointed
   moderator is on record" — true in both cases — and the card sends the person
   to Moderation, whose named-moderator verdict
   (`operate`/`auto_promote`/`quiesce`, CSD-065) is the read that fails secure.
@@ -214,7 +214,7 @@ envelope route returns. Calling both would sign the same change twice.
 
 ### 3.2 Moderation takes the room (CSD-065)
 
-`ModerationScreen` takes a `communityPicker`; it is now wired. From Moderation
+`ModerationScreen` takes a `communityPicker`. From Moderation
 the picker (`CommunityModerationPicker`, `community_moderation_picker`) lists
 the person's rooms of more than two at both tiers as chips
 (`chip_community_moderation_<id>`), read through the same two tier view models
@@ -230,24 +230,23 @@ left out: a two-person chat has no moderation duty to look up.
 * **The group book** — who admitted whom, when, and the change history — is
   CSD-103's, and is CIRISServer#650.
 
-### 3.3 Nobody joins without their own consent (ruling of 2026-09-30)
+### 3.3 Nobody joins without their own consent
 
-The maintainer ruled on 2026-09-30 that **adding someone to a family or a
-community requires their consent, including founding members named at
-create** (CIRISConstitution#133). Persist's enforcement is CIRISPersist#955
-(v52): one inviter proposes, the invitee accepts or declines, the quorum stays
-on the admitting record, and an invitation expires in 30 days or less. Reverse
-quorum is not a membership rule; it stays CSD-070's commons brake.
+**Adding someone to a family or a community requires their consent, including
+founding members named at create** (CIRISConstitution#133). Persist enforces
+it (CIRISPersist#955, v52): one inviter proposes, the invitee accepts or
+declines, the quorum stays on the admitting record, and an invitation expires
+in 30 days or less. Reverse quorum is not a membership rule; it stays
+CSD-070's commons brake.
 
-**CIRISServer 0.5.218** ships it (merged at `53d1ffb5`); the interim 409
-`membership.consent_required` of CIRISServer#700 never reached a release. On
-this card (CSD-106):
+**CIRISServer 0.5.218** carries it. No released node sends the 409
+`membership.consent_required` of CIRISServer#700. On this card (CSD-106):
 
 * **the invitee's inbox** for community invitations is drawn at the top of the
   section (`GET /v1/self/invites`, Accept / Decline behind a three-fact
-  confirm). A row's `tier` (a 0.5.219 addition) places it on this tier's hub
-  only; 0.5.218 sends none, so until then an untiered community invitation is
-  shown on **both** community hubs (CSD-106 §3.1, §6).
+  confirm). A row's `tier` (sent from 0.5.219) places it on this tier's hub
+  only; an untiered community invitation (0.5.218 sends none) is shown on
+  **both** community hubs (CSD-106 §3.1, §6).
 * **found with members**: a create naming anyone but the founder is refused
   `membership.founding_member_unsigned`. On a node that carries invitations the
   founding card offers no member chips (`community_create_found_alone`).
@@ -309,12 +308,12 @@ needs a room whose rule one signature does not meet — two nodes and a contact.
    collected (`CommunitiesViewModelTest.a_quorum_pending_add_is_held_then_assembled`).
 4. Leave and dissolve name who signs before the signature.
 
-**Review (2026-09-28).** Closed: the unreadable-moderators rendering (above,
-red-tested); Moderation's community picker, wired from this card (§3.2, UI
-wiring, verified by compile). Open: CIRISServer#688 (the node still sends `[]`
-for an unreadable chain; no founder-rooted appoint route; no row envelope) and
-CIRISServer#649 (the affiliations record). Stage: building → building
-(`affiliations_declared_record` is `blocked_by: CIRISServer#649`).
+**Open dependencies.** CIRISServer#688 (the node sends `[]` for an unreadable
+chain; no founder-rooted appoint route; no row envelope) and CIRISServer#649
+(the affiliations record). The card stays `building`
+(`affiliations_declared_record` is `blocked_by: CIRISServer#649`). The
+unreadable-moderators rendering is red-tested; Moderation's community picker
+(§3.2) is UI wiring, verified by compile.
 
 **Not tested here.**
 * Whether a signer satisfies the rule — the node's `tally` decides, and a client
@@ -323,5 +322,5 @@ CIRISServer#649 (the affiliations record). Stage: building → building
 * The envelope's lifetime: it lives in the app process. An app restart before
   assembly drops it; it can be rebuilt by making the same change again, and the
   node's `community.change_stale` refuses one that no longer fits.
-* This pipeline's English only: every new string is `draft` until the lead's
-  translation run, which is machine-translated and machine-reviewed, not native.
+* Anything but English: every new string is `draft` until a translation run,
+  which is machine-translated and machine-reviewed, not native.

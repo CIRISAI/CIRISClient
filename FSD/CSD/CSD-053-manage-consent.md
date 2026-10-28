@@ -18,12 +18,9 @@ which other node, in both directions, and take that agreement back.** Serves
 one line: *"Autonomy is only real if it remains revocable — **consent that
 cannot be withdrawn is not consent**"* (CC 1.5).
 
-**Revoke is live.** Until #112 the button was hard-disabled behind a
-compile-time flag (`revokeEndpointAvailable = false`) with a TODO for an
-endpoint the node did not have. ciris-server 0.5.218 shipped the route
-(CIRISServer#657) and the flag is gone: the control now drives
-`POST /v1/federation/peering/revoke` on node A, and **whether node A has the
-route is asked of node A at runtime**, never decided by a build. The primitive
+**Revoke is live.** The control drives `POST /v1/federation/peering/revoke`
+on node A (ciris-server 0.5.218, CIRISServer#657), and **whether node A has
+the route is asked of node A at runtime**, never decided by a build. The primitive
 underneath is the one CC always said was there — a `withdraws` against one's
 own row (CC 2.4.1.1), and *"on revoke, the granting node MUST cease replicating
 the named prefixes to P"* (CC 3.3.7). The node signs the `withdraws` **as the
@@ -33,11 +30,9 @@ What the screen renders after a revoke is what the node SAID, never what was
 asked for. That is CC 1.5's flip side, and it is the reason the still-active
 outcome (§2) exists at all.
 
-**0.5.218 builds the route (CIRISServer#657).** The maintainer's brief update
-(2026-09-25) reports `POST /v1/federation/peering/revoke` and
-`DELETE /v1/contacts/{key_id}` as built and tested, **always signed by the
-person, never the node**. So the disabled control can be enabled once the
-release ships. There is one limit, and the screen must carry it: grants the node
+**A withdrawal is always signed by the person, never the node**, on
+`POST /v1/federation/peering/revoke` and `DELETE /v1/contacts/{key_id}` alike.
+There is one limit, and the screen must carry it: grants the node
 wrote before the person re-signed them cannot be withdrawn and stay live. The
 route lists them as `remaining_grants`, and each must render as **still
 active**. A withdraw that leaves any of them standing is not reported as
@@ -104,15 +99,12 @@ fields:
     blocked_by: CIRISServer#657
 ```
 
-**The traces switch is gone from this card (2026-09-28).** `toggle_send_traces`
-drove `PUT /v1/my-data/accord-settings` — the same write the Data card
-(CSD-039) and the Add Federation ID catch-up (CSD-086) also issued: one act,
-three doors, and the route checker's duplicate-mutation ratchet listed all
-three. The Data card is where the setting is READ BACK (`switch_consent`,
-`data_row_events_sent`), so it owns the write; this card and the catch-up now
-point at it (`btn_open_data_sharing` here). The card that did the write here
-also documented it as `consent:community_trust:v1`, a leaf CC 3.3.1 does not
-have (below), which is the other reason it went rather than stayed.
+**The traces switch is not on this card.** `PUT /v1/my-data/accord-settings`
+is one act with one door: the Data card (CSD-039) is where the setting is READ
+BACK (`switch_consent`, `data_row_events_sent`), so it owns the write; this
+card and the Add Federation ID catch-up (CSD-086) point at it
+(`btn_open_data_sharing` here). Nor is the write `consent:community_trust:v1`,
+a leaf CC 3.3.1 does not have (below).
 
 **`use: display-only` on `consent:{kind}` is load-bearing, not bookkeeping.**
 The family is **reserved** (CC 3.1.5, `accord-agent`/CIRISAgent), so
@@ -153,8 +145,8 @@ lines are cleared when a new set-up starts and again when its A→B grant is
 accepted — a fresh grant under "Withdrawn" would be reporting its
 predecessor's fate as its own — and the whole session (grant id, rows,
 outcome, route answer, node A's token) is forgotten on **every** way out of a
-session, because the ViewModel is app-scoped and outlives the owner. Verified
-against the code after #116: the reset is `resetSession()`, called from
+session, because the ViewModel is app-scoped and outlives the owner. The
+reset is `resetSession()`, called from
 CIRISApp's one token effect, keyed and conditioned on
 `consentSessionAuthenticated(currentAccessToken, isHAAddonMode)` — so the
 three logout menus, a session expiring under Interact and Billing's
@@ -185,16 +177,13 @@ CSD-005 §3 files for `GET /v1/contacts`.
   bare title "Manage Consent" and points at the *other* consent — the subject's
   — through `btn_open_user_consent` as a secondary card. A person reading the
   tab sees one word covering two things CC's own drafters kept apart.
-* The traces switch this card used to carry was documented in code as writing
-  `consent:community_trust:v1`. **No such leaf exists.** CC 3.3.1's catalogue is
+* **`consent:community_trust:v1` does not exist.** CC 3.3.1's catalogue is
   `state / stream / deletion_sla / deletion_complete / decay / partnership_grant
   / partnership_accept / scope / replication`, and `community_trust` is not
   among them; the registry has one `consent:{kind}` row and no gloss for that
   kind. Per `client/ceg/README.md`, a family with no registry row cannot be
-  named and therefore cannot be rendered (CC 3.1.7 R2). The endpoint was fine;
-  the dimension name was unbacked. The switch and its comment are gone with the
-  fold above, and the Data card (CSD-039) binds the same write to
-  `consent:state` — a leaf that exists.
+  named and therefore cannot be rendered (CC 3.1.7 R2). The Data card
+  (CSD-039) binds the traces write to `consent:state` — a leaf that exists.
 
 ```yaml csd:states
 populated: {tag: row_consent_a_to_b, renders: "both direction rows, the ratified label (txt_consent_ratified), and the revoke control in whichever of its §2.1 states applies"}
@@ -215,12 +204,12 @@ error:     {tag: consent_revoke_refusal, renders: "the node's typed refusal of t
 | un-contact a person | `DELETE /v1/contacts/{key_id}` | CIRISServer | live since 0.5.218 (#657; the client side is #112); the People side is CSD-005 |
 | the grant's envelope (attester, `for_key_id`, scope, dimension) | not requested by the client; `grant_receipt` exists node-side (`src/peer.rs:1525`) | CIRISServer + CIRISClient | **unconfirmed** — blocks `building` for `text_consent_attester` and `text_consent_for_key`. CIRISServer#616. |
 | a read of node A's peering grants | none | CIRISServer | **missing.** Revoke names a grant by id and the node lists none, so the control works only on a grant set up here in this session. |
-| the traces opt-in | — (was `GET`/`PUT /v1/my-data/accord-settings`, CIRISAgent) | CIRISAgent, via **CSD-039** | **not this card's, since 2026-09-28.** The write was issued from three screens (this one, Data, Add Federation ID) and the Data card is the one that reads it back, so it owns it; `btn_open_data_sharing` opens it. Folded rather than documented as three doors: on a node-only build this card drew the switch over a 404, and the fold removes that reading here without adding a state for it. |
+| the traces opt-in | — (was `GET`/`PUT /v1/my-data/accord-settings`, CIRISAgent) | CIRISAgent, via **CSD-039** | **not this card's.** The Data card reads it back, so it owns the write; `btn_open_data_sharing` opens it. One door, not three: on a node-only build a switch here would be drawn over a 404. |
 
 ## 4. Flow (how)
 
 The controls (`btn_consent_setup_peering`, `btn_consent_revoke_peering`,
-`btn_open_user_consent`, `toggle_send_traces`, `btn_manage_consent_back`) and
+`btn_open_user_consent`, `btn_manage_consent_back`) and
 the outcome lines (§2.1) are real and drivable. The set-up path needs two
 reachable nodes and is not written here.
 
@@ -273,8 +262,8 @@ expect:
   absent: [btn_consent_setup_peering, btn_consent_revoke_peering, toggle_send_traces]
 ```
 
-`toggle_send_traces` is asserted absent on purpose: if it reappears, someone
-has re-opened the third door on `PUT /v1/my-data/accord-settings` (§3).
+`toggle_send_traces` is asserted absent on purpose: if it appears, a second
+door on `PUT /v1/my-data/accord-settings` is open (§3).
 
 ## 5. QA plan
 

@@ -1,6 +1,6 @@
 # CSD-094 — Approve a new device (the device you already have)
 
-**CSD**: CSD-094 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: CIRISServer 0.5.231 `FSD/ADD_DEVICE.md` (CIRISServer#177). Rewritten from the 0.5.218 sketch (scan the new device's QR and drive `claim-remote` at it over HTTP), which the server replaced with a peer-to-peer join request the new device sends to this one
+**CSD**: CSD-094 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: CIRISServer 0.5.231 `FSD/ADD_DEVICE.md` (CIRISServer#177): a peer-to-peer join request the new device sends to this one, not a QR scan that drives `claim-remote` at it over HTTP
 **Pairs with**: CSD-093 (Add this device to an existing CIRIS ID, on the new device) · CSD-037 (My Identity, the page this card sits on)
 **Flow**: `testing/flows/drafts/csd-094-approve-new-device.yaml` (floor `unreleased`)
 **Card**: `ui/screens/AddDeviceScreens.kt` (`ApproveDeviceCard`, `AddDeviceTags`), placed on `ui/screens/IdentityManagementScreen.kt` above the roster's older "add a key" card; `viewmodels/ApproveDeviceViewModel.kt`; wire `api/AddDeviceApi.kt` (`DeviceRequestsApi`) + `CIRISApiClient.{open,list,approve,deny}DeviceRequest(s)`; tests `ApproveDeviceViewModelTest` (commonTest), `AddDeviceWireTest.theApprovingDevicesCallsCarryItsOwnerSession` (desktopTest)
@@ -41,12 +41,12 @@ screen: IdentityManagement
 `btn_my_things -> nav_instrument_devices_keys -> nav_epistemic_identity_management`
 (My things › Devices & keys › My Identity) already holds the person's devices:
 the roster (`GET /v1/self/occurrences`, CSD-037) and the older "add a key a
-device already made" card (`POST /v1/self/occurrence`). No screen called
-`/v1/self/device-requests` before this card, so it is not a duplicate; it is
+device already made" card (`POST /v1/self/occurrence`). No other screen calls
+`/v1/self/device-requests`, so it is not a duplicate; it is
 the 0.5.231 door to the same roster. It sits directly above the older card,
 and that card is renamed by what the person holds ("Add a key a device already
 made", `mobile.identity_add_key_title`) so the two are not two buttons called
-"Add a device" (§6 of the 0.5.218 sketch recommended exactly this).
+"Add a device".
 
 **The window gates NEW requests only.** `POST /v1/self/device-requests/open`
 opens it (10 minutes by default, 30 at most). While open, the card says
@@ -130,14 +130,14 @@ Verified against CIRISServer **v0.5.231** `src/add_device.rs`. Every route is
 owner-session gated (`require_owner_session`), with the bearer, on the node
 the card is showing: `ClientDeviceRequests` reads the ACTIVE node's URL on
 every call (`effectiveNodeUrl`, as contacts do), because the view model
-outlives a node-profile switch and a URL captured at construction approved on
-the previous node (Codex, PR #189; `AddDeviceWireTest.afterANodeSwitchTheApprovalGoesToTheNewNode`).
+outlives a node-profile switch and a URL captured at construction would approve
+on the previous node (`AddDeviceWireTest.afterANodeSwitchTheApprovalGoesToTheNewNode`).
 
 | value | endpoint | owner | state |
 |---|---|---|---|
 | open the window | `POST /v1/self/device-requests/open {seconds?}` → `{open: true, seconds}` | CIRISServer `open_window`, `:940-969`; default/max `:53-54`; route `:1265-1268` | **live**, wired: `ApproveDeviceViewModel.open` → `CIRISApiClient.openDeviceRequests`. The body is `{}` (the node's default); an empty body is also accepted (`:948-952`) |
 | the pending requests and the window | `GET /v1/self/device-requests` → `{requests: [{request_id, label, device_class, match_code, node_key_id, requested_secs_ago}], window_secs_left}` | CIRISServer `list_requests`, `:972-1000`; `sweep` `:184-201`; route `:1261-1264` | **live**, polled by the card. `window_secs_left` is null once closed (`sweep` clears it, `:197-199`); held requests survive until REQUEST_TTL (`:49`, `:187-188`) |
-| approve | `POST /v1/self/device-requests/{id}/approve` → `{approved, match_code, node_key_id, occurrence_key_id, self_dek_granted}` | CIRISServer `approve`, `:1033-1094`; `sign_and_record` `:1098-1241`; route `:1269-1272` | **live**, behind the ConfirmSheet. 404 `add_device.request_unknown`, 500 `add_device.approve_failed`. From two devices (CIRISServer#794, #802 @ `e1201b69`, `:1354-1400`) a held approval answers **202** `{approved: false, held: true, proposal_id}`: shown as held, never approved, with a way to CSD-095 |
+| approve | `POST /v1/self/device-requests/{id}/approve` → `{approved, match_code, node_key_id, occurrence_key_id, self_dek_granted}` | CIRISServer `approve`, `:1033-1094`; `sign_and_record` `:1098-1241`; route `:1269-1272` | **live**, behind the ConfirmSheet. 404 `add_device.request_unknown`, 500 `add_device.approve_failed`. From two devices (CIRISServer#794, #802, `:1354-1400`) a held approval answers **202** `{approved: false, held: true, proposal_id}`: shown as held, never approved, with a way to CSD-095 |
 | deny | `POST /v1/self/device-requests/{id}/deny` → `{denied: true}` | CIRISServer `deny`, `:1003-1030`; route `:1273-1276` | **live**, behind the ConfirmSheet. 404 `add_device.request_unknown`. A decided request frees its slot at once (N3) |
 | the new device in the roster | `GET /v1/self/occurrences` (CSD-037) | CIRISServer | live; approval records the occurrence here (`put_identity_occurrence`, `:1194-1197`), so the roster shows it on its next read |
 
@@ -183,12 +183,15 @@ UNCLAIMED one, with a mesh transport, whose loopback the fixture can reach.
 
 * **Where the server source differs from the FSD.** The list row carries
   `node_key_id` and `requested_secs_ago`, not `requested_at` (FSD §4); the
-  window is `window_secs_left` (null when closed). `device_class` is always
-  `laptop` at v0.5.231 (`:491`). Fixed at `b3e05e27`: the request carries the host's class (`src/add_device.rs:497`), and the card shows it (`text_approve_device_class_<id>`, `deviceClassDisplay`).
+  window is `window_secs_left` (null when closed). At this client's pin
+  (CIRISServer `fix/client-copy-0.5.232`) the request carries the host's class
+  (`src/add_device.rs:497`), and the card shows it
+  (`text_approve_device_class_<id>`, `deviceClassDisplay`); a v0.5.231 node
+  always sends `laptop` (`:491`).
 * **Stated limits.** A request the new device sent while this node's window
   was closed is refused, not queued (N2), so "Accept new requests" comes first.
   The new device must receive the approval within 15 minutes of it being
-  given (DECIDED_TTL, `:51`); after that it reads `expired` (`b3e05e27`;
+  given (DECIDED_TTL, `:51`); after that it reads `expired` (at the pin;
   `failed`/"Unknown" on v0.5.231) and the person starts again (open the window, send a new request).
 * **CC.** CC 3.4.5 and 3.3.6 hold as §1 says. The self-DEK re-wrap is the
   owner's act and runs at approval; if it fails it is retried by `self_rewrap`

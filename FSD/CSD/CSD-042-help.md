@@ -150,84 +150,31 @@ flow should re-assert.
   by habit. The node-version row above is the first thing that will tempt someone
   to break it; it should arrive as an optional, already-resolved string passed in
   by the shell, not as a fetch on this screen.
-* **`NavSurface.Help` is returned for a screen that is not Help, and that makes
-  one obvious flow assertion unsound.** `screenToSurface` has a single `when`
-  branch covering six screens with no `-> null`
-  (`CIRISApp.kt:5960-5962`): `Screen.Startup, Screen.Login, Screen.Setup,
-  Screen.ServerConnection, Screen.ClaimNode, Screen.Help -> NavSurface.Help`.
-  `showSidebar` (`:1789-1792`) suppresses the shell for **four** of those, not
-  five — `Screen.ClaimNode` is absent, and the comment at `:1785-1786` names the
-  same four ("Pre-login screens (Startup/Login/Setup/ServerConnection) have no
-  shell") — so the two definitions of "flow-only" agree with each other and both
-  disagree with the branch, which is why this has survived. On ClaimNode the
-  shell therefore renders with `activeSurface = NavSurface.Help`; because Help is
-  an *instrument* surface, `CirclesNav.tabOf(Help)` is null and the tab row runs
-  on a null tab. The wrong back target is masked separately, by the legacy map at
-  `:4921` taking precedence over `activeSurface`.
-  **Consequence for §4:** a step that asserts arrival on Help by reading the
-  highlighted nav row would pass while standing on the claim screen, so that
-  assertion is unsound until the fix lands and this CSD's flow must assert a
-  `item_help_*` element instead.
-
-  **Ask (CIRISClient): `Screen.ClaimNode -> NavSurface.Nodes`, on its own line,
-  and leave `showSidebar` alone.** This codebase already has a rule for an
-  in-shell detail screen with no nav row of its own — it maps to its **parent**
-  surface, so the parent stays lit while you are inside it — and states it in a
-  comment at `CIRISApp.kt:5935-5936`, applied on the line beneath it at `:5937`:
-  *"A chat keeps the Contacts card lit — it
-  is a leaf of that surface, not a sidebar destination of its own."* Four screens
-  already follow it: `SkillStudio`/`SkillImport -> Skills` (`:5910`),
-  `NetworkPeerDetail -> LayerGlobalCommons` (`:5926`), `UserChat -> Contacts`
-  (`:5937`), `DutyConferral -> Accord` (`:5941`). ClaimNode's parent is Nodes:
-  its entries are the ManageNodes button (`:4042`) and an InteractScreen
-  affordance (`:2969-2971`), **both inside the shell**, and its exit is
-  `Screen.ManageNodes`. So `-> null` would make it the only in-shell detail
-  screen that highlights nothing, and suppressing the chrome would hide the nav
-  on a screen the person reached *by navigating*.
-
-  **An earlier cut of this paragraph asked for `-> null` plus a `showSidebar`
-  exclusion. That was wrong on both halves** and is corrected here rather than
-  quietly dropped: it would have traded a wrong highlight for no highlight, and
-  hidden the shell on an in-shell screen. The flows CSDs caught it.
-
-  **The four pre-login screens must stop mapping to Help in the same commit.**
-  `Screen.Startup`, `Screen.Login`, `Screen.Setup` and `Screen.ServerConnection`
-  each return `NavSurface.Help` today and are wrong for a different reason from
-  ClaimNode: they have no parent at all, because they are outside the shell
-  rather than inside it. `-> null` is right for exactly these four. They are
-  currently harmless only because `showSidebar` happens to exclude them, which
-  means the correctness of `screenToSurface` is being supplied by a *different*
-  function — so any caller that reads it outside that guard gets `Help` for the
-  login screen. Fixing ClaimNode and leaving these four would remove the one
-  symptom anybody has seen while keeping the latent defect that produced it.
-
-  **The same defect, opposite symptom, on the Nodes card: `Screen.VerifyAgent`
-  is `-> null` today** (`CIRISApp.kt:5964`) with its only entry
-  `btn_manage_nodes_verify` and its exit `Screen.ManageNodes`, so the Nodes row
-  goes dark while a person verifies a build. By the convention above it should
-  also be `NavSurface.Nodes`. `AddFederationId` correctly stays `null` — it
-  returns to `addFederationIdReturnScreen` and can be auto-pushed over the
-  landing screen by the catch-up effect (`:987-999`), so it has no single parent.
-
-  **The whole branch, disposed of:** four pre-login screens `-> null`; ClaimNode
-  and VerifyAgent `-> NavSurface.Nodes`; AddFederationId stays `null`; Help stays
-  `NavSurface.Help`. Three distinct answers across eight screens, grouped four
-  ways, which is how they came to be lumped into two arms in the first place, and
-  why the fix has to name every screen rather than the one that showed. **CSD-085** owns the claim screen and
-  **CSD-087** the verify screen; **CSD-035** owns the Nodes card whose row is the
-  one that should stay lit.
-
-* **Status 2026-09-27.** The `screenToSurface` ask above LANDED: the four
-  pre-login screens map to `null` and ClaimNode/VerifyAgent to `Nodes`
-  (`CIRISApp.kt:5978-5989`); `SkillImport` no longer exists (folded into
-  `SkillStudio`, CSD-015). What Help itself says is now the gap: `help_a_language`
-  claims "16 supported languages" when 29 bundles ship; `help_a_data_stored` says
-  data is stored "locally on your device", false once federated;
-  `help_a_delete_data` claims GDPR Art. 17 with no completion receipt (CSD-039).
-  Those three belong in the `limits` section asked for above, corrected. "Report
-  an issue" links to CIRISAgent's tracker (`HelpScreen.kt:150`) for what is a
-  client screen, and there is no root `screen_help` tag. Still no route, as
-  required.
+* **`screenToSurface` names every screen — closed.** An in-shell detail screen
+  with no nav row of its own maps to its **parent** surface, so the parent stays
+  lit while you are inside it (`CIRISApp.kt:5935-5936`: *"A chat keeps the
+  Contacts card lit — it is a leaf of that surface, not a sidebar destination of
+  its own."*). So `Screen.ClaimNode` and `Screen.VerifyAgent` map to
+  `NavSurface.Nodes`: both are entered from inside the shell
+  (`btn_manage_nodes_verify` is VerifyAgent's only entry) and exit to
+  `Screen.ManageNodes`. The four pre-login screens (`Screen.Startup`,
+  `Screen.Login`, `Screen.Setup`, `Screen.ServerConnection`) map to `null`: they
+  are outside the shell and have no parent, and `screenToSurface` must be right
+  on its own rather than relying on `showSidebar` to exclude them.
+  `AddFederationId` stays `null` — it returns to `addFederationIdReturnScreen`
+  and can be auto-pushed over the landing screen by the catch-up effect
+  (`:987-999`), so it has no single parent. Help stays `NavSurface.Help`
+  (`CIRISApp.kt:5978-5989`). **CSD-085** owns the claim screen, **CSD-087** the
+  verify screen, and **CSD-035** the Nodes card whose row stays lit. This card's
+  flow asserts arrival on Help by an `item_help_*` element, not by the
+  highlighted nav row.
+* **What Help says is the gap.** `help_a_language` claims "16 supported
+  languages" when 29 bundles ship; `help_a_data_stored` says data is stored
+  "locally on your device", false once federated; `help_a_delete_data` claims
+  GDPR Art. 17 with no completion receipt (CSD-039). Those three belong in the
+  `limits` section asked for above, corrected. "Report an issue" links to
+  CIRISAgent's tracker (`HelpScreen.kt:150`) for what is a client screen, and
+  there is no root `screen_help` tag. No route, as required.
 * **Placement.** Correct, and structurally so: an instrument of its own, reachable
   from the avatar on every screen, needing nothing. No circle would be right —
   Help is not about an audience.

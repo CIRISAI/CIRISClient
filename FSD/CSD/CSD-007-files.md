@@ -13,10 +13,9 @@ owner: CIRISClient
 
 **A person can see the files in a circle, open one, save a copy, and add one —
 and every row says where its bytes are, and every opened file is what the node
-said it sent.** Before B3 the Files tab held audit entries and the memory
-graph. Those are records *about* a person, not files they keep. The drive
-plane (CIRISServer 0.5.215+, `src/drive.rs`) gives the client real files, so
-Files now holds those and nothing else.
+said it sent.** Files holds files and nothing else: audit entries and the
+memory graph are records *about* a person, not files they keep. The drive
+plane (ciris-server 0.5.215+, `src/drive.rs`) serves the files.
 
 A file whose bytes are on another device, or that this device holds no grant
 for, is still listed. The row says so ("On another device", "This device
@@ -99,19 +98,19 @@ fields:
 ```
 
 `bytes` is read through `ByteState.of`, and **an unknown token is never
-`here`**. 0.5.217 made the token list one word per fact across every drive
+`here`**. From 0.5.217 the token list is one word per fact across every drive
 surface (`drive::BYTE_STATES`, `src/drive.rs:193-201`, CIRISServer#644):
 `here`, `not_fetched`, `not_granted`, `withdrawn`, `evicted`, `seal_mismatch`.
 The client names the first three, `unreadable` (the one note-only fact: the
 bytes opened and are not UTF-8 text, `:2945`) as "Opened, but not readable
 text", and renders the rest as "Can't be opened here" with the node's own
-`detail`. 0.5.220 (persist v53 #969) adds `awaiting_key`: the bytes are on this
+`detail`. From 0.5.220 (persist v53) there is also `awaiting_key`: the bytes are on this
 device and its per-epoch key for them has not arrived yet. The row says
 "Waiting for this file's key" (`ByteState.AWAITING_KEY`), and an open answered
 `409 drive.awaiting_key` is `OpenState.AwaitingKey` — `file_awaiting_key`, a
 named wait with `btn_file_check_again`, never `file_not_opened`. The key
-follows on its own; asking again is the whole remedy. `/v1/notes` used to say `open` for
-`here`; `Note.byteState` still maps it, for a 0.5.215/216 node.
+follows on its own; asking again is the whole remedy. A 0.5.215/216 node's
+`/v1/notes` says `open` for `here`; `Note.byteState` maps it.
 
 **A note is not a file.** `/v1/drive?cohort=self` lists notes too. The client
 applies the node's own predicate from `read_notes`: an unnamed `text/plain`
@@ -174,7 +173,7 @@ sheet's header and the platform's "Save a copy" get `RenderTier.typeToDeclare`
 |---|---|---|
 | `text/plain`, valid UTF-8, ≤ the cap | the text, with every bidi control shown as a mark (`⟨RLO⟩`) | yes |
 | `text/plain`, not UTF-8 | "not shown", no guessed rendering | yes |
-| Tier A image / audio / video | **waiting for the node's rendition**: a client renders only bytes a memory-safe encoder we control produced (MEDIA_EDGE §7); the node says `renditions: false` and CIRISServer#614 has not built it | yes |
+| Tier A image / audio / video | **waiting for the node's rendition**: a client renders only bytes a memory-safe encoder we control produced (MEDIA_EDGE §7); the node says `renditions: false` (CIRISServer#614) | yes |
 | PDF, Tier B raw (HEIC, AVIF, WebM, MOV, Ogg, FLAC, WAV), over-cap, unknown binary | no preview | yes |
 | HTML, SVG, archives, executables, scripts | refused | no if it runs code (sniffed, or by the saved name's extension) |
 | mismatch or polyglot | refused, in the error tone | **no** |
@@ -185,24 +184,22 @@ Tags: `file_preview_text`, `file_not_rendered`, `file_save_blocked`,
 
 ## 3. Contracts (who)
 
-Sources: CIRISServer `origin/main` 046e1b39 (0.5.217), `src/drive.rs` and
-`src/media_gate.rs`; the drive and per-file query rows are re-read at tags
-`v0.5.217` (775134e6) and `v0.5.218` (405acc17); client lines are this branch. Every drive route is the
-node's and every call goes to the node URL (`ClientDrive`, read at call time;
-never `$baseUrl`). Reach through the agent works from agent 2.12.1
-(CIRISAgent#1213, closed by #1215); an older agent 404s them, and the direct
-node URL works on every agent version, so the client keeps calling it. Rows marked "not called" are live on the node and not yet wired here.
+Sources: CIRISServer `v0.5.217` and `v0.5.218`, `src/drive.rs` and
+`src/media_gate.rs`. Every drive route is the node's and every call goes to the
+node URL (`ClientDrive`, read at call time; never `$baseUrl`): an agent older
+than 2.12.1 does not forward them, and the node URL works on every agent
+version. Rows marked "not called" are live on the node and not wired here.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| the listing: self; ONE family room; or the whole drive, which the community tab reads | `GET /v1/drive?cohort&room_id&limit&after` | CIRISServer `src/drive.rs:3006` (handler `:1656`) on v0.5.217, `:3912` (handler `:2155`) on v0.5.218 — the same contract: no `cohort` = the whole drive (every room persist admits the caller to, Codex CIRISServer#628); `family`/`community` REQUIRE `room_id` (`room_for`, 400 `drive.family_id_required` / `drive.community_id_required`, `:379`/`:388` and `:433`/`:440`); `limit` is one budget across all rooms, self first, continued by `resume` → `after`; owner session only | called — `viewmodels/FilesViewModel.kt:134` (self: `cohort=self`), `:135` (family: `cohort=family&room_id=<household>`), `:164` (community: no cohort, every page — `cohort=community` without a room is the 400 above). A `room_id` without `family`/`community` would be dropped by the node silently, so `CIRISApiClient.readDrive` refuses it before sending |
-| one file's bytes, with the plaintext digest | `GET /v1/files/{id}?cohort&room_id` | CIRISServer `src/drive.rs:3011` (handler `:2052`; `content_digest` `:2088-2089`; `Repr-Digest` on a raw read `:2136`) on v0.5.217, `:3916` (handler `:2814`) on v0.5.218. `FileQuery` (`room_from_query`): `cohort` defaults to `self` (`Cohort::parse`, `None \| Some("self")`), `room_id` is the family id or community room and is required for those; a row asked in the wrong room is 404 `drive.not_in_room`. 409 `drive.not_fetched`, 403 `drive.not_granted` are answers, not failures | called — `viewmodels/FilesViewModel.kt:205` with the ROW's own `cohort` and `room_id` as the listing named them (`CIRISApiClient.fileQuery`: `cohort` always, `room_id` unless `self`). Before 0.5.218 parity the client sent `?room_id=` alone, so every family and community open was asked in the self room and answered `404 drive.not_in_room`; `DriveWireTest` pins the query per cohort on both versions. The digest is checked before render |
+| the listing: self; ONE family room; or the whole drive, which the community tab reads | `GET /v1/drive?cohort&room_id&limit&after` | CIRISServer `src/drive.rs:3006` (handler `:1656`) on v0.5.217, `:3912` (handler `:2155`) on v0.5.218 — the same contract: no `cohort` = the whole drive (every room persist admits the caller to, CIRISServer#628); `family`/`community` REQUIRE `room_id` (`room_for`, 400 `drive.family_id_required` / `drive.community_id_required`, `:379`/`:388` and `:433`/`:440`); `limit` is one budget across all rooms, self first, continued by `resume` → `after`; owner session only | called — `viewmodels/FilesViewModel.kt:134` (self: `cohort=self`), `:135` (family: `cohort=family&room_id=<household>`), `:164` (community: no cohort, every page — `cohort=community` without a room is the 400 above). A `room_id` without `family`/`community` would be dropped by the node silently, so `CIRISApiClient.readDrive` refuses it before sending |
+| one file's bytes, with the plaintext digest | `GET /v1/files/{id}?cohort&room_id` | CIRISServer `src/drive.rs:3011` (handler `:2052`; `content_digest` `:2088-2089`; `Repr-Digest` on a raw read `:2136`) on v0.5.217, `:3916` (handler `:2814`) on v0.5.218. `FileQuery` (`room_from_query`): `cohort` defaults to `self` (`Cohort::parse`, `None \| Some("self")`), `room_id` is the family id or community room and is required for those; a row asked in the wrong room is 404 `drive.not_in_room`. 409 `drive.not_fetched`, 403 `drive.not_granted` are answers, not failures | called — `viewmodels/FilesViewModel.kt:205` with the ROW's own `cohort` and `room_id` as the listing named them (`CIRISApiClient.fileQuery`: `cohort` always, `room_id` unless `self`). `?room_id=` alone is asked in the self room and answered `404 drive.not_in_room`; `DriveWireTest` pins the query per cohort on both versions. The digest is checked before render |
 | add a file | `POST /v1/files` | CIRISServer `src/drive.rs:3005` (handler `:1551`); refuses over `WHOLE_READ_CAP` as `drive.too_large` (`:728`); since 0.5.217 the write gate requires an RFC 6838 type whose leading bytes agree (`drive.bad_media_type` 400, `drive.format_mismatch` 415) and a filename cleaned per RFC 6266 §4.3 (`drive.bad_filename`), CIRISServer#642 | called — `viewmodels/FilesViewModel.kt:204`; the size gate runs here first, with the node's cap, and the type declared is the SNIFFED one (`FilesViewModel.typeToDeclare`): a picker that reports no type never makes the node refuse a real PNG as `octet-stream` |
 | the node's render policy | `GET /v1/media/policy` | CIRISServer `src/drive.rs:3009` (handler `:2978`, body `src/media_gate.rs:294`; `inline_max_bytes` `:323`, `whole_read_max_bytes` `:324`, `renditions: false` `:325`); public, CIRISServer#643 | called — `viewmodels/FilesViewModel.kt:156`, once per model; narrows `MediaPolicy.RECOMMENDED` |
 | the households, for which room Family › Files lists | `GET /v1/families` | CIRISServer `src/family_api.rs` (CSD-100 §3) | called — `viewmodels/HouseholdsViewModel.kt:136`, the shared household model |
 | the contacts the household model names people from | `GET /v1/contacts` | the api base (CSD-005, CSD-100 §3) | called — `api/HouseholdsApi.kt:85`, by the shared household model; Files reads nothing from it |
 | this owner's key, so the roster can say "you" | `GET /v1/setup/owned-nodes` | CIRISServer (CSD-100 §3) | called — `api/HouseholdsApi.kt:86`, by the shared household model |
-| which of the person's devices the file is on | `GET /v1/files/{id}/custody?cohort&room_id` | CIRISServer v0.5.218 `src/drive.rs:3921` (handler `:2548`, the same `FileQuery`), TAGGED at 405acc17 and not released (no GitHub release, no PyPI 0.5.218, as of 2026-10-01); 0.5.217, the latest release, answers a bare 404 | called — `ui/screens/files/FilesScreen.kt:332`, from the row receipt's **Where is this file** act (`btn_receipt_act_where_<id>`), with the same `fileQuery`; the card is CSD-107's |
+| which of the person's devices the file is on | `GET /v1/files/{id}/custody?cohort&room_id` | CIRISServer v0.5.218 `src/drive.rs:3921` (handler `:2548`, the same `FileQuery`); 0.5.217 answers a bare 404 | called — `ui/screens/files/FilesScreen.kt:332`, from the row receipt's **Where is this file** act (`btn_receipt_act_where_<id>`), with the same `fileQuery`; the card is CSD-107's |
 | everything about a file except its bytes, **including `content_digest`** | `GET /v1/files/{id}/meta` | CIRISServer `src/drive.rs:3017` (handler `:1872`; digest `:1917-1921`, `:1951-1952`; costs a whole read, so it is computed here and on open, never per listed row) | live, **not called** — the card opens the bytes to learn what a meta read would say |
 | rename | `POST /v1/files/{id}/rename` | CIRISServer `src/drive.rs:3018` (handler `:2272`) — a new row over the SAME bytes, old row withdrawn, author only | live, **not called** |
 | move to another circle ("going out asks": this call IS the ask) | `POST /v1/files/{id}/move` `{…, keep_source}` | CIRISServer `src/drive.rs:3019` (handler `:2465`) — reseals at the target room's tier; author only, and a member of the target | live, **not called**. This is the cross-circle move the Files tab needs; `keep_source: true` is "share to" |
@@ -211,8 +208,8 @@ node URL works on every agent version, so the client keeps calling it. Rows mark
 | fetch content from a named peer by SHA-256 | `POST /v1/federation/content/{content_id}` | CIRISServer `src/federation_surface.rs:699`, owner-gated | live — called from the network hub's Content tile (`NetworkContentViewModel`, CSD-051 §3), not from Files. CIRISServer#651's "fetch" half; the directory half is the filed gap |
 | a digest signed into the row; the listing's descriptor (digest, size, renditions, placeholder) | `GET /v1/drive` rows | CIRISEdge `blocked_by: CIRISEdge#638` (`src/drive.rs:170-172`) | blocks `receipt_dimension` on the receipt; the opened file is verified without it |
 | renditions (display / thumb / poster) | the ingest pipeline; `derived_from` index (V149) | CIRISServer `blocked_by: CIRISServer#614`; the node says so itself (`renditions: false`) | Tier A media waits on it, and the sheet says so |
-| a file above the whole-read cap (0.5.218) | `GET /v1/files/{id}` → 413 `drive.too_large_for_whole_read` (above `WHOLE_READ_CAP`, 64 MiB) | CIRISServer (`src/drive.rs::too_large_for_whole_read` @ `53d1ffb5`) | **0.5.218, rendered** as a named state, not an error: `OpenState.TooLarge` → `file_too_large`, "This file is too large to open on this device yet." The bytes are there and open for this viewer; the client reads files whole and has no streaming read (`?raw=1`, which the server serves with `Range`) — not built here. Pinned: `FilesViewModelTest.aFileAboveTheWholeReadCapIsNamedTooLargeNotAFailure` |
-| a file whose key has not arrived (0.5.220) | `GET /v1/drive` row `bytes: "awaiting_key"`; `GET /v1/files/{id}` → 409 `drive.awaiting_key` | CIRISServer `src/drive.rs` (`BYTE_STATES`, `blob_state`: persist `ChunkKeyNotYetGranted`, edge `UnopenedReason::AwaitingKey`; `refuse_state`) @ `e357f6bf` | **rendered** as a named wait, not an error: the row's line "Waiting for this file's key"; the sheet `file_awaiting_key`, "Waiting for this file's key" + "Its bytes are on this device, but the key that opens them hasn't arrived yet. It comes on its own; nothing is wrong.", with `btn_file_check_again` re-opening the file. Pinned: `FilesViewModelTest.aFileWhoseKeyHasNotArrivedIsAWaitingStateAndCheckAgainOpensIt`, `DriveWireTest.aKeyNotYetHereComesBackAsTheAwaitingKeyIdNotABare409` |
+| a file above the whole-read cap (0.5.218) | `GET /v1/files/{id}` → 413 `drive.too_large_for_whole_read` (above `WHOLE_READ_CAP`, 64 MiB) | CIRISServer (`src/drive.rs::too_large_for_whole_read`) | **0.5.218, rendered** as a named state, not an error: `OpenState.TooLarge` → `file_too_large`, "This file is too large to open on this device yet." The bytes are there and open for this viewer; the client reads files whole and has no streaming read (`?raw=1`, which the server serves with `Range`) — not built here. Pinned: `FilesViewModelTest.aFileAboveTheWholeReadCapIsNamedTooLargeNotAFailure` |
+| a file whose key has not arrived (0.5.220) | `GET /v1/drive` row `bytes: "awaiting_key"`; `GET /v1/files/{id}` → 409 `drive.awaiting_key` | CIRISServer `src/drive.rs` (`BYTE_STATES`, `blob_state`: persist `ChunkKeyNotYetGranted`, edge `UnopenedReason::AwaitingKey`; `refuse_state`) | **rendered** as a named wait, not an error: the row's line "Waiting for this file's key"; the sheet `file_awaiting_key`, "Waiting for this file's key" + "Its bytes are on this device, but the key that opens them hasn't arrived yet. It comes on its own; nothing is wrong.", with `btn_file_check_again` re-opening the file. Pinned: `FilesViewModelTest.aFileWhoseKeyHasNotArrivedIsAWaitingStateAndCheckAgainOpensIt`, `DriveWireTest.aKeyNotYetHereComesBackAsTheAwaitingKeyIdNotABare409` |
 
 Refusals arrive as `{error: <id>, detail: <english>}`; `NodeRefusal.fromBody`
 reads the id from `error` when it is dotted. The `drive.*` ids are localized.
@@ -258,15 +255,12 @@ With no household picked: `files_no_household`, and no `files_empty`.
 
 ## 5. QA plan
 
-**Verified live** (desktop, scratch ciris-server 0.5.215 on an isolated home,
-2026-09-24): empty state, listing, opening a text file with preview, the
-receipt, writing a note from the UI and reading it back from `/v1/notes`.
-Live testing found two bugs, and both are now fixed with tests:
+**Verified live** (desktop, ciris-server 0.5.215): empty state, listing,
+opening a text file with preview, the receipt, writing a note from the UI and
+reading it back from `/v1/notes`. Tests pin that notes are not listed as files
+and that a note's `open` token reads as `here`.
 
-- Notes were listed as "Untitled" files.
-- Readable notes rendered "Can't be opened here" because of the `open` / `here` token.
-
-**Verified by test, not yet live** (the 0.5.217 pass, 2026-09-28): the digest
+**Verified by test, not live**: the digest
 check (`DigestCheckTest`: the FIPS vectors, the wire shape, a mismatch is
 `Unreadable`, no digest is `NotSent`), the policy read (`FilesViewModelTest`,
 `RenderTierTest`: one read per model, narrows and never widens, the node's cap

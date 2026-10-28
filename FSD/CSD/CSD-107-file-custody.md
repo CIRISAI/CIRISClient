@@ -1,25 +1,19 @@
 # CSD-107 — Where is this file (file custody, one card from every file surface)
 
-**CSD**: CSD-107 · **Standard**: CSD/3 (`CSD.md`) + the CSD/4 `topology:` block (`FSD/CSD4_EVALUATION.md`; CIRISServer `FSD/TOPOLOGY.md`) · **Origin**: Eric, via the CIRISServer session (2026-09-30): "every file a person can open shows which of their devices it is on"
+**CSD**: CSD-107 · **Standard**: CSD/3 (`CSD.md`) + the CSD/4 `topology:` block (`FSD/CSD4_EVALUATION.md`; CIRISServer `FSD/TOPOLOGY.md`) · **Origin**: CIRISServer#704 — "every file a person can open shows which of their devices it is on"
 **Pairs with**: CSD-007 (Files — the drive), CSD-008 (Notes to self), CSD-091 (a file in chat). Each of those surfaces reaches THIS card from its row's hamburger; none builds its own.
 **Flow**: `testing/flows/drafts/csd-107-file-custody.yaml` (floor `unreleased`)
-**Card**: built on this branch — `ui/screens/files/FileCustodySheet.kt` (the card, `CustodyTags`), `viewmodels/FileCustodyViewModel.kt` (the states), `models/drive/Custody.kt` (the provisional wire and every rendering decision as a pure function), `FileCustodyTest` / `FileCustodyViewModelTest` / `DriveWireTest`
+**Card**: built — `ui/screens/files/FileCustodySheet.kt` (the card, `CustodyTags`), `viewmodels/FileCustodyViewModel.kt` (the states), `models/drive/Custody.kt` (the provisional wire and every rendering decision as a pure function), `FileCustodyTest` / `FileCustodyViewModelTest` / `DriveWireTest`
 
-The number: CSD-107 was assigned once before, to the partnership queue, and
-folded into CSD-054 §7 under the no-duplicate-cards rule (`CSD-054:286`). No
-file, open PR branch (`gh pr list --json headRefName,files`, 2026-09-30) or
-`PENDING-*` file holds it, so it is reused here.
 
 ```yaml csd:stage
 stage: building
 owner: CIRISClient
 ```
 
-`building`, not `testable`: the card is built and every §3 row is answered,
-but the route (CIRISServer#704) is in v0.5.218, which is TAGGED at 405acc17
-and not released: no GitHub release and no PyPI 0.5.218 as of 2026-10-01. The
-latest release, 0.5.217, does not mount it, so the flow's floor stays
-`unreleased` and the one state the matrix can reach is the version fact.
+`building`, not `testable`: the card is built and every §3 row is answered
+(the route, CIRISServer#704, needs ciris-server 0.5.218), but the flow's floor
+is still `unreleased`, so the matrix does not run it yet.
 
 ## 1. Mission (why)
 
@@ -38,9 +32,9 @@ than a silence:
 * **A receipt proves delivery, not current holding.** A device that received a
   file may have evicted it since, and eviction does not retract the receipt yet.
   So "received" is a past event with a time, never "has it".
-* **Small files carry no receipts yet.** Inline files (1 MiB or less) get
-  receipts with persist v52 / edge v38. Until then `receipts_supported: false`,
-  and another device's copy is **unknown**, never "not on".
+* **Small files carry no receipts before persist v52 / edge v38.** Without
+  them an inline file (1 MiB or less) is `receipts_supported: false`, and
+  another device's copy is **unknown**, never "not on".
 * **Copies of your own and family files can't be counted, by design.** CC 5.2
   forbids a `holds_bytes` directory row for `cohort_scope: self | family`
   (the same absence CSD-027 §2 reads as load-bearing). With
@@ -66,7 +60,7 @@ that is where most files are; the same composable and the same view model
 | surface | CSD | the entry | tag |
 |---|---|---|---|
 | Files (the drive, every circle) | CSD-007 | the row's receipt hamburger (`btn_receipt_<id>`) → the receipt's acts → **Where is this file** | `btn_receipt_act_where_<attestation_id>` |
-| Notes to self | CSD-008 | each note now carries the same receipt hamburger ItemRow gives a drive row (`btn_receipt_<id>`) → **Where is this file** | `btn_receipt_act_where_<attestation_id>` |
+| Notes to self | CSD-008 | each note carries the same receipt hamburger ItemRow gives a drive row (`btn_receipt_<id>`) → **Where is this file** | `btn_receipt_act_where_<attestation_id>` |
 | A file in chat | CSD-091 | the message card's `⋮` (`card_menu_<id>`) → **Where is this file**, after the uniform ops | `mi_op_where_<attestation_id>` |
 
 **The chat entry is dormant, and says so.** The chat plane carries text only:
@@ -151,9 +145,8 @@ coming next" (`btn_custody_copy_<key>`, on a device that does not hold it
 here) and "Remove from <device>: coming next" (`btn_custody_remove_<key>`, on a
 device that holds or received it). Both are `testableClickable(enabled =
 false)`: no click handler is registered, so `/click` is refused as it would be
-for a person. `testableWithHandler` does not take `enabled` on `main` yet (the
-flows branch changes that); this follows the existing disabled pattern
-(`bindClickHandler`, CIRISClient#69) instead. `<key>` is the device's
+for a person. This follows the existing disabled pattern
+(`bindClickHandler`, CIRISClient#69). `<key>` is the device's
 `node_key_id`, or `idx<n>` when the node sent none.
 
 ```yaml csd:states
@@ -165,13 +158,11 @@ error:     {tag: custody_error, renders: "'Couldn't find out where this file is.
 
 ## 3. Contracts (who)
 
-The route is **CIRISServer#704** at `d1a15286` (`feat/file-custody-0.5.218`, open into
-`chore/adopt-edge-v33`, which is headed for `integ/0.5.218`): `src/drive.rs`
-(the handler), `src/file_custody.rs` (the reasons), `FSD/FILE_CUSTODY.md` (the
-contract). It is in tag `v0.5.218` (405acc17; `src/drive.rs:3921`, handler
-`:2548`, the same `FileQuery` as every per-file route), which is tagged and not
-released (no GitHub release, no PyPI 0.5.218, as of 2026-10-01), so the floor
-stays `unreleased`. The model cites it in its KDoc (`models/drive/Custody.kt`).
+The route is **CIRISServer#704**: `src/drive.rs` (the handler),
+`src/file_custody.rs` (the reasons), `FSD/FILE_CUSTODY.md` (the contract). It
+is in ciris-server 0.5.218 (`src/drive.rs:3921`, handler `:2548`, the same
+`FileQuery` as every per-file route); the floor stays `unreleased` (above).
+The model cites it in its KDoc (`models/drive/Custody.kt`).
 Every field is optional and parsed by hand over a `JsonObject`: a renamed or
 retyped member reads as absent (then "not sent"), never as a crash.
 
@@ -180,9 +171,8 @@ retyped member reads as absent (then "not sent"), never as a crash.
 owner session, cohort named and membership-checked, the row through edge's
 gated reader, `410 drive.withdrawn`, then persist's custody door as the
 drive's viewer key. A viewer who cannot open the bytes gets the byte read's own
-refusal (`drive.not_granted`, `drive.evicted`, …). No new refusal id. Since
-`d1a15286` (the maintainer's ruling) a device that holds the row and not the
-bytes is NOT refused: it answers 200 with its own entry `holds: "none"` +
+refusal (`drive.not_granted`, `drive.evicted`, …). No new refusal id. A device
+that holds the row and not the bytes is NOT refused: it answers 200 with its own entry `holds: "none"` +
 `checked_at`, `held_here: false`, and `access`, `size_bytes`, `can_open` null,
 with `custody.no_copy_here` in `why`. Byte reads there still answer
 `409 drive.not_fetched`, which is not this card's concern.
@@ -190,16 +180,15 @@ with `custody.no_copy_here` in `why`. Byte reads there still answer
 **A key not yet here (ciris-server 0.5.220).** Persist v53 (#969) seals a
 self/family file's chunks under per-epoch keys, and a device can hold the
 bytes before its key arrives. The custody door then answers through the same
-`refuse_state` as the byte read: `409 drive.awaiting_key` (`src/drive.rs` @
-`e357f6bf`). The card renders it as `CustodyState.AwaitingKey` — a named wait
+`refuse_state` as the byte read: `409 drive.awaiting_key` (`src/drive.rs`).
+The card renders it as `CustodyState.AwaitingKey` — a named wait
 with "Check again" (`FileCustodyViewModel.checkAgain`, which re-asks the same
 target), never `custody_error`. Pinned: `FileCustodyViewModelTest.aKeyNotYetHereIsAWaitWithCheckAgainNotAnError`,
 `DriveWireTest.aKeyNotYetHereComesBackAsTheAwaitingKeyIdNotABare409`.
 
-**The host rule, mirrored from the drive.** The brief said to mirror how the
-client calls `GET /v1/files/{id}/meta`. It does not call it: CSD-007 §3 lists
-`/meta` as "live, not called". So this mirrors the per-file drive reads it does
-make (`readFile`): the NODE URL through `ClientDrive` (the active node, read at
+**The host rule, mirrored from the drive.** The client does not call
+`GET /v1/files/{id}/meta` (CSD-007 §3: "live, not called"), so this mirrors the
+per-file drive reads it does make (`readFile`): the NODE URL through `ClientDrive` (the active node, read at
 call time; never `$baseUrl`, CIRISAgent#1213), the owner bearer, and the
 per-file `FileQuery` every `/v1/files/{id}/…` handler takes — `cohort`
 (`self | family | community`, `Cohort::parse`, `src/drive.rs:107`) and
@@ -213,15 +202,14 @@ per-file `FileQuery` every `/v1/files/{id}/…` handler takes — `cohort`
 | the response | `{attestation_id, cohort, room_id, tier, size_bytes\|null, at_rest_sha256, author_device, this_device_is_author, checked_at, devices_total, devices[{node_key_id, label?, this_device, can_open\|null, received{epoch,k,at\|null}\|null, holds: here\|received\|none\|unknown, checked_at (this device), reported_at\|null}], held_here, copies_known, copies_observable, announced_holders[{node_key_id,size_bytes}], access[{person_key_id,devices,via}]\|null, receipts_supported, receipts_unsupported_reason, receipts_from_other_keys[], why[{reason_id,detail}]}` | CIRISServer#704 `d1a15286`, `FSD/FILE_CUSTODY.md` §1.1 | parsed leniently by `FileCustody.fromWire`. Rendered: every device row, held here, copies (§1), the author device ("Device that wrote it", `custody_author`), the count of receipts from keys that aren't your devices (`custody_receipts_other_keys`, when > 0), every `why[]`. Read and not rendered: `announced_holders`, `access`, `tier`, `size_bytes`, `at_rest_sha256`, `checked_at` |
 | a remote device saying it has no copy | `holds: "none"` + `reported_at` from `custody:ack:v1` (here\|none, live 72 h) | CC 3.1.3.3 (CIRISConstitution#130); CIRISPersist v53. Not in the vendored namespace registry, so cited by CC section, not as a registry family | today only THIS device can say `none`; other devices read `unknown` with `custody.no_copy_reports_pending`. The row shows 'The device reported this at <time>' once `reported_at` arrives |
 | the receipt time | `received.at` | CIRISPersist v52 | `null` until then; the row says "Received it" with no time, never a blank or an epoch |
-| the drive row's hint | `GET /v1/drive` rows gain `custody: {devices_total, received_on}` (`received_on: null` for inline) | CIRISServer#704 §1.2 | **not rendered** on the drive row this cut (optional in the brief); the card is the answer. When it is, a null `received_on` is "unknown", never 0 |
+| the drive row's hint | `GET /v1/drive` rows gain `custody: {devices_total, received_on}` (`received_on: null` for inline) | CIRISServer#704 §1.2 | **not rendered** on the drive row this cut (optional); the card is the answer. When it is, a null `received_on` is "unknown", never 0 |
 | receipts for inline files | `receipts_supported: false` for files of 1 MiB or less | CIRISPersist v52 / CIRISEdge v38 | the card says unknown, never "not on" |
 | copies of self and family files | `copies_observable: false` through 0.5.219; **`true` from 0.5.220** (persist v53 S2: every device files its own `custody:ack:v1`, so `custody.copies_unobservable_by_design` no longer fires) | CC 5.2 (no `holds_bytes` row below community); CC 6.1.5.3 | read off the wire, never assumed from the cohort (`custodyCopies`): a 0.5.219 node's card says they can't be counted, a 0.5.220 node's counts them |
 | copy to a device / remove from a device | none yet | CIRISServer (next cut) | shown disabled, "coming next"; Remove will refuse the last copy of an unwithdrawn file |
 
 **`why[]`: ids, localized, with the node's detail as small print.** At #704
-each entry is `{reason_id, detail}` (`src/file_custody.rs`, one `msg` per id;
-CIRISServer counts them as localization debt for this bundle, ratchet 139 →
-147). The client localizes `reason_id` as a key, keyed as server reason ids
+each entry is `{reason_id, detail}` (`src/file_custody.rs`, one `msg` per id).
+The client localizes `reason_id` as a key, keyed as server reason ids
 already are (`custody.inline_no_receipt` is `{"custody": {"inline_no_receipt":
 …}}`, like `membership.consent_required`, #137), and shows `detail` under it in
 mono small print (`custody_why_<id>`, `custody_why_<id>_detail`). With no key
@@ -261,21 +249,21 @@ topology:
   negatives: [{check: no_wider_self_rows, person: one}]
 ```
 
-**`custody` is a new relation the server is adding**: CIRISServer#704 adds
-it to `FSD/TOPOLOGY.md` §2.5 and ships the same fixture as
+**`custody` is a `FSD/TOPOLOGY.md` relation** (§2.5, CIRISServer#704), and
+the server ships the same fixture as
 `harness/native/topologies/csd-107-file-custody.yaml` (with a `name:` on the
-file relation; the body above is the brief's, verbatim). It asserts that, from the author device D1's view,
+file relation). It asserts that, from the author device D1's view,
 `GET /v1/files/{last}/custody?cohort=self` names **D2 as `received`** and
-reports **`devices_total == 2`**. `no_wider_self_rows` the builder already runs (`selffiles.yaml`), though
+reports **`devices_total == 2`**. The builder runs `no_wider_self_rows` (`selffiles.yaml`), though
 TOPOLOGY.md §2.6 lists only `cannot_list_room` and `holds_no_row`: a self file
 leaves no row wider than self. Realizability rule 4 holds: D2 dials D1, the
 author, so the self room's body reaches it directly.
 
-**How the checker treats it.** `packaging/check_csd_v3.py` now validates a
+**How the checker treats it.** `packaging/check_csd_v3.py` validates a
 `csd:topology` block **structurally** (`check_topology`): known layers only;
 every id a layer names is declared; each relation and negative is one
-TOPOLOGY.md names (both `custody` and `no_wider_self_rows` are listed since
-CIRISServer v0.5.218, so neither is pending any longer), or one listed in
+TOPOLOGY.md names (both `custody` and `no_wider_self_rows` are listed from
+CIRISServer v0.5.218), or one listed in
 `TOPOLOGY_PENDING` with the CSD that asked for it; realizability rule 2;
 and the actor on a device their person owns. It does NOT check rules 1 and 3-7
 or buildability, which are the builder's. `testing/test_csd_topology.py`
@@ -311,10 +299,10 @@ Pressing a next-cut control does nothing, and `/click` on it is refused
 ## 5. QA plan
 
 Spec complete and flow written (`testing/flows/drafts/csd-107-file-custody.yaml`,
-floor `unreleased`). Promotes to `testable` when the route is on a released
+floor `unreleased`). It becomes `testable` when the route is on a released
 node and the populated steps run on the matrix against the §3a fixture.
 
-**Pinned in Kotlin now.** `FileCustodyTest`: the full #704 body (why objects, author, lists where counts were planned), a receipt with `at: null`, the reason-id / detail / raw-id fallback, a `none` device (the only "not on", counted as known), a no-copy-here 200 (access, size and can-open null; a card, not an error), `can_open: null`, a partial
+**Pinned in Kotlin.** `FileCustodyTest`: the full #704 body (why objects, author, device lists), a receipt with `at: null`, the reason-id / detail / raw-id fallback, a `none` device (the only "not on", counted as known), a no-copy-here 200 (access, size and can-open null; a card, not an error), `can_open: null`, a partial
 and a retyped body, the §3a actor view (D2 received, 2 of 2),
 `receipts_supported: false` → unknown (never "not on") and the footnote,
 counted-but-unlisted devices → "at least", `copies_observable: false` → no
@@ -332,9 +320,8 @@ plane carries none). Copy and Remove (not built).
 
 ## 6. Delta — card vs API vs CC
 
-* **Card vs API.** The route is CIRISServer#704, not merged; field names may change.
-  The lenient parse and the "cite the PR" comment are the client's side of
-  that. `announced_holders` is parsed and not shown: the card has no sentence
+* **Card vs API.** Field names on CIRISServer#704 may change. The lenient
+  parse and the KDoc citation are the client's side of that. `announced_holders` is parsed and not shown: the card has no sentence
   for it that isn't a guess.
 * **API vs CC.** `copies_observable: false` for self and family is CC 5.2 working
   as intended, not a gap: the card must never turn it into "1 copy".
@@ -345,13 +332,8 @@ plane carries none). Copy and Remove (not built).
 
 ## 7. Known gaps
 
-* **Resolved: a device with the row but not the bytes.** Until CIRISServer#704
-  `d1a15286` it got `409 drive.not_fetched` from this route. The maintainer's
-  ruling made it a 200 whose own entry is `holds: "none"` with
-  `custody.no_copy_here`; the card renders that normally. (Byte reads there
-  still 409; not this card's concern.)
-* **Other devices can't say "none" yet.** That needs `custody:ack:v1`
-  (CC 3.1.3.3) reports, with persist v53; until then they read `unknown` and
+* **Other devices say "none" only from persist v53.** That needs
+  `custody:ack:v1` (CC 3.1.3.3) reports; without them they read `unknown` and
   the node says so (`custody.no_copy_reports_pending`).
 * **Receipt times** are null until CIRISPersist v52; **inline files** carry no
   receipt at this pin (CIRISPersist#953); **eviction** does not withdraw a

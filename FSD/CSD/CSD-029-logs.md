@@ -104,11 +104,9 @@ state object, and never read by the branch that decides what to draw.
 | value | endpoint | owner | state |
 |---|---|---|---|
 | the log | `GET /v1/telemetry/logs` | **both** | live on CIRISServer (`/v1/telemetry/logs`) and CIRISAgent (`telemetry.py`) |
-| the log download (CIRISClient#249) | `GET /v1/telemetry/logs/download?tail_kib=N` → `application/zip`, `Content-Disposition` filename `ciris-logs-<UTC>.zip`, `X-CIRIS-Log-Files` | CIRISAgent (the AGENT base URL only; the node does not proxy it) | **2.17.0** (CIRISAgent#1326). Owner session (ADMIN): 403 otherwise; 404 on an older agent, which System Logs says is too old for a log download. Called by `downloadLogsZip` (`api/LogsDownloadApi.kt`), saved through `saveFileCopy` and shared through the agent app's `<package>.logs` FileProvider; the Interact diagnostics panel asks it too, falling back to the bundle's 32 KiB tails |
+| the log download | `GET /v1/telemetry/logs/download?tail_kib=N` → `application/zip`, `Content-Disposition` filename `ciris-logs-<UTC>.zip`, `X-CIRIS-Log-Files` | CIRISAgent (the AGENT base URL only; the node does not proxy it) | **2.17.0**. Owner session (ADMIN): 403 otherwise; 404 on an older agent, which System Logs says is too old for a log download. Called by `downloadLogsZip` (`api/LogsDownloadApi.kt`), saved through `saveFileCopy` and shared through the agent app's `<package>.logs` FileProvider; the Interact diagnostics panel asks it too, falling back to the bundle's 32 KiB tails |
 | available services | same response | **both** | live; `availableServices` is derived from the returned lines |
 | the agent source on a node build | — | — | correctly refused client-side, with a sentence |
-
-Agent tree last commit 2026-08-15.
 
 ## 4. Flow (how)
 
@@ -170,9 +168,8 @@ performance question the gate does not ask.
 1. **Placement and build flag are both right.** Node-served route, shown on
    both builds, degrades with a sentence. No change.
 2. **The source picker is the pattern to copy.** `isNodeMode` disables the
-   agent row and explains why (`LogsScreen.kt:319`). Adapters, Runtime and
-   Telemetry each make the same agent-only call with no such treatment; the
-   fix for those three is either the `agentOnly` flag (preferred, per CSD-020
+   agent row and explains why (`LogsScreen.kt:319`). A card that makes an
+   agent-only call takes either the `agentOnly` flag (preferred, per CSD-020
    §6.1) or this pattern.
 3. **The error state is modelled and unread.** `LogsScreenState.error` →
    render it, and make the empty branch `error == null && logs.isEmpty()`.
@@ -187,23 +184,22 @@ performance question the gate does not ask.
    one sentence of prose that closes that gap: *"These are operating notes,
    not signed records."*
 
-## 7. Review — runtime group (2026-09-27, branch `review/runtime`)
+## 7. Review — runtime group
 
-Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origin/main**. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, all shown red against the old behaviour first.
+Card checked against CIRISAgent `main` and CIRISServer `main`. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`.
 
-**Closed here**
-- *WARN returned nothing from an agent.* The agent emits and matches `WARNING`
+**Closed**
+- *WARN on both hosts.* The agent emits and matches `WARNING`
   (`telemetry_logs_reader.py:168`), the node `WARN` (`telemetry_logs.rs:136`),
-  and both match exactly. The WARN chip now asks for each spelling and merges
+  and both match exactly, so the WARN chip asks for each spelling and merges
   (`wireLevels`).
-- *Back arrow* went to Interact; now This node.
+- *Back arrow* goes to This node.
 
 **Still open**
 - `has_more` is always false on the agent (sliced before compared,
-  `telemetry.py:1450-1457`) and `total` is the page size: draft issue in the
-  review report.
+  `telemetry.py:1450-1457`) and `total` is the page size.
 - `context.error_details` / `correlation_id` are dropped by the client — the
-  useful half of an ERROR row. Next pass.
+  useful half of an ERROR row.
 - No CRITICAL chip.
 
 **Stage:** building → building.

@@ -31,7 +31,7 @@ screen: HouseholdMembers
 ```
 
 `nav_map` derives `circle_family -> tab_people -> nav_epistemic_household_members`:
-Family › People now holds two cards, Contacts (CSD-005) and this one, so the
+Family › People holds two cards, Contacts (CSD-005) and this one, so the
 shell lists them as rows. It is placed in Family only (`CirclesNav.kt`), and is
 not agent-only: the node serves it.
 
@@ -118,7 +118,7 @@ it." (`household_governance_note`) and no controls.
 
 ## 3. Contracts (who)
 
-Node-owned, at the node URL. CIRISServer `origin/main` @ `046e1b39`, `src/family_api.rs`.
+Node-owned, at the node URL. CIRISServer 0.5.217, `src/family_api.rs`.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
@@ -143,31 +143,28 @@ Add, remove and role have their controls here (`btn_household_member_pick_*`,
 `HouseholdsViewModel.confirmMemberAct()`; leave, dissolve, sign and apply have
 theirs on the hub and are sent by `confirmHouseholdAct()` (CSD-100 §3.1). Both
 screens share one view model so the household picked in one is the one shown
-in the other. Before the review one `confirm()` dispatched every act, and the
-route gate saw the hub's writes on this screen; the split closed that, and the
-five rows left the baseline. Only `POST /v1/families/{id}/changes/envelope` is
+in the other. Two confirms keep each write on the screen that makes it, so the
+route gate sees it there. Only `POST /v1/families/{id}/changes/envelope` is
 two doors by design (a quorum roster change from here, a quorum dissolve from
-the hub) and stays recorded as that decision.
+the hub) and is recorded as that decision.
 
 ### 3.2 Stated limits
 
-Both limits this section listed are **fixed in persist v49 (CIRISPersist#910)**
-and cleared on `integ/0.5.218`, which builds on v49: an addition and a role
-change are signed rows that replicate (`src/family_api.rs:57-61`, `:1296`), and
-a removed member can be added back (`:1099-1100`). They still hold against a
-0.5.217 node (persist v48) — an added member or new role reaches only that
+Persist v49 (CIRISPersist#910), which 0.5.218 builds on, makes an addition and
+a role change signed rows that replicate (`src/family_api.rs:57-61`, `:1296`),
+and lets a removed member be added back (`:1099-1100`). Against a 0.5.217 node
+(persist v48) two limits hold: an added member or new role reaches only that
 node, and re-adding is refused `family.readd_unsupported`, which the removal
-confirm says — and the card keeps saying so until 0.5.218 ships. After
-CIRISServer#700, adding anyone waits on their acceptance (§3.3).
+confirm says. Adding anyone waits on their acceptance (§3.3).
 
-### 3.3 Nobody joins without their own consent (ruling of 2026-09-30)
+### 3.3 Nobody joins without their own consent
 
-The maintainer ruled on 2026-09-30 that **adding someone to a household or a
-community requires their consent**, founding members included
-(CIRISConstitution#133; persist's enforcement CIRISPersist#955, v52: one
-inviter proposes, the invitee accepts or declines, the quorum stays on the
-admitting record, expiry 30 days or less). **CIRISServer 0.5.218** ships it
-(persist v52, edge v38; merged at `53d1ffb5`). On this card (CSD-106):
+**Adding someone to a household or a community requires their consent**,
+founding members included (CIRISConstitution#133; persist enforces it in
+CIRISPersist#955, v52: one inviter proposes, the invitee accepts or declines,
+the quorum stays on the admitting record, expiry 30 days or less).
+**CIRISServer 0.5.218** carries it (persist v52, edge v38). On this card
+(CSD-106):
 
 * **the add control is "Invite someone"** on a node that answers
   `GET /v1/families/{id}/invites`. Picking a contact opens the confirm
@@ -184,7 +181,7 @@ admitting record, expiry 30 days or less). **CIRISServer 0.5.218** ships it
   the direct add as written above. A confirmed invitation that meets a bare 404
   sends nothing in its place and the roster switches to Add with
   `mobile.invites_node_adds_directly`; a direct add answered 409
-  `membership.consent_required` (the unreleased interim branch, CIRISServer#700)
+  `membership.consent_required` (an unreleased node build, CIRISServer#700)
   re-reads the invites route and offers Invite if it is served.
 
 Unaffected: remove, role changes, and re-adding someone already active (still
@@ -209,7 +206,7 @@ with either a `btn_household_member_pick_*` per contact or
 
 ## 5. QA plan
 
-**`testable`** since CIRISServer 0.5.218 answered the last unconfirmed field: the flow (`testing/flows/csd-101-household-members.yaml`, floor `>=0.5.225`) passed on all five legs in the five-platform run 36775704425 (2026-09-30, `flows/matrix-0.5.225` at efdac2a2, node v0.5.217), and the card was held at `building` only because `x_private:membership_invitation` was `blocked_by: CIRISPersist#955`. Persist v52 and the invites routes shipped in 0.5.218 (CSD-106), so the field is confirmed. The flow still describes the card: its steps drive only tags that are unchanged (`btn_household_member_add_open` opens `card_household_member_add` whether the button reads Add someone or Invite someone) and confirm no add, so neither the direct add nor the invitation is driven by it. The invite, pending rows and inbox are driven by CSD-106's draft flow (floor `unreleased`). The matrix's node has no household, so the first step accepts the roster's empty shape and the populated roster is gated on `household_members_list`. Linux desktop leg run locally the way `five-platform-live-qa.yml` runs it (2026-09-29, candidate 0.5.225, node v0.5.217, `--flows testing/flows`, the two-node fixture): **2/4 passed, 2 skipped** — the roster composes in its empty shape and points to the hub; the populated roster and the add card skipped as designed (no household on the bare node). On the matrix run of the same day (36588619656) it could not start on any desktop leg (the tab was clicked before the circle hop landed; fixed in the runner).
+**`testable`.** The flow (`testing/flows/csd-101-household-members.yaml`, floor `>=0.5.225`) passed on all five legs in five-platform run 36775704425 (node v0.5.217). `x_private:membership_invitation` is confirmed by persist v52 and the invites routes in CIRISServer 0.5.218 (CSD-106). The flow's steps drive only tags that are the same whether the button reads Add someone or Invite someone (`btn_household_member_add_open` opens `card_household_member_add`) and confirm no add, so neither the direct add nor the invitation is driven by it; the invite, pending rows and inbox are driven by CSD-106's draft flow (floor `unreleased`). The matrix's node has no household, so the first step accepts the roster's empty shape and the populated roster is gated on `household_members_list`: on a bare node the roster composes empty and points to the hub, and the populated roster and the add card skip as designed.
 
 **Platforms.** All five.
 
@@ -221,5 +218,5 @@ Family › Rules gains no second household card (`CirclesNavTest`).
 
 **Untested, and must be established on a live node.** Adding a real contact
 (it needs a second identity registered on the node); `dek_rewrap.excluded`,
-which the card does not show yet; a role name other than founder or member
+which the card does not show; a role name other than founder or member
 arriving from another node.

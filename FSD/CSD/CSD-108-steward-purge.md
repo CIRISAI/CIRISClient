@@ -1,11 +1,9 @@
 # CSD-108 — Steward purge (remove rows that never belonged, under the global trust root)
 
-**CSD**: CSD-108 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the operator ruling of
-2026-10-09, relayed by the CIRISPersist session: *"We already have a steward purge
-for keys, extend to generic rows, create a CSD working with the client session to
-go under global trust root moderation."*
+**CSD**: CSD-108 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the steward purge for keys,
+extended to generic rows under global trust root moderation (CIRISPersist#1046)
 **Door**: CIRISPersist#1046 (`Engine::purge_rows`, milestone v54.1.0) ·
-**CC reading**: CIRISConstitution#165 (proposed rc8 text, lands on the steward's go)
+**CC reading**: CIRISConstitution#165 (proposed rc8 text)
 **Extends**: CSD-065's tier 3 (Descend), the key purge that exists today, and
 CSD-067's co-scrub, the quorum cosign that exists today (§1.1). **Placed as** a leaf
 of the Accord card (CSD-067), beside CSD-105 and CSD-090
@@ -59,8 +57,8 @@ Serves **Integrity** and **Justice**. The falsifiable claims are these four:
 
 ### 1.1 What this extends, and why it is still its own card
 
-Following `cards-keyed-by-routes`, we looked for the purge that already exists by
-the routes and primitives it uses, not by its name.
+The purge that already exists is found by the routes and primitives it uses,
+not by its name.
 
 * **The key purge is CSD-065's tier 3, Descend.** `POST /v1/admin/descend`
   previews a selection and returns a `selection_hash` and row counts
@@ -93,7 +91,7 @@ duty over the canonical that root anchors. It is authorised by a cosigned
 `takedown_notice` under the root's `consensus_protocol`
 (CIRISConstitution#165 §1: "no new family, no new power"). The second authority
 lives at Everyone › Safety › Accord, and so does this card. Putting both on one
-ladder would draw two authorities as one brake. CSD-065 §2.1 already records
+ladder would draw two authorities as one brake. CSD-065 §2.1 records
 that confusion once, between filing a report and pulling a brake.
 
 It is **not CSD-105** either. CSD-105 answers whether *this node* trusts a root,
@@ -344,9 +342,8 @@ fields:
 
 ## 3. Contracts (who)
 
-**There is no route yet.** The door is persist's (CIRISPersist#1046, open,
-v54.1.0). The HTTP surface is CIRISServer's. Persist has asked the Server
-session to file the ask for these routes, citing #1046 and this CSD, and **it is
+**There is no route.** The door is persist's (CIRISPersist#1046, open,
+v54.1.0). The HTTP surface is CIRISServer's, and the ask for these routes **is
 not filed yet**. Every row below is `missing` and **asked of CIRISServer, not
 filed yet**. The shapes are what the card needs, so the server can answer one
 ask instead of eight.
@@ -502,38 +499,37 @@ always present, CSD-065's rule):
 * A payload sealed in another signed envelope cannot be reached (CC 2.6.1.3,
   CSD-039).
 
-## 6. Questions put to Persist, and the answers (CIRISPersist#1046)
+## 6. Persist's answers (CIRISPersist#1046)
 
-All six were answered on CIRISPersist#1046. They are recorded here so nobody
-asks them again, along with what each answer changed on this card.
+Six questions are answered on CIRISPersist#1046. Each answer, and what it
+fixes on this card:
 
-1. **What the client calls: resolved.** The door is persist's and the HTTP
-   surface is CIRISServer's. Persist asked the Server session to file the
-   `/v1/accord/purge/*` ask, citing #1046 and this CSD. It is not filed yet.
+1. **What the client calls.** The door is persist's and the HTTP
+   surface is CIRISServer's. The `/v1/accord/purge/*` ask is not filed yet;
    §3 marks every route "asked of CIRISServer, not filed yet".
-2. **Refusal ids: resolved.** They are `purge_selection_count_mismatch
+2. **Refusal ids.** They are `purge_selection_count_mismatch
    {table, expected, found}` and `purge_retraction_inadmissible {record_id,
    plane, index, total}`, beside #165's two. The door stops at the first
    inadmissible retraction. Records before it stay retracted, nothing after it is
    touched, and a retry is idempotent. **There is no override path**, because the
-   notice binds the digest. The draft's "override logged" is withdrawn, and the
-   card has no override state or control (the refusal table under §2's states, §4).
-3. **How the cosign is collected: resolved.** It uses the client and server's
+   notice binds the digest, and the card has no override state or control (the
+   refusal table under §2's states, §4).
+3. **How the cosign is collected.** It uses the client and server's
    propose/cosign flow (§3). Persist only verifies the cosignatures against the
    root's `consensus_protocol`. **Still open, on CIRISConstitution#165, not
    here:** which keys may sign, given CC 4.2.1's limits on humanity-accord keys
    (CSD-090 §3).
-4. **Progress and settle: resolved.** Progress is a phased report per plane,
+4. **Progress and settle.** Progress is a phased report per plane,
    polled or streamed, and the card draws one row per plane. Settle is the
    retraction-round settle of CIRISPersist `FSD/HELD_RECORD_SETTLE.md`.
    Hard-delete is a second, explicit `purge_finalize(notice_id)`, so Settled is a
    visible state with Finalize behind its own ConfirmSheet. **Still to name:**
    what the route carries while settling, so `x_private:purge_settle` stays
    `unconfirmed`.
-5. **Descend: resolved.** CSD-065's tier 3 moves onto `purge_rows` by actor,
+5. **Descend.** CSD-065's tier 3 moves onto `purge_rows` by actor,
    and `evict_actor` remains the bytes-plane primitive underneath. CSD-065's
    tier-3 row says so.
-6. **The sample: resolved.** It is the first 20 ids in JCS order plus per-table
+6. **The sample.** It is the first 20 ids in JCS order plus per-table
    counts. The ledger holds every id, and the sample is a view of it, so the
    ledger view pages every id (`row_purge_ledger_id_<i>`).
 

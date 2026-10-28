@@ -1,7 +1,7 @@
 # CSD-065 — Moderation (the duty, the existence invariant, and the brake)
 
 **CSD**: CSD-065 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, wave 1 (S2/G1)
-**Flow**: unwritten — every tag in §2.3 is real as of the 2026-09-27 review, so it can be
+**Flow**: unwritten — every tag in §2.3 is real, so it can be written
 **Extended by**: CSD-108 (Steward purge). Tier 3 (Descend) is the key purge
 that exists today: a previewed selection hash, a quorum of 2, and `evict_actor`
 for each target (moving onto `purge_rows` by actor, CIRISPersist#1046).
@@ -33,17 +33,14 @@ pull in opposite directions:
   admitted iff the signer holds the duty as-self or on a live `delegates_to`
   chain; absence of a principal field is **not** an admit condition.
 
-The reason this CSD was written before its UI was changed is stated in the plan
-as G1: **this screen already carried a brake and could not prove it drew one.**
-The ten `/v1/admin` rungs were wired, the preview→confirm-with-hash pattern was
-implemented, and the four things a person needs to see before signing — the
-verdict, the blast radius, the "what this does NOT reach" sentence, and the
-refusal when the node says no — had **no test tag between them**. A safety
-surface that silently fails to render is worse than one that is absent
-(CSD-003 §1); a *brake* that silently fails to render its limits is worse
-still, because the operator signs anyway. §2.3 lists the tags; all of them are
-real now, and the ladder itself is no longer this app's opinion: it is read
-from the node (`GET /v1/operations`, §3).
+**This screen carries a brake, so it must prove it draws one** (the plan's
+G1). The four things a person needs to see before signing — the verdict, the
+blast radius, the "what this does NOT reach" sentence, and the refusal when the
+node says no — each carry a test tag (§2.3). A safety surface that silently
+fails to render is worse than one that is absent (CSD-003 §1); a *brake* that
+silently fails to render its limits is worse still, because the operator signs
+anyway. The ladder itself is not this app's opinion: it is read from the node
+(`GET /v1/operations`, §3).
 
 ## 2. Surface (what)
 
@@ -181,7 +178,7 @@ to name the value it draws.
 
 **`moderation_track_record` carries `range: unconfirmed`** for CSD-004's reason:
 the registry gives it `polarity: signed` and no bounds. The card does not render
-it at all today (§2.3), so nothing depends on the range yet.
+it at all (§2.3), so nothing depends on the range.
 
 ```yaml csd:states
 populated: {tag: txt_named_moderator_verdict, renders: "the community's verdict, the fail-secure line under it, and the report form below"}
@@ -190,11 +187,10 @@ loading:   {tag: spinner_named_moderator, renders: "the Check button carries the
 error:     {tag: txt_named_moderator_error, renders: "Could not ask this node about that community ({detail}). This is NOT a report that it has a moderator. A node without the route draws `txt_named_moderator_not_on_this_node` instead: a fact about the node, in the neutral tone"}
 ```
 
-**`error` and `empty` were the same pixels until 2026-09-27.** A failed
-`loadNamedModerator()` set the shared `state.error` and left the verdict null,
-which drew nothing at all, exactly like a community never asked about. The
-read now has its own field (`SafetyState.namedModeratorFailure`, a
-`ReadFailure`), the verdict area draws one of four things by tag, and a new
+**`error` and `empty` are different pixels.** A failed `loadNamedModerator()`
+never draws like a community never asked about: the read has its own field
+(`SafetyState.namedModeratorFailure`, a `ReadFailure`), the verdict area draws
+one of four things by tag, and a new
 community key drops the last community's verdict the moment it is typed. The
 mission's distinction — "this community has no moderator" versus "we could not
 ask" — is expressible, and on a fail-secure invariant those two are opposites.
@@ -227,14 +223,14 @@ the half CC opens to every member is reachable only from a conversation.
 A person in Neighbours › Safety who does not hold `moderate` has, on this
 screen, nothing they are permitted to do.
 
-What the sheet does since 2026-09-27, on the way to a route that does not
-exist yet (`blocked_by: CIRISServer#665`):
+What the sheet does while the route does not exist
+(`blocked_by: CIRISServer#665`):
 
 * It posts to the **node** (`{nodeUrl}/v1/safety/reports`), where the FSD
   puts `src/safety/report.rs`, not to `$baseUrl` (the agent on a with-AI
   install, which does not proxy it).
 * The content id it is handed is sent as `target_id`, not as `target_key_id`
-  — a message id is not a key, and the old body claimed it was. The author's
+  — a message id is not a key. The author's
   key rides as `target_key_id` only when the caller knows it (today, never).
 * A 404 is `txt_moderation_proposal_not_on_this_node`: "this node can't take
   a community proposal yet (needs CIRISServer#665)", the submit button
@@ -247,14 +243,13 @@ exist yet (`blocked_by: CIRISServer#665`):
   person out of reporting harm would serve nobody the gate protects.
   `ModerationCatalogueTest` shows the refused case makes no request at all.
 * Its copy is in the bundle (`moderation.proposal.*`) and its spinner uses a
-  token; it was hardcoded English over `Color.White`.
+  token.
 
 ### 2.3 The tags G1 needs, and why each one
 
 G1 is "moderation exposure contract: test tags before any brake UI ships". This
-is that list. Every row is a value the screen renders; **all eleven are real
-as of 2026-09-27** (they were `proposed:` when this CSD was written, which is
-why it was `sketched`). The `why` column is why a flow cannot go without it.
+is that list. Every row is a value the screen renders, and **every tag is
+real**. The `why` column is why a flow cannot go without it.
 
 | tag | what it carries | why the flow cannot go without it |
 |---|---|---|
@@ -262,7 +257,7 @@ why it was `sketched`). The `why` column is why a flow cannot go without it.
 | `txt_named_moderator_verdict` | `operate` \| `auto_promote` \| `quiesce`, as its text | the CC 4.5.4 verdict; `one_of` is enforceable, and a fourth value renders as "not cleared to operate", never as itself |
 | `txt_named_moderator_fails_secure` | the fail-secure sentence | CC 4.5.4 rule 3 is the reason `quiesce` is not a failure report |
 | `txt_named_moderator_none` | the never-asked state | distinguishes "no community named" from "no moderator" |
-| `txt_named_moderator_error` / `_not_on_this_node` | the read failure / the absent route | today distinct from the never-asked state, in two tones |
+| `txt_named_moderator_error` / `_not_on_this_node` | the read failure / the absent route | distinct from the never-asked state, in two tones |
 | `spinner_named_moderator` | the in-flight read, on the button | the verdict area is blank while loading, never the empty sentence |
 | `txt_moderation_filed_id` | the returned attestation id | the only evidence the report landed |
 | `row_named_moderator_candidate` | the auto-promote candidate | who, without why: the track record is not in the body yet (§3) |
@@ -275,8 +270,7 @@ why it was `sketched`). The `why` column is why a flow cannot go without it.
 
 ## 3. Contracts (who)
 
-Verified against ciris-server `origin/main` at 0.5.217 (2026-09-25), route
-literals in `src/`.
+Verified against ciris-server 0.5.217, route literals in `src/`.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
@@ -293,31 +287,30 @@ literals in `src/`.
 | tier 4 — re-admit | `POST /v1/admin/re-admit` | `src/admin_ops.rs:4277` | **live** — `AdminLadder.kt:533` |
 | tier 4 — refuse writes | `POST /v1/admin/refuse-writes` | `src/admin_ops.rs:4280` | **live** — `AdminLadder.kt:541` |
 | tier 4 — accept writes | `POST /v1/admin/accept-writes` | `src/admin_ops.rs:4284` | **live** — `AdminLadder.kt:550` |
-| **the ladder itself, as data** — op, route, tier, scope, quorum, inverse, `reaches_substrate` | `GET /v1/operations` | CIRISServer `src/operations_catalogue.rs:50` (ROUTE), rows `:82-182`; ungated | **live and READ** (CIRISClient#109 closed 2026-09-27). `AdminLadderViewModel.load()` → `CIRISApiClient.getOperations` → `LadderRung.fromCatalogue` (`models/NodeCatalogue.kt`): the chips, tier, scope, quorum floor, reversal pair and `reaches_substrate` are the served row's, joined to this app's labels and message ids by op token (`AdminLadderOp.wireOp`; `throttle_release`, `de_admission` are not derivable from the enum name). A served op with no compiled entry is still a rung, under its token; the commit posts to the SERVED route. A node without the route keeps the compiled ladder and says so (`txt_ladder_catalogue_fallback`, in the error tone); a failed read likewise, with its detail. `NodeCatalogueTest` + `ModerationCatalogueTest` are the acceptance tests the issue asked for, red on the old code |
+| **the ladder itself, as data** — op, route, tier, scope, quorum, inverse, `reaches_substrate` | `GET /v1/operations` | CIRISServer `src/operations_catalogue.rs:50` (ROUTE), rows `:82-182`; ungated | **live and READ** (CIRISClient#109). `AdminLadderViewModel.load()` → `CIRISApiClient.getOperations` → `LadderRung.fromCatalogue` (`models/NodeCatalogue.kt`): the chips, tier, scope, quorum floor, reversal pair and `reaches_substrate` are the served row's, joined to this app's labels and message ids by op token (`AdminLadderOp.wireOp`; `throttle_release`, `de_admission` are not derivable from the enum name). A served op with no compiled entry is still a rung, under its token; the commit posts to the SERVED route. A node without the route keeps the compiled ladder and says so (`txt_ladder_catalogue_fallback`, in the error tone); a failed read likewise, with its detail. `NodeCatalogueTest` + `ModerationCatalogueTest` are the acceptance tests the issue asked for |
 | the scopes a delegation may carry | `GET /v1/vocabulary` → `delegation_scope.moderation` | CIRISServer `src/vocabulary_surface.rs:50`; ungated | **live and read by CSD-090** (`getVocabulary`, CIRISClient#108). On THIS card the duty radio (`ModerationDuty`, `models/safety/SafetyModels.kt:135`) is the request enum of `moderation.rs::Duty` and is correct to be fixed; the ladder's per-rung scope now comes from the `/v1/operations` row above, so `LADDER_SCOPE_*` survive only in the compiled fallback |
 | **the owner's usable delegation ids** | `GET /v1/admin/self` → `owner_delegations[]` | CIRISServer `src/admin_ops.rs:3348` (read), `owner_serve_delegations` `:3470-3526`, on `integ/0.5.218` (CIRISServer#676) | **live in 0.5.218, read.** `OwnerDelegationDto` (`models/selfreader/SelfAndReaderOps.kt`); the picker is `chip_ladder_delegation_{i}`. **On 0.5.218 every returned row carries `infra:serve`** (`REQUIRED_SCOPE_SELF_DIRECTED`, `:286`): that is the tier S/R scope, and tiers 0–4 require the NAMED row to carry `review`/`moderate`/`slash` itself (`resolve_authority` `:1039`, `authority_scope_absent`). So on this ladder the node's list will, today, carry nothing usable, and the card says exactly that (`txt_ladder_delegations_none_usable`: "returned N delegation(s) carrying infra:serve; none carries slash") rather than offering an id the node would refuse. A node before 0.5.218 returns no field (`txt_ladder_delegations_not_returned`). Upstream ask, not yet filed: return the owner's `review`/`moderate`/`slash` rows too, or let an owner session resolve the delegation (CIRISServer#676 option 2) |
 | the caller's key | `GET /v1/federation/self-key-record` | CIRISServer | live — `SafetyViewModel.probeIdentityAndStatus`; the `signer_key_id` on the report |
 | the caller's protective posture | `GET /v1/safety/status/{key_id}` | CIRISServer `src/safety/age.rs` | live — read on open; rendered by CSD-066 |
-| whose posture | `GET /v1/setup/owned-nodes` (`owner`) | CIRISServer | live — the same probe, since 2026-09-28: the posture's subject is the owner's fed-ID, not the node key (CSD-066 §3). The node key stays this card's `signer_key_id` |
+| whose posture | `GET /v1/setup/owned-nodes` (`owner`) | CIRISServer | live — the same probe: the posture's subject is the owner's fed-ID, not the node key (CSD-066 §3). The node key stays this card's `signer_key_id` |
 | the proposer's age band (§2.2's minor gate) | `GET /v1/safety/age-assurance/{key_id}` | CIRISServer `src/safety/age.rs` | live — read by `ModerationViewModel` before a proposal; that view model is mounted on Interact, so the route checker files it under CSD-091's screen, not this one |
 
-The admin rungs moved from 4264-4284 (0.5.217) to 4360-4380 on
-`integ/0.5.218` (97900cf5) with no change to the set; `/v1/operations` and
-`/v1/vocabulary` are byte-identical in both.
+The line numbers above are 0.5.217's; on `integ/0.5.218` the admin rungs are at
+4360-4380 with the same set, and `/v1/operations` and `/v1/vocabulary` are
+byte-identical.
 | the candidate's track record | **missing** — the verdict body carries `candidate_key_id`, not `moderation_track_record` | CIRISServer | blocks `row_named_moderator_candidate` |
-| **anyone-may-propose** (CC 4.5.13) | `POST /v1/safety/reports` — **missing** | CIRISServer | `blocked_by: CIRISServer#665`. The client calls it (`CIRISApiClient.proposeModeration`, on the NODE url since 2026-09-27); `src/safety/report.rs` is specified in CIRISServer `FSD/MODERATION_CHILD_SAFETY.md` §4.4 and does not exist on `origin/main` or `integ/0.5.218` (`src/safety/` is six files, no `report.rs`; no route literal). The sheet says so in words (§2.2) |
+| **anyone-may-propose** (CC 4.5.13) | `POST /v1/safety/reports` — **missing** | CIRISServer | `blocked_by: CIRISServer#665`. The client calls it (`CIRISApiClient.proposeModeration`, on the NODE url); `src/safety/report.rs` is specified in CIRISServer `FSD/MODERATION_CHILD_SAFETY.md` §4.4 and does not exist on `origin/main` or `integ/0.5.218` (`src/safety/` is six files, no `report.rs`; no route literal). The sheet says so in words (§2.2) |
 
 **The last row is the gap that matters.** The only moderation path CC opens to a
 member who holds no duty has no route behind it. The control is built, the
 endpoint constant is written on both sides, and the request 404s — and the
-sheet now says that is what happened, instead of "Moderation proposal failed:
-404".
+sheet says that is what happened (§2.2).
 
 **The filed report is not a CEG item on this screen.** `POST /v1/safety/moderation`
 answers `{attestation_id, duty}` (`src/safety/moderation.rs:413`), no envelope,
 so `txt_moderation_filed_id` is a line, not a hamburger (CSD-006 §1: a row
-without the five facts is furniture). The row to ask for is the envelope on
-the response; until then the card does not pretend.
+without the five facts is furniture). The ask is the envelope on the
+response; without it the card does not pretend.
 
 ## 4. Flow (how)
 
@@ -387,8 +380,8 @@ expect:
 
 **Those three tags are the model for the rest of the screen.** `previewError` /
 `previewRefusal` / no-preview / zero-rows are four distinct facts and three of
-them already have their own tag (`ModerationScreen.kt:661,670,677`). The
-named-moderator half of the same screen collapses its four into one blank.
+them have their own tag (`ModerationScreen.kt:661,670,677`); the
+named-moderator half draws its four by tag as well (§2).
 
 ## 5. QA plan
 
@@ -407,7 +400,7 @@ served scope wins, a served op is never dropped, the fallback is a ladder) and
 delegation ids prefilled only when one carries the rung's scope and dropped on
 a rung change, a typed id never overwritten, a node before 0.5.218, the
 named-moderator failure as its own fact, the proposal sheet's 404 and minor
-gate). All shown red against the previous behaviour on 2026-09-27.
+gate). Each was shown red before being believed.
 
 **Not tested here.**
 * The chain walk. Whether the signer holds the duty is decided by the node
