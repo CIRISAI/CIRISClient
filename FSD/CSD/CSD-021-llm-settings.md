@@ -116,7 +116,7 @@ error:     {tag: llm_providers_error, renders: "a persistent sentence with the r
 | breaker config | `PUT /v1/system/llm/providers/{name}/circuit-breaker/config` | CIRISAgent | live (`llm_routes.py:592`) |
 | hosted-services status | `GET /v1/system/llm/ciris-services/status` | CIRISAgent | live (`llm_routes.py:1065`) |
 | turn hosted off | `POST /v1/system/llm/ciris-services/disable` | CIRISAgent | live (`llm_routes.py:973`) |
-| turn hosted on | `POST /v1/system/llm/ciris-services/enable` | CIRISAgent | live (`routes/system/llm_routes.py:1081` on `main`, setup-or-ADMIN) — **called** since the setup review: `enableCirisServices` from `switch_ciris_services` and `btn_enable_ciris_services`. Before, the client sent people to a factory reset to undo `disable` |
+| turn hosted on | `POST /v1/system/llm/ciris-services/enable` | CIRISAgent | live (`routes/system/llm_routes.py:1081`, setup-or-ADMIN) — **called**: `enableCirisServices` from `switch_ciris_services` and `btn_enable_ciris_services`, so undoing `disable` needs no factory reset |
 | list a provider's models | `POST /v1/setup/list-models` | CIRISAgent | live (`setup/llm_routes.py:222`) — `CIRISApiClient.listModels` (`CIRISApiClient.kt:6782`) |
 | find a local server | `POST /v1/setup/discover-local-llm` | CIRISAgent | live (`setup/llm_routes.py:237`) — `CIRISApiClient.kt:6913`, from `LLMSettingsViewModel.kt:543` and `LocalLlmDiscovery.kt:113` |
 | start the local server it found | `POST /v1/setup/start-local-server` | CIRISAgent (`setup/llm_routes.py:286`, setup-or-ADMIN) | **live** — `CIRISApiClient.startLocalLlmServer` (`CIRISApiClient.kt:7020`), from `LocalLlmDiscovery.kt:151`, which this screen mounts at `LLMSettingsScreen.kt:2055, 2168` (and Setup at `SetupScreen.kt:1540`) |
@@ -124,10 +124,8 @@ error:     {tag: llm_providers_error, renders: "a persistent sentence with the r
 | the model capability catalogue | `GET /v1/setup/models`, `GET /v1/setup/models/{provider_id}` | CIRISAgent (`setup/llm_routes.py:93, 138`; setup-only) | live, **not called** — only generated stubs. `list-models` asks the provider live; this is the agent's own table of what each model can do, and the card never shows it |
 | `config:llm` as a record | — **unconfirmed** | CIRISAgent | blocks `building` for `llm_config_receipt` |
 
-Agent tree last commit **2026-08-15**; "live" is as of that tree. The five `/v1/setup/*`
-rows were re-verified against CIRISAgent `main` 29371660de (2026-09-26). Nothing under
-`/v1/system/llm` exists on `CIRISServer`, which is correct — this is the
-brain's configuration, not the node's.
+Nothing under `/v1/system/llm` exists on CIRISServer, which is correct — this
+is the brain's configuration, not the node's.
 
 ### 3.1 Every route this screen calls (generated)
 
@@ -159,8 +157,8 @@ shows only the ones whose `services_registered` includes `LLM`
 thinking with" should not have to find the brain's adapter among the
 communication ones. Same routes, same act, narrower list — so this card keeps
 its two controls and does not grow others (no configure, no add), and CSD-020
-stays the owner of adapter management. CSD-020 is off-limits in this batch; its
-side of this note is reported, not written.
+stays the owner of adapter management. CSD-020 §3.1 records the same agreement
+from its side.
 
 ## 4. Flow (how)
 
@@ -214,10 +212,9 @@ bus-status decode.
    person whose first-choice provider is failing sees a list that looks fine
    and answers that are quietly coming from somewhere else. This is the
    "silently routing around it" the mission forbids.
-4. **`enable` was unreachable; closed.** The client called `disable` and never
-   `enable`, and told people to factory-reset to undo it. `enableCirisServices`
-   now calls the route (`CirisServicesToggleTest`, red first); the copy says it
-   applies after the agent restarts, which is what the route does.
+4. **`enable` is reachable — closed.** `enableCirisServices` calls the route
+   (`CirisServicesToggleTest`), so undoing `disable` needs no factory reset; the
+   copy says it applies after the agent restarts, which is what the route does.
 5. **CC gap — ask (CIRISAgent).** Publish the running LLM configuration as a
    `config:llm` row under CC 3.1.9 / CC 3.4.5 (self-or-owner). Today "what is
    my agent thinking with" is answerable only by reading this screen, which is

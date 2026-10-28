@@ -1,7 +1,6 @@
 # CSD-004 — Federation capacity attestations (Health & Reputation)
 
-**CSD**: CSD-004 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: CIRISClient#45,
-**§2 and §3 updated** at the circles redesign
+**CSD**: CSD-004 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: CIRISClient#45
 **Flow**: tools/qa_runner/flows/capacity_attestations.yaml
 
 > **A PROFILE DEMONSTRATION, NOT A SECOND COPY.** The canonical CSD-004 is
@@ -14,19 +13,16 @@ stage: building
 owner: CIRISClient
 ```
 
-**Why `sketched` and not further — and why the reason has changed.** The
-previous cut said the capacity route was `unconfirmed`, and that was true when it
-was written. **It is not true any more: CIRISServer#580 shipped
-`GET /v1/my-data/capacity` and it is live on 0.5.217** (§3). What now blocks
-`building` is worse than an unanswered route: *two* owners serve that path with
-*two different payloads*, and the client parses only one of them (§3.1). The
-stage stays `sketched` because the type of every `shows:` row is decided by
-which host answered, which is not a thing this document can yet state.
+**What blocks the next stage.** `GET /v1/my-data/capacity` is live on
+ciris-server 0.5.217 (§3), but *two* owners serve that path with *two different
+payloads*, and the client parses only one of them (§3.1). The type of every
+`shows:` row is decided by which host answered, which this card cannot yet
+state.
 
 ## 1. Mission (why)
 
-**A user can now see live federation capacity attestations on Health &
-Reputation, where before #45 a gate placeholder stood in for them.** The
+**A user sees live federation capacity attestations on Health & Reputation, not
+a gate placeholder standing in for them.** The
 distinction is the whole feature: a placeholder that looks like data is the
 metric-dishonesty MDD's anti-Goodhart measures name. Serves **Incompleteness** —
 show what is measured, and only what is measured.
@@ -42,13 +38,11 @@ No "reached from" column: `nav_map` derives `circle_local_community ->
 tab_decisions -> nav_epistemic_health_reputation` from the client's own tag
 rules, and the checker refuses this block if that route does not exist.
 
-**The chain ends on the row, not the tab** — the previous cut said "Neighbours ›
-Decisions, where the tab's only card is this screen", and that stopped being
-true when the environment snapshot moved into the same tab at the spine pass
-(`CirclesNav.kt:124-126`: Health & Reputation, Environment Graph, Commons).
-`expected_tail("health-reputation")` now returns `nav_epistemic_health_reputation`,
-and a CSD claiming the tab would fail the checker's surface block. The hop is
-derived precisely so this correction is mechanical rather than archaeological.
+**The chain ends on the row, not the tab** — Neighbours › Decisions carries
+three cards (`CirclesNav.kt:124-126`: Health & Reputation, Environment Graph,
+Commons), so `expected_tail("health-reputation")` returns
+`nav_epistemic_health_reputation`, and a CSD claiming the tab would fail the
+checker's surface block.
 
 ```yaml csd:shows
 registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
@@ -146,13 +140,11 @@ at **CC 3.4.5** — a node cannot attest its own capacity. A score with no visib
 attester invites exactly the reading the Constitution forbids. It is `x_private:`
 because the registry names the *rule* and not a family for the key itself.
 
-**It is no longer blocked upstream.** The previous cut carried it as a proposed
-tag against an unconfirmed route. The node's capacity read now puts
+**It is not blocked upstream.** The node's capacity read puts
 `attesting_key_id` on **every row**, and its module doc gives this CSD's own
 reason for it — *"A capacity value with no visible attester invites exactly the
 reading CC 3.4.5 forbids"* (`src/capacity_read.rs:16-19`). The data is served;
-the element does not exist. `text_capacity_attested_by` has become a client
-gap.
+the element does not exist. `text_capacity_attested_by` is a client gap.
 
 ```yaml csd:states
 populated: {tag: federation_capacity_live}
@@ -161,27 +153,22 @@ loading:   {renders: "the card frame with a progress affordance — NOT the empt
 error:     {tag: federation_capacity_local_only, renders: "Federation capacity standing is UNAVAILABLE — /v1/my-data/capacity did not answer, so the score above is a local reading only."}
 ```
 
-**`error` has stopped being `proposed:`.** The previous cut's sharpest paragraph
-said a fresh node produces `warming_up`, a failed read produces nothing
-distinguishable from it, and *"the mission's own distinction — 'we could not
-ask' versus 'nothing has happened' — is not yet expressible on this surface."*
-`federation_capacity_local_only` (`HealthReputationScreen.kt:404`) is that
-distinction, shipped: it is a distinct tag on a distinct sentence that names the
-route by name and says the number above it is local only.
+**`error` is not `proposed:`.** The mission's own distinction — "we could not
+ask" versus "nothing has happened" — is `federation_capacity_local_only`
+(`HealthReputationScreen.kt:404`): a distinct tag on a distinct sentence that
+names the route and says the number above it is local only.
 
-**`federation_capacity_warming_up` was DISCOVERED, not designed.** Running this
-CSD's flow against a #45 build on a fresh node showed the card present and the
-live marker absent, with `federation_capacity_warming_up` in its place — a real
-fifth state nobody had written down. It is recorded here as `empty` because that
-is what it means: the node exists and nothing has attested it yet.
+**`federation_capacity_warming_up` is `empty`.** On a fresh node the card is
+present and the live marker absent, with `federation_capacity_warming_up` in its
+place: the node exists and nothing has attested it yet.
 
-**And #580's module doc says that state was a lie on a node.** *"A client card
-built on them could only render a permanent 'warming up' placeholder — a screen
-that reads 'not yet' when the truth is 'not ever, on this build'"*
-(`src/capacity_read.rs:5-8`). The empty state was honest about the corpus and
-dishonest about the build, and it took the server author to notice.
+**On a node build that state can be a lie.** The node's module doc: *"A client
+card built on them could only render a permanent 'warming up' placeholder — a
+screen that reads 'not yet' when the truth is 'not ever, on this build'"*
+(`src/capacity_read.rs:5-8`). The empty state is honest about the corpus and
+can be dishonest about the build.
 
-### 2.1 What is still untagged
+### 2.1 What is untagged
 
 `txt_fragility_elevated` is tagged and `card_capacity_maturity` is tagged;
 `btn_capacity_full_spec` is tagged. Untagged: the **"LOCAL + FLEET" / "FLEET
@@ -192,55 +179,44 @@ pre-fetch `—` (`:198`). The first two are the only thing on screen that says
 
 ## 3. Contracts (who)
 
-**Answered, and then complicated.** Verified against ciris-server `origin/main`
-at 0.5.217 (2026-09-25) and the `~/CIRISAgent` working tree, last commit
-**2026-08-15** — six weeks stale, so the agent row is "true of that tree".
+Verified against ciris-server 0.5.217 and CIRISAgent.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| ~~the six capacities~~ — **superseded** | ~~unconfirmed; the path is not named in #45~~ | — | the row this CSD carried since #45 |
 | capacity rows by subject, each with its attester | `GET /v1/my-data/capacity` | CIRISServer `src/system_data.rs:390`, `src/capacity_read.rs` (#580) | **live** — `{node_key_id, responsible_user_key_id, subjects[{key_id, any_standing, rows[{dimension, score, attesting_key_id, attested_by_this_node, standing, asserted_at, expires_at}]}], unscored[], truncated}` |
 | the five factors + a composite + fragility + category | `GET /v1/my-data/capacity?scope=both` | CIRISAgent `routes/my_data.py:138-149` | **live on the agent** — `{composite_score, fragility_index, category, factors{…}, local_score, local_category}` |
-| the range | **missing** on both | CIRISLensCore | blocks `building` — this is now the *only* clean unconfirmed left |
+| the range | **missing** on both | CIRISLensCore | blocks `building` — the *only* unconfirmed row |
 
 ### 3.1 One path, two payloads, and a client that reads one
 
 The two rows above are **the same URL on two hosts with incompatible shapes.**
 
-`CIRISApiClient.getCapacity()` (`:12846`) parses the agent's:
+`CIRISApiClient.getCapacity()` (`:12935`) parses the agent's:
 `data.factors.C.score`, `data.composite_score`, `data.fragility_index`,
-`data.local_score` — every one of them through `?: 0.0`
-(`:12865-12874`).
+`data.local_score`. The node's payload has no `factors` and no
+`composite_score`.
 
-The node's payload has no `factors` and no `composite_score`. Against a node
-build, every one of those lookups misses, every `?: 0.0` fires, and the screen
-renders **a composite of 0.00 with five factor rows at 0.00** — inside
-`federation_capacity_live`, because the fetch succeeded.
+**The parse raises on a payload it does not recognise** (CIRISServer#659)
+rather than defaulting five factors and a composite to zero. CSD/3 §3 states
+the rule in one line: *"`number` refuses a non-numeric text rather than reading
+0. Reading a missing value as a zero is a score where there is none."* `0.00`
+on an anti-Goodhart capacity screen is not a neutral default — it is the worst
+score the scale has, presented as live federation data. This is the
+wheels-placeholder rule from `AGENTS.md`: the placeholder RAISES, and must never
+be made to return a value instead.
 
-CSD/3 §3 states the rule this breaks in one line: *"`number` refuses a
-non-numeric text rather than reading 0. Reading a missing value as a zero is a
-score where there is none."* The predicate was written for the harness. The
-client does it in the parser, and `0.00` on an anti-Goodhart capacity screen is
-not a neutral default — it is the worst score the scale has, presented as live
-federation data.
-
-**Three asks, and they are not the same ask:**
-* **CIRISClient** — the parse must fail loudly on a payload it does not
-  recognise rather than defaulting five factors and a composite to zero. This is
-  the wheels-placeholder rule from `AGENTS.md`: the placeholder RAISES, and must
-  never be made to return a value instead.
+**Two asks:**
 * **CIRISServer + CIRISAgent** — one path, two shapes, two owners is the
   "do not add a second source for anything that already has one" rule broken at
   the wire. Either the node projects the agent's shape, or the client learns
   both and says which it got.
-* **CIRISLensCore** — the range (§2), unchanged since #45.
+* **CIRISLensCore** — the range (§2).
 
 ## 4. Flow (how)
 
 The flow embedded upstream asserts only that the card and
-`federation_capacity_live` are on screen — everything above was unassertable
-before CSD/3 §3. **This is what it becomes**, using the tags a #45 build actually
-serves:
+`federation_capacity_live` are on screen. **The full flow**, using the tags the
+build serves:
 
 ```yaml
 expect:
@@ -253,24 +229,22 @@ expect:
   visible: [federation_capacity_live]
 ```
 
-RUN AGAINST A REAL BUILD, THIS IS THE VERDICT IT RETURNED:
+Against a fresh node it returns
 
     [FAIL] expect: 'federation_capacity_live' is not on screen
 
-and it is correct. `card_federation_capacity_attestations` WAS present; the live
-marker was not, because the node was fresh. That is this flow's stated purpose
-working — "a gate placeholder would satisfy the card tag alone" — distinguishing
-a rendered card from live data on the first run that could reach the screen.
+and that is correct: `card_federation_capacity_attestations` is present and the
+live marker is not. A gate placeholder would satisfy the card tag alone; this
+flow distinguishes a rendered card from live data.
 
-**The step §3.1 needs, and why it is not written.** Against a node build the
-flow above would go **green**: five `factor_row_*` elements, five numbers in
+**Why no step asserts against zeroes.** A screen of zeroes would go
+**green**: five `factor_row_*` elements, five numbers in
 `[0.0, 1.0]`, a composite that is trivially the minimum of five zeroes, and
 `federation_capacity_live` on screen. Every predicate passes on a screen showing
 a score nobody attested. `each: {number: {min: 0.0}}` cannot express "and not
 all of them zero", and adding `relation: {left: capacity:composite, op: gt,
 right: 0}` would be asserting that a real low score is a failure. **The
-assertion this needs is on the parse, not on the pixels** — which is what the
-first ask in §3.1 is.
+assertion this needs is on the parse, not on the pixels** (§3.1).
 
 ## 5. QA plan
 
@@ -289,16 +263,14 @@ first ask in §3.1 is.
   above are a placeholder and no assertion may depend on them.
 * **Acceptance 2.** Nothing computes the minimum on either side (§2), so the
   `relation` predicate has never had a true implementation to check.
-* **Acceptance 4.** The data arrived with #580; the element did not (§2).
-* **Acceptance 3 is now COVERED** — `federation_capacity_warming_up` and
-  `federation_capacity_local_only` are two tags on two sentences. This is the
-  one line of this section that has moved since #45, and it moved because the
-  distinction was written down here first.
+* **Acceptance 4.** The node serves the attester; the element does not exist (§2).
+* **Acceptance 3 is covered** — `federation_capacity_warming_up` and
+  `federation_capacity_local_only` are two tags on two sentences.
 * **The min relationship, on the current client.** Expressible in CSD/3 §3 and
-  implemented in this repo's vendored runner; not yet in CIRISAgent's, which is
-  where the canonical flow runs.
+  implemented in this repo's runner; not in CIRISAgent's, which is where the
+  canonical flow runs.
 
-## Review, 2026-09-27 (identity group)
+## Review — identity group
 
 * The route map reaches no route from `Screen.HealthReputation` and that is
   correct for the screen, wrong for the card: the numbers come from
@@ -307,8 +279,5 @@ first ask in §3.1 is.
   skipped in node mode, and read here through `cellVizState` collected outside the
   arm. The checker cannot see a flow collected outside a screen's arm; this card's
   routes are cited in §3 and the closure's blind spot is recorded, not papered over.
-* §3.1's `getCapacity` line moved (`CIRISApiClient.kt:12935`), and the `?: 0.0`
-  defaults it complained of are gone — an unrecognised payload now raises
-  (CIRISServer#659).
 * Never fetched: the NODE's own `/v1/my-data/capacity` (`system_data.rs:314/390`,
   attester rows per subject). On a node build this card has no source.

@@ -135,10 +135,10 @@ an unread one, and the difference is the whole value of a self-report.
 | radio config write | `PUT /v1/config/{key}` ×7 | **both** | live; owner-gated |
 | radio config read-back | `GET /v1/config` | **both** | live |
 | the agent's own federation address (Edge `signer_key_id`, `available=false` when Edge is off) | `GET /v1/system/federation` | CIRISAgent (`routes/system/health.py:912`, OBSERVER) | live, **not called** — the brain's answer to the question the first row asks the node; on an agent build the two can differ and the card shows only the node's |
-| the edge event stream | `GET /v1/federation/events/{channel}` (SSE) | CIRISServer `src/federation_surface.rs:703` | live — called, **but from the network hub's tiles, not this card** (`FederationEventStream.kt:91`; cited in CSD-051). The route-coverage report placed it here |
+| the edge event stream | `GET /v1/federation/events/{channel}` (SSE) | CIRISServer `src/federation_surface.rs:703` | live — called, **but from the network hub's tiles, not this card** (`FederationEventStream.kt:91`; cited in CSD-051). The route-coverage report places it here |
 | the key-boundary attestation | `GET /v1/federation/identity` — **unconfirmed** | CIRISServer | blocks `building` for `transport_key_boundary` |
 
-Agent tree last commit 2026-08-15; this card's contract is the node's.
+This card's contract is the node's.
 
 ## 4. Flow (how)
 
@@ -201,8 +201,8 @@ hint makes the same distinction and is the right model.
    frequency and power. On a desktop node that activates the radio, that is a
    transmitter running on parameters the owner did not choose. **Ask
    (CIRISServer): a batch config write, or a `net.radio.*` document write, so
-   the radio's parameters land together or not at all.** Until then the client
-   should write `enabled` LAST.
+   the radio's parameters land together or not at all.** Without one, the
+   client should write `enabled` LAST.
 4. **No band or power guidance.** `input_radio_frequency` and
    `input_radio_tx_power` are free integers filtered to digits
    (`TransportViewModel.kt:91`, `:97`). The lawful band and ceiling are
@@ -218,26 +218,26 @@ hint makes the same distinction and is the right model.
    `:126`) — every other string on this screen goes through
    `localizedString(...)` with an English `.ifEmpty { }` fallback.
 
-## 7. Review — runtime group (2026-09-27, branch `review/runtime`)
+## 7. Review — runtime group
 
-Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origin/main**. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, all shown red against the old behaviour first.
+Card checked against CIRISAgent `main` and CIRISServer `main`. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`.
 
 **Duplicate pair (Transport ↔ Config CSD-023): two doors onto one store, kept**
 — see CSD-023 §7 for the reasoning. Transport is the typed door onto seven node
 keys; Config is the untyped door onto the whole store.
 
-**Closed here**
-- *Wrong host.* The radio keys went to `$baseUrl`, i.e. to the AGENT on a
-  with-agent install, where nothing reads them. Now written to the node
-  (`TransportViewModel(nodeUrl = { LOCAL_NODE_URL })`).
-- *Wrong types.* `"true"` and `"868000000"` as strings; the node does not coerce,
-  so six of seven keys silently fell back to defaults. Now a boolean, a string and
-  five integers (`radioConfigValues`); a blank number is not written.
-- *Stopped after one key.* The first PUT against a node "failed" on the missing
-  envelope and aborted the loop. Fixed with CSD-023's parser.
-- *Never read back.* The form started from hard-coded defaults (868 MHz; the
-  node's default is 915) and Apply overwrote the saved values. Now
-  `loadRadioConfig` fills the form from the node.
+**Closed**
+- *Host.* The radio keys are written to the node
+  (`TransportViewModel(nodeUrl = { LOCAL_NODE_URL })`), never `$baseUrl`, which
+  on a with-agent install is the AGENT, where nothing reads them.
+- *Types.* A boolean, a string and five integers (`radioConfigValues`), never
+  strings: the node does not coerce, so a string key falls back to its default.
+  A blank number is not written.
+- *Every key is written.* CSD-023's parser reads the node's bare PUT response,
+  so the loop does not abort after the first key.
+- *Read back.* `loadRadioConfig` fills the form from the node (the node's
+  default is 915 MHz), so Apply never overwrites the saved values with
+  hard-coded defaults.
 
 **Still open**
 - The "Current transports" card shows federation capabilities, not transports:

@@ -18,8 +18,8 @@ Record is the tab that answers *what happened here*, and it is the only one of
 the seven placed identically in all five circles (`CirclesNav.kt:129`). The
 comment above it reads "one card, five homes". This CSD's finding is that the
 homes are five and the card is one **list** — the same list, unscoped, in all
-five circles (§2.2) — and that on a node build that list is empty for a reason
-the screen reports as the person's filtering mistake (§2.1).
+five circles (§2.2) — and that on a node build there is no list to read at all
+(§2.1).
 
 ## 2. Surface (what)
 
@@ -116,36 +116,21 @@ The error card and the empty block are visually distinct — `errorContainer`
 versus centred grey text — so the CSD/3 §2.2 requirement is met in the rendering
 and unassertable in the harness.
 
-### 2.1 The empty state blames the reader for a build decision
+### 2.1 The empty state never blames the reader for a build decision
 
-`getAuditEntries` opens with `if (nodeSkip(method)) return AuditEntriesData(
-entries = emptyList(), total = 0, …)` (`CIRISApiClient.kt:10621`). `nodeSkip`
-returns true whenever `clientMode?.isNode == true` (`:249`). So on a node build
-the call never leaves the device, no error is raised, and `auditState.entries`
-is empty with `auditState.error == null`.
+A node serves no audit feed (§3). On a node the client raises
+`RouteNotOnThisHost` and the screen renders `audit_not_on_this_node` ("…Nothing
+was filtered out"), never "No audit entries found / Try adjusting your
+filters": there are no filters to adjust, and a plausible empty would tell the
+person the absence is their own doing. This is the failure mode AGENTS.md pins
+for the wheels placeholder in a different register — *"a wheel that installs
+and silently contains no client"* — and the remedy is the same: the absent
+thing must raise or announce itself, never return a plausible empty.
 
-The screen then draws, in every one of the five circles:
-
-> **No audit entries found**
-> *Try adjusting your filters*
-
-There are no filters to adjust. The feed does not exist on this build, and the
-one sentence the person is given tells them the absence is their own doing. This
-is the failure mode AGENTS.md pins for the wheels placeholder in a different
-register — *"a wheel that installs and silently contains no client"* — and the
-remedy is the same: the absent thing must raise or announce itself, never return
-a plausible empty.
-
-**Fix shape:** `nodeSkip` should not fabricate a successful empty result for a
-user-facing feed. Either the call raises a typed `unsupported` and the screen
-renders the fifth state above, or `Audit`'s placement carries `agentOnly = true`
-so the node build has no Record card and the tab falls back to
-`nav.empty.record` ("Nothing has happened in this circle yet.") — which is
-itself only honest if nothing is being kept, and it is.
-
-Of the two, **the typed `unsupported` is right and `agentOnly` is not**: a node
-*does* record — the attestation corpus is the record — and what is missing is a
-read route for it (§3), not the events.
+**The typed refusal is right and `agentOnly` is not**: a node *does* record —
+the attestation corpus is the record — and what is missing is a read route for
+it (§3), not the events. Record stays offered on every build
+(`CirclesNavTest.peopleSafetyRulesAndRecordAreNeverEmptyOnAnyBuild`).
 
 ### 2.2 Five circles, one unscoped list
 
@@ -171,11 +156,7 @@ three options, because it is the only one that implies a filter nobody applied.
 
 ## 3. Contracts (who)
 
-Agent routes read from the `~/CIRISAgent` working tree, whose last commit is
-**2026-08-15** — six weeks stale at the time of writing, so the agent rows below
-are "true as of that tree" rather than "true of a running agent".
-Re-verified in the citation pass against CIRISAgent `main` 29371660de
-(2026-09-26): every line number below still holds.
+Agent routes are verified against CIRISAgent `main`.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
@@ -192,8 +173,8 @@ Re-verified in the citation pass against CIRISAgent `main` 29371660de
 everything Record needs and more than the agent's feed carries, including the
 circle scope §2.2 wants. **Ask: CIRISServer — serve the corpus as a record feed
 (`GET /v1/attestations?cohort=…&since=…`), so the Record tab has something to
-read on a node build and each circle can read its own.** Until then Record is
-agent-only in fact while being placed as though it were not.
+read on a node build and each circle can read its own.** Without it, Record is
+agent-only in fact while placed as though it were not.
 
 ## 4. Flow (how)
 
@@ -224,7 +205,8 @@ expect:
   count: {of: "item_audit_entry_*", min: 1}
 ```
 
-Against a node build — **this is the step that should fail and cannot.**
+Against a node build — **the tag below is `proposed:`, so this step cannot run
+yet.**
 
 ```yaml
 expect:
@@ -232,10 +214,9 @@ expect:
   visible: ["proposed:txt_audit_unsupported"]
 ```
 
-Today the same run produces zero `item_audit_entry_*` elements and a screen the
-harness reads as healthy, because `count: {eq: 0}` is legal only against an
-explicit `state: empty` (CSD/3 §3) and nothing here declares one. The empty-set
-trap, on the surface whose whole job is the record.
+Without the tag, a run sees zero `item_audit_entry_*` elements, and
+`count: {eq: 0}` is legal only against an explicit `state: empty` (CSD/3 §3).
+That is the empty-set trap, on the surface whose whole job is the record.
 
 ## 5. QA plan
 
@@ -261,25 +242,22 @@ either.
   offset paging behaviour differs between the agent's feed and anything a node
   might serve; nothing pins it.
 
-## 7. Review — runtime group (2026-09-27, branch `review/runtime`)
+## 7. Status
 
-Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origin/main**. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, all shown red against the old behaviour first.
+Card vs API checked against CIRISAgent `main` and CIRISServer. Tests:
+`client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, each
+shown red before being believed.
 
-**Checked:** query names match; the node serves no `/v1/audit/*` and the client
-already raises `RouteNotOnThisHost` there, rendered as `audit_not_on_this_node`
-("…Nothing was filtered out"), so a bare node's Record tab is honest rather than
-an error. Record stays offered on every build by design
-(`CirclesNavTest.peopleSafetyRulesAndRecordAreNeverEmptyOnAnyBuild`).
+**Holds:** query names match; a bare node's Record tab is honest rather than
+an error (§2.1); back goes to the placed parent.
 
-**Closed here:** the back arrow went to Interact; now the placed parent.
-
-**Still open**
+**Open**
 - The one list in five circles: `blocked_by: CIRISAgent#1205`.
 - Filters apply only to the graph source; SQLite and JSONL rows are merged in by
   time alone (`audit.py:187-191, 262-266`), so a filtered view shows
-  non-matching rows and `total` is off. Draft issue in the review report.
+  non-matching rows and `total` is off (CIRISAgent, not yet filed).
 - `integrity_valid` / `integrity_warnings` (per-entry tamper evidence) are not in
   the generated model; `GET /v1/audit/entries/{id}?verify=` is uncalled. The
-  per-entry verification is the feature this card most needs; next pass.
+  per-entry verification is the feature this card most needs.
 
-**Stage:** building → building.
+**Stage:** `building`.

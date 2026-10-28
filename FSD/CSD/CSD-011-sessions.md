@@ -95,9 +95,9 @@ error:     {tag: "proposed:sessions_error", renders: "Could not read the agent's
 This is the CSD/3 §2.2 failure in its exact form: a failed read renders as a
 flattering one. The work is not missing — `_errorMessage`, `_statusMessage`,
 `mobile.sessions_error_fetch_failed` and `mobile.sessions_error_invalid_state`
-are all written and localized. The wire from `SessionsViewModel` to
-`SessionsScreen` was never run: `CIRISApp.kt:3274` passes `currentState`,
-`isLoading` and three callbacks, and stops.
+are all written and localized. `SessionsViewModel` is not wired to
+`SessionsScreen`: `CIRISApp.kt:3274` passes `currentState`, `isLoading` and
+three callbacks, and stops.
 
 ## 3. Contracts (who)
 
@@ -107,14 +107,10 @@ are all written and localized. The wire from `SessionsViewModel` to
 | request a transition | `POST /v1/system/state/transition` | CIRISAgent (`routes/system/runtime.py:94`) | live — `SystemApi.kt:905`, via `transitionCognitiveState` (`CIRISApiClient.kt:6359`) |
 | which occurrence holds an exchange | **no route** — `session:claim:v1`, CC 3.1.3.1 | CIRISPersist | **missing**, and not this screen's job; recorded so the name collision is on the record |
 
-**Host check.** Both routes are the brain's. `CIRISServer origin/main` serves
+**Host check.** Both routes are the brain's. CIRISServer serves
 `/v1/system/health` (`src/health.rs:589`, merged with the folded brain's) but
-has **no** `/v1/system/state/transition` — a grep of every `"/v1/..."` literal
-in `src/` returns 213 routes and none of them is it. The card being `agentOnly`
-is what keeps that from mattering.
-
-**CIRISAgent working tree is dated 2026-08-15** (`git -C ~/CIRISAgent log -1`),
-five weeks behind today, so "live" above means "present in that checkout".
+has **no** `/v1/system/state/transition` — no `"/v1/..."` literal in `src/` is
+it. The card being `agentOnly` is what keeps that from mattering.
 
 ## 4. Flow (how)
 
@@ -159,19 +155,19 @@ transition was accepted, not that the cognitive loop did anything with it. The
 **Upstream ask.** None. Every gap on this surface is CIRISClient's own: tag the
 banner, pass the error through, and stop seeding a state nobody read.
 
-## 7. Review — runtime group (2026-09-27, branch `review/runtime`)
+## 7. Review — runtime group
 
-Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origin/main**. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, all shown red against the old behaviour first.
+Card checked against CIRISAgent `main` and CIRISServer `main`. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`.
 
-**Closed here**
-- *Error mapping could never fire.* `transitionCognitiveState` never checked
-  `response.success`, so a 400/401/403/503 failed while decoding the error body as
-  a transition, and the view model's status branches were unreachable. Now the
-  status reaches the caller; 403 has its own sentence (`mobile.sessions_error_forbidden`).
-- *A request written as an arrival.* The agent reads `current_state` straight
+**Closed**
+- *Error mapping.* `transitionCognitiveState` checks `response.success`, so a
+  400/401/403/503 reaches the view model's status branches instead of failing
+  while decoding the error body as a transition; 403 has its own sentence
+  (`mobile.sessions_error_forbidden`).
+- *A request is not an arrival.* The agent reads `current_state` straight
   after REQUESTING the transition and substitutes the target when unread
-  (`runtime.py:365`); the client wrote that raw, lower-case value as the reading.
-  Now "Transitioning to X…" and a fresh health read.
+  (`runtime.py:365`), so that raw, lower-case value is not a reading. The
+  screen says "Transitioning to X…" and reads health again.
 - *"Return to work" offered from SETUP / WAKEUP_ERROR*, which the agent reports
   and which do not accept WORK. Excluded.
 

@@ -1,23 +1,22 @@
 # CSD-045 — This node's own standing (shed load · stop accepting · legal compulsion)
 
-**CSD**: CSD-045 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the route-coverage pass for #90
+**CSD**: CSD-045 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the route-coverage pass
 **Flow**: `testing/flows/drafts/csd-045-node-self-standing.yaml`
-**Reads with**: CSD-036 (This node › Network, which hosts tier R and used to host this card as a section)
+**Reads with**: CSD-036 (This node › Network, which hosts tier R)
 
 ```yaml csd:stage
 stage: building
 owner: CIRISClient
 ```
 
-**Why `building` now.** This card was `envisioned` because the standing was a
-section at the bottom of Network and not a surface, so there was no hop to
-derive. It now has one: `NavSurface.NodeSelf` under This node, `Screen.NodeSelfStanding`,
-`NodeSelfStandingScreen.kt`. Every route is confirmed against CIRISServer source.
-The one field no route served — the owner's `delegation_id` — is served by
-0.5.218 (`GET /v1/admin/self` → `owner_delegations`, CIRISServer#676), and the
-client reads it; on an older node the field is typed, and the screen says why.
-Not `testable`: the floor is still `unreleased` for the 0.5.218 half, and the
-flow has not run on the matrix.
+**Why `building`.** The card is a surface with a hop to derive:
+`NavSurface.NodeSelf` under This node, `Screen.NodeSelfStanding`,
+`NodeSelfStandingScreen.kt`. Every route is confirmed against CIRISServer
+source. The owner's `delegation_id` is served from 0.5.218
+(`GET /v1/admin/self` → `owner_delegations`, CIRISServer#676), and the client
+reads it; on an older node the field is typed, and the screen says why. Not
+`testable`: the floor is `unreleased` for the 0.5.218 half, and the flow has
+not run on the matrix.
 
 ## 1. Mission (why)
 
@@ -55,9 +54,8 @@ screen: NodeSelfStanding
 nav_epistemic_node_self`. Shown on every build: the routes are the node's and
 need no agent. **It calls the node's address**, not `$baseUrl` — every method
 defaults `nodeUrl = LOCAL_NODE_URL` (`CIRISApiClient.kt`, `getSelfStanding` and
-the six `self*` acts). The agent forwards `/v1/admin/*` to the node from agent
-2.12.1 (CIRISAgent#1213, closed by #1215) and 404s it before that; the direct
-node address works on every agent version, so the card keeps using it.
+the six `self*` acts). An agent older than 2.12.1 does not forward
+`/v1/admin/*` to the node; the node address works on every agent version.
 
 ```yaml csd:shows
 registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
@@ -146,13 +144,13 @@ error:     {tag: banner_self_unreachable, renders: "'This node could not be reac
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| the three standings | `GET /v1/admin/self` (`src/admin_ops.rs:4288` on 0.5.217; `:4384` on `integ/0.5.218`) — **503** when any axis is unreadable, with that axis still in the body | CIRISServer | live — `getSelfStanding` (`CIRISApiClient.kt:5263`) from `SelfReaderOpsSection.kt` `reloadStandings()` |
-| the owner's delegations | `GET /v1/admin/self` → `owner_delegations[] {delegation_id, issuer_key_id, subject_key_id, scope, owner_binding, cohort_scope, asserted_at}` and `owner_delegations_error` (`owner_serve_delegations`, `src/admin_ops.rs:3470-3526` on `integ/0.5.218`) | CIRISServer | live on 0.5.218 (unreleased) — `OwnerDelegationDto`, `SelfStandingResponse.ownerAuthority()`; **absent on ≤0.5.217**, rendered as the typed fallback, never as "none held" |
+| the three standings | `GET /v1/admin/self` (`src/admin_ops.rs:4288` on 0.5.217; `:4384` on 0.5.218) — **503** when any axis is unreadable, with that axis still in the body | CIRISServer | live — `getSelfStanding` (`CIRISApiClient.kt:5263`) from `SelfReaderOpsSection.kt` `reloadStandings()` |
+| the owner's delegations | `GET /v1/admin/self` → `owner_delegations[] {delegation_id, issuer_key_id, subject_key_id, scope, owner_binding, cohort_scope, asserted_at}` and `owner_delegations_error` (`owner_serve_delegations`, `src/admin_ops.rs:3470-3526` on 0.5.218) | CIRISServer | live from 0.5.218 — `OwnerDelegationDto`, `SelfStandingResponse.ownerAuthority()`; **absent on ≤0.5.217**, rendered as the typed fallback, never as "none held" |
 | shed / resume | `POST /v1/admin/self/shed` · `/resume-load` (`:4289`, `:4291`) | CIRISServer | live — `selfShedLoad` / `selfResumeLoad` |
 | stop / resume accepting | `POST /v1/admin/self/stop-accepting` · `/resume-accepting` (`:4295`, `:4299`) | CIRISServer | live — `selfStopAccepting` / `selfResumeAccepting` |
 | declare / lift compulsion | `POST /v1/admin/self/compelled` · `/compulsion-lifted` (`:4303`, `:4307`) | CIRISServer | live — `selfDeclareCompelled` / `selfCompulsionLifted` |
 | request body, every act | `SelfCommit {delegation_id, reason, compelled_by?}` (`src/admin_ops.rs:3372-3384`): both required, `reason` refused by name when empty (`admin.refusal.reason_absent`); `compelled_by` read only by the compulsion declaration | CIRISServer | live — `SelfCommitRequest` |
-| reach from a with-AI install | `/v1/admin/*` through the agent | CIRISAgent | live from agent 2.12.1 (CIRISAgent#1213, closed by #1215); older agents 404. The card calls the node URL directly, which works on every agent version, so it does not depend on it |
+| reach from a with-AI install | `/v1/admin/*` through the agent | CIRISAgent | live from agent 2.12.1; older agents 404. The card calls the node URL directly, which works on every agent version, so it does not depend on it |
 | a declaration that anyone else can see | the act writes a `hard_case:admin_action:{op}` row into persist's local `hard_case_events`: unsigned, no `cohort_scope`, not an attestation, so nothing replicates it | CIRISServer / CIRISPersist | **missing**: CIRISServer#675 |
 
 **Registry gap.** The row kind is `admin_action:{op}` (persist `hard_case.rs`),
@@ -195,7 +193,7 @@ arrives anyway.
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-045-node-self-standing.yaml`, floor `unreleased`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97). **Floor left `unreleased` on the 0.5.225 run (2026-09-29):** the flow names the ConfirmSheet's `sheet_self_act`, `self_act_fact_1..3`, `btn_self_act_confirm` / `_cancel` and OwnerDelegationPicker's `input_self_delegation_id`, `opt_self_owner_delegation_0`, `text_self_no_owner_delegation` (every one built from `tagPrefix`). Real in 0.5.225, but built by interpolation, which the flow tag check (`testing/test_flows.py::_client_tag_strings`: whole literals and `$`-headed prefixes only) cannot see; a promoted flow naming them goes red at the keyboard. The fix is in that check, not the flow.
+Flow written (`testing/flows/drafts/csd-045-node-self-standing.yaml`, floor `unreleased`); it promotes to `testable` when the floor is a release and the flow runs on the matrix. **The floor stays `unreleased`** because the flow names the ConfirmSheet's `sheet_self_act`, `self_act_fact_1..3`, `btn_self_act_confirm` / `_cancel` and OwnerDelegationPicker's `input_self_delegation_id`, `opt_self_owner_delegation_0`, `text_self_no_owner_delegation`, which exist from client 0.5.225 but are every one built from `tagPrefix` by interpolation, and the flow tag check (`testing/test_flows.py::_client_tag_strings`: whole literals and `$`-headed prefixes only) cannot see them; a promoted flow naming them fails that check. The fix is in that check, not the flow.
 
 **Platforms.** All five, against a claimed node with an owner session. The
 with-AI legs exercise the node URL, not the agent port. The delegation-supplied
@@ -216,17 +214,14 @@ declaration: it cannot today, and that is the upstream gap in §3, not a client 
 - **Card vs API.** The API is complete for the owner's own view: six acts, one
   read, localized strings, a 503 that refuses to let an unreadable axis look
   like a zero, and (0.5.218) the delegation the act is taken under. The client
-  calls all of it. What was wrong before this revision: the card was a section
-  at the bottom of the Network card, under the disk budget, with no surface of
-  its own; the delegation id had to be typed from nowhere; and an act went
-  straight from a dialog to the wire with no confirm.
+  calls all of it: the card is a surface of its own, the delegation id is read
+  rather than typed where the node serves it, and every act confirms.
 - **API vs CC.** CC 3.2 makes this the owner's alone, and the node enforces that
   (`resolve_owner_authority` plus `is_steward_bound`). CC 3.1.9.4's attributed
   audit is honoured locally. What CC's purpose for the act implies, and the route
   doc promises, is that a *peer* can read it. That fails: the row is a local,
   unsigned table entry (CIRISServer#675).
-- **Reach.** Through the agent from agent 2.12.1 (CIRISAgent#1213, closed by
-  #1215); node-only before that. The card uses the node address, which works on
+- **Reach.** Through the agent from agent 2.12.1; node-only before that. The card uses the node address, which works on
   every agent version.
 - **Registry.** `hard_case:{kind}` cannot name the two-segment `admin_action:{op}`
   kind (see §3).

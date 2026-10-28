@@ -30,10 +30,10 @@ screen: Runtime
 
 `nav_map` derives `btn_my_things -> nav_instrument_this_agent ->
 nav_epistemic_runtime`. Runtime is under **This agent**, whose whole instrument
-is `requiresAgent` (`CirclesNav.kt`), so a bare node is never offered it (§6.1,
-closed). **It is the ONE runtime control**: System (CSD-025) used to carry a
-second pause/resume door onto the same `POST /v1/system/runtime/{action}`; that
-door is gone and System links here (`btn_system_open_runtime`), see §7.
+is `requiresAgent` (`CirclesNav.kt`), so a bare node is never offered it
+(§6.1). **It is the ONE runtime control**: System (CSD-025) has no
+pause/resume door onto `POST /v1/system/runtime/{action}` and links here
+(`btn_system_open_runtime`), see §7.
 
 ```yaml csd:shows
 registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
@@ -119,25 +119,17 @@ here, with the aggravation that the flattering thing is a specific claim.
 | state read-back | `POST /v1/system/runtime/state` | CIRISAgent | **live, and contracted as a read** (`system/helpers.py:580-594`, "Get current state without changing it") |
 | the live step stream | `GET /v1/system/runtime/reasoning-stream` | CIRISAgent | live (`system_extensions.py:922`); opened by `InteractViewModel`, never by `RuntimeViewModel` — see below |
 | queue | `GET /v1/system/runtime/queue` | CIRISAgent | live (`system_extensions.py:39`); not called (`SystemExtensionsApi.kt:75` has zero callers) |
-| release memory | `POST /v1/system/runtime/memory/release` | CIRISAgent (`routes/system/runtime.py:204`) | live, **not called** — named below as additive drift and never given a row; a runtime control this card does not offer |
+| release memory | `POST /v1/system/runtime/memory/release` | CIRISAgent (`routes/system/runtime.py:204`) | live, **not called** — a runtime control this card does not offer |
 
-`CIRISServer` serves **no** `/v1/system/runtime*` — `git grep -n 'system/runtime'
-origin/main -- src/` returns zero at 0.5.217, and the node folds only
-`/v1/system/health` from a brain (`src/health.rs:576-591`). There is no general
-brain proxy.
+CIRISServer serves **no** `/v1/system/runtime*` (0.5.217), and the node folds
+only `/v1/system/health` from a brain (`src/health.rs:576-591`). There is no
+general brain proxy. Agent rows are CIRISAgent `main`.
 
-**Every agent row re-checked against `main`, not the 2026-08-15 tree.** The drift
-since that tree is additive only (`GET /runtime/delivery-receipt`,
-`POST /runtime/memory/release`, a `/v1` fall-through at `app.py:386-389`);
-`valid_actions` is unchanged, so no hedge here is load-bearing.
-
-**The state read-back row said `unconfirmed` and was wrong twice.** There is no
-`status` action — `valid_actions = ["pause","resume","state"]`
-(`system/helpers.py:455` on `main`), so `POST /v1/system/runtime/status` would
-400. And the client never posts it: `CIRISApiClient.kt:11338` logs "via 'state'
-action" and `:11344` sets `action = "state"`. `state` returns before any mutation
-(`runtime.py:78-80`) and its helper is a pure read. Nothing is unknown here, and
-no upstream ask is needed.
+**The state read is `state`, not `status`.** `valid_actions =
+["pause","resume","state"]` (`system/helpers.py:455`), so
+`POST /v1/system/runtime/status` would 400; the client posts
+`action = "state"` (`CIRISApiClient.kt:11338, :11344`). `state` returns before
+any mutation (`runtime.py:78-80`) and its helper is a pure read.
 
 **`step` is not "the same route".** `POST /v1/system/runtime/step` resolves to
 `system_extensions.py:292`, and it is reachable ONLY because
@@ -195,8 +187,6 @@ expect:
   absent: [nav_epistemic_runtime]
 ```
 
-The last two blocks fail today.
-
 ## 5. QA plan
 
 **Platforms.** All five, but the step controls are driven on desktop only —
@@ -208,25 +198,23 @@ surface for one assertion.
 
 ## 6. Card vs API vs CC — the delta
 
-1. **Wrong build, and it is the clearest case in this area.** Runtime is
-   offered on a no-agent build. Every one of its endpoints is
-   `/v1/system/runtime/*`, which `CIRISServer` does not serve; and there is no
-   reasoning to step through without a brain. **Ask (this repo): add
-   `NavSurface.Runtime` to the `this-node` instrument's `agentOnly` set.**
-   The same applies to `Telemetry` (CSD-030) and `Adapters` (CSD-020).
+1. **Agent-only — closed.** Runtime is in the `this-agent` instrument, which
+   `requiresAgent`, so a no-agent build is not offered it. Every one of its
+   endpoints is `/v1/system/runtime/*`, which CIRISServer does not serve; and
+   there is no reasoning to step through without a brain. The same applies to
+   `Telemetry` (CSD-030) and `Adapters` (CSD-020).
 2. **The error state is a lie shaped like health.** See §2 states. **Ask (this
    repo): pass `RuntimeViewModel.error` into `RuntimeScreen` and render a
    distinguishable banner; never fall back to `RuntimeData()`.**
-3. **Zero data tags.** Five real tags, all controls (`btn_pipeline_pause`,
-   `btn_pipeline_resume`, `btn_pipeline_step`, `btn_runtime_back`,
-   `btn_runtime_refresh`). Nothing that renders a value is tagged, so a flow
-   can drive this screen and assert nothing about what it says.
-4. **A read on a POST route.** `getRuntimeState` reaches the runtime status by
-   POSTing `action = "status"` to the control route (`CIRISApiClient.kt:11336`,
-   `controlRuntimeV1SystemRuntimeActionPost`). That works and it is not
-   contracted anywhere. `GET /v1/system/runtime/queue` exists and is unused.
-   **Ask (CIRISAgent): confirm `status` as a non-mutating action on that route,
-   or give the read its own GET.**
+3. **Almost no data tags.** The real tags are the controls
+   (`btn_pipeline_pause`, `btn_pipeline_resume`, `btn_pipeline_step`,
+   `btn_runtime_back`, `btn_runtime_refresh`) and `runtime_admin_required`.
+   Nothing that renders a value is tagged, so a flow can drive this screen and
+   assert nothing about what it says.
+4. **A read on a POST route.** `getRuntimeState` POSTs `action = "state"` to
+   the control route (`controlRuntimeV1SystemRuntimeActionPost`); `state` is a
+   pure read (§3), on a mutating route. `GET /v1/system/runtime/queue` exists
+   and is unused. **Ask (CIRISAgent): give the read its own GET.**
 5. **CC, and this is a genuine future ask.** What this screen shows live is
    the substance of `trace:complete:v1`. CC 3.1.5's trace is signed,
    pro-self, and carries the "exactly-one-of inline-`trace`/`manifest`" shape;
@@ -236,43 +224,36 @@ surface for one assertion.
    should be able to produce its `trace:complete:v1`, and the screen should
    offer it. Recorded as an ask, not a defect.
 
-## 7. Review — runtime group (2026-09-27, branch `review/runtime`)
+## 7. Review — runtime group
 
-Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origin/main**. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, all shown red against the old behaviour first.
+Card checked against CIRISAgent `main` and CIRISServer `main`. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`.
 
-**Duplicate resolved (Runtime CSD-024 ↔ System CSD-025).** Both called `POST
-/v1/system/runtime/{action}`. Folded into Runtime: System's pause/resume, its
-confirm dialog and `SystemViewModel.pauseRuntime/resumeRuntime` are removed;
-System shows the cognitive state read-only with `btn_system_open_runtime` →
-`Screen.Runtime`. The retired tags (`btn_pause_runtime`, `btn_resume_runtime`,
-`btn_runtime_confirm`, `btn_runtime_cancel`) were driven by no flow or gate
-(grepped). `check_csd_routes.py`: duplicate mutating routes 26 → 25.
+**One runtime control (Runtime CSD-024, not System CSD-025).** Only Runtime
+calls `POST /v1/system/runtime/{action}`. System shows the cognitive state
+read-only with `btn_system_open_runtime` → `Screen.Runtime`.
 
-**Closed here**
-- *Step read the wrong shape.* `POST /v1/system/runtime/step`
+**Closed**
+- *Step reads its own shape.* `POST /v1/system/runtime/step`
   (`system_extensions.py:292`, ADMIN) answers a `SingleStepResponse`
-  (`step_point`, `processing_time_ms`, `tokens_used`); the client decoded it as
-  `RuntimeControlResponse` and read `current_step`, which that route never sends,
-  and nulled the time in code. So the pipeline card never showed where the agent
-  stood. Now `parseRuntimeStepBody` (`api/RuntimeWire.kt`); `runtime_step_point`
-  is real data.
-- *A declined act reported as done.* Pause/resume ignored `success`; a 200 with
-  `success:false` ("Not paused") read "Runtime resumed". Now `RuntimeActionDeclined`.
-- *Admin was assumed.* `_isAdmin` defaulted to `true` and `setAdminStatus` had no
-  callers, so an observer saw live Pause/Step buttons that 403. Every runtime
-  action including `state` is ADMIN on main, so the agent now answers it: false
-  until a state read succeeds; a 403 sets `adminRefused` and renders the admin
-  card (tag `runtime_admin_required`, now real), not a failed read.
-- *Back arrow went to Interact* (a bare node has none); it now goes where the tree
-  places the card.
+  (`step_point`, `processing_time_ms`, `tokens_used`), not a
+  `RuntimeControlResponse`; `parseRuntimeStepBody` (`api/RuntimeWire.kt`) reads
+  it, so `runtime_step_point` is real data.
+- *A declined act is not reported as done.* A 200 with `success:false`
+  ("Not paused") is `RuntimeActionDeclined`.
+- *Admin is read, not assumed.* Every runtime action including `state` is
+  ADMIN, so the agent answers it: admin is false until a state read succeeds; a
+  403 sets `adminRefused` and renders the admin card (`runtime_admin_required`),
+  not a failed read. An observer sees no Pause/Step buttons that 403.
+- *Back arrow* goes where the tree places the card (a bare node has no
+  Interact).
 
 **Still open**
-- `streamConnected` is still a poll, not the reasoning stream (§3). Not changed:
-  the only subscriber is Interact's; opening a second stream here is a design
-  call, not a fix.
+- `streamConnected` is a poll, not the reasoning stream (§3): the only
+  subscriber is Interact's, and opening a second stream here is a design call,
+  not a fix.
 - The state read on a mutating POST route, and `GET /runtime/queue` unused:
   `blocked_by: CIRISAgent#1209`.
 - `trace:complete:v1` from a stepped round (§6.5) remains an ask.
 
 **Stage:** building → building (every contract confirmed; the flow is unwritten
-and `runtime_pipeline` / `runtime_idle` / `runtime_loading` are still `proposed:`).
+and `runtime_pipeline` / `runtime_idle` / `runtime_loading` are `proposed:`).

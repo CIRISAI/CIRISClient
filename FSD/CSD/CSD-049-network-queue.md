@@ -1,6 +1,6 @@
 # CSD-049 — What this node has sent, received and is still carrying (the Queue tile)
 
-**CSD**: CSD-049 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the route map (PR #111): a screen with routes and no CSD
+**CSD**: CSD-049 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the route map
 **Covers**: `Screen.NetworkQueue` (`ui/screens/federation/NetworkQueueScreen.kt` + `viewmodels/federation/NetworkQueueViewModel.kt`)
 **Reads with**: **CSD-048** (the Interfaces tile: the same snapshot per medium — two doors, CSD-048 §6), CSD-051 (the hub)
 **Flow**: `testing/flows/drafts/csd-049-network-queue.yaml` (floor `>=0.5.225`)
@@ -21,8 +21,8 @@ never drawn as 0.**
 Serves **Transparency** (CC 3.1.9). The node's own `plane_note` is the mission
 in the node's words: the envelope counters "are the APPLICATION plane … anti-entropy
 replication increments none of them, so 0 there says nothing about carriage".
-A card that showed only the four counters told an operator a silent node was
-healthy (CIRISServer#377).
+A card that showed only the four counters would tell an operator a silent node
+was healthy (CIRISServer#377).
 
 ## 2. Surface (what)
 
@@ -95,11 +95,11 @@ error:     {tag: federation_queue_error, renders: "the read-failure block in pla
 
 ## 3. Contracts (who)
 
-Verified against CIRISServer `origin/main` 046e1b39 (0.5.217).
+Verified against CIRISServer 0.5.217.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| the snapshot | `GET /v1/federation/metrics` → `{data: {envelopes_sent_total, envelopes_received_total, send_failures_total, verify_failures_total, durable_queue_depth, transport_bytes_in_total, transport_bytes_out_total, peer_reachability_ratio, inline_text_subscriber_count, replication_envelopes_served_total, withholds_by_reason, apply_refusals_by_kind, replication_applied_total, replication_duplicate_total, replication_round_outcomes_total, replication_round_routing, bootstrap_door_outcomes, blob_route_refusals, carriage_standing, receive_standing, receive_decided_total, plane_note}}` (`src/federation_surface.rs:697`, handler `:170-340`) | CIRISServer | live — `getFederationMetrics` (node URL), polled every 5 s. **Two dropped fields fixed**: the client read `verified_feed_subscriber_count`, a key no node sends (the node serves it as `inline_text_subscriber_count`, `:317`), and none of the replication-plane fields. `carriage_standing`, `receive_standing`, `replication_*_total`, `receive_decided_total` and `plane_note` are now modelled, nullable, absent-is-not-zero |
+| the snapshot | `GET /v1/federation/metrics` → `{data: {envelopes_sent_total, envelopes_received_total, send_failures_total, verify_failures_total, durable_queue_depth, transport_bytes_in_total, transport_bytes_out_total, peer_reachability_ratio, inline_text_subscriber_count, replication_envelopes_served_total, withholds_by_reason, apply_refusals_by_kind, replication_applied_total, replication_duplicate_total, replication_round_outcomes_total, replication_round_routing, bootstrap_door_outcomes, blob_route_refusals, carriage_standing, receive_standing, receive_decided_total, plane_note}}` (`src/federation_surface.rs:697`, handler `:170-340`) | CIRISServer | live — `getFederationMetrics` (node URL), polled every 5 s. The subscriber count is read as `inline_text_subscriber_count` (`:317`), the key the node sends, not `verified_feed_subscriber_count`. `carriage_standing`, `receive_standing`, `replication_*_total`, `receive_decided_total` and `plane_note` are modelled, nullable, absent-is-not-zero |
 | the standing vocabularies | `carriage_standing` ∈ `unreadable|not_exercised|idle|moving|withholding` (`src/operator_surface.rs:391-421`); `receive_standing` ∈ `unreadable|not_exercised|idle|converged|applying|refusing` (`:486-525`) | CIRISServer | live — rendered by token; an unknown token is shown as sent |
 | `withholds_by_reason`, `apply_refusals_by_kind`, `replication_round_routing`, `bootstrap_door_outcomes`, `blob_route_refusals` | same route | CIRISServer | live, **not modelled** — the diagnostics tile (`Screen.NetworkDiagnostics`, no CSD in this group) is where they belong; recorded here so they are not mistaken for absent |
 
@@ -133,7 +133,7 @@ expect:
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-049-network-queue.yaml`, floor `>=0.5.225`); promotes to `testable` when it runs on the matrix. **Not moved to `testing/flows/` on the 0.5.225 run (2026-09-29):** `Screen.NetworkQueue` is flow-only — `nav_map` derives no hop to it, so the runner only waits for it after sign-in lands on Contacts, and the flow would be `cannot-start` (red) on every leg. To move it: start on LayerGlobalCommons and tap its queue tile, as csd-047 does.
+Flow written (`testing/flows/drafts/csd-049-network-queue.yaml`, floor `>=0.5.225`); it promotes to `testable` when it runs on the matrix. **It stays in `drafts/`:** `Screen.NetworkQueue` is flow-only — `nav_map` derives no hop to it, so the runner waits for it after sign-in reaches Contacts, and the flow is `cannot-start` (red) on every leg. To move it: start on LayerGlobalCommons and tap its queue tile, as csd-047 does.
 
 **Platforms.** All five.
 
@@ -142,10 +142,11 @@ bar's proportions.
 
 ## 6. Delta — card vs API vs CC
 
-* **Two dropped fields, fixed** (§3). The subscriber count was always 0.
-* **Zeros where nothing was read, fixed.** Every counter defaulted to `0L` before
-  the first snapshot; they are null until read and drawn as `—`.
-* **The plane that carries records was invisible, fixed.** The card now shows
-  carriage and receive standings and the replication totals, with the node's own
-  caveat that the application counters say nothing about them.
+* **Every field the card draws is read — fixed** (§3), including the subscriber
+  count under the key the node sends.
+* **No zeros where nothing was read — fixed.** Every counter is null until read
+  and drawn as `—`, never a default `0L`.
+* **The plane that carries records is shown — fixed.** The card shows carriage
+  and receive standings and the replication totals, with the node's own caveat
+  that the application counters say nothing about them.
 * **Two doors with CSD-048**, stated there and here.

@@ -24,7 +24,7 @@ grammar cannot express* — and composes with the CC 3.3.1 deletion ladder, wher
 The falsifiable claim, and it fails today: **"completed" on this screen means
 the duty was discharged.** `status == "completed"` is a row in the agent's own
 ticket table (`routes/tickets.py`), written by the operator's own process. CC
-3.3.1 D1 rules that *proof of deletion is the absence, not a new artifact* —
+3.3.1 D1 states that *proof of deletion is the absence, not a new artifact* —
 the row withdrawn, superseded or hard-deleted — and that an affirmative
 `consent:deletion_complete` is *evidence toward* it and never a substitute.
 This screen shows neither. It shows a word.
@@ -124,8 +124,8 @@ message in it.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| the ticket list | `GET /v1/tickets` | CIRISAgent (`routes/tickets.py:397` on `main` 29371660de, prefix `:37`) | live — but the client calls `"/v1/tickets/"` **with a trailing slash** (`TicketsApi.kt:210`) against a route registered as `@router.get("")`; it works only through FastAPI's `redirect_slashes` 307. `TicketResponse` (`:68-86`) → `TicketData`: the client drops `correlation_id` and `agent_occurrence_id` (`CIRISApiClient.kt:11689`) |
-| one ticket | `GET /v1/tickets/{ticket_id}` | CIRISAgent (`routes/tickets.py:368`) | live — `getTicket` (`CIRISApiClient.kt:11715`). **Closed 2026-09-27:** it was called by no screen; the expanded row was drawn from the list, which nothing refreshes after load. Opening a row now re-reads it (`TicketsViewModel.selectTicket` → `TicketsScreenState.withTicket`, `TicketsStateTest`) |
+| the ticket list | `GET /v1/tickets` | CIRISAgent (`routes/tickets.py:397`, prefix `:37`) | live — but the client calls `"/v1/tickets/"` **with a trailing slash** (`TicketsApi.kt:210`) against a route registered as `@router.get("")`; it works only through FastAPI's `redirect_slashes` 307. `TicketResponse` (`:68-86`) → `TicketData`: the client drops `correlation_id` and `agent_occurrence_id` (`CIRISApiClient.kt:11689`) |
+| one ticket | `GET /v1/tickets/{ticket_id}` | CIRISAgent (`routes/tickets.py:368`) | live — `getTicket` (`CIRISApiClient.kt:11715`). Opening a row re-reads it, so the expanded row is not drawn from a list nothing refreshes after load (`TicketsViewModel.selectTicket` → `TicketsScreenState.withTicket`, `TicketsStateTest`) |
 | create | `POST /v1/tickets` | CIRISAgent (`routes/tickets.py:276`) | live — same trailing-slash shape; `createTicket` drops `metadata` from the response (`CIRISApiClient.kt:12035`) |
 | the SOP list | `GET /v1/tickets/sops` | CIRISAgent (`routes/tickets.py:201`) | live |
 | one SOP's metadata | `GET /v1/tickets/sops/{sop}` | CIRISAgent (`routes/tickets.py:230`) | live |
@@ -136,7 +136,7 @@ message in it.
 **Wrong circle, and the reason is legal rather than aesthetic.** A data-subject
 request is an obligation on the **controller** — the person who runs the node —
 and it does not become optional because they chose to run without AI.
-`CIRISServer origin/main` serves `/v1/auth/erasure` and `/v1/system/data*` but
+CIRISServer serves `/v1/auth/erasure` and `/v1/system/data*` but
 has no `/v1/tickets` and no `/v1/dsar` literal anywhere in `src/`, and the card
 is `agentOnly`, so **a run-without-AI install has no inbound-request surface at
 all**. Two consistent fixes exist and one must be chosen: give the node the
@@ -144,13 +144,11 @@ ticket routes and drop `agentOnly`, or state plainly that a node without an
 agent accepts no requests. Leaving it as it is means the obligation is invisible
 on exactly the install that cannot automate it.
 
-Handler lines re-read from `main` 29371660de on 2026-09-27; the trailing-slash
-observation still holds there.
+Handler lines are CIRISAgent `main`.
 
-**States, closed 2026-09-27.** The error card and "No tickets found" both
-rendered, because the empty branch did not check `error`
-(`TicketsScreen.kt:198`); `TicketsScreenState.showsEmpty()` now refuses empty
-while loading, refreshing or errored (`TicketsStateTest`). Still open:
+**States.** The error card and "No tickets found" never render together:
+`TicketsScreenState.showsEmpty()` refuses empty while loading, refreshing or
+errored (`TicketsStateTest`). Still open:
 `refresh()` (`TicketsViewModel.kt:118-138`) launches its fetches in separate
 coroutines, so its `catch` is dead and `isRefreshing` clears immediately; and
 `startPolling` loads once and never polls.

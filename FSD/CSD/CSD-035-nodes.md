@@ -94,12 +94,10 @@ loading:   {tag: nodes_loading, renders: "a progress affordance and NO empty sen
 error:     {tag: nodes_error, renders: "'Could not read' above the rows, plus text_nodes_unverified: 'This list could not be checked against the nodes you own … That does not mean you own nothing else.' nodes_not_on_this_node when the node is too old to serve the projection. Distinct from empty: an unreachable local node and a node that owns nothing do not draw the same screen"}
 ```
 
-The four states were all `proposed:` and the error one did not exist: a failed
-`getOwnedNodes()` was logged and swallowed (`NodeSwitcherViewModel.reload`), and
-because the fallback still lists the local node, the person saw one row reading
-"This device" — which is also exactly what a person who owns only this node
-sees. `NodeSwitcherViewModel.ownedNodesRead` now records whether the projection
-answered, `nodesListBody()` (pure, `NodesListBodyTest`) decides which of the four
+**A failed read is not a one-row list.** The fallback lists the local node, and
+one row reading "This device" is also exactly what a person who owns only this
+node sees. So `NodeSwitcherViewModel.ownedNodesRead` records whether the
+projection answered, `nodesListBody()` (pure, `NodesListBodyTest`) decides which of the four
 bodies draws, and the list is tagged with which one it is.
 
 ## 3. Contracts (who)
@@ -182,7 +180,7 @@ are **CSD-085** and **CSD-087**.
   and the card does not state it. A node the person does **not** own is
   indistinguishable on the row from one they do, except through `is_self`; and
   CC 3.2's "cardinality ≠ 1 is a refusal" has no rendering at all.
-* **API → card.** `POST /v1/self/nodes/{id}/release` shipped on the node
+* **API → card.** `POST /v1/self/nodes/{id}/release` is live on the node
   (0.5.216/0.5.217) and the client has no call site: a person can acquire nodes
   from this screen and cannot let one go. **Ask (CIRISClient):** add
   `releaseNode(nodeKeyId, forceSelf)` to `CIRISApiClient` and a per-row

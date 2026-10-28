@@ -329,7 +329,7 @@ arm, or a lambda handed through navigation.
 
 * **The runner must learn the new predicates.** `flow_spec.py` today implements
   `screen`/`visible`/`absent`/`text`. §3 is a specification of work, not work
-  done, and until it lands a v3 CSD can express more than any harness enforces —
+  done, and until it exists a v3 CSD can express more than any harness enforces —
   which is the exact failure v3 exists to end, temporarily reintroduced at a
   different layer. It should be implemented before v3 is declared Active.
 * **`relation` needs values, not pixels.** Comparing `capacity:composite` to five

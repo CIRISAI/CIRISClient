@@ -143,25 +143,22 @@ NO_COUNTS / QUIET / COUNTED: a refusal returns first, the four absence arms and
 any arm without a fold print no counts, `quiet` is read-and-clear. This is the
 most carefully built zero-discipline in the client.
 
-**And it now has tags.** The eight arms are assertable through
+**And it has tags.** The eight arms are assertable through
 `txt_commons_standing` (value = the arm), `txt_commons_no_counts`,
 `txt_commons_quiet`, `txt_commons_refusal`, `txt_commons_objectors`,
 `txt_commons_raise_price`, `txt_commons_lift_price`, `txt_commons_floor`,
 `txt_commons_dry_run_hash`, `txt_commons_ballot_tally` and
-`txt_commons_escalation`. Before this revision all twenty tags on the screen
-were inputs and buttons, and the write buttons' automation handlers were `{}`:
-a flow could click `btn_commons_object` and nothing happened. Every text field
-now has an input sink and every button's handler runs the same act as a tap.
+`txt_commons_escalation`. Every text field has an input sink and every
+button's automation handler runs the same act as a tap.
 
-### 2.0.1 Every write is confirmed first (review, 2026-09-28)
+### 2.0.1 Every write is confirmed first
 
 Every write on this screen is signed by this node's key on its owner's behalf
 (`commons_surface.rs`, `sign_hybrid` over the stamped row) and replicates as a
 row to every peer; none can be taken back by the one who made it. Raising a
 brake is lifted only by the cohort's own m-of-n, a ballot is one per
-respondent, and a dismissal is the m-of-n act itself. Before the review all
-three went straight out on a tap. Each now opens a three-fact ConfirmSheet
-first, and the buttons the flow already drives (`btn_commons_object`,
+respondent, and a dismissal is the m-of-n act itself. Each opens a three-fact
+ConfirmSheet first, and the buttons the flow already drives (`btn_commons_object`,
 `btn_commons_uphold` / `_overrule`, `btn_commons_dismiss_submit`) open it:
 
 | sheet | which | what changes | who signs |
@@ -194,15 +191,15 @@ pins that raise and lift do not converge on the same treatment.
 unreachable without it, because the co-signers must sign the exact
 `payload_sha256` the dry run hands back.
 
-The screen has a tag for every button in that sequence and none for the hash it
-produces. So "the submit sends the bytes the dry run disclosed" — the same
-preview-then-ratify invariant CSD-065 §2 names on the enforcement ladder, where
-it **is** tagged (`txt_ladder_selection_hash`) — is unassertable here.
+The screen has a tag for every button in that sequence and for the hash it
+produces (`txt_commons_dry_run_hash`). That the submit sends the bytes the dry
+run disclosed — the same preview-then-ratify invariant CSD-065 §2 names on the
+enforcement ladder (`txt_ladder_selection_hash`) — has no test (§5).
 
 ## 3. Contracts (who)
 
-Verified against ciris-server `origin/main` at 0.5.217 (2026-09-25), route
-constants in `src/commons_surface.rs:120-126`.
+Verified against ciris-server 0.5.217, route constants in
+`src/commons_surface.rs:120-126`.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
@@ -212,9 +209,8 @@ constants in `src/commons_surface.rs:120-126`.
 | lift a brake (m-of-n) | `POST /v1/commons/dismissals` | `:1314` | **live** |
 
 **Every route is live and the client calls all four** (`CIRISApiClient.kt:3281,
-3318, 3357, 3398`). There is no substrate gap on this surface at all. The tag
-list, which was the whole blocker, is now real (§2); what keeps this at
-`building` is the floor (`unreleased`) and a flow that has not run on the matrix.
+3318, 3357, 3398`). There is no substrate gap on this surface at all, and the
+tags are real (§2); what keeps this at `building` is the floor (`unreleased`) and a flow that has not run on the matrix.
 
 **One wire behaviour the client must keep honouring.** `unreadable` (503),
 `action_unknown` (404) and `cohort_unknown` (404) arrive on **non-2xx statuses
@@ -286,14 +282,13 @@ submit sends.
 3. The dismissal submit is unreachable before a dry run.
 4. A refusal shows the substrate's own token, not a paraphrase.
 
-**Review (2026-09-28).** Card vs CSD: agrees (tags, eight arms). CSD vs API:
-all four routes live at the node URL; the non-2xx-with-body contract is
-honoured. CSD vs CC: **closed** — irreversible writes now go behind a
-three-fact ConfirmSheet (§2.0.1). Open: the six `x_private:` prices have no
-registry family (the ask in §2 is CIRISConstitution#110, filed and open);
-the raise/lift visual asymmetry and the submit-sends-the-
-dry-run-bytes invariant have no test. Stage: building → building (the floor is
-`unreleased` and no flow has run on the matrix).
+**Status.** Card, CSD and API agree: the tags and eight arms, all four routes
+live at the node URL, the non-2xx-with-body contract honoured, and
+irreversible writes behind a three-fact ConfirmSheet (§2.0.1). Open: the six
+`x_private:` prices have no registry family (the ask in §2,
+CIRISConstitution#110); the raise/lift visual asymmetry and the
+submit-sends-the-dry-run-bytes invariant have no test. Stage: `building` (the
+floor is `unreleased` and no flow has run on the matrix).
 
 **Not tested here.**
 * **The thresholds.** `m`, the respondent floor, the window and the escalation

@@ -79,13 +79,10 @@ fields:
 **Two credentials, two states, and the card says which is which.** The agent's
 `GET /v1/api/billing/credits` answers 401 `billing_auth_expired` when the
 Google ID token it spends at the hosted proxy has lapsed (`routes/billing.py`,
-`_AUTH_FAILURE_CATEGORIES`). That token lasts an hour and, on desktop, was
-written once at setup and never again (CIRISClient#172: issued 15:17:55Z,
-expired 16:17:55Z, three weeks of `401 token_expired`). The client used to
-route it through `TokenManager.on401Error` — the SESSION path — and render
-`auth.session_expired` with a button that signed the person out of an agent
-that was answering them (#171). Now `TokenManager.billingCredentialStale` is
-its own flag, `BillingViewModel.billingCredentialStale` its own state, and the
+`_AUTH_FAILURE_CATEGORIES`). That token lasts an hour, and on desktop setup
+writes it only once (CIRISClient#172). It is not the session, so it never
+signs the person out of an agent that is answering them (CIRISClient#171):
+`TokenManager.billingCredentialStale` is its own flag, `BillingViewModel.billingCredentialStale` its own state, and the
 banner above (`BillingCredentialBanner`) is non-blocking and renews the token
 in place: the native picker on Android/iOS; on desktop the browser hand-off
 (`BrowserSignIn.kt`), whose `id_token` is written through `EnvFileUpdater` to
@@ -96,8 +93,8 @@ token the hand-off also returns is deliberately ignored. A hand-off without an
 (ciris-server < 0.5.177), not a generic error.
 
 **Every row is `x_private:` and that is correct, not a shortcut.** There is no
-billing, payment, wallet or currency family in the registry — I checked all 116
-rc5 prefixes, and again all 158 at rc6 (CIRISClient#150). `bond_posted:{currency}` is a forfeitable Sybil-resistance stake, not a
+billing, payment, wallet or currency family in the registry — none among the
+158 prefixes at rc6 (CIRISClient#150). `bond_posted:{currency}` is a forfeitable Sybil-resistance stake, not a
 balance.
 
 **And `credits:*` is a trap this card must never fall into.** The registry has
@@ -126,51 +123,44 @@ loading:   {tag: "proposed:billing_loading", renders: "the frame with a progress
 error:     {tag: "proposed:billing_unsupported", renders: "This install has no billing. Credits belong to an agent, and this is a node running {version}. — the danger tone, NOT a zero balance"}
 ```
 
-**The `error` state does not exist and a false `populated` stands in for it.**
-`getCredits` short-circuits on a node and **synthesises a response**:
-`hasCredit = true, creditsRemaining = 0, freeUsesRemaining = 0,
-purchaseRequired = false, planName = null` (`CIRISApiClient.kt:7653-7662`). The
-comment says the intent — *"Report 'free / no billing' so the node UI shows no
-purchase prompts"* — and the intent is sound; the value is not. A node build
-renders a real-looking balance of zero with `hasCredit = true`, which is a
-manufactured fact presented as the host's answer. The same repo already rules on
-this shape: the wheels job stages a placeholder that **raises** on every lookup
+**On a node the card shows an error, never a balance.** A synthesised "free /
+no billing" response (a real-looking balance of zero with `hasCredit = true`)
+would be a manufactured fact presented as the host's answer, so `getCredits`
+raises on a node and the card renders its read failure (§3). The same repo
+rules on this shape: the wheels job stages a placeholder that **raises** on every lookup
 rather than returning a path, *because a thing that installs and silently
 contains nothing is the failure this arrangement exists to prevent*
-(`AGENTS.md`, CI). The billing equivalent of raising is the `billing_unsupported`
-state above.
+(`AGENTS.md`, CI). The billing equivalent of raising is the `error` state above.
 
 ## 3. Contracts (who)
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| balance, free uses, plan | `GET /v1/api/billing/credits` | **CIRISAgent** (`routes/billing.py:30, 643` on `main` 29371660de; it was `:580` in the 2026-08-15 tree) | live on the agent — generated SDK `getCreditsV1ApiBillingCreditsGet` (`CIRISApiClient.kt:7780`). The doubled `api` segment is real: the router's prefix is `/api/billing`, mounted at `/v1`. |
-| redeem a Play purchase | `POST /v1/api/billing/google-play/verify` | CIRISAgent (`routes/billing.py:983`) | **live** — `CIRISApiClient.verifyGooglePlayPurchase` (`CIRISApiClient.kt:7824`, generated `verifyGooglePlayPurchaseV1ApiBillingGooglePlayVerifyPost`), called from `androidApp/.../MainActivity.kt:277` after `BillingManager` completes. The route-coverage report had this as generated-only; it is called |
+| balance, free uses, plan | `GET /v1/api/billing/credits` | **CIRISAgent** (`routes/billing.py:30, 643` on `main`) | live on the agent — generated SDK `getCreditsV1ApiBillingCreditsGet` (`CIRISApiClient.kt:7780`). The doubled `api` segment is real: the router's prefix is `/api/billing`, mounted at `/v1`. |
+| redeem a Play purchase | `POST /v1/api/billing/google-play/verify` | CIRISAgent (`routes/billing.py:983`) | **live** — `CIRISApiClient.verifyGooglePlayPurchase` (`CIRISApiClient.kt:7824`, generated `verifyGooglePlayPurchaseV1ApiBillingGooglePlayVerifyPost`), called from `androidApp/.../MainActivity.kt:277` after `BillingManager` completes |
 | the credit history | `GET /v1/api/billing/transactions?limit&offset` | CIRISAgent (`routes/billing.py:878`) | live, **not called** — a generated stub exists (`BillingApi.kt:130`) and nothing in `shared/` uses it. The card shows a balance and no account of how it got there |
 | start a non-Play purchase | `POST /v1/api/billing/purchase/initiate` | CIRISAgent (`routes/billing.py:727`) | live, **not called** (stub `BillingApi.kt:167`) — the Portal/Stripe leg; nothing in `shared/` or `androidApp/` reaches it |
 | poll that purchase | `GET /v1/api/billing/purchase/status/{payment_id}` | CIRISAgent (`routes/billing.py:800`) | live, **not called** (stub `BillingApi.kt:94`) |
 | purchasable packages | **a compiled-in constant, not the store** | CIRISClient | live, and **two lists that never meet** — see below |
-| anything on a node | none | — | The node serves no billing route. `getCredits` now RAISES `RouteNotOnThisHost` on a node (`CIRISApiClient.kt:7776`) and the card renders `ReadFailureBlock` (`BillingScreen.kt:123-132`: `billing_not_on_this_node` / `billing_error`), never a synthesised balance |
-| a 503 from the credit service | `GET /v1/api/billing/credits` → 503 `billing_unavailable` (`routes/billing.py:615-623`) | CIRISAgent | **closed 2026-09-27:** the client classed 503 as an auth failure, walked the person through a token refresh and landed them on "session expired" for an outage that was never theirs (`BillingViewModel.kt:211-213, 330-332`); only a 401 is auth now (`isAuthFailure`, `BillingViewModelTest.loadBalance_503_isAnOutageNotAnExpiredSignIn`) |
-| a 401 from the credit service | `GET /v1/api/billing/credits` → 401 `billing_auth_expired` (`routes/billing.py`, `_AUTH_FAILURE_CATEGORIES`); the agent also writes `<CIRIS_HOME>/.token_refresh_needed` (`token_handshake.py`) | CIRISAgent | **closed 2026-10-18 (CIRISClient#171):** this is the BILLING credential — the Google ID token at the hosted proxy — not the session, and it rendered `auth.session_expired` with a sign-out button. Now `TokenManager.onBillingCredentialRejected` → `billingCredentialStale` → `BillingViewModel.onBillingCredentialStale` → the credits banner (`BillingViewModelTest.loadBalance_401Error_retryAlsoFails_isABillingStateNotASessionOne`, `TokenManagerCredentialSplitTest`). The session's `on401Error` / `needsInteractiveLogin` path is untouched |
-| renew the billing credential (desktop) | `GET /v1/auth/oauth/{provider}/login?app_nonce=` in the browser, then `GET /v1/auth/oauth/handoff?app_nonce=&allow_unbound=` on the **node** (CSD-081 row), then `.env` + `.config_reload` | CIRISServer (hand-off) · CIRISAgent (`.env` reader) · CIRISClient (the write) | **live 2026-10-18 (CIRISClient#172):** `refreshBillingCredentialFromBrowser` (`BillingCredentialRefresh.kt`) takes the hand-off's `id_token` (ciris-server 0.5.177+, CIRISServer#434) and writes it to `CIRIS_BILLING_GOOGLE_ID_TOKEN` through `EnvFileUpdater` (`BillingCredentialRefreshTest`). The same write now happens on every existing-user desktop Google sign-in, which used to collect the token and drop it. **No silent path exists:** the node asks Google for `access_type=offline` and discards the `refresh_token` it gets back (`src/auth/oauth.rs` `exchange_google` reads only `access_token` + `id_token`) — `evidence/blocked_upstream.tsv` |
+| anything on a node | none | — | The node serves no billing route. `getCredits` RAISES `RouteNotOnThisHost` on a node (`CIRISApiClient.kt:7776`) and the card renders `ReadFailureBlock` (`BillingScreen.kt:123-132`: `billing_not_on_this_node` / `billing_error`), never a synthesised balance |
+| a 503 from the credit service | `GET /v1/api/billing/credits` → 503 `billing_unavailable` (`routes/billing.py:615-623`) | CIRISAgent | **an outage, never a sign-in:** no token refresh and no "session expired" for an outage that is not the person's (`BillingViewModel.kt:211-213, 330-332`); only a 401 is auth (`isAuthFailure`, `BillingViewModelTest.loadBalance_503_isAnOutageNotAnExpiredSignIn`) |
+| a 401 from the credit service | `GET /v1/api/billing/credits` → 401 `billing_auth_expired` (`routes/billing.py`, `_AUTH_FAILURE_CATEGORIES`); the agent also writes `<CIRIS_HOME>/.token_refresh_needed` (`token_handshake.py`) | CIRISAgent | **the billing credential, not the session (CIRISClient#171):** the Google ID token at the hosted proxy. `TokenManager.onBillingCredentialRejected` → `billingCredentialStale` → `BillingViewModel.onBillingCredentialStale` → the credits banner (`BillingViewModelTest.loadBalance_401Error_retryAlsoFails_isABillingStateNotASessionOne`, `TokenManagerCredentialSplitTest`). The session's `on401Error` / `needsInteractiveLogin` path is untouched |
+| renew the billing credential (desktop) | `GET /v1/auth/oauth/{provider}/login?app_nonce=` in the browser, then `GET /v1/auth/oauth/handoff?app_nonce=&allow_unbound=` on the **node** (CSD-081 row), then `.env` + `.config_reload` | CIRISServer (hand-off) · CIRISAgent (`.env` reader) · CIRISClient (the write) | **live (CIRISClient#172):** `refreshBillingCredentialFromBrowser` (`BillingCredentialRefresh.kt`) takes the hand-off's `id_token` (ciris-server 0.5.177+, CIRISServer#434) and writes it to `CIRIS_BILLING_GOOGLE_ID_TOKEN` through `EnvFileUpdater` (`BillingCredentialRefreshTest`). The same write happens on every existing-user desktop Google sign-in. **No silent path exists:** the node asks Google for `access_type=offline` and discards the `refresh_token` it gets back (`src/auth/oauth.rs` `exchange_google` reads only `access_token` + `id_token`) — `evidence/blocked_upstream.tsv` |
 
 **The prices on screen are not the store's.** `BillingViewModel.DEFAULT_PRODUCTS`
 (`viewmodels/BillingViewModel.kt:47-66` — `credits_100` $9.99/99, `credits_250`
-$24.99/249, `credits_600` $59.99/599) is assigned once at `:95` and there is no
-`_products.value =` anywhere else in that file. Google Play IS queried, but by a
+$24.99/249, `credits_600` $59.99/599) is assigned once at `:95`; the only other
+write is `onNoBillingHere` (`BillingViewModel.kt:244`), which empties the list
+on a node. Google Play IS queried, but by a
 different object outside `shared/src`:
 `androidApp/src/main/kotlin/ai/ciris/mobile/billing/BillingManager.kt:114-120`
 (`queryProductDetailsAsync`) holds its own `_products` with the real
 `formattedPrice` (`:49-50`), and nothing in `androidApp` references
-`BillingViewModel`. Two consequences: the `renders` text above was false, and
-`proposed:text_billing_no_products` names an **unreachable** state — the list is
-never empty because it is never replaced. The `empty:` row in `csd:states` cannot
-be asserted by any flow until the two lists are joined, and §5 says so.
-
-The `_products.value =` claim above is stale: `onNoBillingHere`
-(`BillingViewModel.kt:244`) now empties the list on a node, so the `empty:` row
-is reachable on exactly that host and nowhere else.
+`BillingViewModel`. Two consequences: the prices drawn are the constant's, not
+the store's, and `proposed:text_billing_no_products` is reachable only on a
+node — anywhere else the list is never empty, because it is never replaced.
+Until the two lists are joined, the `empty:` row in `csd:states` can be
+asserted on a node and nowhere else.
 
 **Still open on the client.** `-1` means three things — not loaded, failed, and
 BYOK/unlimited (`BillingViewModel.kt:185, 256`) — and all three render
@@ -184,8 +174,7 @@ runs on a client pinned to `http://localhost:8080`
 (`androidApp/.../MainActivity.kt:268-277`), so a purchase is credited to the
 local agent whichever host the person is signed into.
 
-**One upstream ask after all (CIRISAgent, unfiled — drafted in the review
-report).** With no credit provider configured the agent answers
+**One upstream ask (CIRISAgent, not yet filed).** With no credit provider configured the agent answers
 `credits_remaining=999, free_uses_remaining=999, plan_name="unlimited"`
 (`billing.py:374-384`): a made-up balance the client can only defend against by
 string-matching "unlimited". A typed `mode: "unlimited"` with null counts is the
@@ -194,7 +183,7 @@ CIRISConstitution.
 
 ## 4. Flow (how)
 
-Unwritten. Three tags, all chrome. A purchase cannot be driven in a flow anyway
+Unwritten: the value rows are untagged. A purchase cannot be driven in a flow anyway
 — it hands off to the platform store — so this card's flow will always stop at
 the balance and the package list, which is precisely what is untagged.
 
@@ -202,7 +191,7 @@ the balance and the package list, which is precisely what is untagged.
 
 **Platforms.** Android and iOS carry the store integration; desktop and web show
 the balance and no purchase path. **And a node build**, which is the run that
-exposes §2's synthesised balance.
+shows the card's not-on-this-node state (§2).
 
 **Not tested here.**
 * The purchase itself. It leaves the app.
@@ -215,6 +204,6 @@ agent"* (`EpistemicNav.kt`, `Account`). Billing is the account. CC 3.3.10 puts
 payment-processor data outside the envelope entirely, so there is no
 `cohort_scope` that makes it a fact about Communities and Businesses rather than
 about any other circle; it is in that circle because that circle's name sounds
-commercial, which is the kind of placement the Card Atlas exists to stop. Mark
-it `agentOnly` in the same change, or give it the `billing_unsupported` state —
-and prefer the state, for the reason CSD-054 §5 gives.
+commercial, which is the kind of placement the Card Atlas exists to stop. Keep
+the not-on-this-node state rather than marking it `agentOnly`, for the reason
+CSD-054 §5 gives.

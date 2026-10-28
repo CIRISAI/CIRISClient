@@ -33,8 +33,8 @@ nav_epistemic_graph_memory`. **Not** in `agentOnly` — correct, since
 is `agentOnly` over the same data (CSD-027 §6.1); one of the two is wrong and
 it is `Memory`.
 
-This is also the default landing for the old nav's "Memory" entry
-(`CIRISApp.kt:2873`, `onMemoryClick = { currentScreen = Screen.GraphMemory }`).
+A "Memory" click lands here (`CIRISApp.kt:2873`,
+`onMemoryClick = { currentScreen = Screen.GraphMemory }`).
 
 ```yaml csd:shows
 registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
@@ -120,8 +120,6 @@ fix a 500.
 | a purpose-built graph read | `GET /v1/memory/visualize/graph` | CIRISAgent | live (`memory.py`); **not called**, and agent-only, so not calling it is right |
 | per-scope counts | derived client-side | — | `GraphStats.nodesByScope`, computed from the node list |
 
-Agent tree last commit 2026-08-15.
-
 ## 4. Flow (how)
 
 Open My things → This node → Graph.
@@ -176,8 +174,7 @@ make the gate flaky for no assertion gained.
 
 1. **Zero test tags. Not one.** `GraphMemoryScreen.kt` (559 lines) contains no
    `testable`, `testableClickable` or `testTag` call. Every field and state in
-   §2 is `proposed:`, which is why this CSD is `envisioned` and not `sketched`.
-   A surface with no tags cannot be driven, cannot be screenshotted by step,
+   §2 is `proposed:`. A surface with no tags cannot be driven, cannot be screenshotted by step,
    and cannot fail a gate — it can only fail a person.
 2. **Empty and error render together.** See §2. **Ask (this repo): make the
    empty branch `state.error == null && state.nodes.isEmpty()`.** One
@@ -196,9 +193,9 @@ make the gate flaky for no assertion gained.
 5. **Recommended placement: unchanged.** Graph and Memory should sit next to
    each other under This node, and they do.
 
-## 7. Review — runtime group (2026-09-27, branch `review/runtime`)
+## 7. Review — runtime group
 
-Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origin/main**. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, all shown red against the old behaviour first.
+Card checked against CIRISAgent `main` and CIRISServer `main`. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`.
 
 **Checked:** `GET /v1/memory/timeline` on both hosts; the node's shape is reduced
 (`buckets` null, `consent_stream` / `expires_at` null) and the graph reads only

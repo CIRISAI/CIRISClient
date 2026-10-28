@@ -140,18 +140,14 @@ loading:   {tag: setup_ownership_claiming, renders: "'Claiming ownership of this
 error:     {tag: setup_ownership_error, renders: "'This node could not be claimed', the node's reason, and btn_setup_finish_unclaimed — the wizard stops on COMPLETE and lets the person choose rather than completing over a claim that did not happen (CIRISClient#68)"}
 ```
 
-**The `empty` row was a real defect, and is closed (setup review, 2026-09-27).**
-The trace question rendered only under `d.grant("replication")?.let`, and
-`canProceedFromCurrentStep` returned `traceConsentAnswered` for
-`JOIN_FEDERATION`, so a disclosure without that grant stranded the wizard on
-step 2 with a disabled Next and no visible cause. Now the step calls
-`noteTraceQuestionAbsent()`, renders `setup_consent_empty`, and
-`canProceedFromCurrentStep` reads `traceConsentAnswered || !traceQuestionOffered`
-(`SetupReviewGapsTest.aDisclosureWithNoTraceGrantDoesNotStrandScreenTwo`, red
-against the old predicate).
+**The `empty` row: a disclosure without the replication grant never strands
+step 2.** The trace question renders only under `d.grant("replication")?.let`.
+Without that grant the step calls `noteTraceQuestionAbsent()`, renders
+`setup_consent_empty`, and `canProceedFromCurrentStep` reads
+`traceConsentAnswered || !traceQuestionOffered`, so Next is never disabled with
+no visible cause (`SetupReviewGapsTest.aDisclosureWithNoTraceGrantDoesNotStrandScreenTwo`).
 
-**The disclosure read failing is an error, not a loading screen.** It used to
-print the exception text in the loading slot with nothing to press. It now
+**The disclosure read failing is an error, not a loading screen.** It
 renders `setup_consent_error` with the reason and `btn_setup_consent_retry`;
 Next stays disabled, because the question cannot be asked without the
 substrate's own words (CIRISAgent `routes/setup/providers.py:105-110` fails LOUD
@@ -159,16 +155,15 @@ for the same reason).
 
 **Announce is per device, and not offered to minors (CIRISServer 0.5.218,
 CIRISServer#655; CIRISClient#96).** The switch copy says "this device"
-(`mobile.announce_decision_toggle_label`, `_body_on`, `_body_off`; the stale
-"OFF (recommended)" is gone — the default is ON because announce is the floor
-for service). For an under-18 or undeclared band the switch is not rendered;
+(`mobile.announce_decision_toggle_label`, `_body_on`, `_body_off`; the default
+is ON because announce is the floor for service). For an under-18 or undeclared band the switch is not rendered;
 `txt_announce_not_offered` says why (CIRISConstitution#111: minors are not
 discoverable by unconnected adults), and the claim reads
 `SetupFormState.announcesThisDevice()`, never the raw switch
 (`SetupReviewGapsTest.aMinorNeverAnnouncesWhateverTheSwitchHeld`). The claim
-already skipped minors entirely; the rule is now local to announce too. The
-YOU step no longer asks announce a second time: `AnnounceDecisionCard` there
-was the same question with one answer (it stays on AddFederationId, CSD-086).
+skips minors entirely, and the rule is local to announce too. The YOU step
+does not ask announce a second time (`AnnounceDecisionCard` stays on
+AddFederationId, CSD-086).
 
 ## 3. Contracts (who)
 
@@ -186,22 +181,22 @@ was the same question with one answer (it stays on AddFederationId, CSD-086).
 | record the age band | `POST /v1/self/age` (loopback, post-claim) | CIRISServer (`src/auth/gate.rs`, `src/claim_remote.rs`) | live |
 | — the federation-tier route | `POST /v1/safety/age-assurance` | CIRISServer (`src/safety/age.rs`) | live, **not used pre-claim**: it needs an x-ciris signature the app cannot make |
 | mint a steward request for a minor | `POST /v1/safety/minor-steward/request` · `/accept` | CIRISServer | **missing** — no route literal in `src/*.rs`; the client synthesises a local offer artifact and says so (`SetupViewModel.kt:1000`) |
-| validate the LLM choice | `POST /v1/setup/validate-llm` | **CIRISAgent** (`routes/setup/llm_routes.py:211` on `main` 29371660de; `:190` in the 2026-08-15 tree) | live — generated `validateLlmV1SetupValidateLlmPost` (`CIRISApiClient.kt:6722`) |
-| list models | `POST /v1/setup/list-models` | **CIRISAgent** (`routes/setup/llm_routes.py:222`; was `:201`) | live — `CIRISApiClient.kt:6782` |
+| validate the LLM choice | `POST /v1/setup/validate-llm` | **CIRISAgent** (`routes/setup/llm_routes.py:211` on `main`) | live — generated `validateLlmV1SetupValidateLlmPost` (`CIRISApiClient.kt:6722`) |
+| list models | `POST /v1/setup/list-models` | **CIRISAgent** (`routes/setup/llm_routes.py:222`) | live — `CIRISApiClient.kt:6782` |
 | which LLM providers to offer | `GET /v1/setup/providers` (setup-only) | **CIRISAgent** (`routes/setup/providers.py:27`) | live, **not called** — the picker is a compiled-in list (`SetupViewModel.availableProviders`, `SetupViewModel.kt:76`). A provider the agent adds never appears, and one it drops still does |
-| which agent templates to offer | `GET /v1/setup/templates` (setup-only) | **CIRISAgent** (`routes/setup/providers.py:38`) | **live, called** from the AI step (`OptionalFeaturesSection`, setup review). Was wired and unreached — only tests invoked `loadAvailableTemplates`. `stewardship_tier` (REQUIRED on the agent's `AgentTemplate`, `models.py:44`) was dropped by the mapping and is now shown on each option. A failed read renders `setup_templates_error`, not an empty list; `opt_template_<id>` selects |
-| which communication adapters to offer | `GET /v1/setup/adapters` (setup-only) | **CIRISAgent** (`routes/setup/providers.py:49`) | **live, called** from the AI step. `platform_available` and `missing_binaries` (`models.py:67-72`) were dropped by the mapping; an adapter the agent says cannot run here is no longer offered, and missing binaries are named. `api` is not offered (always on — the always-on disclosure covers it). `toggle_adapter_<id>`; an adapter with `requires_config` opens its configure wizard instead of flipping. Failed read: `setup_adapters_error` + `btn_setup_features_retry` |
+| which agent templates to offer | `GET /v1/setup/templates` (setup-only) | **CIRISAgent** (`routes/setup/providers.py:38`) | **live, called** from the AI step (`OptionalFeaturesSection`). `stewardship_tier` (REQUIRED on the agent's `AgentTemplate`, `models.py:44`) is shown on each option. A failed read renders `setup_templates_error`, not an empty list; `opt_template_<id>` selects |
+| which communication adapters to offer | `GET /v1/setup/adapters` (setup-only) | **CIRISAgent** (`routes/setup/providers.py:49`) | **live, called** from the AI step. `platform_available` and `missing_binaries` (`models.py:67-72`) are read: an adapter the agent says cannot run here is not offered, and missing binaries are named. `api` is not offered (always on — the always-on disclosure covers it). `toggle_adapter_<id>`; an adapter with `requires_config` opens its configure wizard instead of flipping. Failed read: `setup_adapters_error` + `btn_setup_features_retry` |
 | adapters with eligibility (ready / missing requirements) | `GET /v1/setup/adapters/available` | **CIRISAgent** (`routes/setup/providers.py:113`) | live, **not called** and no hand-written method |
 | **what each optional tool would be able to do** | `GET /v1/setup/tool-disclosure` (setup-only) | **CIRISAgent** (`routes/setup/providers.py:61`) | **live, called and drawn**: each optional feature carries `tool_disclosure_<id>` (what it lets the agent do, expandable per tool) directly under its switch, and `tool_disclosure_always_on` lists the tools no choice controls. A failed read renders `setup_tool_disclosure_error` — never "grants nothing" |
-| keep the chosen location, after the config is written | `POST /v1/setup/location` | **CIRISAgent** (front door) | **live, called** from `SetupViewModel.completeSetup` once `setup/complete` succeeds (the `.env` must exist). Settings calls the same route to change it later: one act, two doors (the wizard's first answer, Settings' edit), recorded as a known duplicate. Surfaced by the route map when the agent's final step moved into `SetupViewModel.finishAgentSetup` (CSD-093) |
+| keep the chosen location, after the config is written | `POST /v1/setup/location` | **CIRISAgent** (front door) | **live, called** from `SetupViewModel.completeSetup` once `setup/complete` succeeds (the `.env` must exist). Settings calls the same route to change it later: one act, two doors (the wizard's first answer, Settings' edit), recorded as a known duplicate. The agent's final step runs in `SetupViewModel.finishAgentSetup` (CSD-093) |
 | write the config and reload | `POST /v1/setup/complete` | **CIRISAgent** (`routes/setup/complete.py:1511` on `main`) | live, and **not idempotent** — CIRISAgent#1193. Carries `template_id` and `enabled_adapters` from the choices above |
-| pair with an organisation's Portal record | `POST /v1/setup/connect-node` → `GET /v1/setup/connect-node/status` (poll) · `POST /v1/setup/reset-device-auth` (back out) | CIRISServer `src/auth/device_auth.rs:371-377` (the agent's copy is retired; only `download-package` remains there) | **live, called** from `PortalConnectSection` on the AI step (setup review). Was wired and unreached, and could not have worked: the node answers with BARE bodies and `{"error": …}` refusals, the client required a `data` envelope and read `detail` (`DeviceAuthWireTest`, red against the old parser). `approved_adapters`, `package_download_url` and `package_template_id` were dropped; now parsed. Tags: `btn_portal_connect_open`, `input_portal_url`, `btn_portal_connect`, `txt_portal_user_code`, `btn_portal_open_link`, `btn_portal_cancel`, `setup_portal_complete`, `setup_portal_error` |
+| pair with an organisation's Portal record | `POST /v1/setup/connect-node` → `GET /v1/setup/connect-node/status` (poll) · `POST /v1/setup/reset-device-auth` (back out) | CIRISServer `src/auth/device_auth.rs:371-377` (the agent's copy is retired; only `download-package` remains there) | **live, called** from `PortalConnectSection` on the AI step. The node answers with BARE bodies and `{"error": …}` refusals, and the client parses them as such, including `approved_adapters`, `package_download_url` and `package_template_id` (`DeviceAuthWireTest`). Tags: `btn_portal_connect_open`, `input_portal_url`, `btn_portal_connect`, `txt_portal_user_code`, `btn_portal_open_link`, `btn_portal_cancel`, `setup_portal_complete`, `setup_portal_error` |
 
-**Four upstream defects sit on this pass**, all open (re-checked 2026-09-27):
+**Four upstream defects sit on this pass**, all open:
 
 * **#1193** — two `setup/complete` calls 64 ms apart minted two ROOT owners with
-  one name; every login after is refused as ambiguous. The client's half was
-  CIRISClient#69, now closed by `beginFinalStep()` on BOTH branches (the node
+  one name; every login after is refused as ambiguous. The client's half
+  (CIRISClient#69) is `beginFinalStep()` on BOTH branches (the node
   client's final step goes through `finishNodeClientSetup`, which takes the same
   guard).
 * **#1194** — `setup/complete` ran on a node whose server had already closed
@@ -262,9 +257,9 @@ listed in `scratchpad/csd-route-map.md`'s duplicates.
 **Still not called, and why.** `GET /v1/setup/providers`: the provider picker is
 a compiled-in list (`SetupViewModel.availableProviders`), so a provider the
 agent adds never appears; it is a picker change, not a disclosure, and no CC
-clause turns on it — left for the AI-step owner. `GET /v1/setup/adapters/available`:
+clause turns on it. `GET /v1/setup/adapters/available`:
 the eligibility report duplicates `platform_available`/`missing_binaries`,
-which `/v1/setup/adapters` now carries into the list.
+which `/v1/setup/adapters` carries into the list.
 
 ## 4. Flow (how)
 
@@ -332,12 +327,12 @@ its substrate route does not exist); `input_llm_model` and
 (`client/tools/check_ui_drivable.py --list`); the OAuth-sourced free-AI path
 (`btn_use_free_ai` depends on a completed browser handoff).
 
-**The guard this section used to ask for is in place.** The node-client final
-step goes through `SetupViewModel.finishNodeClientSetup`, which checks the step
-against its own state and takes `beginFinalStep()` (CIRISClient#69), and
-`testableClickable` now takes `enabled` and binds its automation handler with
-it (`platform/TestAutomation.kt:259-278`), so `/click btn_next` is refused while
-`isSubmitting`. Verified in the setup review; `FinalStepOnceTest` pins it.
+**The final step runs once.** The node-client final step goes through
+`SetupViewModel.finishNodeClientSetup`, which checks the step against its own
+state and takes `beginFinalStep()` (CIRISClient#69), and `testableClickable`
+takes `enabled` and binds its automation handler with it
+(`platform/TestAutomation.kt:259-278`), so `/click btn_next` is refused while
+`isSubmitting`. `FinalStepOnceTest` pins it.
 
 **And the agent-side walker cannot complete this wizard today.**
 CIRISAgent's Android and iOS setup tests (`tools/qa_runner/modules/mobile/test_cases.py:590-700`,
@@ -347,7 +342,7 @@ is_text_visible("Your Account")`, and answer the metrics consent by clicking
 `"I agree to share anonymous alignment metrics"`. None of those three strings
 renders in this client — `setup.confirm_title` has no call site anywhere in
 `commonMain`, "Your Account" is not a string in `en.json`, and the metrics
-sentence does not exist at all (the question is now `trace_consent_yes`/`_no`).
+sentence does not exist at all (the question is `trace_consent_yes`/`_no`).
 So the walker clicks "Next" fifteen times against a step whose Next is disabled
 until the trace question is answered. **CIRISAgent**: drive this screen by
 testTag, as `testing/gate/session_fixture.py:76-125` already does —

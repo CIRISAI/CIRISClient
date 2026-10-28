@@ -13,9 +13,8 @@ owner: CIRISClient
 **A person can search everything their node remembers, open one memory, and
 see which scope it was filed under — because the scope is who else can see it.**
 
-The Locked Spec moved the memory graph out of the Files tab and into This
-node, on the grounds that Files holds files. That is right, and it leaves this
-card carrying a question Files does not: a memory node has a `scope`
+The memory graph lives under This node, not Files, because Files holds files
+(the Locked Spec). This card carries a question Files does not: a memory node has a `scope`
 (`local` / `identity` / `environment` / `community`), and under CC 2.3.3 the
 visibility axis — `cohort_scope` + `family_id` / `community_id` — is what
 decides who can see the bytes. A list that renders scope as a colour swatch has
@@ -109,8 +108,7 @@ it. A person whose node refused the read is told their memory is empty.
 | its envelope (`cohort_scope`) | — **unconfirmed** | CIRISServer | blocks `building` for `memory_receipt_scope` |
 | its `holds_bytes` row | — **unconfirmed** | CIRISServer | blocks `building` for `memory_holds_bytes` |
 
-**All four live routes are served by the node.** Agent tree last commit
-2026-08-15.
+**All four live routes are served by the node.**
 
 ## 4. Flow (how)
 
@@ -159,7 +157,7 @@ The last block fails today.
 
 **Not tested here.** A memory at `cohort_scope: family`. CC 5.2 makes those
 structurally invisible outside the cohort, so the gate would have to stand up a
-second member to see one — worth doing once `memory_receipt_scope` lands,
+second member to see one — worth doing when `memory_receipt_scope` is served,
 because the assertion that matters is that a family memory shows NO
 `holds_bytes` row and the screen does not read that as a defect.
 
@@ -188,9 +186,9 @@ because the assertion that matters is that a family memory shows NO
    Memory is not a file. But it is the node's, not the agent's, and the
    `agentOnly` flag says otherwise.
 
-## 7. Review — runtime group (2026-09-27, branch `review/runtime`)
+## 7. Review — runtime group
 
-Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origin/main**. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, all shown red against the old behaviour first.
+Card checked against CIRISAgent `main` and CIRISServer `main`. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`.
 
 **Duplicate pair (Memory ↔ EnvironmentInfo CSD-002): two doors onto one READ,
 kept.** Both call `POST /v1/memory/query`. Memory is the operator's graph browser
@@ -203,16 +201,15 @@ are EnvironmentInfo's alone.
 **Checked, no change needed:** stats match field for field on both hosts; the
 query parameters are right; the 168 h cap matches the longest range.
 
-**Closed here:** the back arrow went to Interact (a bare node has none); now This node.
+**Closed:** the back arrow goes to This node (a bare node has no Interact).
 
 **Still open**
 - `createdAt` is filled from `updated_at` although `attributes.created_at` is
   parsed; `consent_stream` / `expires_at` (TEMPORARY vs PARTNERED) are dropped.
-  Client-side, next pass.
+  Client-side.
 - Node ids with `/` (`node/identity`) cannot be opened on a node: the node's
   `{node_id}` is one segment. Node search is exact-match on `content`. Both
-  `blocked_by: CIRISServer#661` (memory reads) — or a new issue, draft in the
-  review report.
+  `blocked_by: CIRISServer#661` (memory reads).
 - 403 vs 404 on a node read both render as "HTTP …".
 
 **Stage:** building → building.

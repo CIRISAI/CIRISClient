@@ -1,8 +1,8 @@
 # CSD-106 — Invitations to a household or a community (nobody joins without saying yes)
 
-**CSD**: CSD-106 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the maintainer's ruling of 2026-09-30 (CIRISConstitution#133; CIRISPersist#955; CIRISServer#700)
+**CSD**: CSD-106 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: CIRISConstitution#133 (the normative text); CIRISPersist#955; CIRISServer#700
 **Extends**: CSD-100 (the household hub) · CSD-101 (the household roster) · CSD-102 (the community hub) · CSD-103 (the community roster). **No new card** (§2).
-**Flow**: `testing/flows/drafts/csd-106-membership-invites.yaml` (floor `unreleased`: no released client carries these tags; client 0.5.226 will)
+**Flow**: `testing/flows/drafts/csd-106-membership-invites.yaml` (a draft flow; floor `unreleased`)
 
 ```yaml csd:stage
 stage: building
@@ -17,13 +17,13 @@ them, with who sent it, to which group, in which role and until when, and
 accepts or declines it. The person who invited sees it waiting until it is
 answered or expires.**
 
-The maintainer ruled on 2026-09-30 that adding someone to a family or a
-community requires their consent, **founding members named when the group is
-formed included**. The normative text is CIRISConstitution#133. Until
-CIRISServer 0.5.218 every roster-growing door admitted a new member on the
-existing members' signatures alone (CC 4.4.3.2.3's admit predicate), so a
-founder could enrol any key they could name, and the enrolled person's node
-began receiving the group's rows and key wraps. Serves **Contextual
+Adding someone to a family or a community requires their consent, **founding
+members named when the group is formed included** (CIRISConstitution#133):
+a member is admitted only by their own signed acceptance (CC 4.4.3.2.3). Nodes
+older than CIRISServer 0.5.218 do not enforce this: they admit a new member on
+the existing members' signatures alone, so a founder can enrol any key they can
+name and that person's node starts receiving the group's rows and key wraps.
+Serves **Contextual
 Integrity** and **Integrity**: joining a `cohort_scope: family` or `community`
 roster changes who can read what, in both directions (CC 4.4.3.4.1 wraps every
 extant family DEK to a new member), so it must be the joiner's own signed act.
@@ -58,9 +58,9 @@ already stand. One app-scoped view model (`InvitationsViewModel`) reads
 (`inboxFor`, `ui/screens/InvitesSupport.kt`). A pair room's invitation is left
 out: a two-person chat is answered by opening it (CSD-091, `POST /v1/chat`).
 **A row's `tier` places it on its own community hub** (`community` →
-Neighbours, `affiliations` → Communities and Businesses). 0.5.218 does not send
-`tier`, so until 0.5.219 a row without it is drawn on **both** community hubs
-rather than hidden from either (§6).
+Neighbours, `affiliations` → Communities and Businesses). A row without `tier`
+(0.5.218 does not send it) is drawn on **both** community hubs rather than
+hidden from either (§6).
 
 **Accept and decline are each behind a ConfirmSheet with three facts**: *who
 invites you* (the inviter, by your contact's name for them when you have one),
@@ -80,7 +80,7 @@ node that has the route and said no, and decides nothing about support. Two
 act-time answers are taken at their word: a confirmed invitation that meets a
 bare 404 sends **nothing** in its place (a direct add is a different act) and
 the roster switches to Add, saying why (`mobile.invites_node_adds_directly`);
-a direct add answered 409 `membership.consent_required` (the interim build)
+a direct add answered 409 `membership.consent_required` (an unreleased node build)
 re-reads the invites route and offers Invite if it is served. A direct add
 answered 202 `{state: "invited"}` (0.5.218's alias) is reported as an
 invitation, never as "Added".
@@ -137,8 +137,7 @@ error:     {tag: invitations_error, renders: "'Couldn't read your invitations.' 
 
 Node-owned, at the node URL (`nodeBaseUrl`, as CSD-100..103 call theirs),
 never `$baseUrl`: on a with-AI install that is the agent, which does not proxy
-them (CIRISAgent#1213). CIRISServer **0.5.218**, merged to server `main` at
-`53d1ffb5` (tag pending): `src/membership_invites.rs`, `src/family_api.rs`,
+them (CIRISAgent#1213). CIRISServer **0.5.218**: `src/membership_invites.rs`, `src/family_api.rs`,
 `src/communities.rs`; design and as-built notes in its
 `FSD/MEMBERSHIP_INVITES.md` §7.
 
@@ -154,7 +153,7 @@ them (CIRISAgent#1213). CIRISServer **0.5.218**, merged to server `main` at
 | the `…/members` alias | `POST /v1/{families,communities}/{id}/members` answers the same 202 `{state: "invited"}` | CIRISServer | **live at 0.5.218**. The client reads it as an invitation (`InviteSent`, `CommunityChangeOutcome.Invited`), never an applied add |
 | seating under a quorum | `POST /v1/families/{id}/changes/envelope {action: add, key_id}` → cosign → assemble, now a co-signed widening | CIRISServer | **live**; persist refuses it at assemble without the joiner's acceptance (`membership.awaiting_acceptance`). The household roster's "Propose adding" on an accepted row starts it (CSD-100 §2.2's ceremony). The community equivalent (`…/changes/envelope {op: add}`) is **not called** by this client (§6) |
 | founding | `POST /v1/families`, `POST /v1/communities` with `members` naming anyone but the founder | CIRISServer | **refused 409 `membership.founding_member_unsigned`** at 0.5.218. The founding cards stop offering member chips on a node that carries invitations |
-| refusals | 18 `membership.*` ids (`refused` and the flow's own, `membership_invites.rs` :105-300) | CIRISServer | **live**. Rendered by id through `NodeRefusal`; the bundle entries are the server-strings PR's (`feat/server-0.5.218-parity`), and until it lands the node's English shows |
+| refusals | 18 `membership.*` ids (`refused` and the flow's own, `membership_invites.rs` :105-300) | CIRISServer | **live**. Rendered by id through `NodeRefusal`; the bundle entries are the server-strings PR's (`feat/server-0.5.218-parity`); without them the node's English shows |
 | the rows | `membership:proposal:v1`, `membership:acceptance:v1`, `membership:decline:v1` | CIRISPersist#955 (v52) / CIRISEdge (v38 `membership`) | **shipped**; the admission rule is persist's alone |
 | who "you" are, for Withdraw | `GET /v1/setup/owned-nodes` → `owner` | CIRISServer | **live**, loopback. Read by the household roster already (CSD-101); the community roster reads it once, only when a list arrives without `viewer_key_id` |
 
@@ -201,15 +200,13 @@ cannot observe.
 
 ## 6. Delta — card vs API vs CC
 
-* **The interim 409 never shipped as a client target.** The design (and the
-  first version of this card) said every roster door would answer 409
-  `membership.consent_required` until persist v52. At 0.5.218 persist v52 is
-  in and that refusal is gone: `POST …/members` is an alias for `…/invites`
+* **`membership.consent_required` is handled, not expected.** At 0.5.218
+  (persist v52) `POST …/members` is an alias for `…/invites`
   answering 202 `{state: "invited"}`, a quorum `add` is admitted only on the
   joiner's acceptance, and a founding roster beyond the founder is refused
   `membership.founding_member_unsigned`, not `consent_required`. The client
-  still handles `consent_required` (a node on the unreleased interim branch),
-  but no released node sends it.
+  handles `consent_required` (an unreleased node build sends it); no released
+  node sends it.
 * **Accepted is not joined.** Under `quorum:M/N` an invitee can accept and
   still not be admitted if the quorum never assembles. The inbox's notice and
   the roster's "Accepted: waiting…" never report the acceptance as
@@ -218,15 +215,14 @@ cannot observe.
 * **The inbox row does not carry the room's tier at 0.5.218.** It sends
   `group_kind: community` for both `community` and `affiliations` rooms, and
   the invitee's node may not hold the room's record. 0.5.219 adds `tier` to
-  each row (§3.1); the client already filters by it when present, and until
-  then draws an untiered community invitation on both community hubs.
+  each row (§3.1); the client filters by it when present, and draws an
+  untiered community invitation on both community hubs.
 * **A quorum ROOM cannot seat an accepted invitee from this client.** The
   server seats them through `…/changes/envelope {op: add}` → cosign →
-  assemble; this client has never called the community envelope route (every
-  pre-0.5.218 write returned the envelope itself on `community.quorum_pending`).
-  The accepted row says so ("this app can't start that yet") rather than
-  offering a control. The household equivalent works (its envelope route was
-  already called from the roster).
+  assemble; this client does not call the community envelope route. The
+  accepted row says so ("this app can't start that yet") rather than offering
+  a control. The household equivalent works (the roster calls its envelope
+  route).
 * **"Your own invitation" is the viewer's key against `proposer_key_id`.**
   0.5.219 sends `viewer_key_id` on the list (§3.1); on 0.5.218 both rosters
   read the owner from `owned-nodes`. Only with neither readable is Withdraw

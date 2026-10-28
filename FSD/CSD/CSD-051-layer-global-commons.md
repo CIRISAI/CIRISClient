@@ -69,20 +69,18 @@ are real tags on `NetworkScreen.kt`. None of them is a rule of the widest
 circle; the last `shows:` row is the one the card was placed here to show, and
 it is `proposed:` because nothing renders it.
 
-**The mode card is gone (setup review decision, 2026-09-28).** The hub used to
-draw the Client / Proxy / Server selector and call `PUT /v1/system/agent-mode`
-behind a confirm — an agent-only route, on a surface every build shows, so on a
-bare node the card read a 404 into an error banner and offered a switch that
-could only fail. Settings owns that act (CSD-022 §2.0.1, where it is already
-agent-plane only). With an agent attached the hub now draws one line and a link
+**There is no mode selector here.** `PUT /v1/system/agent-mode` is an
+agent-only route and this surface shows on every build, so on a bare node a
+selector here could only fail. Settings owns that act (CSD-022 §2.0.1,
+agent-plane only). With an agent attached the hub draws one line and a link
 (`card_network_mode_link`, "Your agent's network mode … is set in Settings",
 `btn_network_mode_open_settings` → Settings); on a bare node it draws nothing
 about modes. `banner_restart_pending`, `dialog_mode_confirm` and the
-insufficient-disk banner went with the selector; Settings keeps its own.
+insufficient-disk banner are Settings' own.
 
 **The Federation ID card is drawn only with an agent.** It reads the agent's
 persist aggregate (`GET /v1/system/peers/federation-identity`); on a bare node
-that read fails and the card said "Identity initializing…" indefinitely — a
+that read fails, and the card would say "Identity initializing…" forever — a
 failure drawn as a state that will resolve. The node's own signer key is the
 Identity card above it, which the node serves.
 
@@ -103,8 +101,8 @@ surface whose empty state is unreachable is not the surface the tab asked for.
 |---|---|---|---|
 | this node's signer key | `GET /v1/federation/identity` (`src/federation_surface.rs:696`) | CIRISServer | live — `getFederationIdentity` (node URL) from `NetworkViewModel.loadFederationIdentity`; the same read CSD-036 makes, because both cards are `NetworkViewModel` |
 | the persist identity aggregate (the Federation ID card) | `GET /v1/system/peers/federation-identity` (CIRISAgent `routes/system/peers.py:194`) | CIRISAgent | live on the agent only — `getFederationIdentityAggregate` raises `RouteNotOnThisHost` on a bare node, so the card is drawn only with an agent attached (§2) |
-| the agent mode, read | `GET /v1/system/agent-mode` (CIRISAgent `routes/system/agent_mode.py:78`) | CIRISAgent | **not called by this card since the review** — the Network card reads it (`NetworkViewModel.loadAgentMode`, CSD-036) and Settings reads it for its selector (CSD-022) |
-| the agent mode, switched | `PUT /v1/system/agent-mode` (`agent_mode.py`) | CIRISAgent | **removed from this card** (setup review decision): Settings (CSD-022 §2.0.1) is the one door. `NetworkViewModel.setMode` and the hub's selector are deleted; the hub links to Settings with an agent attached. The route map's duplicate row `PUT /v1/system/agent-mode :: LayerGlobalCommons, Settings` is gone from the baseline — red first: with the row removed the gate failed on the old code, and passes on this one |
+| the agent mode, read | `GET /v1/system/agent-mode` (CIRISAgent `routes/system/agent_mode.py:78`) | CIRISAgent | **not called by this card** — the Network card reads it (`NetworkViewModel.loadAgentMode`, CSD-036) and Settings reads it for its selector (CSD-022) |
+| the agent mode, switched | `PUT /v1/system/agent-mode` (`agent_mode.py`) | CIRISAgent | **not on this card**: Settings (CSD-022 §2.0.1) is the one door; the hub links to Settings with an agent attached |
 | the Identity, Peers, Trust graph, Content, Interfaces and Queue tiles | `GET /v1/federation/identity`, `/node-code`, `/peers`, `/content/{id}`, `/metrics`; `POST /v1/system/peers/add-from-code` | CIRISServer / CIRISAgent | live — **other CSDs' cards**: CSD-032, CSD-033, CSD-046 (the Map tile folded into it), CSD-047, CSD-048, CSD-049. `NetworkPeerDetail` behind a peer row is CSD-104. Paths, Announces and Diagnostics have no CSD yet |
 | the edge's counters (Interfaces, Queue tiles) | `GET /v1/federation/metrics` | CIRISServer `src/federation_surface.rs:697` | **live** — `CIRISApiClient.getFederationMetrics` (`CIRISApiClient.kt:1645`), read by `NetworkInterfacesViewModel.kt:86` and `NetworkQueueViewModel.kt:56`. The route-coverage report placed this on Telemetry (CSD-030); nothing on Telemetry reads it |
 | the live event bus (Paths, Announces, Diagnostics tiles) | `GET /v1/federation/events/{channel}` (SSE) | CIRISServer `src/federation_surface.rs:703` | **live** — `FederationEventStream.kt:91`, opened by `NetworkPathsViewModel`, `NetworkAnnouncesViewModel`, `NetworkDiagnosticsViewModel` and `FederationStreamViewModel` |
@@ -112,9 +110,9 @@ surface whose empty state is unreachable is not the surface the tab asked for.
 | **how big the widest circle is** — counts, never contents, with an `as_of` | `GET /v1/mesh/status` | CIRISServer `src/federation_admin.rs:919` (handler `:787`, CIRISServer#498) — **public**, served from cache | **live and never called.** It is the one read that is about the federation as a whole rather than about this node, and it deliberately enumerates nobody ("a public surface that enumerates peers is a reconnaissance surface", `:781-782`). When this card becomes `LayerHubScreen(GLOBAL_COMMONS)` (§5), this is the read its header can make without a scope filter that does not exist yet |
 | the rules binding this circle | none | CIRISConstitution + CIRISServer | **missing**, and unspecifiable: there is no `trust_policy` family (CSD-050 §2) and no scope-scoped rules route |
 
-Verified against CIRISServer `origin/main` 046e1b39 (0.5.217). On `integ/0.5.218`
-(97900cf5) `federation_surface.rs` moved +12 (`metrics :709`, `content :711`,
-`events :715`); `mesh/status` did not move. The four network rows are the
+Verified against CIRISServer 0.5.217. On `integ/0.5.218` the
+`federation_surface.rs` lines are +12 (`metrics :709`, `content :711`,
+`events :715`); `mesh/status` is unchanged. The four network rows are the
 hub's tiles, not the rules this card's name promises — they are recorded so the
 §5 move takes them with it rather than losing them.
 
@@ -123,19 +121,15 @@ hub's tiles, not the rules this card's name promises — they are recorded so th
 None. A flow written now would pin the wrong screen to the right tab and make
 the defect harder to move.
 
-## 4.1 Review (2026-09-28)
+## 4.1 Status
 
-* **Card vs CSD**: the CSD's mode-card rows described a selector that called an
-  agent-only route from an every-build surface. **Closed**: selector removed,
-  link to Settings with an agent attached, `setMode` deleted, baseline row
-  removed. The Federation ID card no longer claims "initializing" on a bare
-  node. The hub's `banner_error` (which showed the agent-mode 404) is replaced
-  by the signer-key read's own failure block.
+* The hub's error block is the signer-key read's own failure block; the
+  Federation ID card is not drawn on a bare node (§2).
 * **Open**: the recommendation in §5 (route this surface to
   `LayerHubScreen(GLOBAL_COMMONS)` and move the transport hub under My things ›
-  This node) is a navigation change across two cards and the nav map; not made
-  in this review. `GET /v1/mesh/status` is still unread.
-* **Stage**: building → building (`proposed:layer_hub_scope`; no flow).
+  This node) is a navigation change across two cards and the nav map.
+  `GET /v1/mesh/status` is unread.
+* **Stage**: `building` (`proposed:layer_hub_scope`; no flow).
 
 ## 5. QA plan
 

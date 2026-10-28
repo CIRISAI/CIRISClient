@@ -134,8 +134,7 @@ Same defaults-as-health failure as CSD-024: `TelemetryData()`'s
 | a consent row for an export | — **unconfirmed** | CIRISAgent | blocks `building` for `telemetry_dest_consent_d1` |
 
 `CIRISServer` serves `/v1/telemetry/logs` and nothing else under
-`/v1/telemetry`. Agent rows re-verified against CIRISAgent `main` 29371660de
-(2026-09-26). The node's own counters, `GET /v1/federation/metrics`
+`/v1/telemetry`. Agent rows are CIRISAgent `main`. The node's own counters, `GET /v1/federation/metrics`
 (`src/federation_surface.rs:697`), are NOT drawn here: their only readers are the
 network hub's Interfaces and Queue tiles (`NetworkInterfacesViewModel.kt:86`,
 `NetworkQueueViewModel.kt:56`), so they are cited in CSD-051. A node build's
@@ -225,9 +224,9 @@ confirm.**
    two instruments is a cost, and the `consent:scope:*` receipt in (4) would
    surface the export in Everything I shared without moving the control.
 
-## 7. Review — runtime group (2026-09-27, branch `review/runtime`)
+## 7. Review — runtime group
 
-Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origin/main**. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, all shown red against the old behaviour first.
+Card checked against CIRISAgent `main` and CIRISServer `main`. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`.
 
 **Checked:** all six `/v1/telemetry/export/destinations*` routes exist on main and
 the field names match; `auth_value` comes back `***REDACTED***` and the edit form
@@ -235,7 +234,7 @@ correctly does not prefill it.
 
 **Still open**
 - A 403 on the **test** call is returned as `TestResult(statusCode=403)` — the
-  same as the destination answering 403. Next pass.
+  same as the destination answering 403.
 - An observer opening the screen gets "HTTP 403" as a plain error; every route is
   ADMIN, including the list.
 - A telemetry export is a standing egress with no consent record:

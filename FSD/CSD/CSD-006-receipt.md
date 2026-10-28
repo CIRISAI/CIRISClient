@@ -89,10 +89,9 @@ error:     {tag: receipt_rule, renders: "a NotSent fact renders 'This node did n
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| the envelope on every list route | per surface | CIRISServer | **live since 0.5.217** — CIRISServer#616 CLOSED 2026-09-25 |
+| the envelope on every list route | per surface | CIRISServer | **live since 0.5.217** |
 
-**The substrate has answered, which is what moves this to `building`.** The
-envelope is built once as `grant_receipt` (`CIRISServer src/peer.rs:1524-1560` —
+**The substrate serves the envelope.** It is built once as `grant_receipt` (`CIRISServer src/peer.rs:1524-1560` —
 `subject_key_ids`, `attesting_key_id`, `cohort_scope`, `dimension`,
 `consent_prefixes`, plus `valid_until` / `row_expires_at`) and attached per row
 on five reads: `GET /v1/contacts` (`src/contacts_chat.rs:1704-1712`),
@@ -103,30 +102,25 @@ called `:1844`, `:1965`), `GET /v1/families/{id}` (`src/family_api.rs:561-568`),
 
 **`GET /v1/notes` is the one read that does NOT carry it** — `read_notes` in
 `src/drive.rs` never calls `envelope_of`. A note is a CEG item by the rule in §1,
-so a Notes card binding this template renders `Fact.NotSent` on every row until
-that read joins the others. That is a row to ask for, not a reason to hide the
-hamburger.
+so a Notes card binding this template renders `Fact.NotSent` on every row. That
+is a row to ask for, not a reason to hide the hamburger.
 
 **The first binding reads all five off the wire.** `models/federation/Contact.kt`
 decodes the row's `grant` (`ContactGrant`: every member of `peer.rs::grant_receipt`)
 and `ui/screens/PeopleSupport.kt::contactReceipt` renders each fact from it —
-`wireFacts == 5` (`PeopleSupportTest`). Re-checked 2026-09-28 on
-`integ/0.5.218`: `grant_receipt` is built per row at `src/contacts_chat.rs:1754`
-and attached under the key `grant` (`:1823`), `null` when the node holds no
-readable receipt.
+`wireFacts == 5` (`PeopleSupportTest`). `grant_receipt` is attached under the
+key `grant`, `null` when the node holds no readable receipt.
 
-**Which facts a binding may fix `ByRule`, decided on the first one.** Only a
+**Which facts a binding may fix `ByRule`.** Only a
 fact the constitution or the route fixes for EVERY row of that kind. On a
 contact that is the dimension alone: a contact IS a `consent:replication:v1`
 grant (CC 3.3.7) and `GET /v1/contacts` serves nothing else. The scope is NOT
 one — a grant's `cohort_scope` is the consent audience the person chose
-(`peer.rs::add_contact`, default federation) — and the attester stopped being
-one at 0.5.211, when consent moved from the node to the person. So a grant-less
+(`peer.rs::add_contact`, default federation) — and neither is the attester:
+from ciris-server 0.5.211 the person, not the node, consents. So a grant-less
 row (a node older than 0.5.217, or `grant: null`) renders the attester, the
-scope and the rule as `NotSent`. The scope used to render `ByRule("federation")`
-there; that was a guess and this review removed it, red first. A binding that
-wants a `ByRule` fact names the section that fixes it, as CSD-005 does for the
-dimension.
+scope and the rule as `NotSent`. A binding that wants a `ByRule` fact names the
+section that fixes it, as CSD-005 does for the dimension.
 
 **Where this template does NOT apply, and says so.** The Moderation card
 (CSD-065) files a `ModerationEvent` and gets back `{attestation_id, duty}`
@@ -143,7 +137,7 @@ Bound per surface; CSD-005 §4 is the first instance.
 
 ## 5. QA plan
 
-**`testable`** since the five-platform run 36775704425 (2026-09-30, `flows/matrix-0.5.225` at efdac2a2, node v0.5.217): the flow (`testing/flows/csd-006-receipt.yaml`, floor `>=0.5.225`, `fixture: two_node`) passed on all five legs — Linux, macOS and Windows desktop, the Android emulator and the iOS simulator. What follows is how it got there. The two-node fixture (`testing/gate/two_node.py`) seeds a contact, and the flow opens `btn_receipt_${PEER_KEY_ID}` and asserts all five facts, the wire dimension and the wire rule (`chat:`). Linux desktop leg run locally the way `five-platform-live-qa.yml` runs it (2026-09-29, candidate 0.5.225, node v0.5.217, `--flows testing/flows`, the two-node fixture): **5/6 passed, 1 skipped** — the seeded row's hamburger, all five envelope rows, the wire dimension, the rule row off the wire (`chat:` among the grant's prefixes) and the close; the grant-less step skipped as designed (the node sends the grant). On the matrix run of the same day (36588619656) every desktop leg failed this flow for csd-092's open contact-code card, since fixed (`cleanup:`). Not yet run on the other four legs. On the second matrix run (36600766576) it passed 6/6 on Linux and failed on macOS at its first step: `contacts_row_${PEER_KEY_ID}` was composed but below the fold, under the add card csd_005 had left open with a refusal, on a screen the harness cannot scroll (People's list is a LazyColumn with no `testableVerticalScroll`). csd_005's `cleanup:` now closes the card, and the runner says "composed but off screen after scrolling" with what `/scroll` answered, rather than "not on screen".
+**`testable`**: the flow (`testing/flows/csd-006-receipt.yaml`, floor `>=0.5.225`, `fixture: two_node`) passes on all five legs of five-platform run 36775704425 (node v0.5.217) — Linux, macOS and Windows desktop, the Android emulator and the iOS simulator. The two-node fixture (`testing/gate/two_node.py`) seeds a contact, and the flow opens `btn_receipt_${PEER_KEY_ID}` and asserts all five facts, the wire dimension, the rule off the wire (`chat:` among the grant's prefixes) and the close. The grant-less step skips by design when the node sends the grant. The flow depends on csd_005's `cleanup:` closing the add card: People's list is a LazyColumn with no `testableVerticalScroll`, so a row pushed below the fold cannot be reached, and the runner reports it as "composed but off screen after scrolling" with what `/scroll` answered.
 
 A card CSD that binds this template asserts `visible:` on all five `receipt_*`
 tags after clicking its `btn_receipt_<id>`; a card whose rows are furniture

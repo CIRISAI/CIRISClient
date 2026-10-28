@@ -25,12 +25,10 @@ on `:4243` instead of the agent on `:8080`
 (`platform/BackendEndpoint.kt:83`). Six of this repo's closed and open bugs live
 in that hand-off, and none of them can be seen on the with-AI pass.
 
-**The question is asked first, and asked once.** It used to be a switch on the
-LLM screen — so the only way to say "no AI" was to visit the screen that
-configures one, and the wizard then walked you through choosing a provider you
-had just said you did not want. Now the answer decides whether that screen
-exists at all (`viewmodels/SetupState.kt:117`,
-`hasAiStep = hasAgent && !runWithoutAi`).
+**The question is asked first, and asked once.** The answer decides whether
+the LLM screen exists at all (`viewmodels/SetupState.kt:117`,
+`hasAiStep = hasAgent && !runWithoutAi`), so nobody is walked through choosing
+a provider they just said they did not want.
 
 ## 2. Surface (what)
 
@@ -124,29 +122,27 @@ error:     {tag: setup_ownership_error, renders: "the node's reason plus btn_set
 | write the config and reload | `POST /v1/setup/complete` | **CIRISAgent** (`routes/setup/complete.py:1511` on `main`) | live — and it is the LAST thing the agent does for this install |
 | self-claim ownership | `POST /v1/setup/claim-remote` → `POST /v1/setup/root` | CIRISServer (`src/claim_remote.rs`) | live |
 | everything after the hand-off | node routes on `:4243` | CIRISServer | live |
-| the wizard's agent catalogues | `GET /v1/setup/providers` · `/templates` · `/adapters` · `/adapters/available` · `/tool-disclosure` · `/models` | CIRISAgent `routes/setup/providers.py:27, 38, 49, 113, 61`; `llm_routes.py:93` | live, **correctly not read on this branch** — there is no brain to configure, and the AI step that reads them does not exist here. Since the setup review the with-AI branch DOES read templates, adapters and tool-disclosure (CSD-082 §3), so "this branch skips them" is now distinguishable from "nothing reads them"; `providers` is still a compiled-in list |
+| the wizard's agent catalogues | `GET /v1/setup/providers` · `/templates` · `/adapters` · `/adapters/available` · `/tool-disclosure` · `/models` | CIRISAgent `routes/setup/providers.py:27, 38, 49, 113, 61`; `llm_routes.py:93` | live, **correctly not read on this branch** — there is no brain to configure, and the AI step that reads them does not exist here. The with-AI branch reads templates, adapters and tool-disclosure (CSD-082 §3), so "this branch skips them" is distinguishable from "nothing reads them"; `providers` is a compiled-in list |
 | is a node there at all | `GET /v1/identity` (unauthenticated) | CIRISServer `src/compose.rs:3132` | live — the desktop runtime's readiness probe after the hand-off (`PythonRuntime.desktop.kt:673`), see CSD-084 |
 
-**`run_without_ai` must reach `setup/complete`, or the agent never learns.**
-CIRISClient#41 (closed) was exactly that: the flag was dropped between the YOU
-screen and the completion request and the agent always saw `false`.
+**`run_without_ai` must reach `setup/complete`, or the agent never learns**
+(CIRISClient#41: a flag dropped between the YOU screen and the completion
+request leaves the agent seeing `false`).
 
-**The hand-off is where this pass breaks, and it breaks per platform.** None
-of these is still open. **#51** (a run-without-AI install had no logout
-affordance: no Agent group ⇒ no Settings ⇒ no `btn_logout`, so Login and factory
-reset were unreachable) is closed by My Identity's `btn_logout` and My things'
-`btn_my_things_sign_out`, both the one sign-out (CSD-037 §3). **#43, #47 and #48 are CLOSED** and were listed
-here as open: #43 (the client stayed on `:8080` after the hand-off and never
-moved to `:4243`), #47 (a `waitForServices` timeout thrown on the main thread
-killed the app — Android FATAL EXCEPTION, iOS SIGABRT), #48 (`checkFirstRunStatus`
-polled `:8080` 61 times, then parked on "Backend unreachable" while the client's
-own reviver logged a healthy `:4243`; the fix is at `CIRISApp.kt:5066`). All four
-remain the regression suite this pass owes, because four of them were found on a
-different platform from the one they were fixed on. Also closed and worth the
-same test: #66 (macOS stalled on "Restarting your node…" at Starting Services 0/22 — a
-node-only backend reports no services), #67 (Windows: session not saved, the
-watchdog revived a healthy node, the Login press was silently dropped while the
-header said Connected).
+**The hand-off is where this pass breaks, and it breaks per platform.** These
+closed issues are the regression suite this pass owes, because four of them
+were found on a different platform from the one they were fixed on:
+**#43** (the client must move from `:8080` to `:4243` after the hand-off),
+**#47** (a `waitForServices` timeout must not be thrown on the main thread —
+Android FATAL EXCEPTION, iOS SIGABRT), **#48** (`checkFirstRunStatus` must not
+park on "Backend unreachable" polling `:8080` while a healthy `:4243` answers,
+`CIRISApp.kt:5066`), **#51** (a run-without-AI install has no Agent group and
+so no Settings; its sign-out is My Identity's `btn_logout` and My things'
+`btn_my_things_sign_out`, the one sign-out, CSD-037 §3), **#66** (a node-only
+backend reports no services, so macOS must not stall on "Restarting your node…"
+at Starting Services 0/22), **#67** (Windows: the session is saved, the
+watchdog does not revive a healthy node, and the Login press is not dropped
+while the header says Connected).
 
 ### 3.1 Every route this screen calls (generated)
 
@@ -254,12 +250,11 @@ two processes, one file, and no test drives both); the reviver/watchdog
 interaction; the node-client variant (`hasAgent = false`), which reaches the
 same two steps without ever asking the question and has no fixture.
 
-**The node-client double-submit this section reported is closed.** The
-`isFinalStep && !hasAgent` branch now calls `SetupViewModel.finishNodeClientSetup`,
-which checks the step and takes `beginFinalStep()` (CIRISClient#69), and
-`testableClickable` binds its automation handler with `enabled`
-(`platform/TestAutomation.kt:259-278`), so `/click` on a disabled Finish is
-refused. Verified in the setup review; `FinalStepOnceTest` pins it.
+**The node-client final step runs once.** The `isFinalStep && !hasAgent`
+branch calls `SetupViewModel.finishNodeClientSetup`, which checks the step and
+takes `beginFinalStep()` (CIRISClient#69), and `testableClickable` binds its
+automation handler with `enabled` (`platform/TestAutomation.kt:259-278`), so
+`/click` on a disabled Finish is refused. `FinalStepOnceTest` pins it.
 
 **Announce on this pass.** The same per-device switch as CSD-082 §2, with the
 same under-18 rule: for a minor or undeclared band it is not offered

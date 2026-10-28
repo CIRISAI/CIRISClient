@@ -97,7 +97,7 @@ throughout — CC 3.4.3 reserves emission to the substrate, and an `emit` here
 would be a load error in the checker, correctly.
 
 The `row_storage_scope_*` histogram is deliberately **not** bound to a CC family.
-CC 3.1.9 rules that the seven-token ladders "MUST NOT be reconciled into a single
+CC 3.1.9 states that the seven-token ladders "MUST NOT be reconciled into a single
 vocabulary"; the memory graph's scopes are a third vocabulary again, and binding
 them to `cohort_scope` would assert a mapping CC forbids.
 
@@ -108,23 +108,21 @@ loading:   {tag: storage_loading, renders: "a CircularProgressIndicator with no 
 error:     {tag: storage_error, renders: "the errorContainer card, the read's message as the tag's text — visible, distinct from empty"}
 ```
 
-All four are real. Loading and error always behaved correctly and were merely
-untagged; empty did not exist and now does (a pure classifier,
-`storageGraphState`, pinned by `StorageEmptyTest`); populated is the graph card
-rather than the screen frame, so a flow can tell a card from a page.
+All four are real. Empty is a pure classifier (`storageGraphState`, pinned by
+`StorageEmptyTest`), so a fresh node never renders `Total nodes — 0`; populated
+is the graph card rather than the screen frame, so a flow can tell a card from
+a page.
 
-**Correction (2026-09-27): the eight `row_storage_*` tags, `card_storage_by_type`
-and `card_storage_by_scope` DO exist.** They are passed as the `tag` parameter
-of `StatRow` (`StorageScreen.kt:90-116`, `:139`), which is why a grep for
-`testable("…")` literals missed them. The earlier paragraph here said
-`screen_storage` was the only literal and that no flow could be written; both
-were wrong, and the flow is now written against those tags
-(`testing/flows/drafts/csd-040-storage.yaml`). **Closed 2026-09-28:** the error
-card is tagged (`storage_error`); an all-zero graph renders `storage_empty`; a
-failed `getAgentMode` is classified (`ReadFailure`) and said in the disk card's
-place (`storage_disk_not_on_this_node` / `storage_disk_error`) instead of
-swallowed; the two dates are labelled *(approx.)* with the reason under them.
-Still true: the agent-mode parse defaults `mode` to PROXY and `data_dir` to ""
+**The eight `row_storage_*` tags, `card_storage_by_type` and
+`card_storage_by_scope` exist** as the `tag` parameter of `StatRow`
+(`StorageScreen.kt:90-116`, `:139`), not as `testable("…")` literals, so a grep
+for literals does not find them; the flow is written against them
+(`testing/flows/drafts/csd-040-storage.yaml`). The error card is tagged
+(`storage_error`); an all-zero graph renders `storage_empty`; a failed
+`getAgentMode` is classified (`ReadFailure`) and said in the disk card's place
+(`storage_disk_not_on_this_node` / `storage_disk_error`), never swallowed; the
+two dates are labelled *(approx.)* with the reason under them.
+The agent-mode parse defaults `mode` to PROXY and `data_dir` to ""
 (`CIRISApiClient.kt`), so a disk card that reads an empty directory is a parse
 default, not a reading — outside this card's reach.
 
@@ -174,12 +172,9 @@ expect:
   absent: [card_storage_disk]
 ```
 
-That third block used to assert the card's silent absence as a warning to
-itself; the fix landed (2026-09-28) and the block now asserts the sentence.
-
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-040-storage.yaml`, floor `unreleased`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97). **Floor left `unreleased` on the 0.5.225 run (2026-09-29):** the flow names `storage_disk_not_on_this_node` (ReadFailureBlock builds `${tagPrefix}_not_on_this_node`). Real in 0.5.225, but built by interpolation, which the flow tag check (`testing/test_flows.py::_client_tag_strings`: whole literals and `$`-headed prefixes only) cannot see; a promoted flow naming them goes red at the keyboard. The fix is in that check, not the flow.
+Flow written (`testing/flows/drafts/csd-040-storage.yaml`, floor `unreleased`); it promotes to `testable` when the floor is a release and the flow runs on the matrix. **The floor stays `unreleased`** because the flow names `storage_disk_not_on_this_node`, which exists from client 0.5.225 but is built by interpolation (`ReadFailureBlock` builds `${tagPrefix}_not_on_this_node`), and the flow tag check (`testing/test_flows.py::_client_tag_strings`: whole literals and `$`-headed prefixes only) cannot see it; a promoted flow naming it fails that check. The fix is in that check, not the flow.
 
 **Platforms.** All five. The Postgres-only variant is a server-side fixture, not
 a client platform, and belongs in CIRISServer's matrix; this flow only needs the
@@ -201,13 +196,11 @@ persist; the heuristic dates, for the same reason.
   Everything I shared holding exactly one card, Data — which is correct, because
   Data is the only card in the app that is actually about what this person
   shared.
-* **Same wrong-host as CSD-036 — closed here (2026-09-28).** `getAgentMode()`
-  used to be caught and logged with no error state, so on a node-only build the
-  "On disk" card was simply not there, and a missing card and a card that was
-  never asked for looked identical. The failure is now classified and rendered
-  in the card's place (`storage_disk_not_on_this_node` / `storage_disk_error`).
-  CSD-036's copy of the defect is its own.
-* **A heuristic presented as a fact — labelled (2026-09-28).** `oldest_node_date`
+* **Same wrong-host as CSD-036 — said on the card.** On a node-only build the
+  "On disk" card has no host. The failure is classified and rendered in the
+  card's place (`storage_disk_not_on_this_node` / `storage_disk_error`), so a
+  missing card and a card that was never asked for do not look identical.
+* **A heuristic presented as a fact — labelled.** `oldest_node_date`
   and `newest_node_date` are computed from a 1000-row page per scope. The client
   labels them *(approx.)* and says why (`row_storage_dates_heuristic`), from the
   server source. **Ask (CIRISServer) stands:** mark them `approximate: true` on
@@ -219,6 +212,6 @@ persist; the heuristic dates, for the same reason.
   stays `building` until a release carries the tags and the floor can flip;
   nothing else stands between this card and `testable`.
 * **Copy.** The card's labels ("Graph store", "Total nodes", "On disk"…) are
-  English literals in `StorageScreen.kt`, not bundle keys; the new lines are
-  keyed. Not a gate failure (the colour and layout checks do not cover strings),
-  but the next change here should key the rest.
+  English literals in `StorageScreen.kt`, not bundle keys; the empty, failure
+  and heuristic lines are keyed. Not a gate failure (the colour and layout
+  checks do not cover strings), but the next change here should key the rest.

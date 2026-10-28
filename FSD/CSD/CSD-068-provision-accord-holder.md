@@ -132,7 +132,7 @@ error:     {tag: provision_holder_error, renders: "the plain-language reason, in
 `primaryContainer` block with a check glyph, failure an `errorContainer` text,
 the start state the three-step intro, loading the spinner inside the disabled
 button. That is the CSD/3 §2.2 requirement met with no `proposed:` tag on any
-side (the last two were made real at the accord review).
+side.
 
 ### 2.1 Why the three steps are gates and not a form
 
@@ -143,41 +143,40 @@ by construction rather than by error message, which is the right shape for a
 one-shot ceremony: a wrong PIN is recoverable, a seed wrapped to the wrong
 volume is a holder who thinks they have a spare and does not.
 
-### 2.2 What the screen does not show that it should
+### 2.2 What the screen shows after the mint, and what it cannot
 
 * **What was written, and where.** On success the screen shows the minted
   `key_id` and a next step. It does not echo back the USB path the node actually
   wrote to, nor the artifact filenames. A holder who typed one path and had the
   node resolve another has no way to notice — and this is the artifact they will
-  reach for during a halt. **Still open, upstream** (§3: the node only logs them).
-* ~~**The custody class the node recorded.**~~ **Shown** since the accord
-  review: `txt_provision_holder_custody` reads `custody_tier` out of the
+  reach for during a halt. **Open, upstream** (§3: the node only logs them).
+* **The custody class the node recorded** is shown:
+  `txt_provision_holder_custody` reads `custody_tier` out of the
   response's `custody_attestation` (`firstStringField`, tolerant of where the
   signed envelope nests it — `CanonicalSupersedeTest.aStringFieldIsFoundWhereverTheEnvelopeNestsIt`),
   and says "not stated" when the attestation names none.
-* ~~**A copy affordance.**~~ **Added**: `btn_provision_holder_copy` puts the
+* **A copy affordance**: `btn_provision_holder_copy` puts the
   minted `key_id` on the clipboard and says so.
-* **The plain-language errors were English literals in the view model.** A view
-  model cannot call the composable `localizedString`, so `error` is now a key
+* **The plain-language errors are localized by the screen.** A view
+  model cannot call the composable `localizedString`, so `error` is a key
   plus the node's detail (`ProvisionError`) and the screen localizes it — eleven
   `mobile.provision_holder_err_*` keys. `AccordCeremonyViewModel` and
   `AccordViewModel` still carry the literal form (CSD-067 §2.3, CSD-069 §2.2).
 
 ## 3. Contracts (who)
 
-Verified against ciris-server `origin/main` at 0.5.217 (2026-09-25).
+Verified against ciris-server 0.5.217.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
 | provision a holder | `POST /v1/accord/provision-holder` | CIRISServer `src/accord_provision.rs:3697` | **live**, loopback-only |
 | register the minted holder | `POST /v1/accord/holder` | CIRISServer `src/accord.rs:2600` | **live** — but this screen does not call it; it tells the person to ask the node owner |
-| token presence before the POST | `GET /v1/accord/yubikey-status` | CIRISServer `src/accord_provision.rs:3770` | **live, called** (accord review) — `ProvisionAccordHolderViewModel.refreshYubiKeyStatus` on entry and on demand, drawn by the same `YubiKeyStatusBanner` the ceremony uses (`yubikey_status_banner`). The FIPS-approval acknowledgement stays a claim (CC 4.2.2.1); whether a token is plugged in no longer is |
+| token presence before the POST | `GET /v1/accord/yubikey-status` | CIRISServer `src/accord_provision.rs:3770` | **live, called** — `ProvisionAccordHolderViewModel.refreshYubiKeyStatus` on entry and on demand, drawn by the same `YubiKeyStatusBanner` the ceremony uses (`yubikey_status_banner`). The FIPS-approval acknowledgement stays a claim (CC 4.2.2.1); whether a token is plugged in is the node's answer |
 | the written path + artifact names | **missing** — the node knows both and only LOGS them | CIRISServer | blocks §2.2's first bullet |
-| the recorded custody class | on the wire here (`custody_attestation` → `custody_tier`) | CIRISClient | **rendered** — `txt_provision_holder_custody`; §2.2's second bullet, closed |
+| the recorded custody class | on the wire here (`custody_attestation` → `custody_tier`) | CIRISClient | **rendered** — `txt_provision_holder_custody`; §2.2's second bullet |
 | the node's own judgment of a SEATED holder's hardware | `GET /v1/trust-root` → `roots[].verdict.holders_hardware[]` `{key_id, class, layer_a, layer_b, refusal}` | CIRISServer `src/trust_root_api.rs:415` (verdict passed through verbatim, `:76-79`); shape CIRISPersist v48.0.0 `federation/trust_root.rs:372` | **live on this node's own machine, called** by the Accord card's trust-root detail (`row_trust_root_holder_<root>_<holder>`, CSD-067 §3), not by this screen — and only for holders the root's charter counts, so it answers "did my seat's hardware pass" after seating, never "what did I just mint". **Remote reach** `blocked_by: CIRISServer#652` |
 
-**The fourth row said `unconfirmed` and its premise was false.** The response
-shape IS established in the client: the node returns
+**The response shape is established in the client:** the node returns
 `json!({ "key_id", "holder_record", "custody_attestation" })`
 (`src/accord_provision.rs:487-491`, returned `:506`, module doc `:23`) and
 `AccordProvisionResponse` models all three (`models/federation/Accord.kt:221-228`).
@@ -187,15 +186,12 @@ them and writes them only to `tracing::info!`
 route over — `AdmitNodeResponse` carries `saved_to` (`Accord.kt:245-246`). **Ask:
 add `saved_to` / `artifacts[]` to `provision-holder`'s body.**
 
-**The fifth row was filed against the wrong repo.** The custody class arrives on
-this very response inside `custody_attestation`, minted with
-`CUSTODY_TIER_PORTABLE_2FA` (`src/accord_custody.rs:134-141`; constant at
-`ciris-verify-core accord_custody_attestation.rs:70`, envelope key `custody_tier`
-at `:235`). The client parses it as an opaque `JsonElement` it never inspects
-(`Accord.kt:227`) and `CIRISApiClient.kt:3877` only logs `custody != null`. So
-this screen can render the class today with no upstream change. What is missing
-upstream is the same fact on `GET /v1/accord-holders` — and that is CSD-067's
-row, not a second one.
+**The custody class needs no upstream change.** It arrives on this response
+inside `custody_attestation`, minted with `CUSTODY_TIER_PORTABLE_2FA`
+(`src/accord_custody.rs:134-141`; constant at `ciris-verify-core
+accord_custody_attestation.rs:70`, envelope key `custody_tier` at `:235`), and
+the screen reads it from there (§2.2). What is missing upstream is the same
+fact on `GET /v1/accord-holders` — and that is CSD-067's row, not a second one.
 
 **Where this identity goes after it is minted** (CSD-067 §3.1): registered
 by the owner (`POST /v1/accord/holder`), seated by the genesis ceremony
@@ -207,10 +203,9 @@ the first place the person could see it. It is loopback-only like the rest of
 this flow, which here costs nothing: provisioning already needs the YubiKey on
 the node's own host.
 
-**`/v1/accord/yubikey-status` was the cheapest fix on this screen, and it is
-done.** The acknowledgement stays — CC 4.2.2.1 means FIPS-approval remains a
-claim — and "is a token plugged in at all" is now the node's answer, in the
-banner above the checkbox.
+**`/v1/accord/yubikey-status` answers "is a token plugged in at all"**, in the
+banner above the checkbox. The acknowledgement stays — CC 4.2.2.1 means
+FIPS-approval remains a claim.
 
 ## 4. Flow (how)
 
@@ -252,17 +247,14 @@ expect:
 `btn_provision_holder_copy`. It needs a physical FIPS YubiKey with a PIN and a
 touch, which no platform runner has; §5 says so rather than mocking it.
 
-**Stage.** Every tag is real and nothing in §3 is `unconfirmed`, so
-`check_csd_v3.py` would admit `testable`. The flow's floor is already off
-`unreleased` — `testing/flows/csd-068-provision-accord-holder.yaml` is
-`client: ">=0.5.224"`, and every tag it drives is a literal at v0.5.224 (the
-custody row, copy button and token banner that came later are not in it). The
-one remaining condition is that the flow runs on the matrix (#97); the card
-stays at `building` until it does.
+**Stage.** Every tag is real and nothing in §3 is `unconfirmed`. The flow's
+floor is `client: ">=0.5.224"`, and every tag it drives is a literal at
+v0.5.224 (the custody row, copy button and token banner are not in it). It runs
+on the matrix (§5), so the card is `testable`.
 
 ## 5. QA plan
 
-**`testable`** since the five-platform run 36775704425 (2026-09-30, `flows/matrix-0.5.225` at efdac2a2, node v0.5.217): the flow (`testing/flows/csd-068-provision-accord-holder.yaml`, floor `>=0.5.224`) passed on all five legs — Linux, macOS and Windows desktop, the Android emulator and the iOS simulator. What follows is how it got there. Linux desktop leg run locally the way `five-platform-live-qa.yml` runs it (2026-09-29, candidate 0.5.225, node v0.5.217, `--flows testing/flows`, the two-node fixture): **5/5 passed** — the form with no banner, the disabled submit doing nothing, the FIPS acknowledgement and the two fields taking input, the no-token refusal landing on `provision_holder_error` and not on success, and back. Reaching the screen found two client defects the same day: the three fields had no input sinks (`/input` had nothing to apply to), and the empty state's tag `txt_provision_holder_start` was drawn in every state, so a refused submit showed error and empty at once — both fixed. On the matrix run (36588619656) it could not start on any desktop leg (the circle-hop race, fixed in the runner). On the second (36600766576) Linux and macOS passed 5/5 and Windows failed `fips_and_a_path` with `provision_holder_error` already on screen — a third client defect: the submit's `testableClickable` did not carry the Button's `enabled`, so the disabled-submit step's `/click` ran `provision()` and raised the "confirm your YubiKey" banner (CIRISClient#69's shape). Linux and macOS had passed that step only because the banner composed above the fold the runner had scrolled past, where the geometry-based `absent:` could not see it. Fixed; `testing/test_platform_automation_wiring.py` now pins the mirror for every tag a flow clicks. On the third (36733112700) every desktop leg passed; iOS failed `empty_submit_does_nothing` because the now-disabled submit refused `/click` (404 "No click handler") and a plain `click:` counts a refusal as a failure. The step now says `click_refused:`, which holds when the click is refused and fails if a handler runs, and every platform answers a disabled control the same way (409, "is disabled").
+**`testable`.** The flow (`testing/flows/csd-068-provision-accord-holder.yaml`, floor `>=0.5.224`) passed on all five legs in five-platform run 36775704425 (node v0.5.217) — Linux, macOS and Windows desktop, the Android emulator and the iOS simulator: the form with no banner, the disabled submit doing nothing, the FIPS acknowledgement and the two fields taking input, the no-token refusal landing on `provision_holder_error` and not on success, and back. What the run holds the client to: each of the three fields has an input sink; `txt_provision_holder_start` is drawn only in the start state, so a refused submit never shows error and empty at once; the submit's `testableClickable` carries the Button's `enabled`, so a `/click` on the disabled submit runs nothing (CIRISClient#69's shape; `testing/test_platform_automation_wiring.py` pins the mirror for every tag a flow clicks); and the disabled-submit step is `click_refused:`, which holds when the click is refused and fails if a handler runs — every platform answers a disabled control the same way (409, "is disabled").
 
 **Platforms.** Desktop and Android in practice — the flow needs a USB path and a
 physical token, and the iOS/browser corners have neither. The screen composes on

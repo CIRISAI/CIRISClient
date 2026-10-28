@@ -96,16 +96,14 @@ fields:
 
 **`approach:{goal_id}` is bound to show what the shape would be, and it is
 `unconfirmed` because the wire has a sentence where CC has an identifier.**
-CC 3.1.9.7 rules that `goal_id` denotes a `Goal` object's identifier and a
+CC 3.1.9.7 states that `goal_id` denotes a `Goal` object's identifier and a
 composer MUST NOT read a scale out of it. `ScheduledTaskData.goalDescription`
 (`CIRISApiClient.kt:13799`) is free text the person typed into
 `mobile.scheduler_goal`. So the card can render a reason and cannot join it to
-anything — which is exactly the split-truth that ruling closes.
+anything — which is exactly the split-truth that rule closes.
 
-**Three stat tiles read 0 for a failed read.** `completedTotal =
-statsData?.tasksCompletedTotal ?: 0` (`SchedulerViewModel.kt:171`) and its two
-neighbours substitute a zero for an absent stats envelope. CSD/3 §3 names this:
-reading a missing value as a zero is a score where there is none.
+**A failed stats read draws "—" in the tiles, never 0.** CSD/3 §3: reading a
+missing value as a zero is a score where there is none.
 
 ```yaml csd:states
 populated: {tag: "proposed:scheduler_list", renders: "the stat row, the cognitive-state line, then one card per task"}
@@ -129,12 +127,10 @@ The renderer is not the defect; `catch { logDebug(...) }` is.
 | whether a past run happened | **no route** — `commitment_fulfillment:*`, CC 3.1.9.2 | CIRISNodeCore | **missing**; blocks `building` for `proposed:scheduler_row_fulfilment` |
 | a Goal object to bind the task to | **no route** — `goal:{scale}` / `approach:{goal_id}`, CC 3.1.9.7 | CIRISNodeCore | **missing**; blocks `building` for `proposed:scheduler_row_goal` |
 
-**Host check.** All five live routes are the brain's. `CIRISServer origin/main`
-has no `/v1/scheduler` literal anywhere in `src/`. The notification and
-calendar options in `SchedulerScreenState` (`SchedulerViewModel.kt:22`) are the
+**Host check.** All five live routes are the brain's. CIRISServer has no
+`/v1/scheduler` literal anywhere in `src/`. The notification and calendar
+options in `SchedulerScreenState` (`SchedulerViewModel.kt:22`) are the
 device's, not any host's.
-
-**CIRISAgent working tree is dated 2026-08-15**, five weeks behind today.
 
 ## 4. Flow (how)
 
@@ -182,24 +178,23 @@ platform dialog.
 one. Today `last_triggered_at` says when it started and nothing says what
 happened, so a person who scheduled something cannot find out whether it worked.
 
-## 7. Review — runtime group (2026-09-27, branch `review/runtime`)
+## 7. Review — runtime group
 
-Card vs API re-read against CIRISAgent **main** (gh api) and CIRISServer **origin/main**. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`, all shown red against the old behaviour first.
+Card checked against CIRISAgent `main` and CIRISServer `main`. Tests: `client/shared/src/desktopTest/.../viewmodels/RuntimeGroupReviewTest.kt`.
 
-**Closed here**
-- *Quarantine was invisible.* `tasks_dead_lettered` (`scheduler.py:80`) was
-  dropped; now the fourth tile, "Quarantined" (`scheduler_stat_dead_lettered`).
-- *A missing stats envelope became zeros.* Now a failed read ("—").
-- *Invalid JSON on an ordinary prompt.* The create body was hand-concatenated and
-  escaped only `"`; a newline or backslash gave a 422. Now serialized
-  (`schedulerCreateBody`).
-- *Active = Pending.* `activeCount` now comes from the list's `active_count`.
-- *Back arrow* went to Interact; now This agent.
+**Closed**
+- *Quarantine is visible.* `tasks_dead_lettered` (`scheduler.py:80`) is the
+  fourth tile, "Quarantined" (`scheduler_stat_dead_lettered`).
+- *A missing stats envelope is a failed read* ("—"), not zeros.
+- *The create body is serialized* (`schedulerCreateBody`), not hand-concatenated,
+  so a newline or backslash in a prompt is valid JSON, not a 422.
+- *Active is not Pending.* `activeCount` comes from the list's `active_count`.
+- *Back arrow* goes to This agent.
 
 **Still open**
 - Dream tasks from the graph are listed but `cancel_task` does not know their ids
   (404, shown as "Failed to cancel task"); the outcome of a fired task is not on
   the wire. `blocked_by: CIRISAgent#1208`.
-- `cancelScheduledTask` still collapses a 403 into `false`.
+- `cancelScheduledTask` collapses a 403 into `false`.
 
 **Stage:** building → building.

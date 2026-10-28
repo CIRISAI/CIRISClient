@@ -1,6 +1,6 @@
 # CSD-033 — The peers this node holds (the Peers tile)
 
-**CSD**: CSD-033 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the route map (PR #111): a screen with routes and no CSD
+**CSD**: CSD-033 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the route map
 **Covers**: `Screen.NetworkPeers` (`ui/screens/federation/NetworkPeersScreen.kt` + `viewmodels/NetworkPeersViewModel.kt`)
 **Reads with**: **CSD-104** (a peer row opens `Screen.NetworkPeerDetail`: trust, appearance and the short-code ceremony live there, not here), CSD-046 (the same peer set drawn as a graph), CSD-051 (the hub)
 **Flow**: `testing/flows/drafts/csd-033-network-peers.yaml` (floor `>=0.5.225`)
@@ -68,7 +68,7 @@ error:     {tag: federation_peers_error, renders: "the read-failure block in pla
 
 ## 3. Contracts (who)
 
-Verified against CIRISServer `origin/main` 046e1b39 (0.5.217) and CIRISAgent `main`.
+Verified against CIRISServer 0.5.217 and CIRISAgent `main`.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
@@ -116,7 +116,7 @@ expect:
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-033-network-peers.yaml`, floor `>=0.5.225`); promotes to `testable` when it runs on the matrix. **Not moved to `testing/flows/` on the 0.5.225 run (2026-09-29):** `Screen.NetworkPeers` is flow-only — `nav_map` derives no hop to it, so the runner only waits for it after sign-in lands on Contacts, and the flow would be `cannot-start` (red) on every leg. To move it: start on LayerGlobalCommons (which has a hop) and tap `tile_federation_peers`, as csd-047 does.
+Flow written (`testing/flows/drafts/csd-033-network-peers.yaml`, floor `>=0.5.225`); it promotes to `testable` when it runs on the matrix. **It stays in `drafts/`:** `Screen.NetworkPeers` is flow-only — `nav_map` derives no hop to it, so the runner waits for it after sign-in reaches Contacts, and the flow is `cannot-start` (red) on every leg. To move it: start on LayerGlobalCommons (which has a hop) and tap `tile_federation_peers`, as csd-047 does.
 
 **Platforms.** All five. The add-by-code path needs an agent; the bare-node leg
 asserts the sheet's "not on this node" copy instead.
@@ -126,14 +126,15 @@ asserts the sheet's "not on this node" copy instead.
 
 ## 6. Delta — card vs API vs CC
 
-* **Error looked like empty, fixed.** A failed list read was a dismissable banner
-  over "No peers yet"; once dismissed, a dead node read as a node with no peers.
-* **The paste field had no input sink, fixed.** `/input` refused it (CIRISClient#30),
-  so no flow could add a peer.
+* **Error is not empty — fixed.** A failed list read is the read-failure block,
+  not a dismissable banner over "No peers yet" that, once dismissed, would make
+  a dead node read as a node with no peers.
+* **The paste field has an input sink — fixed**, so `/input` accepts it and a
+  flow can add a peer.
 * **Add-by-code is agent-only.** The node has `/v1/federation/node-code` to *give*
   a code and no route to *take* one; the seeder lives in the agent. **Ask
   (CIRISServer):** `POST /v1/federation/peers/add-from-code`, so a bare node can
-  add a peer from this card. Search found no existing issue; draft in the report.
+  add a peer from this card.
 * **Duplication.** `GET /v1/federation/peers` is also read by Contacts,
   DataManagement, Delegations, ManageConsent, NetworkContent and the trust graph.
   Those are reads of one list for different questions; the only mutation on this

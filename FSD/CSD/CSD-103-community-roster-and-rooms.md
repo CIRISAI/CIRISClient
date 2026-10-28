@@ -54,22 +54,19 @@ Businesses › Chats) render `CommunityChatsScreen`. Their chains end on the tab
 **Pair rooms are chats, and they are listed in Neighbours › Chats.** A pair room
 comes back from `GET /v1/communities` with `kind: pair, tier: community`
 (`room_json`, `communities.rs:1362`; `Tier::of` reads an absent policy blob as
-`community`, :150). CSD-091 §2 recommended a Chats card listing the person's
-rooms and warned that which circle a pair room appears in would be "a
-client-side audience judgment with no substrate backing". It has backing now:
-the wire says `community`, and `community` folds to Neighbours. A pair room is
+`community`, :150). Which circle a pair room appears in is therefore not a
+client-side audience judgment: the wire says `community`, and `community`
+folds to Neighbours. A pair room is
 never an affiliations chat. Tapping one opens the chat CSD-091 already draws
 (`Screen.UserChat`, keyed by the contact whose `chat_community_id` IS the room's
 id). A pair room whose contact is gone is listed with "Not a contact any more"
 and does not open, because the chat screen enters a room only through a contact.
 
-**A room of more than two opens by its id** (since the people review,
-CSD-091). `GET/POST /v1/chat/{id}/messages` serve N-member rooms
-(CIRISServer#594), so the chat screen enters such a room by the room's
-community id and never asks `POST /v1/chat` (pair-only) for it. The row used to
-carry "cannot be opened here yet" (`flag_community_chat_room_unopenable_*`);
-that limit is gone. What remains is the pair room whose contact is gone: it
-cannot be entered through a contact and says so.
+**A room of more than two opens by its id** (CSD-091).
+`GET/POST /v1/chat/{id}/messages` serve N-member rooms (CIRISServer#594), so
+the chat screen enters such a room by the room's community id and never asks
+`POST /v1/chat` (pair-only) for it. Only a pair room whose contact is gone
+cannot be entered through a contact, and it says so.
 
 ```yaml csd:shows
 registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
@@ -153,7 +150,7 @@ there.
 
 ## 3. Contracts (who)
 
-CIRISServer `origin/main` 046e1b39 (0.5.217), `src/communities.rs`; node URL only
+CIRISServer 0.5.217, `src/communities.rs`; node URL only
 (CSD-102 §3 has the full table and the refusal shape).
 
 | value | route | handler | notes |
@@ -170,18 +167,17 @@ CIRISServer `origin/main` 046e1b39 (0.5.217), `src/communities.rs`; node URL onl
 | a pair room | `kind: pair` on a list row | `kind_of` :202 | `community.pair_room_fixed` (409) for any roster change on it, :291 |
 | widened reads | — | module doc, "What a widened member cannot do yet" | listed, shown and sealed to; refused by the message read gate (`chat.not_a_member`) until CIRISPersist#907. #907 is **fixed in persist v49**; the server markers (the module doc and the ignored `…_cirispersist_907` test, both still on `integ/0.5.218`) clear with CIRISServer#700 |
 
-### 3.1 Nobody joins without their own consent (ruling of 2026-09-30)
+### 3.1 Nobody joins without their own consent
 
-The maintainer ruled on 2026-09-30 that **adding someone to a family or a
-community requires their consent**, founding members included
-(CIRISConstitution#133; persist's enforcement CIRISPersist#955, v52: one
-inviter proposes, the invitee accepts or declines, the quorum stays on the
-admitting record, expiry 30 days or less). **CIRISServer 0.5.218** ships it
-(merged at `53d1ffb5`). On this card (CSD-106):
+**Adding someone to a family or a community requires their consent**,
+founding members included (CIRISConstitution#133; persist enforces it in
+CIRISPersist#955, v52: one inviter proposes, the invitee accepts or declines,
+the quorum stays on the admitting record, expiry 30 days or less).
+**CIRISServer 0.5.218** carries it. On this card (CSD-106):
 
 * **each room's add is "Invite someone"** on a node that answers
-  `GET /v1/communities/{id}/invites`: the key field and contact chips as
-  before (anyone already invited and unanswered is left out), then a
+  `GET /v1/communities/{id}/invites`: the key field and contact chips
+  (anyone already invited and unanswered is left out), then a
   three-fact confirm, then `POST …/invites`. The notice says "Invitation sent.
   They join only if they accept.", never "Done: add".
 * **pending rows** under the room's members, never counted as members:
@@ -197,7 +193,7 @@ admitting record, expiry 30 days or less). **CIRISServer 0.5.218** ships it
 * **an older node** (a bare 404 on the invites route) keeps "Add someone" and
   the direct add as written above. A confirmed invitation that meets a bare
   404 sends nothing in its place; a direct add answered 409
-  `membership.consent_required` (the unreleased interim branch,
+  `membership.consent_required` (an unreleased node build,
   CIRISServer#700) re-reads the invites route and offers Invite if served.
 
 Unaffected: remove, role changes, re-adding someone already active (still
@@ -243,9 +239,8 @@ late member's flag, or a pair room in Chats — each needs a second person.
 **Not tested here.**
 * Whether a removed member's future reads fail — the DEK rotation is the
   node's (CC 4.4.3.2.2), and a client fixture cannot observe it.
-* Peer-authored roster rows: persist admits them on signature alone until
-  CIRISPersist#908 (fixed in persist v49; CIRISServer#700 records it in the
-  server FSD), so a row another node wrote can appear here without the
+* Peer-authored roster rows: persist before v49 admits them on signature alone
+  (CIRISPersist#908), so a row another node wrote can appear here without the
   room's rule having been checked by this node. Not visible on the card.
-* The transcript of a room of more than two — CSD-091's (it opens by id since
-  the people review; this card only routes the tap).
+* The transcript of a room of more than two — CSD-091's (it opens by id; this
+  card only routes the tap).

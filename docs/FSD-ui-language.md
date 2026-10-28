@@ -219,8 +219,8 @@ no `current_step` is complete.
 
 ## 5a. The look — two grounds, sixteen tokens, nine primitives (wave 0)
 
-The locked spec (Claude Design, 2026-09) settles how the client looks and what
-it is made of. Wave 0 landed the spine; everything after it composes from it.
+The locked spec settles how the client looks and what it is made of. Wave 0 is
+the spine; everything after it composes from it.
 
 **Two grounds.** Paper (light) and Instrument (dark), following the brightness
 preference. Sixteen tokens resolved per ground in `ui/theme/CirisTokens.kt` —

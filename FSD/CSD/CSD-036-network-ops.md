@@ -2,7 +2,7 @@
 
 **CSD**: CSD-036 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, wave 1
 **Flow**: `testing/flows/drafts/csd-036-network-ops.yaml`
-**Reads with**: CSD-045 (This node › Own standing — tier S, which used to be a section at the bottom of this card), CSD-051 (the hub this card opens), CSD-032 (the Identity tile, which shows the same signer key to the Everyone circle)
+**Reads with**: CSD-045 (This node › Own standing — tier S), CSD-051 (the hub this card opens), CSD-032 (the Identity tile, which shows the same signer key to the Everyone circle)
 
 ```yaml csd:stage
 stage: building
@@ -18,9 +18,9 @@ this node's reader honours.**
 
 Serves **CC 3.1.9 `config:{scope}`**: a node's operating configuration is "published
 as an auditable record rather than **inferred from behaviour**". This card is the
-place that rule is either honoured or quietly broken. It was broken (§6): the
-mode row printed a ViewModel default when nothing answered. It now prints the
-mode only when a read answered, and the reason when one did not.
+place that rule is either honoured or quietly broken: the mode row prints the
+mode only when a read answered, and the reason when one did not — never a
+ViewModel default (§6).
 
 ## 2. Surface (what)
 
@@ -92,10 +92,10 @@ fields:
 constitutional object: CC 3.1.9 reserves `config:{scope}` to the node
 (`owning_component: node`, reserved under CC 3.4.5) precisely so a node's mode is
 a record the node signed, not a guess a reader made. The row's `use` is
-`display-only`; the client never emits it. **It is still the brain's report,
+`display-only`; the client never emits it. **It is the brain's report,
 not the node's** (§3, §6).
 
-**Tier S is no longer on this card.** This node's own standings (shed load,
+**Tier S is not on this card.** This node's own standings (shed load,
 stop accepting, legal compulsion) have their own surface, This node › Own
 standing (CSD-045). What stays here is tier R (`ReaderPolicySection`,
 `section_reader_ops`, `card_reader_policy`): `input_reader_subject` (drivable),
@@ -116,17 +116,17 @@ error:     {tag: netops_error, renders: "'Could not read' in the mode card when 
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| signer key | `GET /v1/federation/identity` | CIRISServer | live — `src/federation_surface.rs:696`; `getFederationIdentity` (node URL) from `NetworkViewModel.loadFederationIdentity`, which now records `identityFailure` |
-| agent mode, SERVER-eligibility, disk budget, data dir | `GET /v1/system/agent-mode` | **CIRISAgent**, not the node | **wrong-host** — no such route in CIRISServer `src/*.rs` on `origin/main` (0.5.217); live on CIRISAgent `routes/system/agent_mode.py:78`. `getAgentMode` (`$baseUrl`) from `NetworkViewModel.loadAgentMode`, which now records `modeRead` / `modeFailure`; on a bare node the card says the mode is the agent's to report |
+| signer key | `GET /v1/federation/identity` | CIRISServer | live — `src/federation_surface.rs:696`; `getFederationIdentity` (node URL) from `NetworkViewModel.loadFederationIdentity`, which records `identityFailure` |
+| agent mode, SERVER-eligibility, disk budget, data dir | `GET /v1/system/agent-mode` | **CIRISAgent**, not the node | **wrong-host** — no such route in CIRISServer `src/*.rs` (0.5.217); live on CIRISAgent `routes/system/agent_mode.py:78`. `getAgentMode` (`$baseUrl`) from `NetworkViewModel.loadAgentMode`, which records `modeRead` / `modeFailure`; on a bare node the card says the mode is the agent's to report |
 | the persist identity aggregate (the Federation ID card) | `GET /v1/system/peers/federation-identity` | CIRISAgent `routes/system/peers.py:194` | live on the agent only — `getFederationIdentityAggregate` raises `RouteNotOnThisHost` in `ClientMode.NODE`; the card stays absent rather than "initializing" |
 | this node's reader fold (tier R) | `POST /v1/admin/reader/fold` | CIRISServer `src/admin_ops.rs:4312` | live — `readerFold` from `SelfReaderOpsSection.kt` `reloadFold()` |
 | honour / decline another party's judgement | `POST /v1/admin/reader/honour` · `POST /v1/admin/reader/decline` | `src/admin_ops.rs:4316` · `:4320` | live — `readerHonour` / `readerDecline`. Body `ReaderCommit {delegation_id, reason}`, resolved by `resolve_owner_authority`: the owner's own `infra:serve` delegation |
-| the delegation a reader act is taken under | `GET /v1/admin/self` → `owner_delegations` (CIRISServer#676, `integ/0.5.218` `src/admin_ops.rs:3348-3360`) | CIRISServer | live on 0.5.218 (unreleased) — read once by `ReaderPolicyCard`; typed fallback on an older node (CSD-045 §2 has the four-way rule) |
+| the delegation a reader act is taken under | `GET /v1/admin/self` → `owner_delegations` (CIRISServer#676, `src/admin_ops.rs:3348-3360`) | CIRISServer | live from 0.5.218 — read once by `ReaderPolicyCard`; typed fallback on an older node (CSD-045 §2 has the four-way rule) |
 | this node's own standings (tier S) | `GET /v1/admin/self` and the six `/v1/admin/self/*` acts | CIRISServer | live — **CSD-045's card** (`Screen.NodeSelfStanding`), not this one |
 | a `config:agent_mode` record signed by the node | — | CIRISServer | **missing** — CIRISServer#668, see §6 |
 
-Admin lines are CIRISServer `origin/main` 046e1b39 (0.5.217); on `integ/0.5.218`
-(97900cf5) the same routes sit +96 lines lower (`:4384-4416`), unchanged in set.
+Admin lines are CIRISServer 0.5.217; on 0.5.218 the same routes sit at
+`:4384-4416`, unchanged in set.
 
 ## 4. Flow (how)
 
@@ -148,14 +148,14 @@ expect:
   absent: [row_netops_mode]
 ```
 
-That second block was written before the fix and failed; it now passes.
+
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-036-network-ops.yaml`, floor `unreleased`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97). **Floor left `unreleased` on the 0.5.225 run (2026-09-29):** the flow names `netops_not_on_this_node` (ReadFailureBlock builds `${tagPrefix}_not_on_this_node`). Real in 0.5.225, but built by interpolation, which the flow tag check (`testing/test_flows.py::_client_tag_strings`: whole literals and `$`-headed prefixes only) cannot see; a promoted flow naming them goes red at the keyboard. The fix is in that check, not the flow.
+Flow written (`testing/flows/drafts/csd-036-network-ops.yaml`, floor `unreleased`); it promotes to `testable` when the floor is a release and the flow runs on the matrix. **The floor stays `unreleased`** because the flow names `netops_not_on_this_node`, which exists from client 0.5.225 but is built by interpolation (`ReadFailureBlock` builds `${tagPrefix}_not_on_this_node`), and the flow tag check (`testing/test_flows.py::_client_tag_strings`: whole literals and `$`-headed prefixes only) cannot see it; a promoted flow naming it fails that check. The fix is in that check, not the flow.
 
 **Platforms.** All five. The node-only variant needs the run-without-AI build,
-which is exactly where the defect showed.
+which is exactly where a defaulted mode would show.
 
 **Not tested here.** The reader acts' outcomes (they need a judgement another
 party issued about a subject this node holds); `btn_netops_open_hub`'s
@@ -163,20 +163,19 @@ destination (`layer-global-commons`, CSD-051).
 
 ## 6. Delta — card vs API vs CC
 
-* **Wrong host, and it failed open — the failing-open half is fixed.** The card
-  is labelled "CIRISEdge · this node" and three of its four cards come from the
-  **brain**. When the brain was absent the mode row printed `PROXY`, a fact
-  about the client's Kotlin default presented as a fact about the node.
-  `NetworkViewModel` now keeps the selector's `mode` (the hub and Settings need a
-  value to highlight) apart from `modeRead` (null until read, null again when a
-  read fails) and records `modeFailure`; the card renders `modeRead` or the
-  reason. `NetworkOpsModeReadTest` was run red against the old view model.
+* **Wrong host; it fails closed.** The card is labelled "CIRISEdge · this node"
+  and three of its four cards come from the **brain**. With the brain absent, a
+  mode row printing the client's Kotlin default (`PROXY`) would present it as a
+  fact about the node. `NetworkViewModel` keeps the selector's `mode` (the hub
+  and Settings need a value to highlight) apart from `modeRead` (null until
+  read, null again when a read fails) and records `modeFailure`; the card
+  renders `modeRead` or the reason (`NetworkOpsModeReadTest`).
 * **CC → card.** CC 3.1.9 wants the mode to be an auditable `config:{scope}`
   record. The node has no route that serves one. **Ask (CIRISServer):** serve
   the node's own `config:agent_mode` record (attester + `asserted_at`) so this
   row stops depending on the brain at all — the mode of the *node* is not the
-  brain's to report. **CIRISServer#668** (open) is that ask.
-* **Tier S moved out.** A warrant-canary declaration is not a row under the
+  brain's to report. **CIRISServer#668** is that ask.
+* **Tier S is CSD-045's.** A warrant-canary declaration is not a row under the
   disk budget (CSD-045).
 * **Placement.** Correct. These are the node's own facts; This node is where the
   Locked Spec puts the substrate.

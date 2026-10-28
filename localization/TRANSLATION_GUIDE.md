@@ -60,8 +60,8 @@ without a sentence's worth of noise around it.
 | replace | `rọ́pò` | `maye gurbi` | `ተካ` | `အစားထိုး` |
 | node | `node` | `kumburi` | `ኖድ` | `node` |
 
-¹ **The one place the corpus was overruled.** It renders *Identity* as `Asali`,
-and the reviewer's finding was that `asali` means *origin / essence*, not a
+¹ **The one place the corpus is overruled.** It renders *Identity* as `Asali`,
+but `asali` means *origin / essence*, not a
 credential. Confirmed against the language: `shaida` (< Arabic *shahāda*,
 "testimony") is the credential sense — `katin shaida` is an identity **card**,
 `takardar shaida` is a certificate. A federation identity is a signed credential,
@@ -195,10 +195,9 @@ metaphor, legal review.
 Everything stays `status: draft` / `review_status: machine_reviewed`.
 That label is the honest one: these are machine translations, reviewed by an
 MQM judge from a different model family than the writer, and nothing more.
-It used to read `needs_native_review`, which named a queue that does not
-exist — there is no native-reviewer pipeline behind this project. A pending
-that can never clear is a worse claim than a stated limit, and it hid the
-real one. What does not change: draft, not native quality, and no output of
+There is no native-reviewer pipeline behind this project, so nothing may be
+labelled as awaiting one: a pending state that can never clear is a worse claim
+than a stated limit. What does not change: draft, not native quality, and no output of
 this pipeline may be marketed as native quality.
 
 **Hand-translating does not upgrade that status either.** An agent doing the

@@ -4,10 +4,6 @@
 **Flow**: none of its own — the Family, Neighbours and Communities hubs are driven by CSD-100's and CSD-102's flows; Just me's rows are `proposed:` and may not enter a flow
 **Covers**: `layer-agent`, `layer-family`, `layer-local-community`, `layer-global-communities`.
 **Does NOT cover**: `layer-global-commons` — see CSD-051 and §2.0.
-**Rewritten** from the code in the adapters-and-hubs review (2026-09-28): the
-earlier text said the screen made no network call and drew three description-only
-sections in every circle. That stopped being true when the household (CSD-100)
-and the communities section (CSD-102) were mounted on it.
 
 ```yaml csd:stage
 stage: building
@@ -33,19 +29,16 @@ card that names the scope is the card that says what may cross out of it.
 | Communities and Businesses | `LayerGlobalCommunities` | the community section at `tier: affiliations` | CSD-102 |
 | Just me | `LayerAgent` | **nothing.** Three sections — Identities, Trust, Policies — each a localized sentence describing rows no route serves | this CSD, and it is the gap |
 
-**Where a circle has a group of its own, the description-only sections are
-gone.** The household replaced them on Family when it landed; since this review
-the community section does the same on Neighbours and on Communities and
-Businesses (`LayerHubScreen.kt`, `return@Column` after the section). Under a
-real roster they read as a second list with nobody in it, which is the
-error-looks-like-empty failure in a new costume. They remain only on Just me,
-where there is nothing else to draw.
+**Where a circle has a group of its own, the description-only sections are not
+drawn.** The household takes their place on Family, and the community section
+on Neighbours and on Communities and Businesses (`LayerHubScreen.kt`,
+`return@Column` after the section). Under a real roster they would read as a
+second list with nobody in it, which is the error-looks-like-empty failure in a
+new costume. They remain only on Just me, where there is nothing else to draw.
 
-**The doc comment that hid the gap is corrected.** It said "EDGE_PEERRESOLVER
-(CIRISEdge#22) has shipped; the cohort-aware views are active". `EDGE_PEERRESOLVER`
-is the node's internal Reticulum transport-address resolver
-(`src/compose.rs`), not a client-facing listing, and "CIRISEdge#22" has no
-reference in CIRISServer. The comment now says what each circle reads.
+**`EDGE_PEERRESOLVER` is not a cohort view.** It is the node's internal
+Reticulum transport-address resolver (`src/compose.rs`), not a client-facing
+listing. The hub's doc comment says what each circle reads.
 
 ## 2. Surface (what)
 
@@ -165,7 +158,7 @@ assert `layer_hub_family` / the community section. Just me's rows are
 `proposed:` and `CSD.md` §2.1.1 forbids a proposed tag in a flow; the three
 frame tags would assert only that three sentences composed.
 
-The flow this CSD is waiting on, once CIRISServer#662 lands:
+The flow this CSD needs CIRISServer#662 for:
 
 ```yaml
 expect:
@@ -187,18 +180,15 @@ expect:
 * That Just me's copy means what the Locked Spec means. It still describes an
   agent-and-its-occurrences reading of the circles
   (`commons.layer.agent.subtitle`: "The agent itself — implicit self at every
-  scale"); the Family copy that defined Family as sibling occurrences is no
-  longer drawn, because the household replaced it.
+  scale"); the Family copy is not drawn, because the household takes its place.
 
-## 6. Review (2026-09-28)
+## 6. Status
 
-* **Card vs CSD**: the CSD said "no network call" and "three description-only
-  sections"; false for three of four circles. Rewritten from the code.
-* **Closed**: the description-only sections no longer render under the
-  community section on Neighbours and Communities and Businesses (UI change,
-  no unit test: it is composition, verified by compile and by CSD-102's flow
-  asserting the section); the false doc comment is corrected. Moderation now
-  receives the room's id from the community card (CSD-102 §3.2).
+* **Verified by composition, not a unit test**: the description-only sections
+  do not render under the community section on Neighbours and Communities and
+  Businesses (verified by compile and by CSD-102's flow asserting the
+  section). Moderation receives the room's id from the community card
+  (CSD-102 §3.2).
 * **Open**: Just me asks nothing — CIRISServer#662 (no cohort-scoped roster)
-  and CIRISConstitution#109 (no `trust_policy` family), both filed.
-* **Stage**: building → building (three rows still `blocked_by`, and `proposed:` tags).
+  and CIRISConstitution#109 (no `trust_policy` family).
+* **Stage**: `building` (three rows `blocked_by`, and `proposed:` tags).

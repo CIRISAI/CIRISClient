@@ -21,9 +21,8 @@ banner are the same commitment at three grains, and the screen is where CC
 
 The falsifiable claim: **every agent turn on this screen is addressable by tag,
 and every one of them can be traced back to the reasoning that produced it or
-says it cannot be.** `msg_agent_0` exists because before `ChatTranscriptTags.kt`
-the product's core feature was the one thing automation could not assert
-(CIRISClient#27).
+says it cannot be.** `msg_agent_0` exists so that the product's core feature
+is something automation can assert.
 
 ## 2. Surface (what)
 
@@ -171,9 +170,9 @@ not resent.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| the diagnostics panel's full logs (CIRISClient#249) | `GET /v1/telemetry/logs/download?tail_kib=N` → `application/zip` | CIRISAgent (the AGENT base URL only) | **2.17.0** (CIRISAgent#1326). Asked by the panel's Download here, where the owner session exists (`InteractViewModel.downloadLogsZip`); saved beside the text bundle. 403 / 404 / a failure fall back to the bundle's 32 KiB tails and the panel says which it gave. The route's own row is CSD-029's |
-| send a message | `POST /v1/agent/interact` | CIRISAgent (`routes/agent.py:1186` on v2.16.2-stable) | live — `AgentApi.kt:215`, called at `CIRISApiClient.kt:771`. **A SHED 503 is a named, retryable state** (agent 2.15+, CIRISAgent#1242, CIRISClient#173): see §2.1 |
-| the paperclip's limits — types, per-file bytes and per-message count for images and documents | `GET /v1/agent/attachments/policy` | CIRISAgent (`routes/agent.py:1350`, `api_attachments.py:123` on `fix/interact-attachments` @ 380455879) | live on that branch — `CIRISApiClient.getAttachmentPolicy`, read when chat opens (`InteractViewModel.loadAttachmentPolicy`) and driving the picker's types, the re-check before send and the count/size pre-refusal (CIRISClient#217). **An older agent answers a bare 404**: the client's own constants (`AttachmentPolicy.CLIENT_FALLBACK`) apply, logged, and attaching is never blocked. The per-file verdicts come back on `POST /v1/agent/interact` as `attachments[]` (complete AND timeout) and are drawn by refusal id under each chip of the sent message (`msg_user_<n>_attachment_<i>`, `..._note`) |
+| the diagnostics panel's full logs | `GET /v1/telemetry/logs/download?tail_kib=N` → `application/zip` | CIRISAgent (the AGENT base URL only) | **2.17.0**. Asked by the panel's Download here, where the owner session exists (`InteractViewModel.downloadLogsZip`); saved beside the text bundle. 403 / 404 / a failure fall back to the bundle's 32 KiB tails and the panel says which it gave. The route's own row is CSD-029's |
+| send a message | `POST /v1/agent/interact` | CIRISAgent (`routes/agent.py:1186` on v2.16.2-stable) | live — `AgentApi.kt:215`, called at `CIRISApiClient.kt:771`. **A SHED 503 is a named, retryable state** (agent 2.15+): see §2.1 |
+| the paperclip's limits — types, per-file bytes and per-message count for images and documents | `GET /v1/agent/attachments/policy` | CIRISAgent (`routes/agent.py:1350`, `api_attachments.py:123`, CIRISAgent#1302) | live (exercised by the release gate's files flow against CIRISAgent 2.16.5) — `CIRISApiClient.getAttachmentPolicy`, read when chat opens (`InteractViewModel.loadAttachmentPolicy`) and driving the picker's types, the re-check before send and the count/size pre-refusal. **An older agent answers a bare 404**: the client's own constants (`AttachmentPolicy.CLIENT_FALLBACK`) apply, logged, and attaching is never blocked. The per-file verdicts come back on `POST /v1/agent/interact` as `attachments[]` (complete AND timeout) and are drawn by refusal id under each chip of the sent message (`msg_user_<n>_attachment_<i>`, `..._note`) |
 | the transcript | `GET /v1/agent/history` | CIRISAgent (`routes/agent.py:981`) | live — `AgentApi.kt:113`; `nodeSkip`-guarded at `CIRISApiClient.kt:798`, so a bare node returns an empty list rather than 404ing |
 | the reasoning timeline | `GET /v1/system/runtime/reasoning-stream` (SSE) | CIRISAgent (`routes/system_extensions.py:922`) | live, but **not** a `trace:complete:v1` envelope — see §2 |
 | the cognitive state | `GET /v1/system/health` | CIRISAgent, merged by the node (`CIRISServer src/health.rs:589`) | live — the one route both hosts answer |
@@ -184,9 +183,9 @@ not resent.
 **Reads this screen makes for the instruments it hosts.** Interact is the
 shell's landing screen, so its `when` arm reaches the status bar, the cell
 visualisation and the post-login bootstrap. Each row below is a READ whose card
-is elsewhere; it is cited here because this screen calls it (route map,
-2026-09-27; agent handlers on `main` 29371660de under
-`ciris_engine/logic/adapters/api/routes/`, node handlers in CIRISServer `src/`).
+is elsewhere; it is cited here because this screen calls it (agent handlers
+under `ciris_engine/logic/adapters/api/routes/`, node handlers in CIRISServer
+`src/`).
 
 | value | endpoint | owner | state |
 |---|---|---|---|
@@ -200,14 +199,14 @@ is elsewhere; it is cited here because this screen calls it (route map,
 | "is this brain still unconfigured?" before promoting a switched node to AGENT — the card is CSD-080 | `GET /v1/setup/status` | CIRISAgent `setup/status.py:45`; node `auth/bootstrap.rs:1488` | called — `NodeSwitcherViewModel.kt:355`. The node answers loopback only, so after switching to a remote node it defaults to "configured" |
 | none — dead branch | `GET /v1/setup/verify-status` | CIRISAgent `setup/attestation.py:292` | **never reached**: the branch at `CIRISApiClient.kt:7136-7138` runs only with a Play Integrity token and no caller passes one. Delete the branch; this row goes with it |
 | a tapped adapter port's status and counts — the card is CSD-020 | `GET /v1/system/adapters/{id}` | CIRISAgent `system/adapters.py:807` | called — `InteractViewModel.kt:2394`; a failure is `SelectionDetail.Error` (distinct) |
-| the adapter ports the cell visualisation draws, loaded by the post-login bootstrap — the card is CSD-020 | `GET /v1/system/adapters` | CIRISAgent `system/adapters.py` | called — `InteractViewModel.kt:693` (`listAdapters`); moved here from CSD-081 in the identity review |
+| the adapter ports the cell visualisation draws, loaded by the post-login bootstrap — the card is CSD-020 | `GET /v1/system/adapters` | CIRISAgent `system/adapters.py` | called — `InteractViewModel.kt:693` (`listAdapters`) |
 | the LLM bus arc's "n/m providers · req" — the card is CSD-021 | `GET /v1/system/llm/status` | CIRISAgent `system/llm_routes.py:327` | called — `InteractViewModel.kt:2415`; fields match `llm_schemas.py:124-139`; a failure falls back to the bare label |
 | provider rows when the LLM arc is tapped — the card is CSD-021 | `GET /v1/system/llm/providers` | CIRISAgent `system/llm_routes.py:399` | called — `InteractViewModel.kt:2416`; fields match `llm_schemas.py:109-114`. **Defect:** a failure shows an empty list |
 | the trust shield (`btn_trust_shield`) and the fast poll while attestation is pending — the card is CSD-052 | `GET /v1/system/verify-status` | CIRISServer `health.rs:612` (route `:683`); the agent relays (`auth_proxy.py:157`) | called — `InteractViewModel.kt:1151, 1234`. The node ignores `?refresh=true` |
 | a tapped non-LLM bus arc's health and counts — the card is CSD-030 | `GET /v1/telemetry/unified` | CIRISAgent `telemetry.py:1854` | called — `InteractViewModel.kt:2443`. **Defect:** any failure is swallowed into zero counts (`CIRISApiClient.kt:9994`) |
 | the pending-deferrals banner count (tap opens Wise Authority) — the card is CSD-041 | `GET /v1/wa/status` | CIRISAgent `wa.py:440` | called — `InteractViewModel.kt:1249`; `pending_deferrals` matches; a failure keeps the previous count |
-| the wallet badge (`btn_wallet_badge`) — the card is CSD-057 | `GET /v1/wallet/status` | CIRISAgent `wallet.py:570` | called — `InteractViewModel.kt:705`. **Closed 2026-09-27:** a failed read used to render "set up wallet" (`hasWallet=false`); it is now `WalletBadgeState.NOT_READ` ("wallet not read", amber, the badge's `testable` value names the state; `WalletBadgeStateTest`) |
-| the fleet-coherence cell signal (composite, fragility, category) — the card is CSD-004 | `GET /v1/my-data/capacity` | CIRISAgent `my_data.py` (`_compute_local_capacity`) | called — `InteractViewModel.kt:630` (`refreshCapacity`, agent-only, skipped in node mode); moved here from CSD-081 in the identity review |
+| the wallet badge (`btn_wallet_badge`) — the card is CSD-057 | `GET /v1/wallet/status` | CIRISAgent `wallet.py:570` | called — `InteractViewModel.kt:705`. A failed read is `WalletBadgeState.NOT_READ` ("wallet not read", amber, the badge's `testable` value names the state; `WalletBadgeStateTest`), never "set up wallet" |
+| the fleet-coherence cell signal (composite, fragility, category) — the card is CSD-004 | `GET /v1/my-data/capacity` | CIRISAgent `my_data.py` (`_compute_local_capacity`) | called — `InteractViewModel.kt:630` (`refreshCapacity`, agent-only, skipped in node mode) |
 | report a message (`btn_moderation_*` → `sheet_moderation_proposal`) — the card is CSD-065 | `POST /v1/safety/reports` | **no handler on either host** | called — `ModerationViewModel.kt:96` → `CIRISApiClient.kt:1778`, and it fails every time: the agent forwards the unknown path to the node, which 404s. `blocked_by: CIRISServer#665`. Two more defects for CSD-065: the body puts a chat MESSAGE id into `target_key_id` (`InteractScreen.kt:1924` → `CIRISApiClient.kt:1784`), and the adult-only gate is not enforced (`ModerationViewModel.kt:55`) |
 
 **Wrong-host risk, stated once.** Every route above is the AGENT's. The client
@@ -261,7 +260,7 @@ is not specified); the cell visualization's rendering (a canvas, not a tag
 tree); the emergency-stop path, which takes the runtime down and cannot run in
 a suite that has later steps.
 
-**On a phone the composer owns the bottom edge (CIRISClient#186).** Below
+**On a phone the composer owns the bottom edge.** Below
 the 900 dp rail the shell hides its circle bar (`shell_bottom_bar`) on this
 screen — `screenHostsComposer` in `CIRISApp.kt` names Interact and a user/pair
 chat — and keeps the top bar and the one back. The screen's own content pads by
@@ -269,7 +268,7 @@ the soft keyboard (`composerImePadding`, `ui/shell/ComposerInsets.kt`), not the
 whole app, and the transcript scrolls to its newest message when the keyboard
 opens. At rail width nothing changes. Pinned headless at 360 x 640 dp with a
 300 dp keyboard: `ChatComposerOnPhoneTest`. **Not verified on a device:** iOS
-does not compile on the Linux box this was written on, and Compose iOS's default
+is not built on Linux, and Compose iOS's default
 `OnFocusBehavior.FocusableAboveKeyboard` pans the view only when the focused
 field would still be covered; with the inset applied it should not be.
 

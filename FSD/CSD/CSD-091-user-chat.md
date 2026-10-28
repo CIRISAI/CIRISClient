@@ -47,8 +47,8 @@ exit: "back to WHERE THE ROOM WAS OPENED FROM — `Screen.UserChat.from`, Contac
 ```
 
 **Placement, resolved.** The Locked Spec gives every circle a **Chats** tab,
-and since PR #121 (CSD-103) Neighbours and Communities and Businesses have one
-that lists rooms: `NavSurface.CommunityChats` / `AffiliationsChats` on
+and Neighbours and Communities and Businesses have one that lists rooms
+(CSD-103): `NavSurface.CommunityChats` / `AffiliationsChats` on
 `Tab.CHATS` (`CirclesNav.kt`). A pair room is `tier: community` on the wire, so
 it folds to Neighbours with the substrate's backing and not by a client guess;
 Contacts keeps the "start one" move, because starting a pair room is
@@ -63,11 +63,9 @@ fact about the wire (no family-tier room read; a pair room is never
 anything else; `GET /v1/chat/{id}/messages` and `POST /v1/chat/{id}/messages`
 serve an N-member room by id (CIRISServer#594: `list_room_messages`, and
 `send_message`'s roster branch — on `main` 0.5.217 at `src/contacts_chat.rs:3592`
-and `:2910`, on `integ/0.5.218` at `:4051` and `:3363`). Until this review the
-client could not use that: `UserChatViewModel.enter` always opened through
-`POST /v1/chat` with a contact key, so the Chats tab listed rooms of more than
-two as "can't open here". `enterRoom(communityId, name, memberCount)` now enters
-by id, and the Chats row opens it (`UserChatViewModelTest.aRoomOfMoreThanTwoIsEnteredByItsIdAndNeverThroughPostChat`).
+and `:2910`, on `integ/0.5.218` at `:4051` and `:3363`).
+`enterRoom(communityId, name, memberCount)` enters by id, and the Chats row
+opens it (`UserChatViewModelTest.aRoomOfMoreThanTwoIsEnteredByItsIdAndNeverThroughPostChat`).
 The header's member count comes from the room row (`GET /v1/communities`),
 because the transcript carries no roster and the only read that returns one is
 the pair-only open. Creating a room, adding to it and leaving it are CSD-102's
@@ -164,13 +162,12 @@ fields:
     tag: "chat_msg_unopened_*"
 ```
 
-**The object this whole surface moves has a family since rc6.** A chat
+**The object this whole surface moves has a family.** A chat
 message is an `attestation_type: scores` row whose dimension is
-`chat:message:v1` (CIRISServer `src/contacts_chat.rs:12`). CC rc5's 116
-prefixes did not carry it, so the message body and the draft were
-`x_private:`; CC v1.0-rc6 registers `chat:*` (CC 3.1.9, semantics at CC 3.3.11;
-open, not reserved, owned by `node`), and `chat:message:v1` resolves to it
-(`Dim.chat`). Both rows above now name it. The rest of the `x_private:` rows are
+`chat:message:v1` (CIRISServer `src/contacts_chat.rs:12`). CC v1.0-rc6
+registers `chat:*` (CC 3.1.9, semantics at CC 3.3.11; open, not reserved, owned
+by `node`), and `chat:message:v1` resolves to it (`Dim.chat`); the body and
+draft rows above name it. The rest of the `x_private:` rows are
 the envelope, the room's handshake and the client's own state — none of them a
 registry family.
 
@@ -197,10 +194,10 @@ as a failure, once as a note.
 | value | endpoint | owner | state |
 |---|---|---|---|
 | open / resolve a PAIR room | `POST /v1/chat` at the node URL | CIRISServer (`src/contacts_chat.rs:3787`) | live — idempotent; returns BEFORE any write when the community exists, so for an open room this is a read, and it is the only read that answers with the authoritative roster the header needs. **Pair-only**: `start_chat` builds "the two-member community for (owner, contact)"; a room of more than two is never asked of it |
-| **the pair room by invitation** (0.5.218) | `POST /v1/chat` → `state` (`open` / `invited` / `accepted` / `awaiting_invitation`) + `proposal_id`; `member_key_ids` is the ACTIVE roster | CIRISServer (CIRISServer#706; `src/contacts_chat.rs::start_chat` and `pair_room_response` @ `53d1ffb5`) | **0.5.218, called** — persist v52 admits a founding record only for its signers, so only the CREATOR (the lexicographically smaller fed-ID, edge's `PairRole`) founds the room and proposes the other person; the joiner's own `POST /v1/chat` accepts a held invitation from that contact (step 1) or answers `awaiting_invitation` and keeps the request on disk (`pair_intents`) until it lands. The client reads it into `PairPhase` (§2) and re-asks while waiting. **Server finding, not worked around beyond the roster check:** the joiner branch answers `awaiting_invitation` even after the joiner is seated (it returns before reading the room), so the client treats two active members as open and remembers an `accepted` answer for the session |
-| the invitee's side | `GET /v1/self/invites` (`is_pair_room`), shown on the contact's People row (CSD-005); accept = this card's `POST /v1/chat` behind CSD-005's ConfirmSheet; decline = `POST /v1/self/invites/{proposal_id}/decline` | CIRISServer (`src/membership_invites.rs::inbox` / `answer`) | **0.5.218, called** — the hubs' inbox (CSD-106, PR #141) leaves pair rooms out by design; People is where a person looks for someone to talk to, and `GET /v1/contacts` already carries the join key (`chat_community_id` = the invitation's `group_id`). The proposal's `proposer_key_id` is the other person's NODE (the room is founded with the node signer), so it is never used to name them |
+| **the pair room by invitation** (0.5.218) | `POST /v1/chat` → `state` (`open` / `invited` / `accepted` / `awaiting_invitation`) + `proposal_id`; `member_key_ids` is the ACTIVE roster | CIRISServer (CIRISServer#706; `src/contacts_chat.rs::start_chat` and `pair_room_response`) | **0.5.218, called** — persist v52 admits a founding record only for its signers, so only the CREATOR (the lexicographically smaller fed-ID, edge's `PairRole`) founds the room and proposes the other person; the joiner's own `POST /v1/chat` accepts a held invitation from that contact (step 1) or answers `awaiting_invitation` and keeps the request on disk (`pair_intents`) until it lands. The client reads it into `PairPhase` (§2) and re-asks while waiting. **Server finding, not worked around beyond the roster check:** the joiner branch answers `awaiting_invitation` even after the joiner is seated (it returns before reading the room), so the client treats two active members as open and remembers an `accepted` answer for the session |
+| the invitee's side | `GET /v1/self/invites` (`is_pair_room`), shown on the contact's People row (CSD-005); accept = this card's `POST /v1/chat` behind CSD-005's ConfirmSheet; decline = `POST /v1/self/invites/{proposal_id}/decline` | CIRISServer (`src/membership_invites.rs::inbox` / `answer`) | **0.5.218, called** — the hubs' inbox (CSD-106) leaves pair rooms out by design; People is where a person looks for someone to talk to, and `GET /v1/contacts` already carries the join key (`chat_community_id` = the invitation's `group_id`). The proposal's `proposer_key_id` is the other person's NODE (the room is founded with the node signer), so it is never used to name them |
 | withdraw my invitation | `DELETE /v1/communities/{id}/invites/{proposal_id}` | CIRISServer (`src/communities.rs::withdraw_invite` → `membership_invites::withdraw`) | **not offered, by the server's rule**: the pair proposal is attested by the opener's NODE signer, and `withdraw` requires the caller's PERSON pen to be the proposer, so it refuses `membership.not_the_proposer` (403). The waiting state says the invitation stays open until they answer or it lapses (pair proposals carry `DEFAULT_INVITE_DAYS`, 14 days). **Ask (CIRISServer):** a pair-room withdraw the node signer may author, or a person-signed pair proposal |
-| enter a room of more than two | `GET /v1/chat/{community_id}/messages` BY ID, no open call | CIRISServer | live — `list_room_messages` (CIRISServer#594; `main` 0.5.217 `:3592`, `integ/0.5.218` `:4051`): persist's admission is the membership gate, and a non-member is refused `chat.not_a_member`. The client's `enterRoom` (this review). What CIRISServer#594 still lists as open — create/invite/revoke by chat routes, per-member reporting — is CSD-102's surface (`/v1/communities`), not a blocker here |
+| enter a room of more than two | `GET /v1/chat/{community_id}/messages` BY ID, no open call | CIRISServer | live — `list_room_messages` (CIRISServer#594; `main` 0.5.217 `:3592`, `integ/0.5.218` `:4051`): persist's admission is the membership gate, and a non-member is refused `chat.not_a_member`. The client's `enterRoom`. What CIRISServer#594 still lists as open — create/invite/revoke by chat routes, per-member reporting — is CSD-102's surface (`/v1/communities`), not a blocker here |
 | the transcript | `GET /v1/chat/{community_id}/messages` at the node URL | CIRISServer (`src/contacts_chat.rs:3789`) | live — oldest first, structural composers already folded into each row's `status`; for a room, `handshake` beside it, never as a refusal |
 | a row whose body did not open | `unopened_reason` (token) + `unopened_detail` on the transcript row | CIRISServer | **0.5.218** (CIRISServer#602): `UNOPENED_REASONS` at `src/contacts_chat.rs:3004-3012`, a test pins every edge arm lands in it. On 0.5.217 the same field carried edge's `Display` text; the client reads both (§2) |
 | send | `POST /v1/chat/{community_id}/messages` at the node URL | CIRISServer (`src/contacts_chat.rs:3789`) | live — a `chat:message:v1` `scores` attestation, `attestation_upsert_local` + `attestation_promote(community)`; for a room, sealed to the fold under the room's DEK with no pair handshake gating it (`:3363` on `integ/0.5.218`) |
@@ -212,17 +209,13 @@ as a failure, once as a note.
 | where a file in chat is | `GET /v1/files/{id}/custody?cohort&room_id` | CIRISServer — the custody PR, unmerged, unreleased | called — `ui/screens/ChatScreen.kt:397`, as **Where is this file** (`mi_op_where_<id>`) on a message card's `⋮`, only on a row whose `content_type` is not `text/*`. **Dormant**: the chat plane refuses anything but text (`chat.unsupported_content_type`), so no row carries it today. The card is CSD-107's |
 | a CEG family for `chat:message:v1` | `chat:*` (CC 3.1.9 / 3.3.11) | CIRISConstitution | **registered in rc6** (CIRISClient#150) — the body and draft rows bind it |
 
-**Wrong-host risk: found and closed.** Every route here is the NODE's, on
-`:4243` — and until this review every one of them was called at `$baseUrl`
-(`startChat`, `listChatMessages`, `sendChatMessage`), which the route gate
-charged to the agent front door and which, on a with-AI install, asked an
-agent that before 2.12.1 did not forward them (CIRISAgent#1213, closed by
-#1215; reach through the agent works from agent 2.12.1). The sentence above used to read "none", written from
-the server side alone. The three calls now take the node URL from the same
-active-node provider People uses (`UserChatViewModel.nodeUrl`, `ChatApi`), and
-`UserChatViewModelTest` pins where each goes. This surface is not served by
-the agent's brain and the client does not ask the agent for it: the direct node
-URL works on every agent version.
+**Wrong host: none.** Every route here is the NODE's, on `:4243`. The three
+calls (`startChat`, `listChatMessages`, `sendChatMessage`) take the node URL
+from the same active-node provider People uses (`UserChatViewModel.nodeUrl`,
+`ChatApi`), never `$baseUrl`, and `UserChatViewModelTest` pins where each goes.
+An agent forwards them only from 2.12.1 (CIRISAgent#1213); this surface is not
+served by the agent's brain, and the direct node URL works on every agent
+version.
 
 **What CC fixes for free, and the client obeys.** persist refuses a
 community-scoped promotion unless `attested_key_id == attesting_key_id` and every
@@ -306,9 +299,9 @@ and §5 disclaims it for the matrix.
 
 ## 5. QA plan
 
-**0.5.218 and CIRISServer#698.** #698 is still OPEN. Its 2026-09-29 measurement on the 0.5.218 tree (edge v33.1, synthetic trust root) keyed the pair room in ~7 s with peers still ADVISORY and saw no `SignedTransportDestination` failures, so the half of #698 this flow fails on is probably release-bound and may clear with the 0.5.218 binary — unconfirmed on a released binary. 0.5.218 also changes the flow itself: a pair room no longer exists after one side's `POST /v1/chat`. The CREATOR's open answers `invited`; the room is open only after the JOINER's own `POST /v1/chat` (or an accept) and the creator's widening. The draft flow therefore needs its peer side to open the chat too (the two-node fixture's peer must call `POST /v1/chat` for the leg's person) and must expect `chat_pair_waiting` on the side that opens first. It stays in drafts until it has run against a released 0.5.218 node. The waiting states, the legacy (no `state`) path, and the accept/decline wire are pinned at unit and wire level instead: `UserChatViewModelTest` (`theOpenerOfAnInvitedRoomWaitsForThemAndReadsNoTranscript`, `theRoomBecomesANormalRoomWhenTheyAccept`, `theInviteeWhoAcceptedIsJoiningEvenWhenTheNextAnswerSaysAwaitingInvitation`, `a0_5_217AnswerWithNoStateBehavesExactlyAsBefore`), `PairRoomInvitationTest`, `Server218ChatEvictWireTest`.
+**0.5.218 and CIRISServer#698.** #698 is open. Its measurement on the 0.5.218 tree (edge v33.1, synthetic trust root) keyed the pair room in ~7 s with peers still ADVISORY and saw no `SignedTransportDestination` failures, so the half of #698 this flow fails on is probably release-bound and may clear with the 0.5.218 binary — unconfirmed on a released binary. On 0.5.218 a pair room does not exist after one side's `POST /v1/chat`. The CREATOR's open answers `invited`; the room is open only after the JOINER's own `POST /v1/chat` (or an accept) and the creator's widening. The draft flow therefore needs its peer side to open the chat too (the two-node fixture's peer must call `POST /v1/chat` for the leg's person) and must expect `chat_pair_waiting` on the side that opens first. It stays in drafts until it has run against a released 0.5.218 node. The waiting states, the legacy (no `state`) path, and the accept/decline wire are pinned at unit and wire level instead: `UserChatViewModelTest` (`theOpenerOfAnInvitedRoomWaitsForThemAndReadsNoTranscript`, `theRoomBecomesANormalRoomWhenTheyAccept`, `theInviteeWhoAcceptedIsJoiningEvenWhenTheNextAnswerSaysAwaitingInvitation`, `a0_5_217AnswerWithNoStateBehavesExactlyAsBefore`), `PairRoomInvitationTest`, `Server218ChatEvictWireTest`.
 
-Spec complete and flow written (`testing/flows/drafts/csd-091-user-chat.yaml`, floor `>=0.5.225`, `fixture: two_node`): it enters the room from People by `btn_contacts_chat_${PEER_KEY_ID}` and asserts the peer's message by its attestation id (`chat_msg_${MESSAGE_ATTESTATION_ID}`), not a class count a system note could satisfy. It CANNOT go green on the released line: two unconferred v0.5.217 nodes never key the pair room (peers admitted ADVISORY, frames fail the SignedTransportDestination check), so no message crosses and `a_room_with_history` fails naming why (`evidence/blocked_upstream.tsv`). Linux desktop, 2026-09-28: the entry, composer and refresh steps passed; history failed as stated. **Not moved to `testing/flows/` on the 0.5.225 run (2026-09-29):** `a_room_with_history` fails on every leg for the upstream reason above (CIRISServer#698), so promoting it would redden the matrix for a defect the client does not have. It moves when the leg's node can key a pair room.
+Spec complete and flow written (`testing/flows/drafts/csd-091-user-chat.yaml`, floor `>=0.5.225`, `fixture: two_node`): it enters the room from People by `btn_contacts_chat_${PEER_KEY_ID}` and asserts the peer's message by its attestation id (`chat_msg_${MESSAGE_ATTESTATION_ID}`), not a class count a system note could satisfy. It CANNOT go green on the released line: two unconferred v0.5.217 nodes never key the pair room (peers admitted ADVISORY, frames fail the SignedTransportDestination check), so no message crosses and `a_room_with_history` fails naming why (`evidence/blocked_upstream.tsv`). On Linux desktop the entry, composer and refresh steps pass; history fails as stated. **It stays in `drafts/`:** `a_room_with_history` fails on every leg for the upstream reason above (CIRISServer#698), so promoting it would redden the matrix for a defect the client does not have. It moves when the leg's node can key a pair room.
 
 **Platforms.** All five for the transcript and the refusals; **two nodes** for
 anything that involves the other side, which `testing/gate/node_fixture.py` does
@@ -324,15 +317,13 @@ the soft keyboard (`composerImePadding`, `ui/shell/ComposerInsets.kt`), not the
 whole app, and the transcript scrolls to its newest message when the keyboard
 opens. At rail width nothing changes. Pinned headless at 360 x 640 dp with a
 300 dp keyboard: `ChatComposerOnPhoneTest`. **Not verified on a device:** iOS
-does not compile on the Linux box this was written on, and Compose iOS's default
+was not built for this check, and Compose iOS's default
 `OnFocusBehavior.FocusableAboveKeyboard` pans the view only when the focused
 field would still be covered; with the inset applied it should not be.
 
 **`input_chat_body` is drivable.** The composer registers
 `rememberTextInputDriver("input_chat_body", …)` beside the `OutlinedTextField`
-(`ChatScreen.kt`), so `/input` types into the draft the ViewModel owns. An
-earlier revision of this section said the opposite; it was true before PR #95
-and is not now.
+(`ChatScreen.kt`), so `/input` types into the draft the ViewModel owns.
 
 **Not driven on the matrix: a locked row.** A row with `unopened_reason` needs
 the far side's content to be absent or sealed to another reader, which the
@@ -350,14 +341,14 @@ missing, on a screen where the consequence is worse.
 **`UserChat` is missing from the gate's own unreachable list, and that list is
 dead code.** `FLOW_ONLY` (`testing/gate/screen_atlas.py:41`) names eleven
 screens; `UserChat` is not one of them, and `"Manage"` is, though no
-`Screen.Manage` exists in `CIRISApp.kt`. Neither omission has ever been noticed
+`Screen.Manage` exists in `CIRISApp.kt`. Neither omission is caught,
 because the branch that reads the set (`screen_atlas.py:261`) sits inside a loop
 over `nav_map.build()` — and **not one of the eleven is reachable by nav_map**,
-so `if screen in FLOW_ONLY` has never matched and the `[FLOW]` line it prints has
-never been printed. The set's only live effect is the `flow_only` array written
+so `if screen in FLOW_ONLY` never matches and the `[FLOW]` line it prints is
+never printed. The set's only live effect is the `flow_only` array written
 into `docs/atlas.json`, which is therefore a hand-maintained claim about coverage
-rather than a derived fact — which is exactly how it came to carry a screen that
-does not exist and miss one that does. **Fix:** derive it as
+rather than a derived fact — which is how it carries a screen that
+does not exist and misses one that does. **Fix:** derive it as
 `_screen_classes() - set(hops)`, the same subtraction `check_csd_v3.py:66-84`
 already performs to validate a `flow_only:` surface. Then `Manage` disappears
 and `UserChat` appears, both without an edit.

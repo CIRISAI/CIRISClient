@@ -1,6 +1,6 @@
 # CSD-048 — The transports this node carries traffic on (the Interfaces tile)
 
-**CSD**: CSD-048 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the route map (PR #111): a screen with routes and no CSD
+**CSD**: CSD-048 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the route map
 **Covers**: `Screen.NetworkInterfaces` (`ui/screens/federation/NetworkInterfacesScreen.kt` + `viewmodels/federation/NetworkInterfacesViewModel.kt`)
 **Reads with**: **CSD-049** (the Queue tile: the same `GET /v1/federation/metrics` snapshot, projected per plane instead of per medium — two doors, see §6), CSD-051 (the hub)
 **Flow**: `testing/flows/drafts/csd-048-network-interfaces.yaml` (floor `>=0.5.225`)
@@ -61,12 +61,12 @@ error:     {tag: federation_interfaces_error, renders: "the read-failure block; 
 
 ## 3. Contracts (who)
 
-Verified against CIRISServer `origin/main` 046e1b39 (0.5.217).
+Verified against CIRISServer 0.5.217.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
 | the snapshot | `GET /v1/federation/metrics` → `{data: {transport_bytes_in_total, transport_bytes_out_total, peer_reachability_ratio, …}}` (`src/federation_surface.rs:697`, handler `:170-340`) | CIRISServer | live — `getFederationMetrics` (`CIRISApiClient.kt:1645`, node URL), polled every 10 s |
-| the reachability key | `peer_reachability_ratio` is keyed `"{peer_key_id}:{medium}"` (`src/federation_surface.rs:222`) | CIRISServer | live — the client split on `|` (the retired agent route's separator), so every peer:medium pair became its own "transport"; `collateTransports` now resolves the medium |
+| the reachability key | `peer_reachability_ratio` is keyed `"{peer_key_id}:{medium}"` (`src/federation_surface.rs:222`) | CIRISServer | live — `collateTransports` splits on `:` and resolves the medium, so a peer:medium pair is never its own "transport" (`|` is not this route's separator) |
 
 ## 4. Flow (how)
 
@@ -96,7 +96,7 @@ expect:
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-048-network-interfaces.yaml`, floor `>=0.5.225`); promotes to `testable` when it runs on the matrix. **Not moved to `testing/flows/` on the 0.5.225 run (2026-09-29):** `Screen.NetworkInterfaces` is flow-only — `nav_map` derives no hop to it, so the runner only waits for it after sign-in lands on Contacts, and the flow would be `cannot-start` (red) on every leg. To move it: start on LayerGlobalCommons and tap its interfaces tile, as csd-047 does.
+Flow written (`testing/flows/drafts/csd-048-network-interfaces.yaml`, floor `>=0.5.225`); it promotes to `testable` when it runs on the matrix. **It stays in `drafts/`:** `Screen.NetworkInterfaces` is flow-only — `nav_map` derives no hop to it, so the runner waits for it after sign-in reaches Contacts, and the flow is `cannot-start` (red) on every leg. To move it: start on LayerGlobalCommons and tap its interfaces tile, as csd-047 does.
 
 **Platforms.** All five. A LoRa or Bluetooth row needs hardware; the matrix
 asserts tcp.
@@ -113,5 +113,6 @@ asserts tcp.
   one long card of two unrelated tables; the rule that fires on a shared
   *mutating* route does not fire here, and the same read behind two views is
   named in both CSDs.
-* **A wrong separator, fixed.** Rows multiplied per peer; now one row per medium.
-* **Error looked like empty, fixed.**
+* **One row per medium — fixed.** The reachability key's separator is `:`, so
+  rows do not multiply per peer.
+* **Error is not empty — fixed.**

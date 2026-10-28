@@ -47,20 +47,17 @@ So this block declares `flow_only: true`, and the checker turns that into three
 assertions rather than a skip: `Screen.AccordCeremony` must be declared in
 `CIRISApp.kt`, it must **not** be sidebar-reachable, and `entry:` must say how a
 person arrives, since no hop can. A flow-only screen that quietly gained a
-placement now fails with *"is sidebar-reachable … so it is not flow_only"*,
+placement fails with *"is sidebar-reachable … so it is not flow_only"*,
 which is the right direction for this defect to break in.
 
-**The earlier `screen_class:` encoding was wrong and this document carried it.**
-CSD-080 §2 introduced `surface: null` / `screen_class:` / `entry:` for the
-pre-shell screens and this CSD followed it. `screen_class` is not a key
-`check_csd_v3.py` reads, so it left `screen` unset and **silently disabled both
-reachability checks** — the same hole that let a CSD claim Nodes is
-`Screen.Telemetry`, and that let the typo `screeen:` pass. An unknown key is now
-a failure rather than a no-op, which is how this file was caught.
+**Not `screen_class:`.** `screen_class` is not a key `check_csd_v3.py` reads:
+it would leave `screen` unset and **silently disable both reachability
+checks**, the hole through which a CSD could claim Nodes is `Screen.Telemetry`
+or a typo like `screeen:` could pass. An unknown key is a failure, not a no-op.
 
-**One stale comment to fix while here.** `screen_atlas.py:52` says *"nav_map
+**One stale comment to fix.** `screen_atlas.py:52` says *"nav_map
 still hands it a one-hop chain, so it read as a screen the atlas kept failing to
-reach"*. It does not any more — `build()` only emits screens whose surface is in
+reach"*. It does not — `build()` only emits screens whose surface is in
 `placements` or an `Instrument`, and `AccordCeremony` is in neither, so
 `nav_map.build()` omits it outright. The entry in `FLOW_ONLY` is still correct;
 its reason is out of date.
@@ -123,15 +120,12 @@ loading:   {tag: spinner_ceremony_step, renders: "the current step's button carr
 error:     {tag: accord_ceremony_error, renders: "which step failed and why, in the error tone — and the phase line does NOT advance"}
 ```
 
-**`error` was said to be the gap, and the finding was half right.** The
-error banner existed and was tagged (`MessageCard(…, "accord_ceremony_error")`,
-`AccordCeremonyScreen.kt`) — this CSD said there was no error tag, and there
-was. What was genuinely missing was the *phase*: a failed provision of key B2
-and an un-started provision of key B2 were the same pixels because nothing on
-the screen said which step the wizard was on. `txt_ceremony_phase` (accord
-review) is that line; with it, "failed" is *error banner + phase unchanged* and
-"not reached" is *a later phase*, which a flow can tell apart. The four states
-are real and tagged.
+**The four states are real and tagged.** The error banner is tagged
+(`MessageCard(…, "accord_ceremony_error")`, `AccordCeremonyScreen.kt`), and
+`txt_ceremony_phase` says which step the wizard is on, so a failed provision of
+key B2 and an un-started one are different pixels: "failed" is *error banner +
+phase unchanged* and "not reached" is *a later phase*, which a flow can tell
+apart.
 
 ### 2.1 What the ceremony gets right
 
@@ -144,27 +138,27 @@ are real and tagged.
   `btn_ceremony_cosign` / `btn_ceremony_assemble` — three verbs, three phases,
   no way to assemble before cosigning.
 
-### 2.2 What it did not, and does now (accord review)
+### 2.2 Keeping the artifact, and what the intro states
 
-* ~~**Nothing asserts the artifact was kept.**~~ `btn_ceremony_genesis_copy`
+* **The artifact can be kept.** `btn_ceremony_genesis_copy`
   puts the genesis on the clipboard; `btn_ceremony_genesis_save` writes it as
   `humanity_accord_genesis.json` to a chosen folder (`writeTextFile`, desktop);
   each says so in the notice banner. The done card also says, in words
   (`txt_ceremony_not_seed`), that this JSON is the entrenched family and NOT the
   portable seed other nodes adopt — §3's finding, put where the person is.
-* ~~**The correlated-failure geometry is not stated.**~~ `txt_ceremony_diversity`
+* **The correlated-failure geometry is stated.** `txt_ceremony_diversity`
   on the intro: three people who do not share a household or an employer,
   because two of three from one address is a quorum one door can reach — CC
   4.2.3's *"the mitigant is diversifying the holder set"*, at the one moment it
   can land.
-* ~~**`consensus_protocol_entrenched` is not shown.**~~ `txt_ceremony_entrenched`
+* **`consensus_protocol_entrenched` is shown.** `txt_ceremony_entrenched`
   on the intro: the family's `quorum:2/3` cannot be lowered later by anyone
   inside the federation; replacing a seat is a new ceremony and a re-minted
   seed, not an edit.
 * **Open:** `AccordCeremonyViewModel` composes its notices and plain-language
   errors as English literals (`"Provisioning A1… TOUCH your YubiKey…"`, the
   ten `plainLanguageError` sentences). The fix is the key-plus-detail shape
-  `ProvisionAccordHolderViewModel` now uses (CSD-068 §2.2).
+  `ProvisionAccordHolderViewModel` uses (CSD-068 §2.2).
 
 ### 2.3 Should it be placed?
 
@@ -190,7 +184,7 @@ Until then `entry:` is prose and this is the only CSD in safety-commons whose
 
 ## 3. Contracts (who)
 
-Verified against ciris-server `origin/main` at 0.5.217 (2026-09-25).
+Verified against ciris-server 0.5.217.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
@@ -234,11 +228,10 @@ sequencer, and a person who needs a seat should not walk a genesis wizard that
 is only offered when no family exists.
 
 **Every route this ceremony needs is live.** The two amendment rows cannot succeed for the accord family (CIRISServer#682);
-the accord's seats change by a new ceremony and a re-minted seed. The route-coverage report also filed
-`admit-node` and `announce` here; both are called from the Accord screen and are
-cited in CSD-067 §3. The whole of this document's gap
-list is client-side, and after the accord review it is: the English literals in
-the view model (§2.2), and a surface the checker cannot resolve (§2.3).
+the accord's seats change by a new ceremony and a re-minted seed. `admit-node`
+and `announce` are called from the Accord screen and cited in CSD-067 §3. This
+document's gap list is client-side: the English literals in the view model
+(§2.2), and a surface the checker cannot resolve (§2.3).
 
 ## 4. Flow (how)
 
@@ -296,16 +289,16 @@ expect:
     txt_ceremony_phase: "Done — the genesis is assembled"
 ```
 
-**`remint_done_family` / `remint_done_holders` were asserted here and are not on
-this screen.** They are tags of the Accord card's re-mint sheet
+**`remint_done_family` / `remint_done_holders` are not on this screen.** They
+are tags of the Accord card's re-mint sheet
 (`AccordScreen.kt`, `RemintTrustRootSheet`), a different ceremony with a
 different artifact: this one entrenches the family, the re-mint mints the
-portable seed. The assertion moved to CSD-067 §4, where the tags live. This
+portable seed. They are asserted in CSD-067 §4, where the tags live. This
 screen draws no tagged family line, so `accord:family` above is `proposed:`.
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-069-accord-ceremony.yaml`, floor `>=0.5.224`); promotes to `testable` when it runs on the matrix. **Not moved to `testing/flows/` on the 0.5.225 run (2026-09-29):** `Screen.AccordCeremony` is flow-only — `nav_map` derives no hop to it, so the runner only waits for it after sign-in lands on Contacts, and the flow would be `cannot-start` (red) on every leg. To move it: start on Accord (which has a hop) and open the ceremony from there.
+Spec complete and flow written (`testing/flows/drafts/csd-069-accord-ceremony.yaml`, floor `>=0.5.224`); it becomes `testable` when it runs on the matrix. **It stays in `drafts/`:** `Screen.AccordCeremony` is flow-only — `nav_map` derives no hop to it, so the runner only waits for it after sign-in lands on Contacts, and the flow would be `cannot-start` (red) on every leg. To promote it, start on Accord (which has a hop) and open the ceremony from there.
 
 **Platforms.** Desktop in practice. Six FIPS YubiKeys and six USB volumes, each
 re-inserted, are not a thing any platform runner has; the screen composes on all
@@ -326,10 +319,10 @@ five and the ceremony runs on one.
   the person then kept the file is theirs.
 
 **Stage.** Every tag is real and §3 has no `unconfirmed`, so `check_csd_v3.py`
-would admit `testable`. The draft flow's floor is already off `unreleased`
+would admit `testable`. The draft flow's floor is off `unreleased`
 (`client: ">=0.5.224"`): it drives only tags that v0.5.224 carries, and leaves
 the later phase line, intro sentences, family line and copy/save unasserted.
-As for CSD-068, the one remaining condition is that the flow runs on the
+The one remaining condition is that the flow runs on the
 matrix (#97); the card stays at `building` until it does.
 * **The hop.** Unlike every other CSD in this area, the runner cannot walk to
   this screen, so "the entry exists" is asserted by the parent's CSD-067 flow

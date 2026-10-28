@@ -31,17 +31,17 @@ The instrument is named **Everything I shared** and that name is a promise this
 card does not yet keep (§6): it can stop and delete, and it cannot *show*.
 
 **Erasure, and proof that it happened.** This card is also where a person
-erases, and it is the only place: the lens-trace delete, the account reset and
-the key wipe were already here, and the node's trace erasure and the agent's
-deletion receipts were added here rather than as a second card (a new card for
-the same act under another name is the duplication this repo measures). GDPR
+erases, and it is the only place: the lens-trace delete, the account reset, the
+key wipe, the node's trace erasure and the agent's deletion receipts are all
+here, not on a second card (a new card for the same act under another name is
+the duplication this repo measures). GDPR
 Art. 17 is the right it serves, and four CC clauses shape what it may say:
 CC 3.3.1 D1 — *proof of deletion is the absence of the row, not a new
 artifact*; CC 6.1.5 N5 and CC 6.1.2 — the erasure guarantee is "not
 individually recoverable", and an implementation MUST NOT present a surviving
 aggregate as an erasure guarantee (*aggregation is not anonymization*), which
 is why the card says detections are *unlinked*, never *erased*; CC 2.6.1.3's
-redaction ruling (CIRISConstitution#78) — a payload sealed in a signed envelope
+redaction rule — a payload sealed in a signed envelope
 cannot be redacted after the fact — which is why the card must say what cannot
 be erased at all; and CC 2.4.1.1's carve-out, which forbids a subject-authority
 `withdraws` of third-party `capacity:*` / `detection:*` rows. The
@@ -237,30 +237,27 @@ error:     {tag: data_error, renders: "the read or the act failed — a StateBlo
 | value | endpoint | owner | state |
 |---|---|---|---|
 | the pseudonymous trace id | `GET /v1/my-data/lens-identifier` | **CIRISAgent** (`routes/my_data.py:379`) and CIRISServer (`src/system_data.rs:387`) | live on both |
-| accord sharing settings + counters | `GET /v1/my-data/accord-settings` | **CIRISAgent only** (`routes/my_data.py:610` on main, re-read 2026-09-25) | agent-only — no `accord-settings` route in CIRISServer `src/*.rs` on 0.5.217. Without an agent the card says so (`data_accord_not_on_this_node`) instead of drawing "Enable" over a read nobody got |
-| the sharing switch — **this card OWNS the write** | `PUT /v1/my-data/accord-settings` (`switch_consent` → `updateAccordConsent`) | **CIRISAgent only** (`routes/my_data.py:753`) | live. Until 2026-09-28 this PUT was issued from THREE screens — here, Manage Consent's traces switch (CSD-053) and Add Federation ID's step 4 (CSD-086) — and the route checker's duplicate-mutation ratchet listed all three. Folded to this card, which is the one that reads the setting back; the other two link here (`btn_open_data_sharing`, `txt_fedid_traces_elsewhere`). One act, one door |
+| accord sharing settings + counters | `GET /v1/my-data/accord-settings` | **CIRISAgent only** (`routes/my_data.py:610`) | agent-only — no `accord-settings` route in CIRISServer `src/*.rs` on 0.5.217. Without an agent the card says so (`data_accord_not_on_this_node`) instead of drawing "Enable" over a read nobody got |
+| the sharing switch — **this card OWNS the write** | `PUT /v1/my-data/accord-settings` (`switch_consent` → `updateAccordConsent`) | **CIRISAgent only** (`routes/my_data.py:753`) | live. This card is the one door: it is the card that reads the setting back, and Manage Consent's traces switch (CSD-053) and Add Federation ID's step 4 (CSD-086) link here (`btn_open_data_sharing`, `txt_fedid_traces_elsewhere`). One act, one door |
 | load the accord adapter | `POST /v1/system/adapters/{}` (`btn_enable_accord` → `enableAccordMetrics`, `ciris_accord_metrics` with `consent_given`), then `authorFederationConsent` | CIRISAgent | live; drawn only with an agent attached and the adapter unloaded. Also called by Adapters (CSD-020) — the same adapter load under its general form; two doors by design, recorded in the baseline |
-| delete the traces already sent | `DELETE /v1/my-data/lens-traces` | **CIRISAgent only** (`routes/my_data.py:489` on main) | **wrong-host** — no such route in CIRISServer |
-| **erase one agent's traces on this node** | `POST /v1/federation/erase-agent-traces` `{agent_id_hash, reason}` (both mandatory) → `{erased, agent_id_hash, trace_events, trace_llm_calls, detection_events_tombstoned, erased_at, scope_note}` | CIRISServer (`src/federation_admin.rs` handler ~:477, body ~:533-548, mounted ~:907; `origin/main` 046e1b39, 0.5.217) | **live; now called** — `CIRISApiClient.eraseAgentTraces` to the NODE URL. Owner-binding + owner session + `CapabilityVerb::Peer`; 403/401 `{error}`. One persist transaction, idempotent. TRACES ONLY |
+| delete the traces already sent | `DELETE /v1/my-data/lens-traces` | **CIRISAgent only** (`routes/my_data.py:489`) | **wrong-host** — no such route in CIRISServer |
+| **erase one agent's traces on this node** | `POST /v1/federation/erase-agent-traces` `{agent_id_hash, reason}` (both mandatory) → `{erased, agent_id_hash, trace_events, trace_llm_calls, detection_events_tombstoned, erased_at, scope_note}` | CIRISServer (`src/federation_admin.rs` handler ~:477, body ~:533-548, mounted ~:907; 0.5.217) | **live; called** — `CIRISApiClient.eraseAgentTraces` to the NODE URL. Owner-binding + owner session + `CapabilityVerb::Peer`; 403/401 `{error}`. One persist transaction, idempotent. TRACES ONLY |
 | erase the person (right to be forgotten) | `POST /v1/auth/erasure` `{attesting_key_id}` → `{blobs_evicted, withdraws_emitted, withdraws_failed, incomplete}` | CIRISServer (`src/auth/erasure.rs:118`, response `:53-60`) | **unreachable from the product** — authorizes by `verify::verify_request`, a SUBJECT-SIGNED request; the client does no crypto. `blocked_by: CIRISServer#677` (owner-session path + a receipt) |
-| the agent's receipt key | `GET /v1/verification/keys/current` → `data{public_key_id, download_url, algorithm}`; `GET /v1/verification/keys/{key_id}.pub` → base64 text | CIRISAgent (`routes/verification.py:432`, `:349`; main 29371660) | live; public; **now called**. `.pub` 404s for any key but the current one |
-| check a receipt | `POST /v1/verification/deletion` `{deletion_proof}` → `data{valid, …, total_records, message, verified_at}` (HTTP 200 either way) | CIRISAgent (`verification.py:184`) | live; public; **now called**. Verifies against the CURRENT key only (`:144`) — the proof's own `public_key_id` is never consulted |
+| the agent's receipt key | `GET /v1/verification/keys/current` → `data{public_key_id, download_url, algorithm}`; `GET /v1/verification/keys/{key_id}.pub` → base64 text | CIRISAgent (`routes/verification.py:432`, `:349`) | live; public; **called**. `.pub` 404s for any key but the current one |
+| check a receipt | `POST /v1/verification/deletion` `{deletion_proof}` → `data{valid, …, total_records, message, verified_at}` (HTTP 200 either way) | CIRISAgent (`verification.py:184`) | live; public; **called**. Verifies against the CURRENT key only (`:144`) — the proof's own `public_key_id` is never consulted |
 | same check, flat fields | `POST /v1/verification/verify-signature` | CIRISAgent (`verification.py:390`) | live; **deliberately not called** — the same `_verify_proof` as `/deletion` with the fields unwrapped; a second door to one check |
 | a human-readable receipt page | `GET /v1/verification/public/{deletion_id}` | CIRISAgent (`verification.py:218`) | live; **not called** — static HTML that echoes the id and looks nothing up, so linking it would imply a verification that page does not do |
 | **a receipt to check** | — (`sign_deletion_proof`, `verification.py:106`, has no caller on main) | CIRISAgent | **missing** — `blocked_by: CIRISAgent#1207`. The card verifies a pasted receipt; nothing mints one |
 | an erasable payload | — (the disclosure store is unbuilt) | CIRISPersist | **missing** — `blocked_by: CIRISPersist#914`: nothing minted today is erasable |
 | peers / peering state | `GET /v1/federation/peers` | CIRISServer | live — `src/federation_peers.rs` |
-| grant federation consent | `GET /v1/accord/canonical/servers` (`src/accord_provision.rs:3711`), then `POST /v1/federation/consent` (owner-gated) — `authorFederationConsent`, `CIRISApiClient.kt` ~5270 | CIRISServer | live. (`/v1/accord/canonical-servers`, the path this row first named, 404s — the client's own comment records it) |
+| grant federation consent | `GET /v1/accord/canonical/servers` (`src/accord_provision.rs:3711`), then `POST /v1/federation/consent` (owner-gated) — `authorFederationConsent`, `CIRISApiClient.kt` ~5270 | CIRISServer | live. (`/v1/accord/canonical-servers`, with a hyphen, 404s.) |
 | erase the account | `POST /v1/system/data/reset-account` | CIRISServer | live — `src/system_data.rs:379`, owner + `CapabilityVerb::Wipe`, non-delegable |
 | erase the signing key | `POST /v1/system/data/wipe-signing-key` | CIRISServer | live — `src/system_data.rs:383`, same gate. Both of these go to `baseUrl`, the front door: the node's route on a node-only install, the agent's on an agent build (the route checker attributes them to the agent for that reason) |
 | which node is about to be wiped | `GET /v1/federation/node-code` → `key_id` (public, unauthenticated) | CIRISServer (`src/federation_nodecode.rs:92`) | live; **called BEFORE** reset-account / wipe-signing-key (`wipeTarget`) — after a key wipe the key_id is gone. A failed read leaves the identity unknown and nothing is matched by key |
-| after a reset or a wipe: forget that node on this device | — (client-local: `auth/WipedNode.kt` `forgetWipedNode`) | CIRISClient | live (CIRISClient#87). The server clears the node's home, never the app's secure storage; on success the VM deletes the stored + live session token and drops the switcher profile(s) pinned to the wiped key_id (a reset keeps them, token cleared — the key survived). By identity, not URL: another node at the same address stays. Touches no user-chosen file (a USB node-list or fed-ID backup) |
+| after a reset or a wipe: forget that node on this device | — (client-local: `auth/WipedNode.kt` `forgetWipedNode`) | CIRISClient | live. The server clears the node's home, never the app's secure storage; on success the VM deletes the stored + live session token and drops the switcher profile(s) pinned to the wiped key_id (a reset keeps them, token cleared — the key survived). By identity, not URL: another node at the same address stays. Touches no user-chosen file (a USB node-list or fed-ID backup) |
 | after a reset or a wipe: stop the runtime | `POST /v1/system/local-shutdown`, then `GET /v1/system/health` | CIRISAgent | live; **not this card's act** — reached through `onResetSetup` (CIRISApp's `Screen.DataManagement` arm): on desktop the app asks the runtime to shut down and polls its health before Startup relaunches it. Cited here because the route checker's closure follows the arm; the card itself never calls either |
 | **see what was shared** | — | — | **missing everywhere** — see §6 |
 | `consent:deletion_sla` / `consent:deletion_complete` | — | CIRISAgent | **missing** — blocks `building` for the two rows above |
-
-CIRISAgent's tree here is dated 2026-08-15; the three `my-data` routes may have
-moved since, and this row should be re-read before the stage advances.
 
 ## 4. Flow (how)
 
@@ -299,8 +296,7 @@ expect:
   text: {data_lens_deletion_status: "Requested — not done", data_row_deletion_sla: "None reported. The agent returns no deletion deadline and no completion (CIRISAgent#1212), so this stays at requested."}
 ```
 
-That last block used to fail; it passes now and says "none reported". The
-number in that row is the fix CIRISAgent#1212 owes.
+The row says "none reported"; the number in it is CIRISAgent#1212's to supply.
 
 **Reset and wipe** each confirm with three facts (`sheet_reset` / `sheet_wipe_key`,
 `*_fact_1..3`), the third being *"Your owner session on this node. The node does
@@ -380,8 +376,7 @@ from this client.
   the mapping *informational*; CIRISAgent has `/v1/dsar/*` routers. **Ask
   (CIRISServer or CIRISAgent, whichever owns the corpus):** serve that query as a
   paged route, so this card can list the Contributions naming this person and the
-  instrument's name stops over-promising. This is the single largest gap in my
-  area.
+  instrument's name stops over-promising. This is the largest gap on this card.
 * **CC 3.3.1's scopes are collapsed to a switch.** CC 3.3.1 defines
   `consent:scope:{kind}` over `retain / share / analyze / train / publish`, with
   sub-scoping in the token (`retain:90d`, `share:cohort:family`). The card offers
@@ -397,35 +392,34 @@ from this client.
   **Ask (CIRISAgent):** return `consent:deletion_sla:{days}` from
   `DELETE /v1/my-data/lens-traces` and expose `consent:deletion_complete` so the
   row can flip from "requested" to "done".
-* **Two of the three read routes are on the brain — said now (2026-09-28).** On a
+* **Two of the three read routes are on the brain, and the card says so.** On a
   node-only build the accord block and the trace-deletion button have no host at
-  all; the screen used to render a snackbar that vanished. The sharing block now
-  says the agent is not here (`data_accord_not_on_this_node`) and draws no
-  control; a failed read that is not an absent route is `data_accord_error`; and
-  the card's own errors are a persistent, tagged block (`data_error`), the same
-  fix as Settings (CSD-022).
-* **Every irreversible act here confirms with three facts (2026-09-28).** Reset,
-  wipe and the lens-deletion request were `AlertDialog`s with a generic body;
-  each is a `ConfirmSheet` now (`sheet_reset`, `sheet_wipe_key`,
-  `sheet_delete_traces`), keeping its `btn_*_confirm` / `btn_*_cancel` tags. The
-  third fact is honest about the signer: the node's own acts are authorised by
-  the owner session and signed by nobody as the person; the lens request is
-  filed by the agent under the session (CIRISAgent#1212). The erasure confirm
-  already said so.
+  all. The sharing block says the agent is not here
+  (`data_accord_not_on_this_node`) and draws no control; a failed read that is
+  not an absent route is `data_accord_error`; and the card's own errors are a
+  persistent, tagged block (`data_error`), not a snackbar, as in Settings
+  (CSD-022).
+* **Every irreversible act here confirms with three facts.** Reset, wipe and
+  the lens-deletion request are `ConfirmSheet`s (`sheet_reset`,
+  `sheet_wipe_key`, `sheet_delete_traces`) with `btn_*_confirm` /
+  `btn_*_cancel` tags. The third fact is honest about the signer: the node's own
+  acts are authorised by the owner session and signed by nobody as the person;
+  the lens request is filed by the agent under the session (CIRISAgent#1212).
+  The erasure confirm says the same.
 * **CC guardrail this card must never cross.** CC 2.4.1.1 carves out that a
   subject-authority `withdraws` "MUST NOT withdraw a third-party `capacity:*` or
   `detection:*` row about itself; selective erasure of adverse evidence is
   reputation laundering". If the list asked for above ever ships, it must render
   those rows as **contestable** (CC 4.5.5 `reconsideration:{grounds}`) and not
-  deletable. Writing that here now is cheaper than discovering it in review.
+  deletable.
 * **Erasure reaches traces and nothing else, and the card says so.** The
   node's only reachable erasure is `erase-agent-traces`: `trace_events` and
   `trace_llm_calls` hard-deleted, `detection_events` tombstoned, in one persist
   transaction. Everything else the node holds — chats, notes, files, consent
   rows, anything sealed in a signed envelope — is minted unerasable today:
-  CIRISPersist#573 ruled that erasability is decided at mint, and the disclosure
-  store that would make a payload erasable is unbuilt (**CIRISPersist#914**).
-  The node's own `scope_note` still cites #573 as if it had not landed. The card
+  erasability is decided at mint (CIRISPersist#573), and the disclosure store
+  that would make a payload erasable is unbuilt (**CIRISPersist#914**). The
+  node's own `scope_note` cites #573 as though it were pending. The card
   states the limit in the section header rows AND in the confirm's "Not erased"
   fact, because a person who erases their agent's traces and reads "erased" has
   been told their data is gone when it is not.
@@ -433,7 +427,7 @@ from this client.
   is correct and fail-honest (`withdraws_failed`, `incomplete`: "re-invoke until
   zero"), and needs a subject-signed request the client cannot make.
   **CIRISServer#677** asks for an owner-session path and a receipt. The card's
-  classifier for that response is written and tested now, so the "never done on
+  classifier for that response is written and tested, so the "never done on
   a partial" rule exists before the route becomes reachable.
 * **Receipts: the verifier exists, the signer has no caller.** The agent's
   `/v1/verification/*` verifies an Ed25519/JCS proof; `sign_deletion_proof` is
@@ -447,7 +441,7 @@ from this client.
   `DataErasureControllerTest.aReceiptSignedByAnOlderKeyIsFlaggedNotCalledForged`);
   (2) `GET /v1/verification/public/{deletion_id}` looks nothing up, so the card
   does not link it.
-* **DSAR is still split across cards, and this one does not submit one.**
+* **DSAR is split across cards, and this one does not submit one.**
   `/v1/dsar` (`routes/dsar.py:378`) files a ticket and starts a 90-day decay; the
   requests land in Tickets (CSD-013), where "completed" is a status word and not
   `consent:deletion_complete`. This card does not add a third DSAR door; the

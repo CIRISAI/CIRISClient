@@ -26,7 +26,7 @@ most tempted to soften: eviction stops the substrate wrapping *new* key grants;
 "**No DEK rotation; no re-encryption**". CC 3.3.6.1 names the consequence as a
 gap under the CC 1.13.3 honesty discipline — "Do not represent KEM rotation as
 recovering the confidentiality of previously-wrapped content." The revoke
-confirmation must say that, and today it does not (§6).
+confirmation says that (§3, §6).
 
 ## 2. Surface (what)
 
@@ -120,17 +120,17 @@ itself is tagged (`identity_device_list`, `identity_row_{occurrenceKeyId}`,
 nothing inside a row is, so a flow can count devices and click one it cannot
 read.
 
-**Reachable or private, per device (0.5.218).** The maintainer ruled on #655
-that announce is per device, and that the public roster is exactly the devices
-a person chose to announce on. This page is the owner's view, so it shows
+**Reachable or private, per device (0.5.218).** Announce is per device, and
+the public roster is exactly the devices a person chose to announce on (#655).
+This page is the owner's view, so it shows
 every device and says which kind each is. The words are "Reachable" and
 "Private", not "announced", because that is what the choice means to the
 person. Making a device reachable from here is not wired: this
 device's own announce is `POST /v1/federation/announce` (live), and the
 per-device "make this device reachable" on the approving side,
-`POST /v1/self/nodes/{node_key_id}/announce` (#678), is built on
-`integ/0.5.218` (`src/self_devices.rs:338-423`) and unreleased (CSD-094 §3). A private row therefore offers "Make reachable" only when it is the
-device in hand.
+`POST /v1/self/nodes/{node_key_id}/announce` (#678), is 0.5.218
+(`src/self_devices.rs:338-423`) and not wired here (CSD-094 §3). A private row
+therefore offers "Make reachable" only when it is the device in hand.
 
 **Approve a new device** (CSD-094) sits directly below the roster, because it
 adds a device to this person's identity (CC 3.3.6).
@@ -152,26 +152,26 @@ an error also must not look alike.
 | value | endpoint | owner | state |
 |---|---|---|---|
 | the self fed-ID | `GET /v1/setup/owned-nodes` → `owner`, falling back to `GET /v1/federation/self-key-record` | CIRISServer | live — `bootstrap.rs:1489`, `federation_admin.rs:900` |
-| the roster | `GET /v1/self/occurrences?identity_key_id=…` | CIRISServer | live — `src/auth/occurrence.rs:668`, **unauthenticated** on 0.5.217. On 0.5.218 (#655) the owner's session sees every row; anyone else sees only announced nodes and an owner with none announced gets the unknown-identity empty answer, marked only by a top-level `audience: "owner" \| "public"`. `SelfOccurrencesResponse` has no `audience`, so a session mismatch would render "No devices enrolled yet" over a roster the node withheld — error looking like empty. To wire with the 0.5.218 client pass (with `GET /v1/self/contact-code`'s per-device `announced`, which is where "public vs private device" lives; there is no per-row flag) |
-| reachable / private on a row | same route, owner session | CIRISServer | **unconfirmed** field name, until CIRISClient#78 |
-| make a device reachable | this device: `POST /v1/federation/announce` (`src/claim_remote.rs:1250`, live, owner-gated, loopback; the RNS announce follows on next boot). Another device: `POST /v1/self/nodes/{node_key_id}/announce` on the approving side (`src/self_devices.rs:338-423` on `integ/0.5.218`) | CIRISServer | this device **live**; another device **built, unreleased, not wired** (#678; CSD-094 §3) |
+| the roster | `GET /v1/self/occurrences?identity_key_id=…` | CIRISServer | live — `src/auth/occurrence.rs:668`, **unauthenticated** on 0.5.217. On 0.5.218 (#655) the owner's session sees every row; anyone else sees only announced nodes and an owner with none announced gets the unknown-identity empty answer, marked only by a top-level `audience: "owner" \| "public"`. `SelfOccurrencesResponse` has no `audience`, so a session mismatch would render "No devices enrolled yet" over a roster the node withheld — error looking like empty. Not wired; it reads together with `GET /v1/self/contact-code`'s per-device `announced`, which is where "public vs private device" lives (there is no per-row flag) |
+| reachable / private on a row | same route, owner session | CIRISServer | **unconfirmed** field name (CIRISClient#78) |
+| make a device reachable | this device: `POST /v1/federation/announce` (`src/claim_remote.rs:1250`, live, owner-gated, loopback; the RNS announce follows on next boot). Another device: `POST /v1/self/nodes/{node_key_id}/announce` on the approving side (0.5.218, `src/self_devices.rs:338-423`) | CIRISServer | this device **live**; another device **0.5.218, not wired** (#678; CSD-094 §3) |
 | approve a new device | `POST /v1/setup/claim-remote` | CIRISServer | live; specified in CSD-094 |
-| add a device | `POST /v1/self/occurrence` | CIRISServer | live on the node — `occurrence.rs:663` (handler `:288`) — and **unreachable from this client**: the route demands the person's hybrid request signature (`x-ciris-key-id` + Ed25519/ML-DSA-65, `auth/verify.rs`) before anything else, and the client only ever sends a Bearer; `federationHttpClient` does not sign. Every call answers 401 "missing x-ciris-key-id", which the view model renders as "Sign in as yourself first" — the wrong remedy. There is no owner-session variant. blocked_by: a signing path in the client or an owner-session route on the node (draft issue in the review report) |
-| evict a device (0.5.218) | `POST /v1/self/occurrence/revoke {identity_key_id, occurrence_key_id, reason?, force_self?}` | CIRISServer (`src/self_devices.rs::revoke_occurrence` @ `53d1ffb5`) | **0.5.218, called** — owner session bearer, the owner's pen signs server-side (#700 merged into 0.5.218). The confirm is now the shared ConfirmSheet (`identity_revoke_confirm` / `_cancel`): Device · What changes ('It can no longer act as you or receive anything new. What was already shared with it stays readable to it.') · Signed by. A refusal is a `NodeRefusal` by id, never raw text; an incomplete eviction is §2's `x_private:eviction_report` |
+| add a device | `POST /v1/self/occurrence` | CIRISServer | live on the node — `occurrence.rs:663` (handler `:288`) — and **unreachable from this client**: the route demands the person's hybrid request signature (`x-ciris-key-id` + Ed25519/ML-DSA-65, `auth/verify.rs`) before anything else, and the client only ever sends a Bearer; `federationHttpClient` does not sign. Every call answers 401 "missing x-ciris-key-id", which the view model renders as "Sign in as yourself first" — the wrong remedy. There is no owner-session variant. blocked_by: a signing path in the client or an owner-session route on the node |
+| evict a device (0.5.218) | `POST /v1/self/occurrence/revoke {identity_key_id, occurrence_key_id, reason?, force_self?}` | CIRISServer (`src/self_devices.rs::revoke_occurrence`) | **0.5.218, called** — owner session bearer, the owner's pen signs server-side (CIRISServer#700). The confirm is the shared ConfirmSheet (`identity_revoke_confirm` / `_cancel`): Device · What changes ('It can no longer act as you or receive anything new. What was already shared with it stays readable to it.') · Signed by. A refusal is a `NodeRefusal` by id, never raw text; an incomplete eviction is §2's `x_private:eviction_report` |
 | revoke the device you are using (`force_self`) | same route, `force_self: true` | CIRISServer | **0.5.218, called — offered, deliberately, behind a second confirm.** Server-side, `force_self` is required when the occurrence is one of the keys of the node SERVING the request: the eviction then also withdraws THIS node's owner-binding and ends the owner's authority here, as a self-release does; without it the node refuses `self.release_self_requires_force` (409). The client never decides which device is "this one" — the node does, by refusing — so the flow mirrors release: first attempt without force → the refusal is explained (`identity_revoke_outcome`: 'That is this device…') with 'Revoke it anyway…' (`btn_identity_revoke_force`) → a SECOND ConfirmSheet (`identity_revoke_force_confirm` / `_cancel`) whose third fact says 'This device loses access. You are signed out here, and this node no longer knows you as its owner.' → only then `force_self: true`. The flag is absent from the body otherwise, so a 0.5.217 node reads what it always read. Why offered rather than hidden: revoking the device you hold is exactly the release this screen already offers for nodes, and hiding it would leave a lost-trust device you are holding unrevocable from itself. Pinned: `IdentityManagementDevicesTest.revokingThisDeviceSendsForceSelfOnlyAfterTheSecondConfirm`, `…cancellingTheSecondRevokeConfirmForcesNothing`, `Server218ChatEvictWireTest.forceSelfIsOnTheWireOnlyWhenAsked` |
-| (history) evict a device on 0.5.217 | `POST /v1/self/occurrence/revoke` | CIRISServer | live — `occurrence.rs:665` (handler `:436`), **same signature requirement, same 401**: the lost/stolen-device eviction this card exists for cannot happen from the app. Its confirm is also an AlertDialog naming neither the device nor the signer, where CC 3.3.6.1 wants both plus "already-shared content is not re-encrypted" (the release confirm below does it right). **CIRISServer#700** (open, branch `fix/evict-device-0.5.218`, unreleased) moves this route to the self-device router and authorises it by the **owner's session bearer**, the owner's pen signing server-side, as `release` is. The app's bearer is then enough, and this 401 should clear when #700 ships; a request with no session still answers 401 (`self.owner_session_required`), and a delegated session is refused (`self.delegate_may_not_author`). #700 also makes revoke and `release` ONE act (`evict_device`): withdraw the owner binding, write a SIGNED occurrence revocation that replicates, kick replication, read both halves back, and answer with each part done or failed plus `history`; any failed part is `self.evict_incomplete` (500). blocked_by: CIRISServer#700 (`x_private:eviction_report`, §2) |
+| evict a device on a 0.5.217 node | `POST /v1/self/occurrence/revoke` | CIRISServer | `occurrence.rs:665` (handler `:436`) demands the person's request signature, so the app's bearer gets **401**: the lost/stolen-device eviction this card exists for needs ciris-server >= 0.5.218. There the route is on the self-device router and authorised by the **owner's session bearer**, the owner's pen signing server-side, as `release` is (CIRISServer#700); a request with no session answers 401 (`self.owner_session_required`), and a delegated session is refused (`self.delegate_may_not_author`). Revoke and `release` are ONE act (`evict_device`): withdraw the owner binding, write a SIGNED occurrence revocation that replicates, kick replication, read both halves back, and answer with each part done or failed plus `history`; any failed part is `self.evict_incomplete` (500, `x_private:eviction_report`, §2) |
 | hand a node back | `POST /v1/self/nodes/{node_key_id}/release` | CIRISServer `src/self_devices.rs:212` (route `:469`), owner session | live — `releaseNode` via `SelfDevicesApi`; ConfirmSheet naming the node, the effect and the signer, and a second sheet when the node refuses `self.release_self_requires_force` because it is the one you are talking to. Refusals render by id (all ten `self.*` ids in en.json) |
 | the node's own warnings | `GET /v1/system/health` on the NODE | CIRISServer `src/health.rs:589` | live — `SelfDevicesApi.nodeWarnings()`, the node's (not the brain's) health warnings shown above the roster |
 | mint this device's fed-ID | `POST /v1/self/identity` | CIRISServer | live — `identity.rs:1945`, loopback-only |
 | portable ID / repair | `POST /v1/self/occurrence/portable`, `POST /v1/self/associate` | CIRISServer | live — `portable_occurrence.rs:1152`, `:1155`, loopback-only |
-| where the associated device's key lives | `POST /v1/self/associate {device: "tpm" \| "software"}` → `device_custody` | CIRISServer (0.5.218 `portable_occurrence.rs:888-915`, CIRISServer#639) | **wired in this review.** `switch_identity_associate_hardware` asks for `tpm`; since 0.5.218 a host with no hardware-sealed storage refuses up front, 409 `self.associate.hardware_custody_unavailable`, nothing minted — where it used to answer 200 with a software key under a hardware label. The refusal renders by id (`txt_identity_associate_refusal`, new en.json key) and offers `btn_identity_associate_software`, which re-sends with `device: "software"`: software is the person's stated choice, not a fallback made for them. The answer's `device_custody` is shown in the notice. The associate errors used to be string-matched ("501" for a YubiKey path the node now implements); they are a `NodeRefusal` now |
-| associate from a YubiKey | `POST /v1/self/associate {yubikey, key_id, mldsa_usb_dir, pkcs11}` | CIRISServer (CIRISServer#618, on main) | live on the node, **not built** — `btn_identity_associate_yubikey` stays a disabled "coming soon"; the client would need the key id, the ML-DSA USB folder and the PIV PIN/slot. The old "server 501s" comment was wrong |
-| `revoked` on a row | `GET /v1/self/occurrences?include_revoked=1` | CIRISServer | live; **wired in #94** (before it, the client never sent the parameter) |
-| `label` on a row | same route; owner-session only | CIRISServer | live; **wired in #94** (before it, `SelfOccurrence.kt` had no field) |
-| name a device | `POST /v1/self/occurrence/label` | CIRISServer | live (`src/self_devices.rs:473`); **wired in #94** |
+| where the associated device's key lives | `POST /v1/self/associate {device: "tpm" \| "software"}` → `device_custody` | CIRISServer (0.5.218 `portable_occurrence.rs:888-915`, CIRISServer#639) | **wired.** `switch_identity_associate_hardware` asks for `tpm`; from 0.5.218 a host with no hardware-sealed storage refuses up front, 409 `self.associate.hardware_custody_unavailable`, nothing minted, rather than answering 200 with a software key under a hardware label. The refusal renders by id (`txt_identity_associate_refusal`) and offers `btn_identity_associate_software`, which re-sends with `device: "software"`: software is the person's stated choice, not a fallback made for them. The answer's `device_custody` is shown in the notice. The associate errors are a `NodeRefusal`, never string-matched |
+| associate from a YubiKey | `POST /v1/self/associate {yubikey, key_id, mldsa_usb_dir, pkcs11}` | CIRISServer (CIRISServer#618) | live on the node, **not built** — `btn_identity_associate_yubikey` is a disabled "coming soon"; the client would need the key id, the ML-DSA USB folder and the PIV PIN/slot |
+| `revoked` on a row | `GET /v1/self/occurrences?include_revoked=1` | CIRISServer | live; **wired** |
+| `label` on a row | same route; owner-session only | CIRISServer | live; **wired** (`SelfOccurrence.label`) |
+| name a device | `POST /v1/self/occurrence/label` | CIRISServer | live (`src/self_devices.rs:473`); **wired** |
 | `hardware_attestation` rendering | already on the wire | CIRISClient | **decoded and not drawn** |
-| sign out of this device | `btn_logout` in the **This device** block: "Signed in on this device as {identity}", plus "via Google/Apple" or "with a password on this node" only when the client recorded the method at sign-in (`models/SignInMethod.kt`) | CIRISClient | **in #93**: the "Account" row is deleted; there is no account in CIRIS, only identities, so sign-out lives with the identity it ends (#51 still holds: a bare node reaches it here). Settings keeps a second `btn_logout` until CIRISAgent#1181's gate routes here |
-| sign out from My things (every install mode) | `btn_my_things_sign_out` in the My things sheet → ConfirmSheet `sheet_sign_out` (`btn_sign_out_confirm` / `_cancel`) with three facts: what is signed out (this device's session with this node; the node revokes it and the device forgets it) · what stays on this device (language and display settings, the nodes added; the node keeps identity, contacts, chats and files) · how to sign back in (Login, the same way; device reset is on that screen) | CIRISClient | **CIRISClient#51.** The avatar is on every screen of every install, so a run-without-AI phone — no agent Settings — signs out from it. It runs `auth/SignOut.kt`'s `SignOut`, the ONE sign-out: Settings' and this card's `btn_logout` and the desktop menu's `menu_logout` call `signOut.now()`, which stops the chat's polling, runs `SettingsViewModel.logout` (secure storage cleared by `clearSession`, then the node's logout route, CSD-022 §3), drops the in-memory token — which is what resets consent, contacts and chat state in `CIRISApp` — and lands on Login. Only this control confirms; the `btn_logout`s stay one tap because harnesses drive them. Pinned: `SignOutOnEveryInstallTest` (node mode, headless, confirm → token cleared → Login; and no logout callback carries its own sign-out) |
+| sign out of this device | `btn_logout` in the **This device** block: "Signed in on this device as {identity}", plus "via Google/Apple" or "with a password on this node" only when the client recorded the method at sign-in (`models/SignInMethod.kt`) | CIRISClient | **live**: there is no account in CIRIS, only identities, so sign-out lives with the identity it ends, and a bare node reaches it here. Settings keeps a second `btn_logout`, which CIRISAgent#1181's gate drives |
+| sign out from My things (every install mode) | `btn_my_things_sign_out` in the My things sheet → ConfirmSheet `sheet_sign_out` (`btn_sign_out_confirm` / `_cancel`) with three facts: what is signed out (this device's session with this node; the node revokes it and the device forgets it) · what stays on this device (language and display settings, the nodes added; the node keeps identity, contacts, chats and files) · how to sign back in (Login, the same way; device reset is on that screen) | CIRISClient | **live.** The avatar is on every screen of every install, so a run-without-AI phone — no agent Settings — signs out from it. It runs `auth/SignOut.kt`'s `SignOut`, the ONE sign-out: Settings' and this card's `btn_logout` and the desktop menu's `menu_logout` call `signOut.now()`, which stops the chat's polling, runs `SettingsViewModel.logout` (secure storage cleared by `clearSession`, then the node's logout route, CSD-022 §3), drops the in-memory token — which is what resets consent, contacts and chat state in `CIRISApp` — and lands on Login. Only this control confirms; the `btn_logout`s stay one tap because harnesses drive them. Pinned: `SignOutOnEveryInstallTest` (node mode, headless, confirm → token cleared → Login; and no logout callback carries its own sign-out) |
 
 ## 4. Flow (how)
 
@@ -204,7 +204,8 @@ expect:
   text: {"proposed:identity_revoke_dek_note": "already shared"}
 ```
 
-The last line asserts a sentence that does not exist yet (§6). On a node that is
+The last line's tag is `proposed:`: the sentence is the history note
+(`mobile.evict_history_note`, §2), which carries no tag. On a node that is
 down:
 
 ```yaml
@@ -226,20 +227,17 @@ repair; hardware attestation, which no CI device produces.
 
 ## 6. Delta — card vs API vs CC
 
-* **The 0.5.216 device-identity work is entirely unconsumed.** The node serves
-  `label`, serves `revoked` under `include_revoked`, and accepts
-  `POST /v1/self/occurrence/label` and `POST /v1/self/nodes/{id}/release`. The
-  client calls none of them and its `SelfOccurrence` (`SelfOccurrence.kt:29-46`)
-  has no field for the first two. **Ask (CIRISClient):** add `label: String?` and
-  `revoked: Boolean = false` to `SelfOccurrence`, pass `include_revoked` behind a
-  "show evicted devices" toggle, and add `labelOccurrence()` driving
-  `POST /v1/self/occurrence/label`. A roster of bare key ids is a roster a person
-  cannot act on: "evict the laptop" requires knowing which key id is the laptop.
-* **CC → card, the honesty gap.** The revoke confirmation says nothing about
-  CC 4.5.12.1. A person evicting a stolen laptop is entitled to read, at that
-  moment, that history already shared stays shared and only new content is
-  withheld. **Ask (CIRISClient):** put that sentence in the confirm dialog, in
-  CC 3.3.6.1's own terms, before the destructive button.
+* **The 0.5.216 device-identity work is consumed.** `label`, `revoked` under
+  `include_revoked`, `POST /v1/self/occurrence/label` and
+  `POST /v1/self/nodes/{id}/release` are wired (§3): a roster of bare key ids is
+  a roster a person cannot act on, because "evict the laptop" requires knowing
+  which key id is the laptop. In §2 the `label` and `revoked` fields are
+  `proposed:` tags.
+* **CC → card, the honesty gap — closed.** A person evicting a stolen laptop is
+  entitled to read, at that moment, that history already shared stays shared
+  and only new content is withheld (CC 4.5.12.1, CC 3.3.6.1). The revoke
+  ConfirmSheet says so before the destructive button, and the outcome repeats
+  it (§3).
 * **CC → card, the missing gradient.** CC 4.5.12.3 says the security gradient of
   single-vouch admission "lives in the optional `hardware_attestation` field, not
   in the admission rule". The client decodes that field and never draws it, so
@@ -253,7 +251,7 @@ repair; hardware attestation, which no CI device produces.
   `cohort_scope: federation`. **Ask (CIRISServer):** state the roster's
   `cohort_scope` on the route and gate it accordingly; an unauthenticated global
   read of *which devices a named person owns* needs a written constitutional
-  basis, and I could not find one.
+  basis, and none is written.
 * **A narrowing worth naming.** CC 3.3.6 closes `device_class` over six values
   (`phone | laptop | server | embedded | agent | service`); persist's
   `check_device_class` and the client both allow three. Not a defect — a

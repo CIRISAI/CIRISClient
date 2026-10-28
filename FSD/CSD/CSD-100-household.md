@@ -25,8 +25,8 @@ Integrity**: `cohort_scope: family` content is structurally invisible outside
 the roster (CC 5.2), so the roster and the rule that changes it are exactly
 what decides who can read what the household shares.
 
-Until 0.5.216 nothing in production could form one (CIRISServer#627); the node
-has served nine routes since then and the client called none of them.
+Forming one needs CIRISServer 0.5.216 or later (CIRISServer#627), which serves
+nine household routes.
 
 ## 2. Surface (what)
 
@@ -35,16 +35,14 @@ surface: layer-family
 screen: LayerFamily
 ```
 
-**No new card: the Family hub IS the household.** Family › Rules already opens
-on the Family layer hub (`LayerFamily`, CSD-050), whose mission is "who is in
-this circle and the standing rules that decide trust here". For Family, it drew
-three description-only sections about data it never fetched (CSD-050 §1), and
-its subtitle described the self-collective, not a household. A second
-"Household" card beside it would have been the same idea under another name.
-So `LayerHubScreen` takes a `familyContent` slot, and for the Family scope the
-household panel (`HouseholdPanel`) comes first and replaces those three
-sections. The delegations card below it is unchanged. The frame tag
-`layer_hub_family` and `nav_epistemic_layer_family` are unchanged.
+**No new card: the Family hub IS the household.** Family › Rules opens on the
+Family layer hub (`LayerFamily`, CSD-050), whose mission is "who is in this
+circle and the standing rules that decide trust here". A second "Household"
+card beside it would be the same idea under another name. So `LayerHubScreen`
+takes a `familyContent` slot, and for the Family scope the household panel
+(`HouseholdPanel`) comes first, in place of the description-only sections
+(CSD-050 §1). The delegations card sits below it. The frame tag
+`layer_hub_family` and `nav_epistemic_layer_family` are the hub's.
 
 **The roster is not here.** Who is in the household is a People fact, and lives
 on Family › People (CSD-101). This card names only the **founders**, because
@@ -212,7 +210,7 @@ A pasted change for a household this person is not in on this node, or for a
 ## 3. Contracts (who)
 
 All node-owned, all at the node URL (`ClientHouseholds(apiClient, nodeBaseUrl)`),
-never `$baseUrl`. CIRISServer `origin/main` @ `046e1b39`, `src/family_api.rs`,
+never `$baseUrl`. CIRISServer 0.5.217, `src/family_api.rs`,
 routes mounted at `:1624-1632`.
 
 | value | endpoint | owner | state |
@@ -226,12 +224,12 @@ routes mounted at `:1624-1632`.
 | propose | `POST /v1/families/{id}/changes/envelope {action, key_id?, role?}` → `{change_envelope, signing_bytes_base64, required_signatures, signers}` | CIRISServer | **live** (`:1244-1386`); quorum only. **Changes with CIRISServer#700:** an `add` (a roster that grows) is refused 409 `membership.consent_required` here, at cosign and at assemble; remove, role and dissolve are unaffected (§3.3) |
 | sign | `POST /v1/families/{id}/changes/cosign {change_envelope, signatures}` → `{signature, signatures, required_signatures, quorum_met}` | CIRISServer | **live** (`:1420-1473`); this node's owner signs with their own pen |
 | apply | `POST /v1/families/{id}/changes/assemble {change_envelope, signatures}` | CIRISServer | **live** (`:1492-1612`); the node verifies the quorum, the client only counts |
-| who to name | `GET /v1/contacts` | CIRISServer (`src/contacts_chat.rs`) | **live**; the founding-member picker on the form card, and the names on the founders row and the ceremony's signer chips. Called through `listContacts(nodeBaseUrl)` (`ClientHouseholds.contacts`), at the node URL like the household routes themselves — it built its URL from `$baseUrl` until the People review (CSD-005 §3) |
+| who to name | `GET /v1/contacts` | CIRISServer (`src/contacts_chat.rs`) | **live**; the founding-member picker on the form card, and the names on the founders row and the ceremony's signer chips. Called through `listContacts(nodeBaseUrl)` (`ClientHouseholds.contacts`), at the node URL like the household routes themselves (CSD-005 §3) |
 | who "you" are | `GET /v1/setup/owned-nodes` → `owner` | CIRISServer | **live**, loopback; so the ceremony can say whether you have signed and the founders row can say "You" |
-| add / remove / role | `POST /v1/families/{id}/members`, `DELETE /v1/families/{id}/members/{key_id}`, `POST /v1/families/{id}/members/{key_id}/role` | CIRISServer | **live, not called by this card** — the roster's acts (CSD-101). Since the review the hub's confirm is `confirmHouseholdAct()`, which sends only leave and dissolve, so the route gate no longer sees these on `LayerFamily` (§3.1) |
+| add / remove / role | `POST /v1/families/{id}/members`, `DELETE /v1/families/{id}/members/{key_id}`, `POST /v1/families/{id}/members/{key_id}/role` | CIRISServer | **live, not called by this card** — the roster's acts (CSD-101). The hub's confirm is `confirmHouseholdAct()`, which sends only leave and dissolve, so the route gate does not see these on `LayerFamily` (§3.1) |
 | refusals | `{error, reason_id, detail}`; 17 `family.*` ids | CIRISServer | **live**; every id has an `en.json` key under `family.*`, rendered by id through `NodeRefusal` |
-| a store for pending changes | none — the envelope is carried by hand | CIRISServer | **not a route.** Stated in §2.2 and on the card, not faked. Draft ask in the PR report |
-| rename | none | CIRISServer | **not a route.** A household keeps the name it was formed with; the card says so and offers no rename. Draft ask in the PR report |
+| a store for pending changes | none — the envelope is carried by hand | CIRISServer | **not a route.** Stated in §2.2 and on the card, not faked. Ask not yet filed |
+| rename | none | CIRISServer | **not a route.** A household keeps the name it was formed with; the card says so and offers no rename. Ask not yet filed |
 
 ### 3.1 One door per act, one view model for two screens
 
@@ -243,23 +241,19 @@ Each act has exactly one control, on exactly one screen:
 | add, remove, make founder / member | `btn_household_member_pick_*`, `btn_household_member_remove_*`, `btn_household_member_role_*` | the roster (Family › People, CSD-101) | `HouseholdsViewModel.confirmMemberAct()` |
 
 The two screens share one `HouseholdsViewModel`, so the household picked in one
-is the one shown in the other. Until the review, one `confirm()` dispatched
-every act after the shared `ConfirmSheet`, so the route gate saw all six
-household writes on both screens — true of the closure, false of the UI, and
-recorded as a decision in `packaging/csd_routes_baseline.json`. **The
-dispatcher is now split by the kind of act** (`HouseholdAct.OfHousehold` —
-leave, dissolve — and `HouseholdAct.OfMember` — add, remove, role): each
-screen's confirm sends only its own kind and leaves the other waiting,
-unsent (`HouseholdsViewModelTest.theRostersConfirmNeverSendsAHouseholdAct`,
-`theHubsConfirmNeverSendsAMemberAct`). Red first: with the five rows removed
-from the baseline, the gate failed on the old code with those five as new
-duplicates; with the split it passes, and the rows are gone from the baseline.
+is the one shown in the other. **The dispatcher is split by the kind of act**
+(`HouseholdAct.OfHousehold` — leave, dissolve — and `HouseholdAct.OfMember` —
+add, remove, role): each screen's confirm sends only its own kind and leaves
+the other waiting, unsent
+(`HouseholdsViewModelTest.theRostersConfirmNeverSendsAHouseholdAct`,
+`theHubsConfirmNeverSendsAMemberAct`), so the route gate sees each household
+write only on the screen that makes it.
 
 **The one route that IS two doors, by design**:
 `POST /v1/families/{id}/changes/envelope`. A quorum dissolve is proposed from
 the hub and a quorum add / remove / role from the roster, each from the one
 control that act has; the proposal is one route with an `action` field. It
-stays in the baseline as that decision.
+is in `packaging/csd_routes_baseline.json` as that decision.
 
 ### 3.2 Stated limits (on the card, `household_limits`, and here)
 
@@ -268,30 +262,27 @@ promising otherwise:
 
 1. **The name is fixed at forming.** No rename route (§3).
 
-Two limits this list carried until 0.5.218 are **fixed in persist v49
-(CIRISPersist#910)** and cleared on `integ/0.5.218`, which builds on v49: an
-addition and a role change are now their own signed rows that replicate
-(`src/family_api.rs:57-61`, `:1073`, `:1296`), and someone removed can be
-added back (`:1099-1100`; `tests/family_crud.rs:386`), so the node no longer
-refuses `family.readd_unsupported`. A 0.5.217 node (persist v48) still behaves
-the old way — a roster change after forming reaches only that node, and
-re-adding is refused `family.readd_unsupported` — and the card's
-`household_limits` sentence still says so until 0.5.218 ships. From
-CIRISServer#700 on, *adding* anyone at all waits on the invitation (§3.3).
+Persist v49 (CIRISPersist#910), which 0.5.218 builds on, makes an addition and
+a role change their own signed rows that replicate (`src/family_api.rs:57-61`,
+`:1073`, `:1296`), and lets someone removed be added back (`:1099-1100`;
+`tests/family_crud.rs:386`), so the node does not refuse
+`family.readd_unsupported`. A 0.5.217 node (persist v48) has two more limits —
+a roster change after forming reaches only that node, and re-adding is refused
+`family.readd_unsupported` — and the card's `household_limits` sentence says
+so. *Adding* anyone at all waits on the invitation (§3.3).
 
-### 3.3 Nobody joins without their own consent (ruling of 2026-09-30)
+### 3.3 Nobody joins without their own consent
 
-The maintainer ruled on 2026-09-30 that **adding someone to a household or a
-community requires their consent, including founding members named when it is
-formed.** The normative text is CIRISConstitution#133. Persist's enforcement is
-CIRISPersist#955 (v52): one inviter proposes, the invitee accepts or declines,
-the quorum stays on the admitting record, and an invitation expires in 30 days
-or less. Reverse quorum is not a membership rule; it stays CSD-070's commons
-brake.
+**Adding someone to a household or a community requires their consent,
+including founding members named when it is formed** (CIRISConstitution#133,
+the normative text). Persist enforces it (CIRISPersist#955, v52): one inviter
+proposes, the invitee accepts or declines, the quorum stays on the admitting
+record, and an invitation expires in 30 days or less. Reverse quorum is not a
+membership rule; it stays CSD-070's commons brake.
 
-**CIRISServer 0.5.218** ships it (persist v52, edge v38; merged at
-`53d1ffb5`). The interim 409 `membership.consent_required` of CIRISServer#700
-never reached a release. On this card (CSD-106):
+**CIRISServer 0.5.218** carries it (persist v52, edge v38). No released node
+sends the 409 `membership.consent_required` of CIRISServer#700. On this card
+(CSD-106):
 
 * **the invitee's inbox** is drawn first on this hub: household invitations
   addressed to the owner (`GET /v1/self/invites`), each with Accept and Decline
@@ -338,7 +329,7 @@ facts → confirm → the household is gone from the switcher.
 
 ## 5. QA plan
 
-Spec complete and flow written (`testing/flows/drafts/csd-100-household.yaml`, floor `unreleased`); promotes to `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97). **Floor left `unreleased` on the 0.5.225 run (2026-09-29):** the flow names the ConfirmSheet's `sheet_confirm_household`, `confirm_household_fact_1..3`, `btn_confirm_household_confirm` / `_cancel` (built from `tagPrefix`). Real in 0.5.225, but built by interpolation, which the flow tag check (`testing/test_flows.py::_client_tag_strings`: whole literals and `$`-headed prefixes only) cannot see; a promoted flow naming them goes red at the keyboard. The fix is in that check, not the flow.
+Spec complete and flow written (`testing/flows/drafts/csd-100-household.yaml`, floor `unreleased`); it becomes `testable` when the floor is no longer `unreleased` and the flow runs on the matrix (#97). **The floor stays `unreleased`:** the flow names the ConfirmSheet's `sheet_confirm_household`, `confirm_household_fact_1..3`, `btn_confirm_household_confirm` / `_cancel` (built from `tagPrefix`). Real in 0.5.225, but built by interpolation, which the flow tag check (`testing/test_flows.py::_client_tag_strings`: whole literals and `$`-headed prefixes only) cannot see; a promoted flow naming them goes red at the keyboard. The fix is in that check, not the flow.
 
 **Platforms.** All five; the card calls only the node.
 
@@ -353,10 +344,9 @@ sign and apply carry the signatures; a pasted change for another household is
 refused.
 
 **Untested, and must be established on a live node.** The ceremony across two
-real nodes (it needs a quorum household whose record is on both, which
-CIRISPersist#910 made fragile on persist v48; fixed in persist v49 and cleared
-in `integ/0.5.218`'s code, while the devices ladder's red-expected family rungs
-move to consent-to-join with CIRISServer#700); `family.author_signer_unavailable` on a node whose owner pen
+real nodes (it needs a quorum household whose record is on both, which is
+fragile on persist v48, CIRISPersist#910, fixed in v49);
+`family.author_signer_unavailable` on a node whose owner pen
 cannot open; the pager past 100 households.
 
 **Not tested here.** Clipboard contents (no `/clipboard` endpoint); the flow
