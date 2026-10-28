@@ -14,6 +14,7 @@ import ai.ciris.mobile.shared.ui.theme.CIRISColors
 import ai.ciris.mobile.shared.viewmodels.NodeWait
 import ai.ciris.mobile.shared.viewmodels.StartupPhase
 import ai.ciris.mobile.shared.viewmodels.StartupViewModel
+import ai.ciris.mobile.shared.viewmodels.localizedText
 import ai.ciris.mobile.shared.ui.primitives.CirisButton
 import ai.ciris.mobile.shared.ui.primitives.ListState
 import ai.ciris.mobile.shared.ui.primitives.StateBlock
@@ -74,6 +75,7 @@ fun StartupScreen(
     val startedServiceSlots by viewModel.startedServiceSlots.collectAsState()
     val statusMessage by viewModel.statusMessage.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
+    val startupError by viewModel.startupError.collectAsState()
     val elapsedSeconds by viewModel.elapsedSeconds.collectAsState()
     val prepStepsCompleted by viewModel.prepStepsCompleted.collectAsState()
     val verifyStepsCompleted by viewModel.verifyStepsCompleted.collectAsState()
@@ -105,12 +107,11 @@ fun StartupScreen(
         languagesPreloaded = true
     }
 
-    // Rotate through languages every 2.5 seconds during startup (visual effect)
-    // Always rotate regardless of language selection - it's a startup animation
-    // Stop rotation when startup completes (phase becomes READY or FIRST_RUN_SETUP)
+    // Rotate through languages every 2.5 seconds while startup is running (a
+    // visual effect). It stops the moment startup settles, ERROR included: the
+    // failure, Retry and the logs block are read in the user's own language.
     LaunchedEffect(languagesPreloaded, phase) {
-        val shouldRotate = languagesPreloaded &&
-            phase != StartupPhase.READY && phase != StartupPhase.FIRST_RUN_SETUP
+        val shouldRotate = languagesPreloaded && !phase.settled
         if (shouldRotate) {
             while (true) {
                 delay(2500)
@@ -121,9 +122,9 @@ fun StartupScreen(
         }
     }
 
-    // Reset to persisted language when startup completes (READY or going to interact)
+    // Back to the user's language once startup settles (ready, setup, or failed)
     LaunchedEffect(phase) {
-        if (phase == StartupPhase.READY || phase == StartupPhase.FIRST_RUN_SETUP) {
+        if (phase.settled) {
             localization?.resetToPersistedLanguage()
         }
     }
@@ -234,7 +235,7 @@ fun StartupScreen(
                 )
 
                 // Show current language indicator during startup (always rotating)
-                if (phase != StartupPhase.READY && phase != StartupPhase.FIRST_RUN_SETUP) {
+                if (!phase.settled) {
                     Text(
                         text = currentLangInfo.nativeName,
                         fontSize = 9.sp,
@@ -356,14 +357,27 @@ fun StartupScreen(
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                // Error message (short)
+                // Why, in the user's language where the cause is known; the
+                // raw text only where nothing better exists.
+                val explained = startupError?.localizedText()
                 Text(
-                    text = error,
+                    text = explained?.let { localizedString(it.key, it.params) } ?: error,
                     fontSize = 12.sp,
                     color = CIRISColors.TextSecondary,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(bottom = 16.dp)
+                    modifier = Modifier
+                        .padding(bottom = if (explained?.hintKey != null) 8.dp else 16.dp)
+                        .testable("txt_startup_error_reason"),
                 )
+                explained?.hintKey?.let { hint ->
+                    Text(
+                        text = localizedString(hint),
+                        fontSize = 12.sp,
+                        color = CIRISColors.TextSecondary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 16.dp).testable("txt_startup_error_hint"),
+                    )
+                }
 
                 // Retry button - immediately visible
                 Button(
@@ -406,10 +420,13 @@ fun StartupScreen(
                         // Now the shared block, so this screen reports the same environment
                         // in the same words as login and interact, and offers both routes out.
                         DebugLogsBlock(
-                            extra = mapOf(
-                                "screen" to "startup",
-                                "error (full)" to error,
-                            ),
+                            extra = buildMap {
+                                put("screen", "startup")
+                                put("error (full)", error)
+                                (startupError as? ai.ciris.mobile.shared.viewmodels.StartupError.Fatal)?.let {
+                                    put("fatal code", it.code.code + " " + it.code.params.entries.joinToString(" ") { (k, v) -> "$k=$v" })
+                                }
+                            },
                             modifier = Modifier.padding(bottom = 12.dp),
                         )
 

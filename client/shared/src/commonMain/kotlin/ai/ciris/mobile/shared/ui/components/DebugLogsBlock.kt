@@ -1,6 +1,7 @@
 package ai.ciris.mobile.shared.ui.components
 
 import kotlinx.coroutines.launch
+import ai.ciris.mobile.shared.localization.localizedString
 import androidx.compose.runtime.rememberCoroutineScope
 import ai.ciris.mobile.shared.platform.copyToClipboard
 import ai.ciris.mobile.shared.platform.isDebugExportAvailable
@@ -95,7 +96,7 @@ fun DebugLogsBlock(
                 .testableWithHandler("btn_debug_logs_toggle") { expanded = !expanded },
         ) {
             Text(
-                text = if (expanded) "Hide diagnostics" else "Click here to download logs",
+                text = if (expanded) localizedString("mobile.debug_logs_hide") else localizedString("mobile.logs_download"),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
             )
@@ -147,8 +148,8 @@ fun DebugLogsBlock(
                             // Name the path, or say plainly that nothing was written.
                             // "Saved" with no location is a dead end for whoever has
                             // to find the file.
-                            val head = path?.let { "Saved to:\n$it" }
-                                ?: "Could not write a file here. Use Copy instead."
+                            val head = path?.let { ai.ciris.mobile.shared.localization.LocalizationHelper.getString("mobile.debug_logs_saved_to", mapOf("path" to it)) }
+                                ?: ai.ciris.mobile.shared.localization.LocalizationHelper.getString("mobile.debug_logs_not_written")
                             result = head + "\n" + fullLogsLine(fetchLogsZip?.let { it() })
                         }
                     }
@@ -157,7 +158,7 @@ fun DebugLogsBlock(
                         modifier = Modifier
                             .weight(1f)
                             .testableWithHandler("btn_debug_download") { doSave() },
-                    ) { Text("Download", fontSize = 12.sp) }
+                    ) { Text(localizedString("mobile.debug_logs_download"), fontSize = 12.sp) }
 
                     val doCopy: () -> Unit = {
                         scope.launch {
@@ -168,9 +169,9 @@ fun DebugLogsBlock(
                             val bundle = DebugBundle.render(extra) +
                                 (manifest?.let { "\nAgent log download manifest\n---------------------------\n" + DebugBundle.redactSecrets(it) } ?: "")
                             result = if (copyToClipboard(bundle)) {
-                                "Copied to clipboard — paste it into the report."
+                                ai.ciris.mobile.shared.localization.LocalizationHelper.getString("mobile.debug_logs_copied")
                             } else {
-                                "Clipboard unavailable. Select the text below."
+                                ai.ciris.mobile.shared.localization.LocalizationHelper.getString("mobile.debug_logs_clipboard_unavailable")
                             }
                         }
                     }
@@ -179,7 +180,7 @@ fun DebugLogsBlock(
                         modifier = Modifier
                             .weight(1f)
                             .testableWithHandler("btn_debug_copy") { doCopy() },
-                    ) { Text("Copy", fontSize = 12.sp) }
+                    ) { Text(localizedString("mobile.common_copy"), fontSize = 12.sp) }
                 }
 
                 result?.let {
@@ -228,15 +229,15 @@ fun DebugLogsBlock(
  * (CIRISClient#249): the zip it saved, or which fallback the bundle is.
  */
 private fun fullLogsLine(got: ai.ciris.mobile.shared.api.LogsDownload?): String = when (got) {
-    null -> "Log tails: the bundle carries the last 32 KiB of each agent log (sign in as the owner for the full logs)."
+    null -> ai.ciris.mobile.shared.localization.LocalizationHelper.getString("mobile.debug_logs_tails_only")
     is ai.ciris.mobile.shared.api.LogsDownload.Got ->
         ai.ciris.mobile.shared.platform.saveFileCopy(got.fileName, "application/zip", got.bytes)
-            ?.let { "Full agent and node logs saved to:\n$it" }
-            ?: "The full logs arrived but could not be written here; the bundle carries 32 KiB tails."
+            ?.let { ai.ciris.mobile.shared.localization.LocalizationHelper.getString("mobile.debug_logs_full_saved", mapOf("path" to it)) }
+            ?: ai.ciris.mobile.shared.localization.LocalizationHelper.getString("mobile.debug_logs_full_not_written")
     ai.ciris.mobile.shared.api.LogsDownload.AgentTooOld ->
-        "Full logs: this agent is too old for a log download (needs 2.17.0); the bundle carries 32 KiB tails."
+        ai.ciris.mobile.shared.localization.LocalizationHelper.getString("mobile.debug_logs_full_too_old")
     is ai.ciris.mobile.shared.api.LogsDownload.NotOwner ->
-        "Full logs need the owner's session; the bundle carries 32 KiB tails."
+        ai.ciris.mobile.shared.localization.LocalizationHelper.getString("mobile.debug_logs_full_not_owner")
     is ai.ciris.mobile.shared.api.LogsDownload.Failed ->
-        "Full logs could not be fetched (${got.detail ?: "HTTP ${got.status}"}); the bundle carries 32 KiB tails."
+        ai.ciris.mobile.shared.localization.LocalizationHelper.getString("mobile.debug_logs_full_failed", mapOf("why" to (got.detail ?: "HTTP ${got.status}")))
 }
