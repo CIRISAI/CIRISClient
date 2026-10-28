@@ -51,6 +51,13 @@ class StartupViewModel(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
+    /** Why startup failed, for the screen to render in the user's language. */
+    private val _startupError = MutableStateFlow<StartupError?>(null)
+    val startupError: StateFlow<StartupError?> = _startupError.asStateFlow()
+
+    /** The agent's last `[FATAL_CODE]`, waiting for the `[FATAL_EXIT]` it explains. */
+    private var pendingFatalCode: FatalCode? = null
+
     private val _elapsedSeconds = MutableStateFlow(0)
     val elapsedSeconds: StateFlow<Int> = _elapsedSeconds.asStateFlow()
 
@@ -78,6 +85,8 @@ class StartupViewModel(
     private var startTime: Long = 0
 
     companion object {
+        /** `[FATAL]` / `[FATAL_EXIT]` — not `[FATAL_CODE]`, which [FatalCode.parse] reads. */
+        private val FATAL_LINE = Regex("""\[FATAL(?:_EXIT)?\]\s*(.+)""")
         private const val TAG = "StartupViewModel"
         const val TOTAL_PREP_STEPS = 8  // pydantic/native lib setup (1-6) + code integrity (7-8)
         const val TOTAL_VERIFY_STEPS = 11  // CIRISVerify attestation: Phase 1 (5) + Phase 2 (6)
@@ -128,7 +137,12 @@ class StartupViewModel(
                 PlatformLogger.i(TAG, "[STARTUP] === Startup sequence complete ===")
             } catch (e: Exception) {
                 PlatformLogger.e(TAG, "[STARTUP] === Startup sequence FAILED: ${e.message} ===")
-                _errorMessage.value = e.message ?: "Unknown error during startup"
+                // A known cause the agent already reported wins over the
+                // exception it produced.
+                if (!_hasError.value) {
+                    _startupError.value = StartupError.Raw(e.message ?: "Unknown error during startup")
+                    _errorMessage.value = _startupError.value?.detail
+                }
                 _phase.value = StartupPhase.ERROR
             }
         }
@@ -379,7 +393,6 @@ class StartupViewModel(
         PlatformLogger.w(TAG, "[STARTUP][CALLBACK][${ts}ms] === WIRING OUTPUT CALLBACK ===")
         val servicePattern = Regex("""\[SERVICE (\d+)/(\d+)\] (\S+) STARTED""")
         val prepPattern = Regex("""\[(\d+)/(\d+)\]""")
-        val fatalPattern = Regex("""\[FATAL(?:_EXIT)?\]\s*(.+)""")
         val consolidatorPattern = Regex("""\[CONSOLIDATOR\]\s*(.+)""")
         val startupPattern = Regex("""\[STARTUP\]\s*(.+)""")
         var callbackLineCount = 0
@@ -390,14 +403,7 @@ class StartupViewModel(
             if (callbackLineCount <= 50 || callbackLineCount % 10 == 0) {
                 PlatformLogger.d(TAG, "[STARTUP][CALLBACK][${lineTs}ms] Line #$callbackLineCount: ${line.take(100)}")
             }
-            // Check for FATAL errors first - these indicate unrecoverable startup failures
-            fatalPattern.find(line)?.let { match ->
-                val errorMsg = match.groupValues[1].trim()
-                PlatformLogger.e(TAG, "[STARTUP][FATAL] $errorMsg")
-                _errorMessage.value = errorMsg
-                _phase.value = StartupPhase.ERROR
-                return@setOutputLineCallback
-            }
+            if (onFatalLine(line)) return@setOutputLineCallback
             // Check for service startup
             servicePattern.find(line)?.let { match ->
                 val num = match.groupValues[1].toIntOrNull() ?: return@let
@@ -647,9 +653,7 @@ class StartupViewModel(
         // startup wait that can kill the app depending on WHICH caller ran it
         // is one refactor away from being fatal again. The failure is reported
         // the same way every other startup failure is.
-        onErrorDetected(
-            "Timeout waiting for services (${_servicesOnline.value}/${_totalServices.value} online)"
-        )
+        onErrorDetected(StartupError.ServicesTimeout(_servicesOnline.value, _totalServices.value))
     }
 
     /**
@@ -900,12 +904,36 @@ class StartupViewModel(
     /**
      * Called when an error is detected
      */
-    fun onErrorDetected(error: String) {
+    /**
+     * The agent's fatal lines. `[FATAL_CODE] <code> k=v …` names a known cause
+     * and never ends startup by itself; the `[FATAL]`/`[FATAL_EXIT]` that follows
+     * ends it, explained by that code when one came first. Returns true when the
+     * line was one of them. Called for every line of agent output, first.
+     */
+    internal fun onFatalLine(line: String): Boolean {
+        FatalCode.parse(line)?.let { code ->
+            PlatformLogger.e(TAG, "[STARTUP][FATAL_CODE] ${code.code} ${code.params}")
+            pendingFatalCode = code
+            return true
+        }
+        val match = FATAL_LINE.find(line) ?: return false
+        val errorMsg = match.groupValues[1].trim()
+        PlatformLogger.e(TAG, "[STARTUP][FATAL] $errorMsg")
+        // Through onErrorDetected, so the services wait's later timeout cannot
+        // replace the cause with "0/22 online".
+        onErrorDetected(pendingFatalCode?.let { StartupError.Fatal(it, errorMsg) } ?: StartupError.Raw(errorMsg))
+        return true
+    }
+
+    fun onErrorDetected(error: String) = onErrorDetected(StartupError.Raw(error))
+
+    fun onErrorDetected(error: StartupError) {
         if (_hasError.value) return // Already in error state
 
-        PlatformLogger.e(TAG, "[STARTUP][ERROR] Error detected: $error")
+        PlatformLogger.e(TAG, "[STARTUP][ERROR] Error detected: ${error.detail}")
         _hasError.value = true
-        _errorMessage.value = error
+        _startupError.value = error
+        _errorMessage.value = error.detail
         setPhase(StartupPhase.ERROR)
     }
 
@@ -929,6 +957,8 @@ class StartupViewModel(
     fun retry() {
         PlatformLogger.w(TAG, "[STARTUP] === RETRY CALLED - Resetting all state ===")
         _errorMessage.value = null
+        _startupError.value = null
+        pendingFatalCode = null
         _servicesOnline.value = 0
         _startedServiceSlots.value = emptySet()
         _elapsedSeconds.value = 0
@@ -952,6 +982,7 @@ class StartupViewModel(
         _phase.value = StartupPhase.LOADING_SERVICES
         _statusMessage.value = LocalizationHelper.getString("mobile.status_resuming_services")
         _errorMessage.value = null
+        _startupError.value = null
         _hasError.value = false
         // Don't reset service count - it will be updated as remaining services start
         // Don't reset elapsed time - continues from startup
@@ -985,5 +1016,13 @@ enum class StartupPhase(val displayName: String) {
     AUTHENTICATING("AUTHENTICATING"),
     WAITING_FOR_AGENT("WAITING FOR AGENT"),
     READY("READY"),
-    ERROR("ERROR")
+    ERROR("ERROR");
+
+    /**
+     * Startup has stopped here, so the screen shows the user's own language and
+     * no longer rotates through the others. ERROR is one of them: the
+     * explanation, Retry and the logs block must never rotate out of the user's
+     * language.
+     */
+    val settled: Boolean get() = this == READY || this == FIRST_RUN_SETUP || this == ERROR
 }
