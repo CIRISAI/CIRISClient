@@ -173,6 +173,7 @@ pins it.
 | cosign | `POST /v1/communities/{id}/changes/cosign` `{change_envelope}` | `change_cosign` :1764 | `{community_id, op, signature}` — stateless |
 | assemble | `POST /v1/communities/{id}/changes/assemble` `{change_envelope, signatures}` | `change_assemble` :1815 | `applied()`, or `quorum_pending` again with the count. **With CIRISServer#700:** an envelope, cosign or assemble whose proposed roster grows is refused 409 `membership.consent_required` (§3.3) |
 | names, and who can be founded with | `GET /v1/contacts` | `list_contacts`, `src/contacts_chat.rs` (CSD-005) | the founding card's member chips are the caller's contacts (a room member must be a contact whose grant covers `chat:`), and every key on the card is titled by the contact's alias when this node has one. Best effort: a failed contacts read hides nothing the node said about the room |
+| rename a community | none | CIRISServer | **not built** (CIRISServer#687): no rename route for communities or households. No Rename control is drawn until the route exists; the server lists it next |
 
 Refusal bodies are `{error, reason_id}` (`src/auth/refusal.rs:52`), with
 `refuse_with` merging the extra members (:35). The client reads them into

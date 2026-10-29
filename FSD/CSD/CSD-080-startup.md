@@ -166,6 +166,18 @@ follows calls from `Screen.Startup`'s composable, and Startup's reads run from
 `CIRISApp.kt` — not from the screen. The rows above are cited from those call
 sites; the heuristic's miss is the checker's, not a missing call.
 
+**A released device.** When a release of this device lands (CSD-037,
+CSD-095), its node writes `released.json` in its home and stops; at its next
+boot it erases its data, keys and identity and comes back as a brand-new node,
+with a new NodeCode and claim PIN (CIRISServer `feat/release-by-roster-quorum`,
+unreleased). Startup must say that, not "the node did not start": "This device
+was released by its owner. It erases itself on restart and comes back as a new
+device. Your data stays with you and your other devices." After the restart it
+is an ordinary first run. **Ask (CIRISServer):** a signal Startup can read for
+the stopped-because-released state (a health status, or the marker's path in
+`/v1/setup/status`), so the client does not infer it from a node that will not
+answer.
+
 ## 4. Flow (how)
 
 Cold start with the backend up.

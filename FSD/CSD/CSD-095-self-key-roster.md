@@ -106,6 +106,15 @@ still answer: not proposed here, not answered here (`badge_nav_instrument_device
 `badge_nav_epistemic_identity_management`). It is as fresh as the last read,
 and opening My things reads again.
 
+**A held release (CSD-037).** Releasing a device, or evicting it, with two or
+more roster keys is an evict proposal like any other. The row reads "Release
+{device}" with the same Agree / Object, and the confirm adds the consequence:
+"Once your devices agree, {device} erases itself. Your data stays with you and
+your other devices." While it is held, the device is still yours. When it
+lands, the answer and the proposals read carry `released_nodes`, and the
+history entry says "Released: {device} will erase itself and return as a new
+node". (CIRISServer `feat/release-by-roster-quorum`, unreleased.)
+
 **The held approval (CSD-094).** A 202 `{held: true}` answers "Held: adding
 Tablet is a proposal your other devices must agree to…", then "Held: another of
 your devices must agree, or it takes effect after 24 hours unless one of them
@@ -200,6 +209,7 @@ bearer, on the ACTIVE node read at call time (`ClientSelfRoster`, as
 |---|---|---|---|
 | the held changes | `GET /v1/self/roster/proposals` → `{identity_key_id, roster: [key_id], w_self_secs, proposals: [{proposal: {id, kind, proposer, target, asserted_at, received_at}, decision, decided_at, approvers, objectors, outcome, lands}]}` | CIRISServer `roster_proposals`, `src/self_devices.rs:1428-1451`; `standing_view` `:1417-1424`; route `:1572-1575`. persist `Standing` `self_roster.rs:880-892`; `TwoPathDecision` (`#[serde(tag = "outcome")]`: `lands{path}` / `pending{earliest_lone_at, needs}` / `refused{reason}` / `cancelled{reason}`) `two_path.rs:645-674`; tokens `:470-500`, `:600-643` | **unreleased (#802)**, wired; polled by the card. Bare 404 on an older node → too old |
 | agree | `POST /v1/self/roster/proposals/{proposal_id}/assent` body `{}` → `{proposal_id, answer: "assent", answer_attestation_id, settled, proposal}` | CIRISServer `assent_proposal` `:1453-1459` → `answer_proposal` `:1478-1541`; route `:1576-1579` | **unreleased (#802)**, wired behind the ConfirmSheet. 404 `self.roster_proposal_unknown` ("There is no open change to your devices with that id.", `:1494-1501`); 409 `self.roster_own_proposal` ("This device proposed that change; another of your devices answers it.", `:1506-1513`) |
+| a release that landed | `released_nodes: [node_key_id]` on `GET /v1/self/roster/proposals` and on the assent/object answers | CIRISServer (`feat/release-by-roster-quorum`) | **unreleased.** Names the nodes whose owner-binding your devices withdrew when an evict of them landed; drawn in the history as released |
 | object | `POST /v1/self/roster/proposals/{proposal_id}/object` body `{}` → the same, `answer: "object"` | CIRISServer `object_proposal` `:1461-1467`; route `:1580-1583` | **unreleased (#802)**, wired; the same two refusals |
 | propose an add | `POST /v1/self/device-requests/{id}/approve` → **202** `{approved: false, held: true, match_code, node_key_id, occurrence_key_id, proposal_id, detail}` | CIRISServer `approve`, `src/add_device.rs:1331-1408` (held arm `:1354-1400`); resumes the approval when the roster lands the key, `resume_when_landed` `:1460-1494` | **unreleased (#802)**; CSD-094's card. The 409 `add_device.roster_change_held` of 0.5.232 without #794 is still read as held, with no proposal id |
 | propose an evict | `POST /v1/self/occurrence/revoke` → `{revoked: false, held: true, occurrences_held: [{occurrence_key_id, door}]}` | CIRISServer `revoke_occurrence` (route `:1564-1567`) | live since 0.5.232 (CSD-037, `RevokeState.Held`); its target marks the evict proposal this device's |
