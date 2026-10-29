@@ -7,25 +7,23 @@ hand-edit — the checker refuses a file whose sha256 is not the one below.
 | pin | value |
 |---|---|
 | repo | `CIRISAI/CIRISServer` |
-| release tag | `v0.5.233` |
-| commit | `7bcbee4206fc8d5b2b8db21e32a8424c4eccb185` |
-| assets | `csd4-requirements.yaml`, `csd4-topology_vocabulary.json`, `csd4-topology_vocabulary.pin`, `csd4-traces.json` (+ `SHA256SUMS`) |
-| SHA256SUMS | every asset listed and matching (the sha256s below are the release's) |
-| cosign | NOT verified: `cosign` is not on PATH. Every asset's sha256 matches the release's SHA256SUMS; the signatures (.sig/.pem) were not checked. Re-run with cosign installed to verify. |
-| catalogue_version | `3` |
-| atoms | 110 |
-| vocabulary owner | `CIRISAI/CIRISConstitution` @ `01b47e75b2250742d8f603dae0142ce58cc86c40` (`manifests/topology_vocabulary.json`) |
+| ref | `a7dc2539` |
+| commit | `a7dc2539851c49d7e0e8ebb4c5b12412999750ce` |
+| status | CIRISServer#833 (pre-release): catalogue v6, T21 |
+| catalogue_version | `6` |
+| atoms | 156 |
+| vocabulary owner | `CIRISAI/CIRISConstitution` @ `f671e469de3c1a1964d222a51c8c1717bcf65c48` (`manifests/topology_vocabulary.json`) |
 
 ## Files
 
-Byte copies of the release assets `csd4-<file>`; no server code was run to produce them.
+The first three are byte copies of `harness/native/topologies/catalog/` at the commit; `traces.json` is the server model's step-by-step trace of T0–T19 at the same commit, produced by running it (sources' sha256 in its `_meta.sources`). A release pin (`--from-release`) replaces this with assets.
 
 | file | sha256 |
 |---|---|
-| `requirements.yaml` | `aa38a8c57fbfb41e08c2b75a787ed29eba8ad3f253849986c24010a0f74ac224` |
-| `topology_vocabulary.json` | `b0b220507d08424a8ced6f5390fc2a01a9987123530b0cf620be2d34bfc69afc` |
-| `topology_vocabulary.pin` | `1b7013fc98d31f44a0e6bbf6dd720bfba5fdeb8a455424bd813796ee8bee9a3f` |
-| `traces.json` | `431f6ff94c3e4198c574aa68902379a1f12f500d29c7a499382025c1817e9eaa` |
+| `requirements.yaml` | `f8e0fefa56eaf7d740c13267c9849134e51194e63332aea658067a844ed949ff` |
+| `topology_vocabulary.json` | `c37f6f9651579932835ff700a2ec376a0c5c928545c3ed476362ec4bd4ac0769` |
+| `topology_vocabulary.pin` | `23b06f89721e254410be10792eb9f3a9c88547b59e2b0aebad56cc5ee4a76403` |
+| `traces.json` | `127223e61dc9699064e3d7464705588a7204da90940687a9e8386469cd933947` |
 
 ## Refetch
 

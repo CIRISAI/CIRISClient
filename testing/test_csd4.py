@@ -32,10 +32,12 @@ def _clean() -> str:
     return check_csd4.FIXTURE.read_text(encoding="utf-8")
 
 
-def test_catalogue_is_v3_closed_and_has_the_new_atom(cat: dict) -> None:
-    assert cat["version"] == 3
-    assert sorted(cat["instants"], key=lambda c: int(c[1:])) == [f"T{i}" for i in range(20)]
+def test_catalogue_is_v6_closed_and_has_the_goal_atoms(cat: dict) -> None:
+    # v6 adds T21 (the canonical declares its Goals); T20 stays reserved.
+    assert cat["version"] == 6
+    assert sorted(cat["instants"], key=lambda c: int(c[1:])) == [f"T{i}" for i in range(20)] + ["T21"]
     assert "key.membership.proposed_add" in cat["atoms"]
+    assert {"goal.staged", "goal.proposed", "goal.declared"} <= set(cat["atoms"])
 
 
 def test_every_server_requirement_holds_at_one_instant_somewhere(cat: dict) -> None:

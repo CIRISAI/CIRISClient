@@ -3,7 +3,7 @@
 **CSD**: CSD-095 · a fixture for `packaging/check_csd4.py --self-test` and
 `testing/test_csd4.py`. The real card is `FSD/CSD/CSD-095-self-key-roster.md`
 (CIRISClient#218). The block below is that card's §5 yaml, copied verbatim, with
-the fence retagged `csd:tests` and one line added: `catalogue_version: 3`. It
+the fence retagged `csd:tests` and one line added: `catalogue_version: 6`. It
 mirrors CIRISServer#802 @ `003871fd`
 `harness/native/topologies/catalog/requirements.yaml` `CSD-095`.
 
@@ -14,7 +14,7 @@ owner: CIRISClient
 
 ```yaml csd:tests
 CSD-095:
-  catalogue_version: 3
+  catalogue_version: 6
   topology: T10
   tests:
     add_held:

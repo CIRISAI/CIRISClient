@@ -13,7 +13,7 @@ where the card is drafted or asked for. **To adopt a reserved card**, add its fi
 delete its row in the same commit; `--check` refuses a card on a number that is still
 reserved. **A retired number is never reused.**
 
-**82 cards** — 1 envisioned · 5 sketched · 68 building · 8 testable. **19 reserved**, **2 retired**.
+**83 cards** — 1 envisioned · 6 sketched · 68 building · 8 testable. **19 reserved**, **2 retired**.
 
 ## Cards
 
@@ -101,6 +101,7 @@ reserved. **A retired number is never reused.**
 | [CSD-108](CSD-108-steward-purge.md) | Steward purge (remove rows that never belonged, under the global trust root) | `sketched` | none yet |
 | [CSD-109](CSD-109-contact-requests.md) | Contact requests (someone added you; you say yes, or ignore it) | `building` | `testing/flows/drafts/csd-109-contact-requests.yaml` |
 | [CSD-110](CSD-110-community-chats.md) | The rooms you talk in (Neighbours › Chats, Communities and Businesses › Chats) | `building` | none yet |
+| [CSD-130](CSD-130-goals-ceremony.md) | Goals (the canonical's Goal rows, signed by its founder quorum) | `sketched` | none yet |
 
 ## Reserved
 
@@ -142,4 +143,4 @@ this directory yet.
 
 ## Unassigned
 
-Below CSD-128, these numbers are free: 009, 017–019, 038, 058–064, 072–079, 088–089, 097–099. Numbers above CSD-128 are free too, up to the test range.
+Below CSD-130, these numbers are free: 009, 017–019, 038, 058–064, 072–079, 088–089, 097–099, 129. Numbers above CSD-130 are free too, up to the test range.

@@ -63,7 +63,7 @@ def test_a_good_release_vendors_green_and_says_cosign_was_not_run(
     pin = (out / "PIN.md").read_text(encoding="utf-8")
     assert "`v0.5.232`" in pin and "NOT verified: `cosign` is not on PATH" in pin
     cat = check_csd4.load_catalogue(out)  # the server's generator string is accepted
-    assert cat["version"] == 3
+    assert cat["version"] == check_csd4.load_catalogue()["version"]
 
 
 def test_a_tampered_asset_is_refused_and_nothing_is_written(
