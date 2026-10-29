@@ -1,5 +1,6 @@
 package ai.ciris.mobile.shared.ui.screens
 
+import androidx.compose.material3.TextButton
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.ui.primitives.rememberTextInputDriver
@@ -80,6 +81,7 @@ fun ClaimNodeScreen(
     onProceedToConsent: () -> Unit = {},
 ) {
     val bootstrap by viewModel.bootstrap.collectAsState()
+    val cohortScopes by viewModel.cohortScopes.collectAsState()
 
     var codeInput by remember { mutableStateOf("") }
     var pinInput by remember { mutableStateOf("") }
@@ -215,6 +217,7 @@ fun ClaimNodeScreen(
             // yourself, your family, or a community." Required by the node or the
             // claim 400s. The selection rides inside the signed body.
             CohortScopeSelector(
+                scopes = cohortScopes,
                 selected = cohortScope,
                 onSelect = { cohortScope = it },
                 enabled = !inFlight && !claimed,
@@ -357,25 +360,25 @@ fun ClaimNodeScreen(
 }
 
 /**
- * Cohort-scope picker — "Add this node to: Yourself / Your family / A community".
+ * Cohort-scope picker — who this node is being added to.
  *
- * A simple radio group (least-churn, follows the screen's existing flat Compose
- * style). The chosen value (`self` | `family` | `community`) is what
- * [NodeSwitcherViewModel.claimAdmin] places in the signed claim body's
- * `cohort_scope`, which CIRISServer v0.4.3 requires.
+ * A claim is normally `self`: the node is yours, and announcing it later
+ * re-signs it at `federation` (CC 3.2). A group scope is for an unannounced node
+ * joining that group. So `self` is the default and the only option shown; the
+ * rest of what the node accepts ([scopes], from its `data.cohort_scopes` —
+ * CIRISServer#666; the three older nodes accept otherwise) sits behind "More
+ * options". The chosen value rides inside the signed claim body's
+ * `cohort_scope`.
  */
 @Composable
 private fun CohortScopeSelector(
+    scopes: List<String>,
     selected: String,
     onSelect: (String) -> Unit,
     enabled: Boolean,
 ) {
-    // value → label-key (localized; fallback-to-key is fine).
-    val options = listOf(
-        "self" to "mobile.claim_node_cohort_self",
-        "family" to "mobile.claim_node_cohort_family",
-        "community" to "mobile.claim_node_cohort_community",
-    )
+    var advanced by remember { mutableStateOf(false) }
+    val showAll = advanced || selected != "self"
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = localizedString("mobile.claim_node_cohort_label"),
@@ -384,7 +387,7 @@ private fun CohortScopeSelector(
             color = MaterialTheme.colorScheme.onBackground,
         )
         Spacer(Modifier.height(6.dp))
-        options.forEach { (value, labelKey) ->
+        scopes.filter { it == "self" || showAll }.forEach { value ->
             val isSel = value == selected
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -402,7 +405,7 @@ private fun CohortScopeSelector(
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
-                    text = localizedString(labelKey),
+                    text = cohortLabel(value),
                     fontSize = 14.sp,
                     color = if (enabled) {
                         MaterialTheme.colorScheme.onSurface
@@ -412,13 +415,30 @@ private fun CohortScopeSelector(
                 )
             }
         }
+        if (scopes.size > 1 && selected == "self") {
+            TextButton(
+                onClick = { advanced = !advanced },
+                enabled = enabled,
+                modifier = Modifier.testableClickable("btn_cohort_advanced") { if (enabled) advanced = !advanced },
+            ) {
+                Text(localizedString(if (advanced) "mobile.claim_node_cohort_fewer" else "mobile.claim_node_cohort_more"))
+            }
+        }
         Spacer(Modifier.height(4.dp))
         Text(
-            text = localizedString("mobile.claim_node_cohort_note"),
+            text = localizedString(if (showAll) "mobile.claim_node_cohort_advanced_note" else "mobile.claim_node_cohort_note"),
             fontSize = 11.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
+}
+
+/** A scope's label; one this client does not know is shown as the node named it. */
+@Composable
+private fun cohortLabel(scope: String): String = when (scope) {
+    "self", "family", "community", "affiliations", "species", "biosphere", "federation" ->
+        localizedString("mobile.claim_node_cohort_$scope")
+    else -> scope
 }
 
 /** Compact ordered step list reflecting the bootstrap phase + claim. */
