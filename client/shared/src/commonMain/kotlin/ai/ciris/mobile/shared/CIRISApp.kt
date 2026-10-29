@@ -4518,6 +4518,13 @@ fun CIRISApp(
                 )
             }
 
+            Screen.OwnedAgents -> {
+                ai.ciris.mobile.shared.ui.screens.OwnedAgentsScreen(
+                    viewModel = identityManagementViewModel,
+                    onClaim = { currentScreen = Screen.ClaimNode },
+                    onVerify = { currentScreen = Screen.VerifyAgent },
+                )
+            }
             Screen.IdentityManagement -> {
                 // Identity Management (Manage group): my self fed-ID + the roster of
                 // devices (occurrences) bound to it — add / revoke a device, or "log
@@ -6316,6 +6323,9 @@ internal sealed class Screen {
     // Node management (CRUD over saved NodeProfiles) — first-class Manage-group
     // surface, promoted from the in-page node-switcher dropdown.
     object ManageNodes : Screen()
+    // Agents you own (CSD-132): the owned nodes that run an agent, with
+    // rename, announce, verify and release.
+    object OwnedAgents : Screen()
     // Add Federation ID (catch-up): an existing logged-in owner whose node has NO
     // fed-ID (legacy WA claim) adds one via the session-authed upgrade path
     // (mint → /v1/self/upgrade-owner). Flow-only (reached from Manage Nodes).
@@ -6536,6 +6546,7 @@ internal fun screenToSurface(s: Screen):ai.ciris.mobile.shared.ui.nav.NavSurface
     is Screen.UserChat -> s.from?.let { screenToSurface(it) } ?: ai.ciris.mobile.shared.ui.nav.NavSurface.Contacts
     Screen.Delegations -> ai.ciris.mobile.shared.ui.nav.NavSurface.Delegations
     Screen.IdentityManagement -> ai.ciris.mobile.shared.ui.nav.NavSurface.IdentityManagement
+    Screen.OwnedAgents -> ai.ciris.mobile.shared.ui.nav.NavSurface.OwnedAgents
     Screen.Accord -> ai.ciris.mobile.shared.ui.nav.NavSurface.Accord
         Screen.DutyConferral -> ai.ciris.mobile.shared.ui.nav.NavSurface.Accord
         // Trust root (card: Accord): a detail of the Accord card keeps it lit.
@@ -6608,6 +6619,7 @@ private fun surfaceToScreen(s: ai.ciris.mobile.shared.ui.nav.NavSurface): Screen
     ai.ciris.mobile.shared.ui.nav.NavSurface.NetworkOps -> Screen.NetworkOps
     ai.ciris.mobile.shared.ui.nav.NavSurface.NodeSelf -> Screen.NodeSelfStanding // CSD-045
     ai.ciris.mobile.shared.ui.nav.NavSurface.Nodes -> Screen.ManageNodes
+    ai.ciris.mobile.shared.ui.nav.NavSurface.OwnedAgents -> Screen.OwnedAgents
     ai.ciris.mobile.shared.ui.nav.NavSurface.ManageConsent -> Screen.ManageConsent
     ai.ciris.mobile.shared.ui.nav.NavSurface.Contacts -> Screen.Contacts
     ai.ciris.mobile.shared.ui.nav.NavSurface.Files -> Screen.Files()

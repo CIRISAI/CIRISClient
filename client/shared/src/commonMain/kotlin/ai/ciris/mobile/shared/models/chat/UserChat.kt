@@ -58,6 +58,13 @@ data class CegChatMessage(
     /** The composer row that produced a non-`live` [status]; omitted when live. */
     @SerialName("status_attestation_id")
     val statusAttestationId: String? = null,
+    /**
+     * The revisions THIS viewer may make to THIS row, as the node judges them
+     * (`supersede` | `withdraw` | `recant`: author-only, live-only). Null on a
+     * node that predates the revision routes — not "none allowed".
+     */
+    @SerialName("viewer_ops")
+    val viewerOps: List<String>? = null,
     val body: String = "",
     @SerialName("content_type")
     val contentType: String = "text/plain",
@@ -218,6 +225,36 @@ data class CegChatMessage(
 }
 
 /** ``POST /v1/chat`` body — open (or re-open) the two-member room with `key_id`. */
+/** One step of a message's lifecycle (`GET …/messages/{id}/history`), oldest first. */
+@Serializable
+data class ChatHistoryStep(
+    @SerialName("attestation_id")
+    val attestationId: String,
+    /** `post` | `supersede` | `withdraw` | `recant`. */
+    val op: String,
+    @SerialName("attesting_key_id")
+    val attestingKeyId: String? = null,
+    val author: String? = null,
+    @SerialName("asserted_at")
+    val assertedAt: String? = null,
+    val body: String? = null,
+    /** A withdraw's or recant's reason code; an unknown code is shown as is. */
+    val reason: String? = null,
+)
+
+/**
+ * The reason codes a revision may carry (edge `chat::ComposerReason`), sent as
+ * lowercase strings. A code from the other op is refused `chat.reason_invalid`.
+ * The reason is plaintext to every room holder.
+ */
+object ChatRevisionReason {
+    val WITHDRAW = listOf("unspecified", "sent_in_error", "privacy", "outdated")
+    val RECANT = listOf("unspecified", "incorrect")
+}
+
+@Serializable
+data class ChatMessageHistory(val chain: List<ChatHistoryStep> = emptyList())
+
 @Serializable
 data class StartChatRequest(
     @SerialName("key_id")

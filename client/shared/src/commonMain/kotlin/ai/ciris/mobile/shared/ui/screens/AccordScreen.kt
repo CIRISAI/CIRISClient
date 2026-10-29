@@ -1,5 +1,11 @@
 package ai.ciris.mobile.shared.ui.screens
 
+import ai.ciris.mobile.shared.viewmodels.FamilyHistoryState
+import ai.ciris.mobile.shared.ui.components.rowOnlyHistory
+import ai.ciris.mobile.shared.ui.components.AttestationHistoryDialog
+import ai.ciris.mobile.shared.ui.components.HistoryStep
+import ai.ciris.mobile.shared.ui.components.HistoryEntry
+import ai.ciris.mobile.shared.ui.components.AttHistory
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.models.federation.AccordEventDto
 import ai.ciris.mobile.shared.models.federation.AccordFamilyDto
@@ -136,6 +142,7 @@ private sealed interface AccordSheet {
     /** Rotate a canonical server to a successor record (`POST /v1/accord/canonical/supersede`, 2-of-3). */
     data class Supersede(val server: CanonicalServerDto) : AccordSheet
     data class Details(val att: Attestation) : AccordSheet
+    data class History(val att: Attestation) : AccordSheet
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -630,6 +637,7 @@ fun AccordScreen(
         }
         is AccordSheet.Supersede -> SupersedeCanonicalSheet(viewModel, s.server, busy) { sheet = null }
         is AccordSheet.Details -> AttestationDetailsDialog(s.att) { sheet = null }
+        is AccordSheet.History -> AccordHistoryDialog(viewModel, s.att) { sheet = null }
     }
 }
 
@@ -638,7 +646,10 @@ fun AccordScreen(
 /** Route the uniform ops that don't need canonical-row context. */
 private fun handleOp(op: AttOp, att: Attestation, open: (AccordSheet) -> Unit) {
     when (op) {
-        AttOp.ViewDetails, AttOp.History, AttOp.Evidence -> open(AccordSheet.Details(att))
+        // History is the row's lifecycle, never its details (CIRISClient desktop
+        // test, 2026-10-29: "view history just toggles details").
+        AttOp.History -> open(AccordSheet.History(att))
+        AttOp.ViewDetails, AttOp.Evidence -> open(AccordSheet.Details(att))
         // Cosign / Delegate / Supersede / Withdraw / Recant have no meaning here
         // (or are disabled in the menu) — details is the safe fallthrough.
         else -> open(AccordSheet.Details(att))
@@ -2244,5 +2255,66 @@ private fun DetailRow(label: String, value: String) {
             fontFamily = FontFamily.Monospace,
             color = MaterialTheme.colorScheme.onSurface,
         )
+    }
+}
+
+/**
+ * One Accord row's lifecycle. The accord family has a real version chain
+ * (`GET /v1/accord/family/history`); a canonical has its withdrawal record
+ * (`GET /v1/accord/canonical/withdrawals`); any other row shows what it records
+ * about itself, marked incomplete.
+ */
+@Composable
+private fun AccordHistoryDialog(viewModel: AccordViewModel, att: Attestation, onDismiss: () -> Unit) {
+    val title = localizedString("mobile.accord_op_history")
+    when (att.kind) {
+        AttKind.AccordFamily -> {
+            LaunchedEffect(Unit) { viewModel.loadFamilyHistory() }
+            val fam by viewModel.familyHistory.collectAsState()
+            val history = when (val f = fam) {
+                FamilyHistoryState.Loading -> AttHistory.Loading
+                is FamilyHistoryState.Failed -> AttHistory.Failed(
+                    when (val x = f.failure) {
+                        is ai.ciris.mobile.shared.models.federation.TrustRootFailure.Refused -> x.reasonId ?: x.detail ?: "refused"
+                        is ai.ciris.mobile.shared.models.federation.TrustRootFailure.LoopbackOnly -> x.reasonId ?: "loopback only"
+                        ai.ciris.mobile.shared.models.federation.TrustRootFailure.NotOnThisNode -> "not on this node"
+                        is ai.ciris.mobile.shared.models.federation.TrustRootFailure.Failed -> x.detail ?: "failed"
+                    },
+                )
+                is FamilyHistoryState.Loaded -> AttHistory.Loaded(
+                    f.versions.sortedBy { it.version }.map { v ->
+                        HistoryEntry(
+                            attestationId = "",
+                            step = HistoryStep.Version,
+                            version = v.version,
+                            at = v.foundedAt,
+                            note = listOfNotNull(
+                                v.consensusProtocol,
+                                localizedString("mobile.att_history_members", mapOf("n" to v.members.size.toString())),
+                                v.supersededAt?.let { localizedString("mobile.att_history_superseded_at", mapOf("at" to it)) },
+                            ).joinToString(" · "),
+                        )
+                    },
+                    complete = true,
+                )
+            }
+            AttestationHistoryDialog(title, history, onDismiss)
+        }
+        AttKind.Canonical -> {
+            val withdrawals by viewModel.canonicalWithdrawals.collectAsState()
+            val record = withdrawals.firstOrNull { it.keyId == att.id }
+            val entries = listOfNotNull(
+                HistoryEntry(att.id, HistoryStep.Original, att.attesterKeyId, null, att.timestamp),
+                record?.let {
+                    HistoryEntry(
+                        attestationId = it.supersededBy ?: "",
+                        step = if (it.supersededBy != null) HistoryStep.Supersede else HistoryStep.Withdraw,
+                        at = it.withdrawnAt,
+                    )
+                },
+            )
+            AttestationHistoryDialog(title, AttHistory.Loaded(entries, complete = true), onDismiss)
+        }
+        else -> AttestationHistoryDialog(title, rowOnlyHistory(att), onDismiss)
     }
 }

@@ -166,6 +166,9 @@ CIRISServer 0.5.217, `src/communities.rs`; node URL only
 | remove | `DELETE /v1/communities/{id}/members/{key_id}` | `remove_member` :1556 | naming yourself is leaving (:1569); `community.last_founder` guards an orphaned room |
 | a pair room | `kind: pair` on a list row | `kind_of` :202 | `community.pair_room_fixed` (409) for any roster change on it, :291 |
 | widened reads | — | module doc, "What a widened member cannot do yet" | listed, shown and sealed to; refused by the message read gate (`chat.not_a_member`) until CIRISPersist#907. #907 is **fixed in persist v49**; the server markers (the module doc and the ignored `…_cirispersist_907` test, both still on `integ/0.5.218`) clear with CIRISServer#700 |
+| the invite window and the approval floor | none | CIRISServer | **not built** (CIRISServer#796) |
+| a moderator's lapse, and merit | none | CIRISServer | **not built** (CIRISServer#795) |
+| the moderator chain, and a founder's appointment | none | CIRISServer | **not built** (CIRISServer#688): today "no moderator appointed" and "the chain could not be read" are the same empty list (CSD-102 §2) |
 
 ### 3.1 Nobody joins without their own consent
 

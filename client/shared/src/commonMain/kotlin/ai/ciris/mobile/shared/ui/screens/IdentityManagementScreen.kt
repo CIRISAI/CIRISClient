@@ -960,39 +960,7 @@ fun IdentityManagementScreen(
         }
     }
 
-    // ── Release confirmations ─────────────────────────────────────────────────
-    // The first names the node, what changes, and who signs. The second is only
-    // reachable after the node refused because it is the one you are talking
-    // to, and names what that costs: this session.
-    when (val r = release) {
-        is ReleaseState.Confirming -> ConfirmSheet(
-            title = localizedString("mobile.identity_release_title"),
-            facts = listOf(
-                ConfirmFact(localizedString("mobile.identity_release_fact_node"), r.node.keyId, mono = true),
-                ConfirmFact(localizedString("mobile.identity_release_fact_effect"), localizedString("mobile.identity_release_effect")),
-                ConfirmFact(localizedString("mobile.identity_release_fact_signer"), localizedString("mobile.identity_release_signer")),
-            ),
-            confirmLabel = localizedString("mobile.identity_release_button"),
-            onConfirm = { viewModel.confirmRelease() },
-            onDismiss = { viewModel.cancelRelease() },
-            destructive = true,
-            tagPrefix = "release",
-        )
-        is ReleaseState.ConfirmingForce -> ConfirmSheet(
-            title = localizedString("mobile.identity_release_force_title"),
-            facts = listOf(
-                ConfirmFact(localizedString("mobile.identity_release_fact_node"), r.node.keyId, mono = true),
-                ConfirmFact(localizedString("mobile.identity_release_fact_effect"), localizedString("mobile.identity_release_effect")),
-                ConfirmFact(localizedString("mobile.identity_release_fact_session"), localizedString("mobile.identity_release_session_ends")),
-            ),
-            confirmLabel = localizedString("mobile.identity_release_force_confirm"),
-            onConfirm = { viewModel.confirmForceRelease() },
-            onDismiss = { viewModel.cancelRelease() },
-            destructive = true,
-            tagPrefix = "release_force",
-        )
-        else -> Unit
-    }
+    NodeReleaseSheets(viewModel, release)
 
     // ── Evict-a-device confirmations ──────────────────────────────────────────
     // The first names the device, what eviction withholds and what it does
@@ -1109,7 +1077,7 @@ private fun DeviceLabelEditor(
  * confirm, never straight to a forced release.
  */
 @Composable
-private fun ReleaseOutcome(state: ReleaseState, onForce: () -> Unit, onRetry: () -> Unit, onDismiss: () -> Unit) {
+internal fun ReleaseOutcome(state: ReleaseState, onForce: () -> Unit, onRetry: () -> Unit, onDismiss: () -> Unit) {
     if (state is ReleaseState.Incomplete) {
         EvictionIncompleteBlock(state.refusal, state.report, tagPrefix = "identity_release", onRetry = onRetry, onDismiss = onDismiss)
         return
@@ -1303,5 +1271,47 @@ private fun ThisDeviceSignIn(
                 Text(localizedString("mobile.identity_sign_out"))
             }
         }
+    }
+}
+
+/**
+ * The release confirmations, shared by My Identity and Agents you own (CSD-132):
+ * the first names the node, what changes, and who signs; the second is only
+ * reachable after the node refused because it is the one you are talking to.
+ */
+@Composable
+internal fun NodeReleaseSheets(viewModel: IdentityManagementViewModel, release: ReleaseState) {
+    // ── Release confirmations ─────────────────────────────────────────────────
+    // The first names the node, what changes, and who signs. The second is only
+    // reachable after the node refused because it is the one you are talking
+    // to, and names what that costs: this session.
+    when (val r = release) {
+        is ReleaseState.Confirming -> ConfirmSheet(
+            title = localizedString("mobile.identity_release_title"),
+            facts = listOf(
+                ConfirmFact(localizedString("mobile.identity_release_fact_node"), r.node.keyId, mono = true),
+                ConfirmFact(localizedString("mobile.identity_release_fact_effect"), localizedString("mobile.identity_release_effect")),
+                ConfirmFact(localizedString("mobile.identity_release_fact_signer"), localizedString("mobile.identity_release_signer")),
+            ),
+            confirmLabel = localizedString("mobile.identity_release_button"),
+            onConfirm = { viewModel.confirmRelease() },
+            onDismiss = { viewModel.cancelRelease() },
+            destructive = true,
+            tagPrefix = "release",
+        )
+        is ReleaseState.ConfirmingForce -> ConfirmSheet(
+            title = localizedString("mobile.identity_release_force_title"),
+            facts = listOf(
+                ConfirmFact(localizedString("mobile.identity_release_fact_node"), r.node.keyId, mono = true),
+                ConfirmFact(localizedString("mobile.identity_release_fact_effect"), localizedString("mobile.identity_release_effect")),
+                ConfirmFact(localizedString("mobile.identity_release_fact_session"), localizedString("mobile.identity_release_session_ends")),
+            ),
+            confirmLabel = localizedString("mobile.identity_release_force_confirm"),
+            onConfirm = { viewModel.confirmForceRelease() },
+            onDismiss = { viewModel.cancelRelease() },
+            destructive = true,
+            tagPrefix = "release_force",
+        )
+        else -> Unit
     }
 }

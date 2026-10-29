@@ -65,6 +65,7 @@ import ai.ciris.mobile.shared.models.federation.RevokeGrantResponse
 import ai.ciris.mobile.shared.models.chat.ChatCommunity
 import ai.ciris.mobile.shared.models.chat.ChatTranscript
 import ai.ciris.mobile.shared.models.chat.SendChatMessageResult
+import ai.ciris.mobile.shared.models.chat.ChatMessageHistory
 import ai.ciris.mobile.shared.platform.PlatformLogger
 import ai.ciris.mobile.shared.viewmodels.AgentTemplateInfo
 import ai.ciris.mobile.shared.viewmodels.CheckDetail
@@ -2299,6 +2300,85 @@ class CIRISApiClient internal constructor(
     }
 
     /**
+     * A message's lifecycle — the original and every later row that names it,
+     * oldest first. `GET /v1/chat/{communityId}/messages/{attestationId}/history`.
+     *
+     * Returns null on a BARE 404 (no `reason_id`): a node older than the route,
+     * which the caller shows as "the node offers no fuller history", never as a
+     * history of one row.
+     */
+    suspend fun getChatMessageHistory(
+        communityId: String,
+        attestationId: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ChatMessageHistory? {
+        val method = "getChatMessageHistory"
+        val url = "$nodeUrl/v1/chat/$communityId/messages/$attestationId/history"
+        logInfo(method, "GET $url")
+        val client = federationHttpClient()
+        return try {
+            val response = client.get(url) { authHeader()?.let { header("Authorization", it) } }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) {
+                val refusal = nodeRefusal(method, response.status, raw)
+                if (response.status.value == 404 && refusal.reasonId == null) return null
+                throw refusal
+            }
+            jsonConfig.decodeFromString(ChatMessageHistory.serializer(), raw)
+        } catch (e: Exception) {
+            logException(method, e, "url=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * Revise one of the owner's own messages: `supersede` (a replacement
+     * [body]), `withdraw` or `recant`.
+     * `POST /v1/chat/{communityId}/messages/{attestationId}/{op}`. The node signs
+     * the revision as the author, with the person key it holds; it refuses
+     * `chat.not_author`, `chat.message_not_found`, `chat.message_not_live`,
+     * `chat.message_too_large`, `chat.reason_invalid`. [reason] is a code from
+     * edge's closed set ([ChatRevisionReason]), plaintext to every room holder,
+     * so it is sent only when the person chose one. Returns the new row's
+     * attestation id.
+     */
+    suspend fun reviseChatMessage(
+        communityId: String,
+        attestationId: String,
+        op: String,
+        body: String? = null,
+        reason: String? = null,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): String {
+        require(op == "supersede" || op == "withdraw" || op == "recant") { "unknown revision $op" }
+        val method = "reviseChatMessage"
+        val url = "$nodeUrl/v1/chat/$communityId/messages/$attestationId/$op"
+        logInfo(method, "POST $url")
+        val client = federationHttpClient()
+        return try {
+            val payload = buildJsonObject {
+                if (op == "supersede") put("body", body ?: "")
+                if (op != "supersede") reason?.let { put("reason", it) }
+            }
+            val response = client.post(url) {
+                authHeader()?.let { header("Authorization", it) }
+                contentType(ContentType.Application.Json)
+                setBody(payload.toString())
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            jsonConfig.parseToJsonElement(raw).jsonObject["attestation_id"]?.jsonPrimitive?.contentOrNull ?: ""
+        } catch (e: Exception) {
+            logException(method, e, "url=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
      * Say something in [communityId] — emit a `scores` attestation on
      * `chat:message:v1`, authored by the OWNER's identity key (the human wrote
      * it, not the box) and placed at the `community` tier.
@@ -3930,6 +4010,35 @@ class CIRISApiClient internal constructor(
             )
         } catch (e: Exception) {
             logException(method, e, "nodeUrl=$nodeUrl, occurrence=$occurrenceKeyId")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * Announce an owned node's owner-binding at `federation` —
+     * `POST {nodeUrl}/v1/self/nodes/{node_key_id}/announce` (CC 3.2), owner
+     * session. Throws [NodeRefusal] on a non-2xx answer.
+     */
+    suspend fun announceOwnedNode(
+        nodeKeyId: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+        token: String? = accessToken,
+    ) {
+        val method = "announceOwnedNode"
+        val path = nodeKeyId.encodeURLPathPart()
+        logInfo(method, "POST $nodeUrl/v1/self/nodes/${nodeKeyId.take(16)}…/announce")
+        val client = federationHttpClient()
+        try {
+            val response = client.post("$nodeUrl/v1/self/nodes/$path/announce") {
+                token?.let { header("Authorization", "Bearer $it") }
+                contentType(ContentType.Application.Json)
+                setBody("{}")
+            }
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, response.bodyAsText())
+        } catch (e: Exception) {
+            logException(method, e, "nodeUrl=$nodeUrl, node=$nodeKeyId")
             throw e
         } finally {
             client.close()
