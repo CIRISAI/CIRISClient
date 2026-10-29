@@ -3937,6 +3937,35 @@ class CIRISApiClient internal constructor(
     }
 
     /**
+     * Announce an owned node's owner-binding at `federation` —
+     * `POST {nodeUrl}/v1/self/nodes/{node_key_id}/announce` (CC 3.2), owner
+     * session. Throws [NodeRefusal] on a non-2xx answer.
+     */
+    suspend fun announceOwnedNode(
+        nodeKeyId: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+        token: String? = accessToken,
+    ) {
+        val method = "announceOwnedNode"
+        val path = nodeKeyId.encodeURLPathPart()
+        logInfo(method, "POST $nodeUrl/v1/self/nodes/${nodeKeyId.take(16)}…/announce")
+        val client = federationHttpClient()
+        try {
+            val response = client.post("$nodeUrl/v1/self/nodes/$path/announce") {
+                token?.let { header("Authorization", "Bearer $it") }
+                contentType(ContentType.Application.Json)
+                setBody("{}")
+            }
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, response.bodyAsText())
+        } catch (e: Exception) {
+            logException(method, e, "nodeUrl=$nodeUrl, node=$nodeKeyId")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
      * Release a node the owner owns — `POST {nodeUrl}/v1/self/nodes/{node_key_id}/release`
      * (0.5.216).
      *

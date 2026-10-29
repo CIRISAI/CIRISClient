@@ -35,6 +35,14 @@ interface SelfDevicesApi {
     suspend fun releaseNode(nodeKeyId: String, forceSelf: Boolean): ReleaseNodeResponse
 
     /**
+     * `POST /v1/self/nodes/{node_key_id}/announce` — announce the owner-binding
+     * of an owned node at `federation` (CC 3.2). Throws [NodeRefusal].
+     */
+    suspend fun announceNode(nodeKeyId: String) {
+        throw UnsupportedOperationException("announceNode")
+    }
+
+    /**
      * `POST /v1/self/occurrence/revoke` — evict a device (0.5.218). [forceSelf]
      * only from the second confirm, after the node refused because the device
      * is the one answering.
@@ -66,6 +74,7 @@ class ClientSelfDevices(
         client.labelOccurrence(occurrenceKeyId, label)
     override suspend fun releaseNode(nodeKeyId: String, forceSelf: Boolean): ReleaseNodeResponse =
         client.releaseNode(nodeKeyId, forceSelf)
+    override suspend fun announceNode(nodeKeyId: String) = client.announceOwnedNode(nodeKeyId)
     override suspend fun revokeOccurrence(
         identityKeyId: String,
         occurrenceKeyId: String,

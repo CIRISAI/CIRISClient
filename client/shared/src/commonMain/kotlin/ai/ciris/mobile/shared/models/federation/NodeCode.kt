@@ -58,7 +58,40 @@ data class OwnedNodeDto(
     val keyId: String,
     @SerialName("is_self")
     val isSelf: Boolean = false,
+    /** The owner's own name for the node; null when unnamed or on an older node. */
+    val label: String? = null,
+    /** Whether its owner-binding is announced at `federation` (CC 3.2); null = not said. */
+    val announced: Boolean? = null,
+    /**
+     * The agent occurrences paired with this node under the owner. NULL means
+     * UNKNOWN (an older node, or a remotely claimed agent whose pairing the
+     * owner has not signed yet), never "no agent"; an empty list means none.
+     */
+    val agents: List<String>? = null,
+    /** True for one of the owner's own devices (holds a roster occurrence); null = not said. */
+    @SerialName("roster_member")
+    val rosterMember: Boolean? = null,
 )
+
+/** Which owned nodes the Agents list shows, and how sure it can be (CSD-132). */
+enum class OwnedAgentKind {
+    /** The node names at least one paired agent occurrence. */
+    AGENT,
+    /** Not one of the owner's devices, and its pairing is unknown: it may run an agent. */
+    MAYBE_AGENT,
+}
+
+/**
+ * The owned nodes for the Agents list, agents first, each with how sure the
+ * list is. A node the owner's own roster holds with no paired agent is a
+ * device, not an agent, and is left to My Identity.
+ */
+fun ownedAgents(nodes: List<OwnedNodeDto>): List<Pair<OwnedNodeDto, OwnedAgentKind>> {
+    val sure = nodes.filter { !it.agents.isNullOrEmpty() }.map { it to OwnedAgentKind.AGENT }
+    val maybe = nodes.filter { it.agents == null && it.rosterMember != true && !it.isSelf }
+        .map { it to OwnedAgentKind.MAYBE_AGENT }
+    return sure + maybe
+}
 
 /**
  * Response body for ``POST /v1/system/peers/add-from-code``.
