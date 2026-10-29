@@ -3,7 +3,7 @@
 **CSD**: CSD-130 · **Standard**: CSD/4 (`CSD.md`; CIRISServer `FSD/CSD4.md` §1) · **Origin**: CIRISAgent `FSD/SAFETY_EVIDENCE_BLOBS.md` §4.2 (the Goal rows and the two evidence joins); CC 3.1.9.3, 3.1.9.7
 **Extends**: CSD-067 (the Accord screen — the Goals card sits beside "Bless CI workers"). **No new screen** (§2).
 **Reads with**: CSD-068 (the holders who sign), CSD-069 (the accord ceremonies this one follows), CSD-129 (the halt the ceremony must respect)
-**Server side**: CIRISServer `FSD/GOALS_CEREMONY.md`; catalogue entry T21
+**Server side**: CIRISServer `FSD/GOALS_CEREMONY.md` (CIRISServer#833); catalogue entry T21
 **Flow**: none yet — the routes are unconfirmed (§3) and the atoms the tests name are not yet in the topology vocabulary (§6)
 
 ```yaml csd:stage
@@ -43,7 +43,7 @@ has three parts.
 
 | part | what it shows | who acts |
 |---|---|---|
-| **the staged rows** | each row's attestation id (fixed at staging), family, text and alignment (`meta_goal_alignment` on goal rows, `alignment` on the approach), read-only, in the order goal → avoidance goal → approach → methods (one per language, with its progress measure) | nobody edits; the text is the node's |
+| **the staged rows** | "Issued by ciris-canonical" (each row's `authority_id`), then each row's attestation id (fixed at staging), family, text and alignment (`meta_goal_alignment` on goal rows, `alignment` on the approach), read-only, in the order goal → avoidance goal → approach → methods (one per language, with its progress measure) | nobody edits; the text is the node's |
 | **the signature** | the set's `proposal_digest` (short form, full on tap), who has signed, and the quorum (`2 of 3`) | the first holder **Proposes**; each next holder **Cosigns** |
 | **after it is declared** | each row marked declared, and per method the evidence joins: *offered against* (rows that name it) and *counted by* (the progress measure that cites them) | read-only |
 
@@ -54,7 +54,7 @@ has three parts.
 | Goal | `goal:species` | "That a person anywhere can reach an AI agent whose consequential acts are checkable by parties it does not control, that named humans can stop, that defers when it is unsure, and that serves them free and open." |
 | Avoidance goal (negative score, CC 3.1.9.3) | `goal:species` | "That no system of ours stands between people or over them." |
 | Approach | `approach:{goal_id}` | "Demonstrate that the conditions hold in practice by meeting the mhGAP referral guidance in every supported language: respond to a person who discloses distress as a non-clinical companion, and refer to care under the mhGAP guidance; never diagnose, never prescribe, never delay a referral." |
-| Method, one per language | `method:{approach_id}:{substrate_rung}` | mhGAP referral guidance in that language, at the rung the deployment runs |
+| Method, one per language | `method:{approach_id}:{substrate_rung}` | mhGAP referral guidance in that language, at the rung the deployment runs. The languages are the battery's 29 `{lang}_mental_health` cells, the same set as this client's locales; each method carries its `language` in its body |
 | Progress measure, one per method | `progress_measure:{method_id}` | `tracks[]`: the refer rate and the no-diagnosis rate per cell; `computation`, `validity_window`, `goodhart_resistance` as stated in the row |
 
 The row text is **not localized**: it is the signed text, and a translation
@@ -99,7 +99,7 @@ fields:
     use: display-only
     type: unconfirmed
     example: "mhGAP referral guidance in Yorùbá, rung 2"
-    renders: "one row per battery language: the language (from the method body's `language`), the rung, the method text, read-only"
+    renders: "one row per battery cell ({lang}_mental_health, 29): the language (from the method body's `language`), the rung, the method text, read-only"
     tag: "proposed:row_goal_method_*"
   - ceg: "progress_measure:{method_id}"
     use: display-only
@@ -148,15 +148,16 @@ error:     {tag: "goals_error", renders: "the node's refusal by id (root_halted,
 
 ## 3. Contracts (who)
 
-Holder operations are loopback-only at the holder's own node, as the other
-Accord ceremonies are (CSD-067 §3). `/v1/goals` is served by every node, as a
+Holder operations run at the canonical, loopback-only: the holders sign in the
+room at C, as in every accord ceremony (CSD-067 §3). Every staged row carries
+`authority_id: "ciris-canonical"` (CIRISPersist#1154). `/v1/goals` is served by every node, as a
 projection of the goal rows it holds; the evidence join is served only where
 the evidence rows are, the canonical's registry slice. Paths and shapes are as
 agreed with CIRISServer (`FSD/GOALS_CEREMONY.md`); **none is released yet**.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| the staged set | `GET /v1/accord/goals/staged` → `{rows: [{attestation_id, family, dimension, text, meta_goal_alignment \| alignment, score}], proposal_digest, quorum: {m, n}, signed_by: [key_id]}` | CIRISServer | **agreed, unreleased.** Staging fixes every row's attestation id and asserted_at (persist mints the id into the signed bytes), so approach, methods and measures reference their parents from the start. `proposal_digest` = sha256 over the JCS of the row envelopes, in order. The node refuses to stage text that is not the locked text (`staged_text_not_locked`) |
+| the staged set | `GET /v1/accord/goals/staged` → `{rows: [{attestation_id, family, dimension, authority_id, text, meta_goal_alignment \| alignment, score}], proposal_digest, quorum: {m, n}, signed_by: [key_id]}` | CIRISServer | **agreed, unreleased.** Staging fixes every row's attestation id and asserted_at (persist mints the id into the signed bytes), so approach, methods and measures reference their parents from the start. `proposal_digest` = sha256 over the JCS of the row envelopes, in order. The node refuses to stage text that is not the locked text (`staged_text_not_locked`) |
 | propose | `POST /v1/accord/goals/propose {proposal_digest, key_id, pkcs11}` | CIRISServer | **agreed, unreleased.** The node scrub-signs each row's envelope bytes with the holder's hardware; quorum is per row |
 | cosign | `POST /v1/accord/goals/cosign {proposal_digest, key_id, pkcs11}` | CIRISServer | **agreed, unreleased.** A cosign that reaches quorum re-checks the halt before the write |
 | pending partials | `GET /v1/accord/goals/pending` → `{proposals: [{proposal_digest, signed_by, blocked_by?}]}` | CIRISServer | **agreed, unreleased.** `blocked_by: root_halted` while the kill switch is latched |
@@ -172,10 +173,10 @@ holders, canonical C), with ciris-canonical minted with founders A1, B1, C1;
 then stage → propose → halt → resume → cosign → one evidence row offered →
 counted.
 
-1. Holder alice opens Accord; the Goals card shows the staged rows read-only, each with its attestation id, and the digest (`goals_staged`).
+1. Holder alice opens Accord at the canonical; the Goals card shows the staged rows read-only, each with its attestation id, and the digest (`goals_staged`).
 2. alice taps `btn_goals_propose` → `sheet_goals_sign` with its three facts → confirm. The card shows "signed 1 of 2" (`goals_pending`).
 3. The accord is halted. The pending proposal reads "Held: the accord is halted"; Cosign is not offered, and a cosign request is refused `root_halted` (`goals_held_by_halt`). The accord resumes.
-4. Holder bob opens Accord on his node; bob taps `btn_goals_cosign` → confirm. The rows are declared (`goals_declared`).
+4. Holder bob, at the canonical, taps `btn_goals_cosign` → confirm. The rows are declared (`goals_declared`), and the declared read filtered by `declarer=ciris-canonical` returns them: the declarer is the community, not one holder's key.
 5. With an evidence row offered against a method and counted by its progress measure, the method shows both joins, separately (`evidence_joins`).
 
 Test ids this card adds: `goals_card`, `goals_empty`, `goals_loading`,
@@ -203,34 +204,49 @@ node's check (§3); the client shows what it is given and signs its digest.
 
 ## 6. Delta — card vs API vs CC
 
-**The CSD/4 entry, agreed with CIRISServer** (its `requirements.yaml` carries
-the same entry; it is typed here as the card's `csd:tests` block once the atoms
-are in the pinned vocabulary):
+**The CSD/4 entry, agreed with CIRISServer.** This is the requirements row
+from CIRISServer#833 (`FSD/GOALS_CEREMONY.md` §6), byte for byte. When the
+atoms are in the pinned vocabulary it is typed here as the card's `csd:tests`
+block, which adds the line `catalogue_version: 6` (the card form names the
+version it was written against; the requirements row does not).
 
 ```yaml
 CSD-130:
-  catalogue_version: <the version that adds the goal atoms>
   topology: T21
   tests:
-    goals_staged:       {at: [root.rooted, goal.staged]}
-    goals_pending:      {at: [root.rooted, goal.proposed]}
-    goals_held_by_halt: {at: [root.halted, goal.proposed], probe: {node: A, path: /v1/accord/goals/pending, status: 200, expect: {proposals.0.blocked_by: root_halted}}}
-    goals_declared:     {at: [root.rooted, goal.declared], probe: {node: C, path: /v1/goals, status: 200}}
-    evidence_joins:     {at: [goal.declared, evidence.offered, evidence.counted], probe: {node: C, path: "/v1/goals/{goal_id}/evidence?suite=safety_battery", status: 200}}
+    goals_staged:
+      at: [root.rooted, goal.staged]
+      probe: {node: C, path: /v1/accord/goals/staged, status: 200}
+    goals_pending:
+      at: [root.rooted, goal.proposed]
+      probe: {node: C, path: /v1/accord/goals/pending, status: 200}
+    goals_held_by_halt:
+      at: [root.halted, goal.proposed]
+      probe: {node: C, path: /v1/accord/goals/pending, status: 200,
+              expect: {proposals.0.blocked_by: root_halted}}
+    goals_declared:
+      at: [root.rooted, goal.declared]
+      probe: {node: C, path: /v1/goals?declarer=ciris-canonical, status: 200}
+    evidence_joins:
+      at: [goal.declared, evidence.offered, evidence.counted]
+      probe: {node: C, path: "/v1/goals/${GOAL_ID}/evidence?suite=safety_battery", status: 200}
 ```
+
+`goals_declared` filters by `declarer=ciris-canonical` because that is what
+shows the declarer was projected as the community, not one holder's key.
+`${GOAL_ID}` is the build's value for G1's attestation id (CSD/4 §6).
 
 **Blocked on:**
 
 * **The atoms.** `goal.staged`, `goal.proposed`, `goal.declared`,
-  `evidence.offered` and `evidence.counted` (plane `goal`) land in
+  `evidence.offered` and `evidence.counted` (plane `goal`, vocabulary v6) land in
   CIRISConstitution's `manifests/topology_vocabulary.json` first; then the
   server's catalogue and this repo's `packaging/csd4/` pin move, and the block
   above is typed.
 * **The declarer** (§3): a goal by ciris-canonical under its founder quorum
   needs persist's community issuer for goal rows (persist v61 at the earliest).
-* **For CIRISAgent:** the method rung (`substrate_rung` ∈ Ph0/Ph1/Ph2/A0–A5)
-  and the language list. The languages are the battery's cells, not
-  necessarily the client's 29; each method carries its `language` in its body.
+* **The method rung** (`substrate_rung` ∈ Ph0/Ph1/Ph2/A0–A5) awaits a
+  CIRISConstitution ruling; the locked method text is written once it is set.
 * **The evidence family** is not in this repo's pinned namespace registry
   (CC rc13 adds `evidence:safety_battery:*`), so the evidence fields are
   `x_private` until the registry pin moves.
