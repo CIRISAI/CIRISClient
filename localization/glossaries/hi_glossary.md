@@ -95,7 +95,8 @@ This glossary defines the canonical translations for key CIRIS terms in Hindi. A
 
 ### Formality Level
 - Use formal Hindi register (मानक हिन्दी) for ACCORD and official documentation
-- Use conversational Hindi (बोलचाल की हिन्दी) for UI strings and chat messages
+- Use conversational Hindi (बोलचाल की हिन्दी) for interface text (labels, buttons, menus)
+- **When the agent speaks to the person** (keys under `prompts.`, safety and care exemplars, the agent's replies): always formal "आप" (never "तुम" or "तू"). This overrides any conversational rule for interface text: a person in distress is addressed with respect, and the agent's own guidance requires it.
 - Use technical Hindi with English loan words for DMA prompts
 
 ### Honorifics
