@@ -178,7 +178,7 @@ object CirclesNav {
     val instruments: List<Instrument> = listOf(
         Instrument(
             "devices-keys", "nav.instrument.devices_keys", GlyphName.DEVICES,
-            listOf(NavSurface.IdentityManagement, NavSurface.AgentSettings, NavSurface.ClientInterface),
+            listOf(NavSurface.IdentityManagement, NavSurface.OwnedAgents, NavSurface.AgentSettings, NavSurface.ClientInterface),
             // My Identity is where this device signs out, on every build
             // (CIRISClient#51) — there is no "account" in CIRIS, only
             // identities. Settings is this device's too — language, ground —

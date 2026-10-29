@@ -650,6 +650,8 @@ class IdentityManagementViewModel(
                 devices.labelOccurrence(occurrence, label)
                 _labelling.value = null
                 _identityKeyId.value?.let { refreshRoster(it) }
+                // An owned node's name lives on the owned-nodes rows (CSD-132).
+                refreshOwnedNodes()
             } catch (e: NodeRefusal) {
                 PlatformLogger.w(TAG, "[saveLabel] refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}")
                 if (e.statusCode == 404 && e.reasonId == null) {
@@ -664,6 +666,36 @@ class IdentityManagementViewModel(
                 _labelRefusal.value = NodeRefusal(null, e.message, 0)
             } finally {
                 _busy.value = false
+            }
+        }
+    }
+
+    // ─── Announce an owned node (POST /v1/self/nodes/{id}/announce) ─────────
+
+    private val _announcing = MutableStateFlow<String?>(null)
+    /** The node whose announce is in flight, or null. */
+    val announcing: StateFlow<String?> = _announcing.asStateFlow()
+
+    private val _announceRefusal = MutableStateFlow<NodeRefusal?>(null)
+    val announceRefusal: StateFlow<NodeRefusal?> = _announceRefusal.asStateFlow()
+
+    /** Announce [nodeKeyId]'s owner-binding at `federation` (CC 3.2), then re-read the rows. */
+    fun announceNode(nodeKeyId: String) {
+        if (_announcing.value != null) return
+        _announcing.value = nodeKeyId
+        _announceRefusal.value = null
+        viewModelScope.launch {
+            try {
+                devices.announceNode(nodeKeyId)
+                refreshOwnedNodes()
+            } catch (e: NodeRefusal) {
+                PlatformLogger.w(TAG, "[announceNode] refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}")
+                _announceRefusal.value = e
+            } catch (e: Exception) {
+                PlatformLogger.w(TAG, "[announceNode] ${e.message}")
+                _announceRefusal.value = NodeRefusal(null, e.message, 0)
+            } finally {
+                _announcing.value = null
             }
         }
     }

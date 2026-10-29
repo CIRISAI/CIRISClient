@@ -220,6 +220,10 @@ sealed class NavSurface(
     object IdentityManagement : NavSurface("identity-management", "My Identity", CIRISIcons.identity,
         labelKey = "nav.surface.identity_management")
 
+    /** Agents you own (CSD-132): the owned nodes that run an agent. */
+    object OwnedAgents : NavSurface("owned-agents", "Agents you own", CIRISIcons.identity,
+        labelKey = "nav.surface.owned_agents")
+
     /**
      * Accord — the HUMANITY_ACCORD constitutional surface (CIRISServer #41). The
      * entrenched accord family + its `quorum:2/3` kill-switch consensus protocol,
