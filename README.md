@@ -143,7 +143,11 @@ translate ──► evaluate ──► repair
 ```
 
 `translate` brings English into 28 locales. `evaluate` grades what is already
-there. `repair` corrects what the evaluation rejected. A run enters at one lane
+there. `repair` corrects what the evaluation rejected. `translate` fills only what is
+missing: a selected key that already has a value is kept, reported, and fails
+the run, because an existing value may be a hand-written overrule. Replace
+existing values with `--overwrite`, or review them against changed English with
+`--lane evaluate`. A run enters at one lane
 and flows through the rest, so nothing reaches a shipped bundle unreviewed.
 
 ```bash
