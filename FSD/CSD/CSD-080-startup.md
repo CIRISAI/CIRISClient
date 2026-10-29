@@ -166,6 +166,16 @@ follows calls from `Screen.Startup`'s composable, and Startup's reads run from
 `CIRISApp.kt` — not from the screen. The rows above are cited from those call
 sites; the heuristic's miss is the checker's, not a missing call.
 
+**A released device.** When a release of this device lands (CSD-037,
+CSD-095), its node writes `released.json` in its home and stops; at its next
+boot it erases its data, keys and identity and comes back as a brand-new node,
+with a new NodeCode and claim PIN (CIRISServer `feat/release-by-roster-quorum`,
+unreleased). Between the stop and the restart nothing answers, and Startup
+shows its ordinary not-answering state. After the restart, `GET /v1/setup/status`
+carries `data.wiped_after_release_at` (RFC 3339, only when, nothing of the
+former owner) while the node is unclaimed, and Startup says: "This device was
+released by its previous owner and erased. Claim it with the new PIN."
+
 ## 4. Flow (how)
 
 Cold start with the backend up.
