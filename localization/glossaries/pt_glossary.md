@@ -213,7 +213,7 @@ This glossary defines the canonical translations for key CIRIS terms in Portugue
 ### Formality Level
 - Use standard Brazilian Portuguese register for ACCORD and official documentation
 - Use conversational Brazilian Portuguese for interface text (labels, buttons, menus)
-- **When the agent speaks to the person** (keys under `prompts.`, safety and care exemplars, the agent's replies): always "você" with respectful phrasing, or "o senhor / a senhora" where the agent's own guidance asks for it (never "tu"). This overrides any conversational rule for interface text: a person in distress is addressed with respect, and the agent's own guidance requires it.
+- **When the agent speaks to the person** (keys under `prompts.`, safety and care exemplars, the agent's replies): always a respectful "você": no contractions or colloquialisms ("Estou aqui para você", not "Tô aqui"), and never "tu". This overrides any conversational rule for interface text: a person in distress is addressed with respect, and the agent's own guidance requires it.
 - Technical terms can mix Portuguese with English loan words (common in tech contexts)
 
 ### Addressing Users
