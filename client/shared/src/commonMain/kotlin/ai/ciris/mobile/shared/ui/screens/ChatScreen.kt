@@ -525,7 +525,7 @@ private fun ChatRevisionConfirm(
             ) { Text(localizedString("mobile.accord_op_$op").trimEnd('…'), color = MaterialTheme.colorScheme.error) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, modifier = Modifier.testable("btn_chat_${op}_cancel")) {
+            TextButton(onClick = onDismiss, modifier = Modifier.testableClickable("btn_chat_${op}_cancel") { onDismiss() }) {
                 Text(localizedString("mobile.confirm_cancel"))
             }
         },

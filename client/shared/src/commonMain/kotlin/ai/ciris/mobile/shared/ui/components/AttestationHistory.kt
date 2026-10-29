@@ -2,6 +2,7 @@ package ai.ciris.mobile.shared.ui.components
 
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.platform.testable
+import ai.ciris.mobile.shared.platform.testableClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -152,7 +153,7 @@ fun AttestationHistoryDialog(title: String, history: AttHistory, onDismiss: () -
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss, modifier = Modifier.testable("btn_att_history_close")) {
+            TextButton(onClick = onDismiss, modifier = Modifier.testableClickable("btn_att_history_close") { onDismiss() }) {
                 Text(localizedString("mobile.common_close"))
             }
         },
