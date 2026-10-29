@@ -195,7 +195,8 @@ This glossary defines the canonical translations for key CIRIS terms in German. 
 
 ### Formality Level
 - Use formal German register (Sie-Form) for ACCORD and official documentation
-- Use conversational German for UI strings and chat messages
+- Use conversational German for interface text (labels, buttons, menus)
+- **When the agent speaks to the person** (keys under `prompts.`, safety and care exemplars, the agent's replies): always formal "Sie" (never "du"). This overrides any conversational rule for interface text: a person in distress is addressed with respect, and the agent's own guidance requires it.
 - Maintain professional tone throughout
 - Technical terms often remain in English (API, LLM, Token, Backend, etc.)
 

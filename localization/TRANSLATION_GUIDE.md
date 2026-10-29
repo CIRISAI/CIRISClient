@@ -127,6 +127,11 @@ so a lesson learned here reaches the models that would otherwise repeat it.
 - **Register drift.** The formality the glossary's standing rules specify is
   binding, not advisory: Amharic formal `እርስዎ` and never `አንተ/አንቺ`, Bengali
   `আপনি`, Yoruba respectful forms.
+- **Who is speaking decides the register.** When the agent addresses the person
+  (`prompts.*`, safety and care exemplars, replies), use the language's formal
+  address: `usted`, `Lei`, `Sie`, `vous`, `Вы`, `Ви`, `siz`, `आप`, `آپ`, `Anda`.
+  A glossary's conversational rule covers interface labels only. Spanish safety
+  exemplars came back in `tú` and passed review at MQM 100; a reviewer flags it.
 - **Orthography is meaning.** Yoruba tone marks and sub-dots disambiguate words
   (`okun` is beach, rope or strength by marks alone), so unmarked text is
   ambiguous rather than merely informal. Amharic takes `።` and `፣`; Hausa keeps
