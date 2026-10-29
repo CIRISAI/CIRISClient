@@ -32,7 +32,7 @@ catalogue id can never be read as an empty layer graph or vice versa — and a c
 carrying both is refused.
 
 REFUSED, BY NAME (CSD4.md §1, plus the card/server agreement CIRISClient#179 asks):
-  1. `topology` outside T0–T19;
+  1. `topology` outside the pinned catalogue (T0–T19, then the version's later entries; T20 reserved);
   2. an atom outside the vocabulary of the catalogue version the card names (and a
      version other than the pinned one);
   3. a test whose atoms no catalogue entry holds AT ONE INSTANT — read from the
@@ -125,8 +125,14 @@ def load_catalogue(root: Path = CATALOGUE_DIR) -> dict:
         raise CatalogueError(f"topology_vocabulary.pin names sha256 {str(vpin.get('sha256'))[:12]}… but the "
                              f"vocabulary hashes to {vsha[:12]}… — the trace and vocabulary are not one release")
     ids = traces["_meta"]["catalog_ids"]
-    if ids != [f"T{i}" for i in range(20)] or sorted(traces["entries"], key=lambda c: int(c[1:])) != ids:
-        raise CatalogueError(f"traces.json: the closed catalogue is T0–T19; got {sorted(traces['entries'])}")
+    # The catalogue is closed by the trace that ships with it: T0–T19 always,
+    # T20 reserved (durability) and never present, then whatever entries the
+    # pinned version adds (T21 from catalogue v6). A card may name only these.
+    entries = sorted(traces["entries"], key=lambda c: int(c[1:]))
+    if (entries != ids or any(f"T{i}" not in ids for i in range(20)) or "T20" in ids
+            or ids != sorted(ids, key=lambda c: int(c[1:]))):
+        raise CatalogueError(f"traces.json: the catalogue must be T0–T19 plus later entries, T20 reserved; "
+                             f"got catalog_ids {ids} and entries {entries}")
     # `_meta.sources` is the sha256 of each entry file the trace was computed
     # from: exactly the twenty entries' files, each named for its catalog id.
     sources = traces["_meta"].get("sources") or {}
@@ -161,7 +167,7 @@ def load_catalogue(root: Path = CATALOGUE_DIR) -> dict:
         stray = sorted({a for t in ((spec or {}).get("tests") or {}).values() for a in (t or {}).get("at", [])} - atoms)
         if stray:
             raise CatalogueError(f"requirements.yaml: {csd} uses atoms outside the vocabulary: {stray}")
-    return {"version": version, "atoms": atoms, "instants": instants, "entries": traces["entries"],
+    return {"ids_text": ("T0–T19" + "".join(", " + c for c in ids if int(c[1:]) > 19)), "version": version, "atoms": atoms, "instants": instants, "entries": traces["entries"],
             "requirements": reqs}
 
 
@@ -216,7 +222,7 @@ def check_card(doc: Path, text: str, block: object, stage: str | None, cat: dict
 
     topo = entry.get("topology")
     if not isinstance(topo, str) or not CATALOG_ID.match(topo) or topo not in cat["instants"]:
-        problems.append(f"tests: topology {topo!r} is outside the closed catalogue T0–T19 (CSD4.md §1 rule 1)")
+        problems.append(f"tests: topology {topo!r} is outside the closed catalogue {cat['ids_text']} (CSD4.md §1 rule 1)")
         topo = None
 
     derives = entry.get("derives")
@@ -340,7 +346,7 @@ def _plants(clean: str) -> list[tuple[str, str, str]]:
         ("bad topology", sub("topology: T10", "topology: T20"), "outside the closed catalogue T0–T19"),
         ("unknown atom", sub("at: [key.membership.evicted, key.holder.thief]",
                              "at: [key.membership.evictd, key.holder.thief]"),
-         "not in the catalogue version 3 vocabulary"),
+         "not in the catalogue version 6 vocabulary"),
         ("unreachable instant", sub("at: [key.membership.evicted, key.holder.thief]",
                                     "at: [key.membership.evicted, root.none]"),
          "at one instant"),
@@ -359,8 +365,8 @@ def _plants(clean: str) -> list[tuple[str, str, str]]:
          "are on the card and not in requirements.yaml"),
         ("card/requirements: different topology", sub("topology: T10", "topology: T11"),
          "topology 'T11' on the card"),
-        ("no catalogue_version", sub("  catalogue_version: 3\n", ""), "no `catalogue_version:`"),
-        ("wrong catalogue_version", sub("  catalogue_version: 3\n", "  catalogue_version: 2\n"), "is not the pinned catalogue"),
+        ("no catalogue_version", sub("  catalogue_version: 6\n", ""), "no `catalogue_version:`"),
+        ("wrong catalogue_version", sub("  catalogue_version: 6\n", "  catalogue_version: 2\n"), "is not the pinned catalogue"),
         ("empty tests", clean.split("  tests:\n")[0] + "  tests: {}\n```\n", "is missing or empty"),
         ("building without derives", sub("stage: sketched", "stage: building"), "without `derives:`"),
         ("`on:` for node", sub("probe: {node: A2, path: /v1/self/roster/proposals, status: 200, expect: {proposals.0: null}}",

@@ -4,7 +4,7 @@
 **Extends**: CSD-067 (the Accord screen — the Goals card sits beside "Bless CI workers"). **No new screen** (§2).
 **Reads with**: CSD-068 (the holders who sign), CSD-069 (the accord ceremonies this one follows), CSD-129 (the halt the ceremony must respect)
 **Server side**: CIRISServer `FSD/GOALS_CEREMONY.md` (CIRISServer#833); catalogue entry T21
-**Flow**: none yet — the routes are unconfirmed (§3) and the atoms the tests name are not yet in the topology vocabulary (§6)
+**Flow**: none yet — the routes are agreed and unreleased (§3; CIRISServer#834)
 
 ```yaml csd:stage
 stage: sketched
@@ -75,6 +75,13 @@ the accord is halted" from the pending read's `blocked_by`. Nothing is
 declared below quorum, and a cosign that would reach quorum is re-checked
 against the halt immediately before it is written.
 
+**After declaration: amend, withdraw, recant.** A declared row is never
+edited. It is superseded by an amended row, withdrawn, or recanted, each staged
+and cosigned under the same founder quorum, as the declaration was (CC 3.1.9.3).
+On a declared row the card offers the three, each behind the same three-fact
+confirm naming what changes; a row in a later state shows "superseded by …",
+"withdrawn" or "recanted" with the attestation id that did it.
+
 **The two joins are never merged.** *Offered against* comes from the evidence
 row (`references_attestation_id`): the worker's claim. *Counted by* comes from
 the progress measure's `evidence_refs`: the Goal side's decision. A row offered
@@ -140,10 +147,10 @@ fields:
 ```
 
 ```yaml csd:states
-populated: {tag: "goals_card", renders: "the staged or declared rows, the digest and signatures, and (once declared) the evidence joins"}
-empty:     {tag: "goals_empty", renders: "'Nothing is staged for signing.' when the node stages no set and none is declared"}
-loading:   {tag: "goals_loading", renders: "the card's own spinner while the staged set or the declared rows are read"}
-error:     {tag: "goals_error", renders: "the node's refusal by id (root_halted, proposal_digest_mismatch, staged_text_not_locked, not_a_founder, already_signed, no_pending_proposal, goals_already_declared, hardware_unavailable, substrate_error); a node without the routes is goals_unsupported, which draws no card at all"}
+populated: {tag: "proposed:goals_card", renders: "the staged or declared rows, the digest and signatures, and (once declared) the evidence joins"}
+empty:     {tag: "proposed:goals_empty", renders: "'Nothing is staged for signing.' when the node stages no set and none is declared"}
+loading:   {tag: "proposed:goals_loading", renders: "the card's own spinner while the staged set or the declared rows are read"}
+error:     {tag: "proposed:goals_error", renders: "the node's refusal by id (root_halted, proposal_digest_mismatch, staged_text_not_locked, not_a_founder, already_signed, no_pending_proposal, goals_already_declared, hardware_unavailable, substrate_error); a node without the routes is goals_unsupported, which draws no card at all"}
 ```
 
 ## 3. Contracts (who)
@@ -163,6 +170,7 @@ agreed with CIRISServer (`FSD/GOALS_CEREMONY.md`); **none is released yet**.
 | pending partials | `GET /v1/accord/goals/pending` → `{proposals: [{proposal_digest, signed_by, blocked_by?}]}` | CIRISServer | **agreed, unreleased.** `blocked_by: root_halted` while the kill switch is latched |
 | the declared rows | `GET /v1/goals`, `GET /v1/goals/{attestation_id}` | CIRISServer (every node) | **agreed, unreleased** — persist's goal projection |
 | the evidence joins | `GET /v1/goals/{attestation_id}/evidence?suite=safety_battery` → evidence rows each with `offered_against {attestation_id, family, dimension, as_stated}` and `counted_by [attestation_id]` | CIRISServer (the canonical's registry slice) | **agreed, unreleased.** Elsewhere 404 `evidence_not_held`, which the card reads as "evidence is held by the canonical", not "none" |
+| amend, withdraw, recant a declared row | `POST /v1/accord/goals/{attestation_id}/amend`, `…/withdraw`, `…/recant`, staged and cosigned like the declaration | CIRISServer | **agreed, unreleased** (CIRISServer#834); `FSD/GOALS_CEREMONY.md` §4 |
 | refusals | `root_halted`, `proposal_digest_mismatch`, `staged_text_not_locked`, `not_a_founder`, `already_signed`, `no_pending_proposal`, `goals_already_declared`, `hardware_unavailable` (501), `substrate_error` | CIRISServer | **agreed** — rendered by id through `NodeRefusal` |
 | a goal declared by a founder quorum | cosigned rows under the community's consensus_protocol, `authority_id` naming the community; supersede, withdraw and recant cosigned the same way (CC 3.1.9.3, rc14) | CIRISPersist | **specified, unreleased**: CIRISPersist#1154. The ceremony ships on the server's adoption of the persist release that carries it |
 
@@ -177,12 +185,13 @@ counted.
 2. alice taps `btn_goals_propose` → `sheet_goals_sign` with its three facts → confirm. The card shows "signed 1 of 2" (`goals_pending`).
 3. The accord is halted. The pending proposal reads "Held: the accord is halted"; Cosign is not offered, and a cosign request is refused `root_halted` (`goals_held_by_halt`). The accord resumes.
 4. Holder bob, at the canonical, taps `btn_goals_cosign` → confirm. The rows are declared (`goals_declared`), and the declared read filtered by `declarer=ciris-canonical` returns them: the declarer is the community, not one holder's key.
-5. With an evidence row offered against a method and counted by its progress measure, the method shows both joins, separately (`evidence_joins`).
+5. With an evidence row offered against a method and counted by its progress measure (posted by CIRISAgent's QA against this node), the method shows both joins, separately.
 
 Test ids this card adds: `goals_card`, `goals_empty`, `goals_loading`,
 `goals_error`, `goals_unsupported`, `row_goal_{kind}`, `row_goal_approach`,
 `row_goal_method_{lang}`, `row_goal_measure_{lang}`, `goals_digest`,
-`btn_goals_propose`, `btn_goals_cosign`, `sheet_goals_sign` with
+`btn_goals_propose`, `btn_goals_cosign`, `btn_goal_amend_{id}`,
+`btn_goal_withdraw_{id}`, `btn_goal_recant_{id}`, `sheet_goals_sign` with
 `goals_sign_fact_{1..3}`, `btn_goals_sign_confirm`, `btn_goals_sign_cancel`,
 `row_goal_offered_{id}`, `row_goal_counted_{id}`.
 
@@ -204,14 +213,19 @@ node's check (§3); the client shows what it is given and signs its digest.
 
 ## 6. Delta — card vs API vs CC
 
-**The CSD/4 entry, agreed with CIRISServer.** This is the requirements row
-from CIRISServer#833 (`FSD/GOALS_CEREMONY.md` §6), byte for byte. When the
-atoms are in the pinned vocabulary it is typed here as the card's `csd:tests`
-block, which adds the line `catalogue_version: 6` (the card form names the
-version it was written against; the requirements row does not).
+**The CSD/4 entry, agreed with CIRISServer.** The block below is CIRISServer's
+requirements row for CSD-130 (`harness/native/topologies/catalog/requirements.yaml`,
+CIRISServer#833) byte for byte, plus the card's own `catalogue_version: 6`.
+`check_csd4.py` compares the two on every build.
 
-```yaml
+`goals_declared` filters by `declarer=ciris-canonical` because that is what
+shows the declarer was projected as the community, not one holder's key. Every
+test names node C: the staging, the partials and the holders' signing all live
+at the canonical.
+
+```yaml csd:tests
 CSD-130:
+  catalogue_version: 6
   topology: T21
   tests:
     goals_staged:
@@ -226,11 +240,29 @@ CSD-130:
               expect: {proposals.0.blocked_by: root_halted}}
     goals_declared:
       at: [root.rooted, goal.declared]
-      probe: {node: C, path: /v1/goals?declarer=ciris-canonical, status: 200}
-    evidence_joins:
-      at: [goal.declared, evidence.offered, evidence.counted]
-      probe: {node: C, path: "/v1/goals/${GOAL_ID}/evidence?suite=safety_battery", status: 200}
+      probe: {node: C, path: "/v1/goals?declarer=ciris-canonical", status: 200}
+    # The evidence joins (evidence.offered, evidence.counted) are realized by
+    # CIRISAgent's QA against this node (T21 promises them with a realizer);
+    # the model never schedules a test on a state its own steps do not reach.
 ```
+
+**What T21 promises** (catalogue v6): `root.rooted`, `goal.staged`,
+`goal.proposed`, `root.halted`, `root.resumed`, `goal.declared`,
+`approach.declared`, `method.declared`, `progress_measure.declared`, and the
+goal's later life `goal.superseded`, `goal.withdrawn` and `goal.recanted` (an
+amend that needs two cosigns, with a one-cosign twin that must fail) are
+reached by the server's own steps. `evidence.admitted`, `evidence.superseded`,
+`evidence.standing.*`, `evidence.offered`, `evidence.counted` and
+`evidence.reference_unresolved` are realized by
+CIRISAgent: its QA posts the evidence against T21's node. The model never
+schedules a server test on a state its own steps do not reach, so **the evidence
+joins this card draws (§2, §4 step 5) are tested by CIRISAgent's QA, not by a
+`tests:` entry here.**
+
+The server's stage, propose and cosign steps are `known_red: CIRISServer#834`
+(the routes) until those routes ship; `check_csd4.py` reports the four tests as
+reached past a known-red step, not as failures.
+
 
 `goals_declared` filters by `declarer=ciris-canonical` because that is what
 shows the declarer was projected as the community, not one holder's key.
@@ -238,10 +270,10 @@ shows the declarer was projected as the community, not one holder's key.
 
 **Blocked on:**
 
-* **The rc14 pin.** The atoms `goal.staged`, `goal.proposed`, `goal.declared`,
-  `evidence.offered` and `evidence.counted` (plane `goal`) are vocabulary v6, in
-  CIRISConstitution rc14. Once the server's catalogue and this repo's
-  `packaging/csd4/` pin move to it, the block above is typed.
+* **CIRISServer#833** merging, then a release that carries catalogue v6. This
+  repo's `packaging/csd4/` is pinned to its pre-release commit until then (see
+  `packaging/csd4/PIN.md`).
+* **The routes** (CIRISServer#834).
 * **The persist release carrying CIRISPersist#1154** (community-issued goal
   rows, §3).
 

@@ -20,31 +20,33 @@
    "T16",
    "T17",
    "T18",
-   "T19"
+   "T19",
+   "T21"
   ],
-  "catalogue_version": 3,
-  "generator": "python -m harness.native trace (harness.native.model.traces)",
+  "catalogue_version": 6,
+  "generator": "packaging/vendor_csd4.py (harness.native.model.trace at the pinned commit)",
   "sources": {
-   "T0-just-me-offline.yaml": "beef50682515ce31fed500fb9143dea359b9986cb41f3eef9126ef8806840038",
-   "T1-one-person-two-devices.yaml": "4f0a8b4f6d5c6ddfbf557b753d389229f637d989d11986c75ef5d50067a4ca5d",
-   "T10-stolen-device-quorum-evict.yaml": "d77b54a4f5a94e3fa859861156db869ea690eb5e4450cdfef0e93f8cd5fa8e25",
-   "T11-lost-devices-lone-recovery.yaml": "58ed9167fc9ce50fc7b530dfaad9eb658d866e59856c0affd7e090c49b7a8cbb",
-   "T12-root-stall-recovery.yaml": "6cb5aebd56efb129557eeb99aaba1db3bd762b940cae36d361c3797a6715970b",
-   "T13-witnessed-lineage.yaml": "9f4908b93c1983c668ae6b325d9be3e7c5719fcda44dd07280c24e30bf59129f",
-   "T14-consent-end-to-end.yaml": "80c2e2596edcbc5ef1d52cb4429199c2021a5202c11ad76901c638f0971dbb64",
-   "T15-community-ceremony.yaml": "f8e2c6cd5d754720c4e9499fcfbd886f174b47e0ed36ade36c60cfb04daaa590",
-   "T16-agent-retirement.yaml": "16aed4cdc287f1001c255239c43f524c69fb0856510db1c2884549a49b52a607",
-   "T17-takedown-purge.yaml": "ff9df050d70ed20fafe2e12cb2b6d7b28afc0a7e0ab931ec0d9f083cb766cecc",
-   "T18-delegation-ends.yaml": "c26b11d1bcaa007809a9dae27094821c4c2f3f63479e4cbccaac910db897d92a",
-   "T19-holders-under-coercion.yaml": "b5fcca370623a56acbbacd78bd372ba79b20645eb711dff87c3a25ebcc250d39",
-   "T2-pair-room-outsider.yaml": "74c1887b64fedf824ab511a82aa355738b1ff5e876f00e6ec40a6420317b9fd5",
-   "T3-second-device-approval.yaml": "8cf100dcf0a1255ffadc0e846383890b170cd9a71d5e129f029a112065582e7b",
-   "T4-household.yaml": "c314962dd0fa8dd67e8f73561291fe10f379a6843ffb5cb7780d30e3ac5ff160",
-   "T5-community-quorum.yaml": "e57ca85b3a391866a3fe5d9eed6050499bc5ba31d57058d5e8fd6515252ee62f",
-   "T6-affiliation-delegation.yaml": "d46ba6368f9cb99472a57af812c60887bb0002d16fabec2bfe3d4cb0ec4f2712",
-   "T7-agent-steward-wa.yaml": "7813ec9880986ff75467113745c1976ef7df3153f15c18be5fbd61958230af85",
-   "T8-accord-halt.yaml": "908fa85dca44c3341db8d8cd7a24fc15edb296a6078cd14d7335de6118d8ff6f",
-   "T9-two-roots-outsider.yaml": "eaba4f2ab638bc3411b0664c12c3f92bcb09918270a2fa0e18836c40bb8201a0"
+   "T0-just-me-offline.yaml": "8f18e475e0af7ee57cfe937b934115b5a8999d8533291ba9ddff9cff930162f1",
+   "T1-one-person-two-devices.yaml": "f4b0066ece316c09802309d3d0bdd876da1be938768a74e6e9fc388944c5172f",
+   "T10-stolen-device-quorum-evict.yaml": "ab3284e3cc0d35964d2fa0cfef67c799c937be5d54a671a7ce57c1219dfa3cd6",
+   "T11-lost-devices-lone-recovery.yaml": "44eebed8102edc5e484d6347d92ad846e4c4d174e2bead5df9769dde974203ac",
+   "T12-root-stall-recovery.yaml": "87a5970ae0df8afe260c98304e95c550f080c6a4ea32222137540bd70801323d",
+   "T13-witnessed-lineage.yaml": "1e0c6802aaa1199264a52cd9e369b62674ee68006fd4f0c54f3dd8d8d6560cc6",
+   "T14-consent-end-to-end.yaml": "3e73d63391ee815c09145fc660b0f61704cf7f7fa969e55abad934ab26abc6f1",
+   "T15-community-ceremony.yaml": "4160189152473324d24d56d6490d72bdef68ea2e86f38708af180182e24c1279",
+   "T16-agent-retirement.yaml": "4ae22b954f1df432265683209d960be9913c5515801990c56230c1ccbd08f3be",
+   "T17-takedown-purge.yaml": "8f7c59a9046289fbd6cbc328da38776751ef755fbb7e73949c5c6ebdb4d24874",
+   "T18-delegation-ends.yaml": "df8f4dc05350fe983172da757c1958bfaf6843e084cc96ee302c3a830501e73b",
+   "T19-holders-under-coercion.yaml": "e00c5d5fbea8db32fb35a8a494a3403a9beecdad1d42b1ba84875e393a03af14",
+   "T2-pair-room-outsider.yaml": "1911706acb91a8bffd76dcf046bb20a417e7debd45ee662c992f6e209fc7e832",
+   "T21-canonical-goals.yaml": "238ccc99a130c0862a55392d5de04dbdb38546c7c6bff413ed653420a0da3502",
+   "T3-second-device-approval.yaml": "e16d8599f312845c86750190cd56e1091bff77de4c1b98e2d6f6b7d041597936",
+   "T4-household.yaml": "2d55071264ee085b0d6cb9f3b4c604101fe196fb7d2328077b91904806b195e4",
+   "T5-community-quorum.yaml": "2340f369875a90249157ed68e0500ed746d728e88e1ce8de424b95d8a75f7fe4",
+   "T6-affiliation-delegation.yaml": "0b6f9fb39c899760c277a617a6d351c8c05751438fa39ff3537a48c1ec0ece35",
+   "T7-agent-steward-wa.yaml": "d467e0d9b093da3732aec1e9678976ace01ee3ad395531cebbfec2b7b3d359cc",
+   "T8-accord-halt.yaml": "eed9291bfa12b132d948dff4030a2d55d8122fbd9732ab6680837676bb766a71",
+   "T9-two-roots-outsider.yaml": "ec97cab53d666c08c6773188b316150f391b1436e5503498a9463c21c79209a3"
   }
  },
  "entries": {
@@ -4604,6 +4606,379 @@
    ],
    "title": "Two people, pair room, one outsider"
   },
+  "T21": {
+   "buildable_prefix": 6,
+   "file": "T21-canonical-goals.yaml",
+   "initial": [],
+   "promises": [
+    "root.rooted",
+    "goal.staged",
+    "goal.proposed",
+    "root.halted",
+    "root.resumed",
+    "goal.declared",
+    "approach.declared",
+    "method.declared",
+    "progress_measure.declared",
+    "goal.superseded",
+    "goal.withdrawn",
+    "goal.recanted",
+    "evidence.reference_unresolved",
+    "evidence.admitted",
+    "evidence.superseded",
+    "evidence.standing.blessed",
+    "evidence.standing.unblessed",
+    "evidence.offered",
+    "evidence.counted"
+   ],
+   "refused": {
+    "rel[1]:goals_stage": "known red: CIRISServer#834 (a filed product defect; --include-known-red builds through it)",
+    "rel[2]:goals_propose": "known red: CIRISServer#834 (a filed product defect; --include-known-red builds through it)",
+    "rel[5]:goals_cosign": "known red: CIRISServer#834 (a filed product defect; --include-known-red builds through it)",
+    "rel[6]:goals_amend": "known red: CIRISServer#834 (a filed product defect; --include-known-red builds through it)",
+    "rel[7]:goals_amend": "known red: CIRISServer#834 (a filed product defect; --include-known-red builds through it)",
+    "rel[8]:goals_withdraw": "known red: CIRISServer#834 (a filed product defect; --include-known-red builds through it)",
+    "rel[9]:goals_recant": "known red: CIRISServer#834 (a filed product defect; --include-known-red builds through it)"
+   },
+   "steps": [
+    {
+     "atoms": [
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "canonical:C"
+    },
+    {
+     "atoms": [
+      "node.unclaimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human"
+     ],
+     "id": "nodes"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.claimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "person:alice"
+    },
+    {
+     "atoms": [
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "announced"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "canonical_peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[0]:peered"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "goal.staged",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[1]:goals_stage"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "goal.proposed",
+      "goal.staged",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[2]:goals_propose"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "goal.proposed",
+      "goal.staged",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.halted",
+      "root.holder_disposition.honest",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[3]:halt"
+    },
+    {
+     "atoms": [
+      "canonical.peered",
+      "goal.proposed",
+      "goal.staged",
+      "key.holder.owner",
+      "key.revocation.none",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "root.holder_disposition.honest",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.resumed",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[4]:resume"
+    },
+    {
+     "atoms": [
+      "approach.declared",
+      "canonical.peered",
+      "goal.declared",
+      "key.holder.owner",
+      "key.revocation.none",
+      "method.declared",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "progress_measure.declared",
+      "root.holder_disposition.honest",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.resumed",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[5]:goals_cosign"
+    },
+    {
+     "atoms": [
+      "approach.declared",
+      "canonical.peered",
+      "goal.declared",
+      "key.holder.owner",
+      "key.revocation.none",
+      "method.declared",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "progress_measure.declared",
+      "root.holder_disposition.honest",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.resumed",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[6]:goals_amend"
+    },
+    {
+     "atoms": [
+      "approach.declared",
+      "canonical.peered",
+      "goal.declared",
+      "goal.superseded",
+      "key.holder.owner",
+      "key.revocation.none",
+      "method.declared",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "progress_measure.declared",
+      "root.holder_disposition.honest",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.resumed",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[7]:goals_amend"
+    },
+    {
+     "atoms": [
+      "approach.declared",
+      "canonical.peered",
+      "goal.declared",
+      "goal.superseded",
+      "goal.withdrawn",
+      "key.holder.owner",
+      "key.revocation.none",
+      "method.declared",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "progress_measure.declared",
+      "root.holder_disposition.honest",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.resumed",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[8]:goals_withdraw"
+    },
+    {
+     "atoms": [
+      "approach.declared",
+      "canonical.peered",
+      "goal.declared",
+      "goal.recanted",
+      "goal.superseded",
+      "goal.withdrawn",
+      "key.holder.owner",
+      "key.revocation.none",
+      "method.declared",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "progress_measure.declared",
+      "root.holder_disposition.honest",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.resumed",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "rel[9]:goals_recant"
+    },
+    {
+     "atoms": [
+      "approach.declared",
+      "canonical.peered",
+      "goal.declared",
+      "goal.recanted",
+      "goal.superseded",
+      "goal.withdrawn",
+      "key.holder.owner",
+      "key.revocation.none",
+      "method.declared",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "progress_measure.declared",
+      "root.holder_disposition.honest",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.resumed",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one"
+     ],
+     "id": "negatives"
+    },
+    {
+     "atoms": [
+      "approach.declared",
+      "canonical.peered",
+      "goal.declared",
+      "goal.recanted",
+      "goal.superseded",
+      "goal.withdrawn",
+      "key.holder.owner",
+      "key.revocation.none",
+      "method.declared",
+      "negatives.held",
+      "node.announce.announced",
+      "node.announced",
+      "node.claimed",
+      "peer.direct",
+      "progress_measure.declared",
+      "root.holder_disposition.honest",
+      "root.infrastructure",
+      "root.liveness.live",
+      "root.resumed",
+      "root.rooted",
+      "seat.identity_type.human",
+      "self.roster_size.one",
+      "values.ready"
+     ],
+     "id": "actor"
+    }
+   ],
+   "title": "The canonical declares its Goals under its founder quorum"
+  },
   "T3": {
    "buildable_prefix": 25,
    "file": "T3-second-device-approval.yaml",
@@ -5948,7 +6323,11 @@
    "promises": [
     "agent.bound",
     "steward.bonded",
-    "wa.present"
+    "wa.present",
+    "agent.deferral.pending",
+    "agent.deferral.approved",
+    "agent.deferral.rejected",
+    "agent.identity.amended"
    ],
    "refused": {
     "rel[0]:agent": "relation `agent`: a CIRISAgent process hard-bound to the node: the server serves no agent routes without one (src/py_adapter.rs proxy_routes); halt_agent drives an EXTERNAL agent",

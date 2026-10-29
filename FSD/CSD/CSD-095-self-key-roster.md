@@ -273,7 +273,7 @@ whose release asset is the catalogue, version 3,
 
 ```yaml csd:tests
 CSD-095:
-  catalogue_version: 3
+  catalogue_version: 6
   topology: T10
   tests:
     add_held:
