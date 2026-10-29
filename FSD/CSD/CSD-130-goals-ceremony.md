@@ -54,7 +54,7 @@ has three parts.
 | Goal | `goal:species` | "That a person anywhere can reach an AI agent whose consequential acts are checkable by parties it does not control, that named humans can stop, that defers when it is unsure, and that serves them free and open." |
 | Avoidance goal (negative score, CC 3.1.9.3) | `goal:species` | "That no system of ours stands between people or over them." |
 | Approach | `approach:{goal_id}` | "Demonstrate that the conditions hold in practice by meeting the mhGAP referral guidance in every supported language: respond to a person who discloses distress as a non-clinical companion, and refer to care under the mhGAP guidance; never diagnose, never prescribe, never delay a referral." |
-| Method, one per language | `method:{approach_id}:{substrate_rung}` | mhGAP referral guidance in that language, at the rung the deployment runs. The languages are the battery's 29 `{lang}_mental_health` cells, the same set as this client's locales; each method carries its `language` in its body |
+| Method, one per language | `method:{approach_id}:{substrate_rung}` | mhGAP referral guidance in that language, at rung **A3** (goal-holding on the coherence-ratchet cognition ladder, CC 3.1.9.7; the same for every deployment): `method:{approach_id}:A3`. The languages are the battery's 29 `{lang}_mental_health` cells, the same set as this client's locales; each method carries its `language` in its body |
 | Progress measure, one per method | `progress_measure:{method_id}` | `tracks[]`: the refer rate and the no-diagnosis rate per cell; `computation`, `validity_window`, `goodhart_resistance` as stated in the row |
 
 The row text is **not localized**: it is the signed text, and a translation
@@ -98,8 +98,8 @@ fields:
   - ceg: "method:{approach_id}:{substrate_rung}"
     use: display-only
     type: unconfirmed
-    example: "mhGAP referral guidance in Yorùbá, rung 2"
-    renders: "one row per battery cell ({lang}_mental_health, 29): the language (from the method body's `language`), the rung, the method text, read-only"
+    example: "mhGAP referral guidance in Yorùbá · A3"
+    renders: "one row per battery cell ({lang}_mental_health, 29): the language (from the method body's `language`), the rung (A3), the method text, read-only"
     tag: "proposed:row_goal_method_*"
   - ceg: "progress_measure:{method_id}"
     use: display-only
@@ -164,7 +164,7 @@ agreed with CIRISServer (`FSD/GOALS_CEREMONY.md`); **none is released yet**.
 | the declared rows | `GET /v1/goals`, `GET /v1/goals/{attestation_id}` | CIRISServer (every node) | **agreed, unreleased** — persist's goal projection |
 | the evidence joins | `GET /v1/goals/{attestation_id}/evidence?suite=safety_battery` → evidence rows each with `offered_against {attestation_id, family, dimension, as_stated}` and `counted_by [attestation_id]` | CIRISServer (the canonical's registry slice) | **agreed, unreleased.** Elsewhere 404 `evidence_not_held`, which the card reads as "evidence is held by the canonical", not "none" |
 | refusals | `root_halted`, `proposal_digest_mismatch`, `staged_text_not_locked`, `not_a_founder`, `already_signed`, `no_pending_proposal`, `goals_already_declared`, `hardware_unavailable` (501), `substrate_error` | CIRISServer | **agreed** — rendered by id through `NodeRefusal` |
-| a goal declared by a founder quorum | the declarer is ciris-canonical, judged by its community protocol, not one attesting key | CIRISPersist | **blocked**: persist v60's goal projection takes the declarer to be the row's attesting key. Needs the licence-style community issuer (raised with persist); the ceremony ships on the server's persist v61 adopt at the earliest |
+| a goal declared by a founder quorum | cosigned rows under the community's consensus_protocol, `authority_id` naming the community; supersede, withdraw and recant cosigned the same way (CC 3.1.9.3, rc14) | CIRISPersist | **specified, unreleased**: CIRISPersist#1154. The ceremony ships on the server's adoption of the persist release that carries it |
 
 ## 4. Flow (how)
 
@@ -238,15 +238,16 @@ shows the declarer was projected as the community, not one holder's key.
 
 **Blocked on:**
 
-* **The atoms.** `goal.staged`, `goal.proposed`, `goal.declared`,
-  `evidence.offered` and `evidence.counted` (plane `goal`, vocabulary v6) land in
-  CIRISConstitution's `manifests/topology_vocabulary.json` first; then the
-  server's catalogue and this repo's `packaging/csd4/` pin move, and the block
-  above is typed.
-* **The declarer** (§3): a goal by ciris-canonical under its founder quorum
-  needs persist's community issuer for goal rows (persist v61 at the earliest).
-* **The method rung** (`substrate_rung` ∈ Ph0/Ph1/Ph2/A0–A5) awaits a
-  CIRISConstitution ruling; the locked method text is written once it is set.
+* **The rc14 pin.** The atoms `goal.staged`, `goal.proposed`, `goal.declared`,
+  `evidence.offered` and `evidence.counted` (plane `goal`) are vocabulary v6, in
+  CIRISConstitution rc14. Once the server's catalogue and this repo's
+  `packaging/csd4/` pin move to it, the block above is typed.
+* **The persist release carrying CIRISPersist#1154** (community-issued goal
+  rows, §3).
+
+The method rung is A3 (CC 3.1.9.7). The steward confirms it at the ceremony,
+and a higher rung named in the pinned ratchet manifest for goal-projector
+agents would take precedence.
 * **The evidence family** is not in this repo's pinned namespace registry
   (CC rc13 adds `evidence:safety_battery:*`), so the evidence fields are
   `x_private` until the registry pin moves.
