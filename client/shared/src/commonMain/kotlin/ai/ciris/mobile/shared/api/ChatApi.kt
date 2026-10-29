@@ -1,6 +1,7 @@
 package ai.ciris.mobile.shared.api
 
 import ai.ciris.mobile.shared.models.chat.ChatCommunity
+import ai.ciris.mobile.shared.models.chat.ChatMessageHistory
 import ai.ciris.mobile.shared.models.chat.ChatTranscript
 import ai.ciris.mobile.shared.models.chat.SendChatMessageResult
 
@@ -27,6 +28,26 @@ interface ChatApi {
 
     /** `POST {nodeUrl}/v1/chat/{id}/messages`. */
     suspend fun send(nodeUrl: String, communityId: String, body: String): SendChatMessageResult
+
+    /**
+     * `GET {nodeUrl}/v1/chat/{id}/messages/{attestationId}/history`, oldest first;
+     * null when the node predates the route (a bare 404).
+     */
+    suspend fun history(nodeUrl: String, communityId: String, attestationId: String): ChatMessageHistory? = null
+
+    /**
+     * `POST {nodeUrl}/v1/chat/{id}/messages/{attestationId}/{op}` — `supersede`
+     * (with [body]), `withdraw` or `recant` (with an optional [reason] code).
+     * Returns the new row's attestation id.
+     */
+    suspend fun revise(
+        nodeUrl: String,
+        communityId: String,
+        attestationId: String,
+        op: String,
+        body: String? = null,
+        reason: String? = null,
+    ): String = throw UnsupportedOperationException("revise")
 }
 
 /** [ChatApi] over the real client, with the client's session. */
@@ -37,4 +58,14 @@ class ClientChatApi(private val client: CIRISApiClient) : ChatApi {
         client.listChatMessages(communityId, nodeUrl = nodeUrl)
     override suspend fun send(nodeUrl: String, communityId: String, body: String): SendChatMessageResult =
         client.sendChatMessage(communityId, body, nodeUrl = nodeUrl)
+    override suspend fun history(nodeUrl: String, communityId: String, attestationId: String): ChatMessageHistory? =
+        client.getChatMessageHistory(communityId, attestationId, nodeUrl = nodeUrl)
+    override suspend fun revise(
+        nodeUrl: String,
+        communityId: String,
+        attestationId: String,
+        op: String,
+        body: String?,
+        reason: String?,
+    ): String = client.reviseChatMessage(communityId, attestationId, op, body, reason, nodeUrl = nodeUrl)
 }

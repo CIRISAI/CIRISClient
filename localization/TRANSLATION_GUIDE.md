@@ -60,12 +60,21 @@ without a sentence's worth of noise around it.
 | replace | `rọ́pò` | `maye gurbi` | `ተካ` | `အစားထိုး` |
 | node | `node` | `kumburi` | `ኖድ` | `node` |
 
-¹ **The one place the corpus is overruled.** It renders *Identity* as `Asali`,
+¹ **Hausa *Identity*.** The corpus renders *Identity* as `Asali`,
 but `asali` means *origin / essence*, not a
 credential. Confirmed against the language: `shaida` (< Arabic *shahāda*,
 "testimony") is the credential sense — `katin shaida` is an identity **card**,
 `takardar shaida` is a certificate. A federation identity is a signed credential,
 so `shaida` is right and `Asali` is the imprecise incumbent.
+
+² **Bengali *recant*, for a message.** The corpus renders *recant* as
+`অস্বীকার` (deny) and *recanted* as `অস্বীকৃত`. Recanting a message is its
+author saying their own statement was false, which is a retraction, not a
+denial; the reviewer rejected every `অস্বীকার` rendering of it on that ground.
+`ভুল স্বীকার` ("acknowledge as wrong") carries the retraction, and matches the
+confirm's own fact line ("you say it was false"). Chat uses `ভুল স্বীকৃত` and
+`এই বার্তাটি ভুল বলে স্বীকার করবেন?`; the Accord badge and op keep the corpus
+words until they are reviewed in their own context.
 
 **Overruling the corpus is a decision that gets written down, here.** It is not
 a licence to prefer your own taste; it took an independent reviewer's finding

@@ -1,5 +1,8 @@
 package ai.ciris.mobile.shared.viewmodels
 
+import ai.ciris.mobile.shared.ui.components.AttHistory
+import ai.ciris.mobile.shared.ui.components.HistoryEntry
+import ai.ciris.mobile.shared.ui.components.HistoryStep
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.api.ChatApi
 import ai.ciris.mobile.shared.api.ClientChatApi
@@ -343,6 +346,17 @@ class UserChatViewModel(
             _sending.value = true
             clearRefusal()
             try {
+                val editing = _editing.value
+                if (editing != null) {
+                    // Replace: a supersede of the original, never a new message.
+                    chat.revise(node, id, editing.attestationId, "supersede", body = text)
+                    if (epochAtSend == entryEpoch) {
+                        _draft.value = ""
+                        _editing.value = null
+                    }
+                    loadMessages(node, id, epochAtSend)
+                    return@launch
+                }
                 val result = chat.send(node, id, text)
                 if (epochAtSend == entryEpoch) {
                     _draft.value = ""
@@ -368,6 +382,75 @@ class UserChatViewModel(
                 // corrective (the new room has no send in flight), and a live
                 // one must always clear it.
                 _sending.value = false
+            }
+        }
+    }
+
+    // ─── History and revisions ─────────────────────────────────────────────────
+
+    private val _history = MutableStateFlow<AttHistory?>(null)
+    /** The open History dialog's content, or null when it is closed. */
+    val history: StateFlow<AttHistory?> = _history.asStateFlow()
+
+    /**
+     * Open [message]'s history: the node's chain when it serves one, otherwise
+     * what the row itself records, marked incomplete. Never the details view.
+     */
+    fun openHistory(message: CegChatMessage) {
+        val id = _community.value?.communityId ?: return
+        val node = roomNodeUrl ?: return
+        _history.value = AttHistory.Loading
+        viewModelScope.launch {
+            _history.value = try {
+                chat.history(node, id, message.attestationId)
+                    ?.let { h -> AttHistory.Loaded(h.chain.map { it.toHistoryEntry() }, complete = true) }
+                    ?: messageRowHistory(message)
+            } catch (e: NodeRefusal) {
+                AttHistory.Failed(e.reasonId ?: e.detail ?: "HTTP ${e.statusCode}")
+            } catch (e: Exception) {
+                AttHistory.Failed(e.message ?: e::class.simpleName ?: "error")
+            }
+        }
+    }
+
+    fun closeHistory() {
+        _history.value = null
+    }
+
+    private val _editing = MutableStateFlow<CegChatMessage?>(null)
+    /** The message being replaced: the composer holds its text and Send supersedes it. */
+    val editing: StateFlow<CegChatMessage?> = _editing.asStateFlow()
+
+    /** Replace: the composer takes the message's text, and Send writes a supersede. */
+    fun startEdit(message: CegChatMessage) {
+        _editing.value = message
+        _draft.value = message.body
+    }
+
+    fun cancelEdit() {
+        _editing.value = null
+        _draft.value = ""
+    }
+
+    /**
+     * Withdraw or recant one of the owner's messages. The node judges who may
+     * (`viewer_ops`) and refuses anyone else; [reason] is a code from
+     * [ai.ciris.mobile.shared.models.chat.ChatRevisionReason], or null.
+     */
+    fun revise(message: CegChatMessage, op: String, reason: String? = null) {
+        val id = _community.value?.communityId ?: return
+        val node = roomNodeUrl ?: return
+        val epoch = entryEpoch
+        viewModelScope.launch {
+            clearRefusal()
+            try {
+                chat.revise(node, id, message.attestationId, op, reason = reason)
+                loadMessages(node, id, epoch)
+            } catch (e: NodeRefusal) {
+                if (epoch == entryEpoch) recordRefusal("revise:$op", e)
+            } catch (e: Exception) {
+                if (epoch == entryEpoch) _refusalDetail.value = e.message ?: e::class.simpleName
+                PlatformLogger.e(tag, "[revise:$op] ${e.message}", e)
             }
         }
     }
@@ -438,4 +521,40 @@ class UserChatViewModel(
             "[$operation] refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}",
         )
     }
+}
+
+/** A chain step as the shared History dialog draws it. */
+private fun ai.ciris.mobile.shared.models.chat.ChatHistoryStep.toHistoryEntry() = HistoryEntry(
+    attestationId = attestationId,
+    step = when (op) {
+        "supersede" -> HistoryStep.Supersede
+        "withdraw" -> HistoryStep.Withdraw
+        "recant" -> HistoryStep.Recant
+        else -> HistoryStep.Original
+    },
+    attesterKeyId = attestingKeyId,
+    authorKeyId = author,
+    at = assertedAt,
+    note = listOfNotNull(body, reason?.let { "reason: $it" }).joinToString(" · ").ifBlank { null },
+)
+
+/**
+ * What a message row records about its own lifecycle when the node serves no
+ * chain: the original, and the step that ended it, whose signer and time the
+ * row does not carry.
+ */
+internal fun messageRowHistory(m: CegChatMessage): AttHistory.Loaded {
+    val later = when (m.status) {
+        CegChatMessage.STATUS_SUPERSEDED -> HistoryStep.Supersede
+        CegChatMessage.STATUS_WITHDRAWN -> HistoryStep.Withdraw
+        CegChatMessage.STATUS_RECANTED -> HistoryStep.Recant
+        else -> null
+    }
+    return AttHistory.Loaded(
+        listOfNotNull(
+            HistoryEntry(m.attestationId, HistoryStep.Original, m.attestingKeyId.ifBlank { null }, m.author, m.assertedAt.ifBlank { null }),
+            later?.let { HistoryEntry(m.statusAttestationId ?: "", it) },
+        ),
+        complete = false,
+    )
 }

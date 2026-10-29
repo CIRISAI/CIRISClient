@@ -1,5 +1,11 @@
 package ai.ciris.mobile.shared.ui.screens
 
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.RadioButton
+import ai.ciris.mobile.shared.models.chat.ChatRevisionReason
+import ai.ciris.mobile.shared.ui.components.AttestationHistoryDialog
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.models.chat.CegChatMessage
 import ai.ciris.mobile.shared.models.chat.PairPhase
@@ -181,6 +187,10 @@ fun ChatScreen(
     }
 
     var detailsFor by remember { mutableStateOf<String?>(null) }
+    // A withdraw or recant awaiting its confirm: (message, op).
+    var confirmRevision by remember { mutableStateOf<Pair<CegChatMessage, String>?>(null) }
+    val history by viewModel.history.collectAsState()
+    val editing by viewModel.editing.collectAsState()
     val whereLabel = localizedString("mobile.files_custody_where")
 
     Scaffold(
@@ -340,12 +350,17 @@ fun ChatScreen(
                                 detailsOpen = detailsFor == msg.attestationId,
                                 extraOps = chatFileOps(msg, custody, whereLabel),
                                 onOp = { op ->
-                                    // Only ViewDetails / History are ever
-                                    // enabled for a message; the rest are
-                                    // shown-and-disabled with their reason.
-                                    if (op == AttOp.ViewDetails || op == AttOp.History) {
-                                        detailsFor =
+                                    // Replace / Withdraw / Recant are enabled
+                                    // only where the node's `viewer_ops` lists
+                                    // them (the author, a live row).
+                                    when (op) {
+                                        AttOp.ViewDetails -> detailsFor =
                                             if (detailsFor == msg.attestationId) null else msg.attestationId
+                                        AttOp.History -> viewModel.openHistory(msg)
+                                        AttOp.Supersede -> viewModel.startEdit(msg)
+                                        AttOp.Withdraw -> confirmRevision = msg to "withdraw"
+                                        AttOp.Recant -> confirmRevision = msg to "recant"
+                                        else -> Unit
                                     }
                                 },
                             )
@@ -363,6 +378,23 @@ fun ChatScreen(
             // otherwise.
             if (!joining) Surface(tonalElevation = 2.dp, modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+                    // Replacing: Send writes a supersede of this message, not a new one.
+                    editing?.let { e ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().testable("chat_editing_banner"),
+                        ) {
+                            Text(
+                                localizedString("mobile.chat_editing", mapOf("id" to e.attestationId.take(8))),
+                                fontSize = 12.sp,
+                                modifier = Modifier.weight(1f),
+                            )
+                            TextButton(
+                                onClick = viewModel::cancelEdit,
+                                modifier = Modifier.testableClickable("btn_chat_edit_cancel") { viewModel.cancelEdit() },
+                            ) { Text(localizedString("mobile.confirm_cancel")) }
+                        }
+                    }
                     rememberTextInputDriver("input_chat_body", draft, enabled = !sending, onValueChange = viewModel::setDraft)
                     Row(verticalAlignment = Alignment.Bottom) {
                         OutlinedTextField(
@@ -425,6 +457,79 @@ fun ChatScreen(
         }
     }
     custody?.let { FileCustodyHost(it, nodeVersion) }
+    history?.let { h ->
+        AttestationHistoryDialog(localizedString("mobile.accord_op_history"), h, viewModel::closeHistory)
+    }
+    confirmRevision?.let { (msg, op) ->
+        ChatRevisionConfirm(
+            message = msg,
+            op = op,
+            onConfirm = { reason ->
+                viewModel.revise(msg, op, reason)
+                confirmRevision = null
+            },
+            onDismiss = { confirmRevision = null },
+        )
+    }
+}
+
+/**
+ * Withdraw or recant one of your messages: three facts, an optional reason code
+ * from edge's closed set, and the warning that the reason is visible to everyone
+ * in the room. The node judges whether you may (`viewer_ops`) and refuses
+ * anyone else.
+ */
+@Composable
+private fun ChatRevisionConfirm(
+    message: CegChatMessage,
+    op: String,
+    onConfirm: (reason: String?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val codes = if (op == "recant") ChatRevisionReason.RECANT else ChatRevisionReason.WITHDRAW
+    var reason by remember { mutableStateOf<String?>(null) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        modifier = Modifier.testable("dialog_chat_$op"),
+        title = { Text(localizedString("mobile.chat_${op}_title")) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    localizedString("mobile.chat_revise_fact_which", mapOf("id" to message.attestationId.take(8))),
+                    modifier = Modifier.testable("chat_${op}_fact_1"),
+                )
+                Text(localizedString("mobile.chat_${op}_fact_what"), modifier = Modifier.testable("chat_${op}_fact_2"))
+                Text(localizedString("mobile.chat_revise_fact_permanent"), modifier = Modifier.testable("chat_${op}_fact_3"))
+                Text(localizedString("mobile.chat_revise_reason_label"), fontWeight = FontWeight.SemiBold)
+                codes.forEach { code ->
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                            .testableClickable("chat_${op}_reason_$code") { reason = if (reason == code) null else code },
+                    ) {
+                        RadioButton(selected = reason == code, onClick = { reason = if (reason == code) null else code })
+                        Text(localizedString("mobile.chat_reason_$code"))
+                    }
+                }
+                Text(
+                    localizedString("mobile.chat_revise_reason_visible"),
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(reason) },
+                modifier = Modifier.testableClickable("btn_chat_${op}_confirm") { onConfirm(reason) },
+            ) { Text(localizedString("mobile.accord_op_$op").trimEnd('…'), color = MaterialTheme.colorScheme.error) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, modifier = Modifier.testable("btn_chat_${op}_cancel")) {
+                Text(localizedString("mobile.confirm_cancel"))
+            }
+        },
+    )
 }
 
 /** How often a joining pair room asks the node again — the node's own pair-room cadence is 30 s. */
@@ -547,6 +652,14 @@ private fun MessageRow(
         authorKeyId = message.author?.takeIf { it.isNotBlank() },
         timestamp = message.assertedAt.takeIf { it.isNotBlank() },
         supersededBy = message.statusAttestationId,
+        allowedOps = message.viewerOps?.mapNotNull {
+            when (it) {
+                "supersede" -> AttOp.Supersede
+                "withdraw" -> AttOp.Withdraw
+                "recant" -> AttOp.Recant
+                else -> null
+            }
+        }?.toSet(),
     )
     Row(
         // THE TEXT, NOT JUST THE TAG (CIRISClient#27, one surface later).

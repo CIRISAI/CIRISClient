@@ -160,6 +160,13 @@ data class Attestation(
     val evidenceCount: Int = 0,
     /** True → replicated here from another holder's device (mesh gossip). */
     val arrivedViaGossip: Boolean = false,
+    /**
+     * The ops the NODE says this viewer may perform on this row, where the node
+     * judges it per row (a chat message's `viewer_ops`: author-only, live-only).
+     * Null when the node gives no judgement — for a message, a node older than
+     * the routes. Only consulted for kinds whose ops the node gates per row.
+     */
+    val allowedOps: Set<AttOp>? = null,
 )
 
 /** Resolved per-kind colors (the generalization of the old `invocationStyle`). */
@@ -205,7 +212,7 @@ fun attestationStyle(kind: AttKind, styleKey: String?, status: AttStatus): AttSt
 }
 
 /** Which hamburger ops light up for a given `(kind, status, viewer)`. */
-private fun AttOp.enabledFor(att: Attestation, viewer: ViewerAuthority): Boolean = when (this) {
+internal fun AttOp.enabledFor(att: Attestation, viewer: ViewerAuthority): Boolean = when (this) {
     AttOp.ViewDetails, AttOp.History -> true
     AttOp.Evidence -> att.evidenceCount > 0
     // Copy the co-scrub partial JSON to the clipboard so a holder can hand it to the
@@ -215,14 +222,25 @@ private fun AttOp.enabledFor(att: Attestation, viewer: ViewerAuthority): Boolean
     // Both an invocation (halt/drill/notify) and a canonical co-scrub accumulate scrubs.
     AttOp.Cosign -> att.status == AttStatus.Pending &&
         (att.kind == AttKind.Invocation || att.kind == AttKind.Coscrub)
-    // Supersede == "replace / update" a live canonical record (a 1-of-N re-mint).
-    AttOp.Supersede -> att.kind == AttKind.Canonical && att.status == AttStatus.Active
-    // Withdraw a live canonical record (2-of-3 destructive).
-    AttOp.Withdraw -> att.kind == AttKind.Canonical && att.status == AttStatus.Active
-    // Delegate / Recant have no in-app endpoint yet (holder revoke / recant are
-    // absent server-side) — surfaced in the uniform menu but never enabled.
-    AttOp.Delegate, AttOp.Recant -> false
+    // Supersede == "replace / update" a live canonical record (a 1-of-N re-mint),
+    // or a chat message (below).
+    AttOp.Supersede -> if (att.kind == AttKind.Message) att.nodeAllows(this)
+        else att.kind == AttKind.Canonical && att.status == AttStatus.Active
+    // Withdraw a live canonical record (2-of-3 destructive), or a chat message.
+    AttOp.Withdraw -> if (att.kind == AttKind.Message) att.nodeAllows(this)
+        else att.kind == AttKind.Canonical && att.status == AttStatus.Active
+    // Recant: a chat message only. Delegate has no in-app endpoint — surfaced in
+    // the uniform menu but never enabled.
+    AttOp.Recant -> att.kind == AttKind.Message && att.nodeAllows(this)
+    AttOp.Delegate -> false
 }
+
+/**
+ * A chat message's replace / withdraw / recant: exactly what the node says this
+ * viewer may do to this row (`viewer_ops`), never a client guess at authorship.
+ * The node signs as the author, with the person key it holds.
+ */
+private fun Attestation.nodeAllows(op: AttOp): Boolean = allowedOps?.contains(op) == true
 
 /**
  * Why a DISABLED op is disabled, when there is a specific answer worth saying.
@@ -236,18 +254,15 @@ private fun AttOp.enabledFor(att: Attestation, viewer: ViewerAuthority): Boolean
  * Returns null when the op is enabled, or when its absence is self-evident from
  * the row (an already-withdrawn record, a non-threshold object's Cosign).
  */
-private fun AttOp.disabledReasonKey(att: Attestation): String? = when {
+internal fun AttOp.disabledReasonKey(att: Attestation): String? = when {
     att.kind != AttKind.Message -> null
-    // A message withdraw is a TRANSIT revocation: it needs the AUTHOR'S OWN
-    // hybrid signature over an envelope naming the target attestation_id. An
-    // owner BEARER session is not that signature, and the node exposes no route
-    // that would produce one, so the op is shown-and-disabled rather than
-    // hidden (the object really does have the verb) or fake-enabled (which would
-    // fail at the wire after the user believed the message was gone).
-    this == AttOp.Withdraw -> "mobile.chat_op_withdraw_unavailable"
-    this == AttOp.Recant -> "mobile.chat_op_recant_unavailable"
-    this == AttOp.Supersede -> "mobile.chat_op_supersede_unavailable"
-    else -> null
+    this != AttOp.Supersede && this != AttOp.Withdraw && this != AttOp.Recant -> null
+    // No `viewer_ops` at all: the node predates the routes. Said only then —
+    // the reason comes from the node, not from a hard-coded assumption.
+    att.allowedOps == null -> "mobile.chat_op_no_route"
+    att.allowedOps.contains(this) -> null
+    // The node answered and did not list this op for this viewer on this row.
+    else -> "mobile.chat_op_not_permitted"
 }
 
 private fun AttOp.labelKey(): String = when (this) {
