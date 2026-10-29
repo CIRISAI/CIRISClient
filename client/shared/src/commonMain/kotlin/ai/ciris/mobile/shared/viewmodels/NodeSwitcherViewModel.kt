@@ -876,8 +876,17 @@ class NodeSwitcherViewModel(
             }.getOrDefault(false)
             PlatformLogger.i(TAG, "[claimAdmin] local signer ready=$ready")
             _bootstrap.value = _bootstrap.value.copy(localSignerReady = ready)
+            if (ready) {
+                val declared = apiClient.getNodeCohortScopes(ai.ciris.mobile.shared.api.CIRISApiClient.LOCAL_NODE_URL)
+                PlatformLogger.i(TAG, "[claimAdmin] cohort scopes declared=${declared ?: "none (older node)"}")
+                _cohortScopes.value = cohortChoices(declared)
+            }
         }
     }
+
+    private val _cohortScopes = MutableStateFlow(cohortChoices(null))
+    /** The scopes the claim may name, narrowest first; `self` is always first. */
+    val cohortScopes: StateFlow<List<String>> = _cohortScopes.asStateFlow()
 
     // LAST in the class, on purpose. `reload()` writes `_ownerHasFedId`, which is
     // declared far below where this block used to sit, and initializers run in
@@ -890,6 +899,20 @@ class NodeSwitcherViewModel(
     init {
         viewModelScope.launch { reload() }
     }
+}
+
+/** The three scopes every node's claim routes accept (before CIRISServer#666). */
+val LEGACY_COHORT_SCOPES = listOf("self", "family", "community")
+
+/**
+ * The cohort choices to offer for a claim: the node's own list
+ * (`data.cohort_scopes`, widening order) when it declares one that includes
+ * `self`, otherwise the three every node accepts. `self` always leads, because
+ * a claim is normally `self` and announcing re-signs it at `federation` (CC 3.2).
+ */
+fun cohortChoices(declared: List<String>?): List<String> {
+    val scopes = declared?.distinct()?.takeIf { "self" in it } ?: return LEGACY_COHORT_SCOPES
+    return listOf("self") + scopes.filter { it != "self" }
 }
 
 /** Phase of the NodeCode bootstrap, for driving the connect/pin/claim UI. */

@@ -148,9 +148,9 @@ fields:
     tag: field_claim_node_displayname
   - ceg: x_private:cohort_scope
     use: emit
-    type: "enum[self,family,community]"
+    type: "enum[self,family,community,affiliations,species,biosphere,federation]"
     example: "self"
-    renders: "'Add this node to: Yourself / Your family / A community' — required, or the claim 400s; the value rides inside the signed body"
+    renders: "'Add this node to:' with Yourself selected and shown alone; More options reveals the rest of the scopes the node accepts (its data.cohort_scopes, widening order; the three self/family/community on an older node). Required, or the claim 400s; the value rides inside the signed body"
     tag: radio_cohort_self
   - ceg: x_private:local_signer_ready
     use: display-only
@@ -172,14 +172,17 @@ fields:
     tag: "proposed:txt_claim_error"
 ```
 
-**The cohort picker offers three of the seven CEG scopes.**
-`ClaimNodeScreen.kt:363` lists `self | family | community`. `CohortScope.kt` maps
-the seven CEG values onto the Locked Spec's five circles — `self → Just me`,
-`family → Family`, `community → Neighbours`, `affiliations → Communities and
-Businesses`, and `species`/`planet`/`federation → Everyone`. So a node **cannot
-be claimed into Communities and Businesses or into Everyone from this screen**;
-two of the five circles have no option. Whether the node accepts
-`affiliations` is a CIRISServer question, and it is the first one to ask.
+**The cohort picker offers what the node accepts, `self` first.** A claim is
+normally `self`: the node is yours, and announcing it later re-signs it at
+`federation` (CC 3.2). A group scope is for an unannounced node joining that
+group; the owner then signs a second binding at the group's scope
+(CIRISPersist#1140). So Yourself is selected and shown alone, and *More options*
+(`btn_cohort_advanced`) reveals the rest. The list is this node's own
+`data.cohort_scopes` from `GET /v1/setup/status` (CIRISServer#666, 0.5.242:
+self, family, community, affiliations, species, biosphere, federation, in
+widening order). A node that does not declare it accepts the three
+`self | family | community`, and those are offered. A scope this client has no
+label for is shown as the node names it.
 
 ```yaml csd:states
 populated: {tag: field_claim_node_code, renders: "the three fields, the cohort picker and Claim; the progress row sits below and fills in as the phases advance"}
@@ -192,6 +195,7 @@ error:     {tag: "proposed:txt_claim_error", renders: "the node's own refusal �
 
 | value | endpoint | owner | state |
 |---|---|---|---|
+| the cohort scopes the claim may name | `GET {local}/v1/setup/status` → `data.cohort_scopes` (widening order) | CIRISServer 0.5.242 (CIRISServer#666, PR #835) | **unreleased.** Read once the local signer is up (`getNodeCohortScopes`, `NodeSwitcherViewModel.checkLocalSigner`); absent on an older node, which accepts `self`, `family`, `community` |
 | is the local signer up | `GET /v1/identity` via `isLocalNodeUp` | CIRISServer `src/compose.rs:3132` (static JSON, a liveness probe) | live — `NodeSwitcherViewModel.kt:839` |
 | the code to claim | `GET /v1/federation/node-code` | CIRISServer `src/federation_nodecode.rs` — `{code, qr_payload, key_id, alias_hint}` | live — `getNodeCode` (`NodeSwitcherViewModel.kt:675`), this device's own code for the other side to scan |
 | the claimed device picks up its session | `POST /v1/setup/claimed-session {claim_pin}` | CIRISServer 0.5.218 (loopback, 15-minute hold) | **not called from this screen.** A claim by another device succeeds WITHOUT a session (`session_pickup: "local"`); the claimed device collects it here. `ClaimRemoteResponse` lacks `cohort_scope`, `owner_binding_attestation_id`, `session_pickup`, `claimer_key_admitted`, `local_directory_updated`, and nothing handles a claim that succeeds with no session. Belongs with the approve-a-new-device pass |
@@ -278,8 +282,7 @@ starts one node.
 **The ask, in order.** (1) `CirisTextField` for all three fields — drivable by
 construction (`ui/primitives/Controls.kt:91`). (2) Tags for the role, the phase
 and the two error kinds. (3) A two-node fixture, or an explicit statement in
-`testing/README.md` that the remote claim is manual. (4) **CIRISServer**: the
-missing cohort scopes, and an off-host claim-posture read.
+`testing/README.md` that the remote claim is manual. (4) **CIRISServer**: an off-host claim-posture read.
 
 **One open defect.** `btn_claim_node_another` and
 `btn_claim_node_to_consent` pass an empty lambda to `testableClickable`
