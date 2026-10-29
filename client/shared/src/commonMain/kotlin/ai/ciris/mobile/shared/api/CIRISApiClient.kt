@@ -11104,6 +11104,34 @@ class CIRISApiClient internal constructor(
             ?.let { it.substringBeforeLast('/', "").ifBlank { null } }
     }.getOrNull()
 
+    /**
+     * The cohort scopes this node's claim routes accept, widest last —
+     * `GET {nodeUrl}/v1/setup/status` → `data.cohort_scopes` (CIRISServer#666,
+     * 0.5.242: self, family, community, affiliations, species, biosphere,
+     * federation).
+     *
+     * A narrow scrape, like [nodeHome]'s: null when the node does not declare
+     * the list (an older node) or cannot be read, and the caller offers the
+     * three scopes older nodes accept.
+     */
+    suspend fun getNodeCohortScopes(nodeUrl: String = LOCAL_NODE_URL): List<String>? = runCatching {
+        val client = agentHttpClient {
+            install(io.ktor.client.plugins.HttpTimeout) {
+                requestTimeoutMillis = 5_000
+                connectTimeoutMillis = 3_000
+            }
+        }
+        val body = try {
+            client.get("$nodeUrl/v1/setup/status").bodyAsText()
+        } finally {
+            client.close()
+        }
+        val root = jsonConfig.parseToJsonElement(body).jsonObject
+        val data = root["data"]?.jsonObject ?: root
+        (data["cohort_scopes"] as? kotlinx.serialization.json.JsonArray)
+            ?.mapNotNull { it.jsonPrimitive.contentOrNull?.takeIf { s -> s.isNotBlank() } }
+    }.getOrNull()
+
     suspend fun getSystemHealth(): SystemHealthData {
         val method = "getSystemHealth"
         // Per-poll fetch (every 30s) — debug; the INFO line below fires only when
