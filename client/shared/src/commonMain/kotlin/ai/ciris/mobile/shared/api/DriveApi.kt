@@ -37,6 +37,18 @@ interface DriveApi {
      * answers a bare 404.
      */
     suspend fun readCustody(attestationId: String, cohort: String, roomId: String?): FileCustody
+
+    /** `POST /v1/files/{id}/rename {filename}` — author only (0.5.242). */
+    suspend fun renameFile(attestationId: String, cohort: String, roomId: String?, filename: String): Unit =
+        throw UnsupportedOperationException("renameFile")
+
+    /** `POST /v1/files/{id}/move {cohort, room_id?, keep_source}` — author only, and a member of the target (0.5.242). */
+    suspend fun moveFile(attestationId: String, cohort: String, roomId: String?, toCohort: String, toRoomId: String?, keepSource: Boolean): Unit =
+        throw UnsupportedOperationException("moveFile")
+
+    /** `DELETE /v1/files/{id}?cohort&room_id` — withdraw; author only. */
+    suspend fun withdrawFile(attestationId: String, cohort: String, roomId: String?): Unit =
+        throw UnsupportedOperationException("withdrawFile")
 }
 
 /**
@@ -59,4 +71,16 @@ class ClientDrive(
     override suspend fun readMediaPolicy(): MediaPolicy = client.readMediaPolicy(nodeUrl = nodeUrl())
     override suspend fun readCustody(attestationId: String, cohort: String, roomId: String?): FileCustody =
         client.readFileCustody(attestationId, cohort, roomId, nodeUrl = nodeUrl())
+    override suspend fun renameFile(attestationId: String, cohort: String, roomId: String?, filename: String) =
+        client.fileAct(attestationId, "rename", cohort, roomId,
+            kotlinx.serialization.json.buildJsonObject { put("filename", kotlinx.serialization.json.JsonPrimitive(filename)) }, nodeUrl())
+    override suspend fun moveFile(attestationId: String, cohort: String, roomId: String?, toCohort: String, toRoomId: String?, keepSource: Boolean) =
+        client.fileAct(attestationId, "move", cohort, roomId,
+            kotlinx.serialization.json.buildJsonObject {
+                put("cohort", kotlinx.serialization.json.JsonPrimitive(toCohort))
+                toRoomId?.let { put("room_id", kotlinx.serialization.json.JsonPrimitive(it)) }
+                put("keep_source", kotlinx.serialization.json.JsonPrimitive(keepSource))
+            }, nodeUrl())
+    override suspend fun withdrawFile(attestationId: String, cohort: String, roomId: String?) =
+        client.fileAct(attestationId, "withdraw", cohort, roomId, null, nodeUrl())
 }

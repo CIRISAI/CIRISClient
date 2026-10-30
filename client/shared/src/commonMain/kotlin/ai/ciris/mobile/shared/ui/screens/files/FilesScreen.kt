@@ -1,5 +1,7 @@
 package ai.ciris.mobile.shared.ui.screens.files
 
+import ai.ciris.mobile.shared.ui.primitives.CirisTextField
+import ai.ciris.mobile.shared.viewmodels.FileActState
 import ai.ciris.mobile.shared.api.NodeRefusal
 import ai.ciris.mobile.shared.ceg.Dim
 import ai.ciris.mobile.shared.ceg.shortKey
@@ -163,6 +165,12 @@ fun FilesScreen(
     households: HouseholdsViewModel? = null,
     /** The one "Where is this file" card (CSD-107); null leaves the item out of the menu. */
     custody: FileCustodyViewModel? = null,
+    /**
+     * A room moderator's acts on a file's AUTHOR (CSD-065): moderation events
+     * and flags are on keys. Null outside a room. [FileModeration.isModerator]
+     * false leaves the acts visible and unavailable, with the reason.
+     */
+    moderation: FileModeration? = null,
 ) {
     val t = CirisTheme.tokens
     val state by viewModel.state.collectAsState()
@@ -172,6 +180,10 @@ fun FilesScreen(
     var picking by remember { mutableStateOf(false) }
     var choosingRoomFor by remember { mutableStateOf<ai.ciris.mobile.shared.platform.PickedFile?>(null) }
     var receiptFor by remember { mutableStateOf<Receipt?>(null) }
+    val actState by viewModel.act.collectAsState()
+    var renaming by remember { mutableStateOf<DriveEntry?>(null) }
+    var moving by remember { mutableStateOf<DriveEntry?>(null) }
+    var withdrawing by remember { mutableStateOf<DriveEntry?>(null) }
 
     // Which household, for a family tab: the one the hub's switcher picked.
     val family = viewModel.cohort == FilesCohort.FAMILY
@@ -194,6 +206,7 @@ fun FilesScreen(
             picking = false
             val rooms = viewModel.rooms
             when {
+                viewModel.room != null -> viewModel.addFile(picked, viewModel.room)
                 viewModel.cohort == FilesCohort.SELF -> viewModel.addFile(picked)
                 viewModel.cohort == FilesCohort.FAMILY -> viewModel.addFile(picked, household?.familyId)
                 rooms.size == 1 -> viewModel.addFile(picked, rooms.single())
@@ -207,7 +220,7 @@ fun FilesScreen(
     Scaffold(
         topBar = {
             ScreenTopBar(
-                title = { Text(localizedString("mobile.files_title")) },
+                title = { Text(localizedString(if (viewModel.room != null) "mobile.files_room_title" else "mobile.files_title")) },
                 actions = {
                     CirisTextButton(
                         label = localizedString("mobile.files_refresh"),
@@ -220,7 +233,7 @@ fun FilesScreen(
                     val canAdd = when (viewModel.cohort) {
                         FilesCohort.SELF -> true
                         FilesCohort.FAMILY -> household != null
-                        FilesCohort.COMMUNITY -> viewModel.rooms.isNotEmpty()
+                        FilesCohort.COMMUNITY -> viewModel.room != null || viewModel.rooms.isNotEmpty()
                     }
                     if (canAdd) {
                         CirisTextButton(
@@ -335,6 +348,14 @@ fun FilesScreen(
                                                     custody.open(custodyTargetOf(entry))
                                                 }
                                             },
+                                        ) + fileActs(
+                                            entry = entry,
+                                            moderation = moderation,
+                                            onRename = { receiptFor = null; renaming = entry },
+                                            onMove = { receiptFor = null; moving = entry },
+                                            onWithdraw = { receiptFor = null; withdrawing = entry },
+                                            onModerate = { receiptFor = null; moderation?.onModerateAuthor?.invoke(entry) },
+                                            onFlag = { receiptFor = null; moderation?.onFlagAuthor?.invoke(entry) },
                                         ),
                                     ),
                                     onClick = { viewModel.openFile(entry) },
@@ -369,6 +390,13 @@ fun FilesScreen(
     if (open !is OpenState.Closed) FileSheet(open, policy, onClose = { viewModel.closeFile() }, onCheckAgain = { viewModel.openFile(it) })
     receiptFor?.let { r -> ReceiptSheet(receipt = r, onDismiss = { receiptFor = null }) }
     custody?.let { FileCustodyHost(it, nodeVersion) }
+    FileActDialogs(
+        viewModel = viewModel,
+        state = actState,
+        renaming = renaming, onRenameDone = { renaming = null },
+        moving = moving, onMoveDone = { moving = null },
+        withdrawing = withdrawing, onWithdrawDone = { withdrawing = null },
+    )
 }
 
 /** A drive row as the custody route's per-file query: its cohort, and its room unless it is a self file. */
@@ -595,4 +623,127 @@ internal fun humanBytes(n: Long): String = when {
     n >= 1024L * 1024 -> "${(n * 10 / (1024L * 1024)) / 10.0} MB"
     n >= 1024L -> "${n / 1024} KB"
     else -> "$n B"
+}
+
+/**
+ * A room moderator's acts on a file's author (CSD-065). Moderation events and
+ * flags are on KEYS: the author's, not the file's.
+ */
+data class FileModeration(
+    /** The viewer holds `moderate` in this room; false leaves the acts shown and unavailable. */
+    val isModerator: Boolean,
+    val onModerateAuthor: (DriveEntry) -> Unit,
+    val onFlagAuthor: (DriveEntry) -> Unit,
+)
+
+/**
+ * The file's own acts beyond open and custody: the author's rename, move and
+ * withdraw (the node refuses anyone else, by name), a room moderator's acts on
+ * the author, and the two acts that exist in the model but on no node yet,
+ * drawn unavailable with their blockers.
+ */
+@Composable
+internal fun fileActs(
+    entry: DriveEntry,
+    moderation: FileModeration?,
+    onRename: () -> Unit,
+    onMove: () -> Unit,
+    onWithdraw: () -> Unit,
+    onModerate: () -> Unit,
+    onFlag: () -> Unit,
+): List<ReceiptAct> = buildList {
+    val id = entry.attestationId
+    add(ReceiptAct(localizedString("mobile.files_act_rename"), "btn_file_act_rename_$id", onAct = onRename))
+    add(ReceiptAct(localizedString("mobile.files_act_move"), "btn_file_act_move_$id", onAct = onMove))
+    add(ReceiptAct(localizedString("mobile.files_act_withdraw"), "btn_file_act_withdraw_$id", onAct = onWithdraw))
+    if (moderation != null) {
+        val notModerator = if (moderation.isModerator) null else localizedString("mobile.files_act_only_moderator")
+        add(ReceiptAct(localizedString("mobile.files_act_moderate_author"), "btn_file_act_moderate_$id", unavailable = notModerator, onAct = onModerate))
+        add(ReceiptAct(localizedString("mobile.files_act_flag_author"), "btn_file_act_flag_$id", unavailable = notModerator, onAct = onFlag))
+        add(ReceiptAct(localizedString("mobile.files_act_takedown"), "btn_file_act_takedown_$id",
+            unavailable = localizedString("mobile.files_act_takedown_unavailable")))
+    }
+    if (entry.cohort != FilesCohort.SELF.wire) {
+        add(ReceiptAct(localizedString("mobile.files_act_report"), "btn_file_act_report_$id",
+            unavailable = localizedString("mobile.files_act_report_unavailable")))
+    }
+}
+
+/** Rename, move and withdraw: one dialog each, and the outcome by name. */
+@Composable
+private fun FileActDialogs(
+    viewModel: FilesViewModel,
+    state: FileActState,
+    renaming: DriveEntry?,
+    onRenameDone: () -> Unit,
+    moving: DriveEntry?,
+    onMoveDone: () -> Unit,
+    withdrawing: DriveEntry?,
+    onWithdrawDone: () -> Unit,
+) {
+    renaming?.let { entry ->
+        var name by remember(entry.attestationId) { mutableStateOf(entry.filename ?: "") }
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = onRenameDone,
+            modifier = Modifier.testable("dialog_file_rename"),
+            title = { Text(localizedString("mobile.files_act_rename")) },
+            text = { CirisTextField(tag = "input_file_rename", value = name, onValueChange = { name = it }) },
+            confirmButton = {
+                CirisTextButton(label = localizedString("mobile.files_act_save"), tag = "btn_file_rename_save",
+                    onClick = { if (name.isNotBlank()) { viewModel.renameFile(entry, name.trim()); onRenameDone() } })
+            },
+            dismissButton = { CirisTextButton(label = localizedString("mobile.confirm_cancel"), tag = "btn_file_rename_cancel", onClick = onRenameDone) },
+        )
+    }
+    moving?.let { entry ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = onMoveDone,
+            modifier = Modifier.testable("dialog_file_move"),
+            title = { Text(localizedString("mobile.files_act_move")) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(localizedString("mobile.files_move_explain"))
+                    CirisButton(label = localizedString("mobile.files_move_to_self"), tag = "btn_file_move_self",
+                        onClick = { viewModel.moveFile(entry, FilesCohort.SELF.wire, null); onMoveDone() })
+                    for (room in viewModel.rooms.filter { it != entry.roomId }) {
+                        CirisButton(label = localizedString("mobile.files_room", "room", shortKey(room)), tag = "btn_file_move_${room}",
+                            onClick = { viewModel.moveFile(entry, entry.cohort, room); onMoveDone() })
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { CirisTextButton(label = localizedString("mobile.confirm_cancel"), tag = "btn_file_move_cancel", onClick = onMoveDone) },
+        )
+    }
+    withdrawing?.let { entry ->
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = onWithdrawDone,
+            modifier = Modifier.testable("dialog_file_withdraw"),
+            title = { Text(localizedString("mobile.files_act_withdraw")) },
+            text = { Text(localizedString("mobile.files_withdraw_explain", "name", entry.filename ?: shortKey(entry.attestationId))) },
+            confirmButton = {
+                CirisTextButton(label = localizedString("mobile.files_act_withdraw"), tag = "btn_file_withdraw_confirm",
+                    onClick = { viewModel.withdrawFile(entry); onWithdrawDone() })
+            },
+            dismissButton = { CirisTextButton(label = localizedString("mobile.confirm_cancel"), tag = "btn_file_withdraw_cancel", onClick = onWithdrawDone) },
+        )
+    }
+    val line = when (state) {
+        is FileActState.Working -> localizedString("mobile.files_act_working")
+        is FileActState.Done -> localizedString(when (state.kind) {
+            FileActState.Kind.RENAME -> "mobile.files_act_renamed"
+            FileActState.Kind.MOVE -> "mobile.files_act_moved"
+            FileActState.Kind.WITHDRAW -> "mobile.files_act_withdrawn"
+        })
+        is FileActState.Refused -> refusalText(state.refusal)
+        FileActState.Idle -> null
+    }
+    line?.let {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { viewModel.dismissAct() },
+            modifier = Modifier.testable("dialog_file_act_result"),
+            text = { Text(it) },
+            confirmButton = { CirisTextButton(label = localizedString("mobile.common_close"), tag = "btn_file_act_result_close", onClick = { viewModel.dismissAct() }) },
+        )
+    }
 }

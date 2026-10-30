@@ -133,8 +133,8 @@ fields:
   - ceg: x_private:op_disabled_reason
     use: display-only
     type: string
-    example: "mobile.chat_op_withdraw_unavailable"
-    renders: "Withdraw / Recant / Supersede are SHOWN AND DISABLED with their reason, not hidden and not fake-enabled: each needs the author's own hybrid signature over an envelope naming the target, an owner bearer session is not that signature, and the node exposes no route that would produce one (Attestation.kt:224-236). The object really does have the verb"
+    example: "mobile.chat_op_no_route"
+    renders: "Replace / Withdraw / Recant are enabled exactly where the row's `viewer_ops` lists them (the node's judgement: author-only, live-only; the node signs as the author with the person key it holds). Otherwise they are SHOWN AND DISABLED with the node's reason, never hidden: no `viewer_ops` → 'This node can't do this yet' (`mobile.chat_op_no_route`); listed without the op → 'Only the person who wrote this message can do this, and only while it's live' (`mobile.chat_op_not_permitted`)"
     tag: "chat_msg_*"
   - ceg: x_private:draft_bytes
     use: display-only
@@ -189,6 +189,29 @@ transcript as a neutral system note, because `RoomHandshake::note` has three
 consumers by design. A person who tries to send early sees one fact twice: once
 as a failure, once as a note.
 
+**History and revisions.** A message's ⋮ offers History: its lifecycle — the
+original, then each replacement, withdrawal or recantation, with who signed it
+and when (`GET …/history`; on a node without the route, the row's own record,
+marked incomplete, never a one-row history). Replace puts the text back in the
+composer (`chat_editing_banner`) and Send writes a supersede; Withdraw and
+Recant confirm with three facts and an optional reason code that everyone in
+the room can see (`dialog_chat_withdraw`, `dialog_chat_recant`). All three are
+enabled only where the row's `viewer_ops` lists them.
+
+**The room's files.** `btn_chat_files` opens `chat_room_files_panel`: the Files
+card (CSD-007) for exactly this room, with add, open, *Where is this file*
+(CSD-107), and the author's rename, move and withdraw.
+
+**Moderation under the menu.** On someone else's message, the ⋮ adds *Moderate
+the author…* and *Flag the author…* (`mi_chat_moderate_<id>`,
+`mi_chat_flag_<id>`), which open the Moderation forms (CSD-065) prefilled with
+this room and the author's key: moderation acts on keys, not on messages. They
+are unavailable, with "only a moderator of this room", unless the viewer holds
+`moderate` here: the node's `viewer_duties` on the transcript when it sends it
+(0.5.243), otherwise the `author_duties` on the viewer's own messages. A flag is
+recorded and hides nothing yet. *Report to the room's moderators*
+(`mi_chat_report_<id>`) is drawn unavailable: no route (CIRISServer#665).
+
 ## 3. Contracts (who)
 
 | value | endpoint | owner | state |
@@ -207,9 +230,14 @@ as a failure, once as a note.
 | the contact grant | `GET` / `POST /v1/contacts` | CIRISServer (`src/contacts_chat.rs:3784`) | live — CSD-005 |
 | the room's handshake state | carried as a system entry with `message_id: chat.state.*` (`src/contacts_chat.rs:694-751`, `803-818`) | CIRISServer | live — and the client renders it correctly through `SystemNoteRow` + `chatEntryText`, whose fallback rules are id, then the server's English, never a blank line and never the raw key (CIRISClient#34) |
 | **does this wait resolve by itself** | `converges_on_its_own` — present on `GET .../messages` (`:3742`) and on the contacts refusal (`:2063`), **absent from the send refusal** (`:2986-2996`) | CIRISServer | **missing on the one route that needs it** |
-| edit / withdraw / recant a message | no route — it needs the author's own signature and the app holds no keys | CIRISServer | **missing by design**, and the UI says so per-op rather than hiding the verb |
-| where a file in chat is | `GET /v1/files/{id}/custody?cohort&room_id` | CIRISServer — the custody PR, unmerged, unreleased | called — `ui/screens/ChatScreen.kt:397`, as **Where is this file** (`mi_op_where_<id>`) on a message card's `⋮`, only on a row whose `content_type` is not `text/*`. **Dormant**: the chat plane refuses anything but text (`chat.unsupported_content_type`), so no row carries it today. The card is CSD-107's |
+| where a file in chat is | `GET /v1/files/{id}/custody?cohort&room_id` | CIRISServer 0.5.218+ (`src/drive.rs`, custody) | called — `ui/screens/ChatScreen.kt:397`, as **Where is this file** (`mi_op_where_<id>`) on a message card's `⋮`, only on a row whose `content_type` is not `text/*`. **Dormant**: the chat plane refuses anything but text (`chat.unsupported_content_type`), so no row carries it today. The card is CSD-107's |
 | a CEG family for `chat:message:v1` | `chat:*` (CC 3.1.9 / 3.3.11) | CIRISConstitution | **registered in rc6** (CIRISClient#150) — the body and draft rows bind it |
+| the room's files panel: list | `GET /v1/drive?cohort=community&room_id={room}` | CIRISServer | **live** (0.5.242; `room_file` passes in the native harness: 64 KiB and a 3 MiB chunk DAG, bytes identical on the other member's node). `btn_chat_files` opens `chat_room_files_panel`, the Files card (CSD-007) for this room only; `viewer_duties` on this read and on the transcript (0.5.243) says whether the viewer moderates here |
+| the panel: add, open, render policy | `POST /v1/files {cohort: community, room_id, …}`, `GET /v1/files/{id}?cohort=community&room_id=…`, `GET /v1/media/policy` | CIRISServer | **live** — the same calls as CSD-007, in this room |
+| the panel: rename, move, withdraw a file you sent | `POST /v1/files/{id}/rename {filename}`, `POST /v1/files/{id}/move {cohort, room_id?, keep_source}`, `DELETE /v1/files/{id}?cohort&room_id` | CIRISServer | **live** (0.5.242), author only — CSD-007's acts, one action with two doors |
+| (closure only) households and owned nodes | `GET /v1/families`, `GET /v1/setup/owned-nodes` | CIRISServer | **not called in a room**: the Files card reads them only for a family tab; the route checker's closure follows the shared composable |
+| a message's moderation items | none here — they open the Moderation forms (CSD-065) for the author in this room | — | moderate and flag act on the AUTHOR's key; drawn unavailable with "only a moderator of this room" for a non-moderator. "Report to the room's moderators" is drawn unavailable: no route (CIRISServer#665) |
+| a file shown in the chat as an attachment | send `POST …/messages {body, attachment_attestation_id}`; the transcript's per-message `attachment`; the gate `accepts_attachments: true` on the transcript | CIRISServer 0.5.243 (needs CIRISEdge's unreleased consent fix) | **not offered in this client yet** (planned for client 0.5.238): an older node ignores the field and posts the caption without the file, so Attach is offered only where the transcript says `accepts_attachments: true` |
 
 **Wrong host: none.** Every route here is the NODE's, on `:4243`. The three
 calls (`startChat`, `listChatMessages`, `sendChatMessage`) take the node URL

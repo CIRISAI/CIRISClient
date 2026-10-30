@@ -370,6 +370,13 @@ val ai.ciris.mobile.shared.models.federation.InviteInbox.pairRooms: List<ai.ciri
 data class ChatTranscript(
     @SerialName("community_id")
     val communityId: String = "",
+    /**
+     * The duties THIS viewer holds in the room (`moderate`, `takedown`, …), as
+     * the node's duty gate computes them. Null on a node that does not say;
+     * the client then reads the viewer's own messages' `author_duties`.
+     */
+    @SerialName("viewer_duties")
+    val viewerDuties: List<String>? = null,
     @SerialName("cohort_scope")
     val cohortScope: String = CegChatMessage.COHORT_SCOPE_COMMUNITY,
     val messages: List<CegChatMessage> = emptyList(),

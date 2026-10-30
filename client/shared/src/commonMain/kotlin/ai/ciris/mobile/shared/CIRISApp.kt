@@ -4496,6 +4496,18 @@ fun CIRISApp(
                     // "Where is this file" on a row that is a file (CSD-107).
                     custody = fileCustodyViewModel,
                     nodeVersion = nodeVersion,
+                    // The room's files panel (CSD-091, CSD-110): this room's drive only.
+                    roomFiles = { room ->
+                        ai.ciris.mobile.shared.viewmodels.FilesViewModel(
+                            drive, ai.ciris.mobile.shared.viewmodels.FilesCohort.COMMUNITY, room = room,
+                        )
+                    },
+                    // A message's or file's moderation items open the Moderation
+                    // forms for its author in this room (CSD-065).
+                    onModerateItem = { room, author ->
+                        safetyViewModel.prefillFromItem(room, author)
+                        currentScreen = Screen.Moderation
+                    },
                 )
             }
 

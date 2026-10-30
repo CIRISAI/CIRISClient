@@ -182,6 +182,22 @@ Tags: `file_preview_text`, `file_not_rendered`, `file_save_blocked`,
 `file_unreadable`, `file_digest_verified`, `file_digest_not_sent`,
 `file_policy_builtin`.
 
+**The receipt's acts.** Every file row's receipt offers Open and *Where is this
+file* (CSD-107), then the author's acts: **Rename** (`dialog_file_rename`),
+**Move** (`dialog_file_move`: Just me, or another room this circle lists) and
+**Withdraw** (`dialog_file_withdraw`). The node allows them to the author only
+and refuses anyone else by id; the outcome is a named line
+(`dialog_file_act_result`), never a silent success. In a room (the files panel
+of CSD-091 and CSD-110) the receipt adds the moderation acts on the file's
+AUTHOR (CSD-065: *Moderate the author*, *Flag the author*; unavailable with
+"only a moderator of this room" for anyone else) and two acts drawn
+unavailable with their blockers: *Take down (legal basis)* (CIRISPersist#1160)
+and *Report to the room's moderators* (CIRISServer#665). An unavailable act is a
+dim chip that says why when tapped (`receipt_act_unavailable`); it never acts.
+
+**One room's files.** The same card, in room mode, is the files panel of a chat
+room: it lists exactly that room (`cohort=community&room_id`) and adds into it.
+
 ## 3. Contracts (who)
 
 Sources: CIRISServer `v0.5.217` and `v0.5.218`, `src/drive.rs` and
@@ -201,15 +217,17 @@ version. Rows marked "not called" are live on the node and not wired here.
 | this owner's key, so the roster can say "you" | `GET /v1/setup/owned-nodes` | CIRISServer (CSD-100 §3) | called — `api/HouseholdsApi.kt:86`, by the shared household model |
 | which of the person's devices the file is on | `GET /v1/files/{id}/custody?cohort&room_id` | CIRISServer v0.5.218 `src/drive.rs:3921` (handler `:2548`, the same `FileQuery`); 0.5.217 answers a bare 404 | called — `ui/screens/files/FilesScreen.kt:332`, from the row receipt's **Where is this file** act (`btn_receipt_act_where_<id>`), with the same `fileQuery`; the card is CSD-107's |
 | everything about a file except its bytes, **including `content_digest`** | `GET /v1/files/{id}/meta` | CIRISServer `src/drive.rs:3017` (handler `:1872`; digest `:1917-1921`, `:1951-1952`; costs a whole read, so it is computed here and on open, never per listed row) | live, **not called** — the card opens the bytes to learn what a meta read would say |
-| rename | `POST /v1/files/{id}/rename` | CIRISServer `src/drive.rs:3018` (handler `:2272`) — a new row over the SAME bytes, old row withdrawn, author only | live, **not called** |
-| move to another circle ("going out asks": this call IS the ask) | `POST /v1/files/{id}/move` `{…, keep_source}` | CIRISServer `src/drive.rs:3019` (handler `:2465`) — reseals at the target room's tier; author only, and a member of the target | live, **not called**. This is the cross-circle move the Files tab needs; `keep_source: true` is "share to" |
 | replace a file's bytes | `PUT /v1/files/{id}` | CIRISServer `src/drive.rs:3013` (handler `:2186`) — publishes the new row THEN withdraws the old | live, **not called** |
-| withdraw a file | `DELETE /v1/files/{id}` | CIRISServer `src/drive.rs:3014` (handler `:2408`) — persist then refuses every read of the bytes (CC 2.3); holders drop it on their next pass | live, **not called** — the card has no delete |
 | fetch content from a named peer by SHA-256 | `POST /v1/federation/content/{content_id}` | CIRISServer `src/federation_surface.rs:699`, owner-gated | live — called from the network hub's Content tile (`NetworkContentViewModel`, CSD-051 §3), not from Files. CIRISServer#651's "fetch" half; the directory half is the filed gap |
 | a digest signed into the row; the listing's descriptor (digest, size, renditions, placeholder) | `GET /v1/drive` rows | CIRISEdge `blocked_by: CIRISEdge#638` (`src/drive.rs:170-172`) | blocks `receipt_dimension` on the receipt; the opened file is verified without it |
 | renditions (display / thumb / poster) | the ingest pipeline; `derived_from` index (V149) | CIRISServer `blocked_by: CIRISServer#614`; the node says so itself (`renditions: false`) | Tier A media waits on it, and the sheet says so |
 | a file above the whole-read cap (0.5.218) | `GET /v1/files/{id}` → 413 `drive.too_large_for_whole_read` (above `WHOLE_READ_CAP`, 64 MiB) | CIRISServer (`src/drive.rs::too_large_for_whole_read`) | **0.5.218, rendered** as a named state, not an error: `OpenState.TooLarge` → `file_too_large`, "This file is too large to open on this device yet." The bytes are there and open for this viewer; the client reads files whole and has no streaming read (`?raw=1`, which the server serves with `Range`) — not built here. Pinned: `FilesViewModelTest.aFileAboveTheWholeReadCapIsNamedTooLargeNotAFailure` |
 | a file whose key has not arrived (0.5.220) | `GET /v1/drive` row `bytes: "awaiting_key"`; `GET /v1/files/{id}` → 409 `drive.awaiting_key` | CIRISServer `src/drive.rs` (`BYTE_STATES`, `blob_state`: persist `ChunkKeyNotYetGranted`, edge `UnopenedReason::AwaitingKey`; `refuse_state`) | **rendered** as a named wait, not an error: the row's line "Waiting for this file's key"; the sheet `file_awaiting_key`, "Waiting for this file's key" + "Its bytes are on this device, but the key that opens them hasn't arrived yet. It comes on its own; nothing is wrong.", with `btn_file_check_again` re-opening the file. Pinned: `FilesViewModelTest.aFileWhoseKeyHasNotArrivedIsAWaitingStateAndCheckAgainOpensIt`, `DriveWireTest.aKeyNotYetHereComesBackAsTheAwaitingKeyIdNotABare409` |
+| rename a file you wrote | `POST /v1/files/{id}/rename {filename}` | CIRISServer `src/drive.rs` `rename_file` | **live** (0.5.242): a new row over the same bytes, the old withdrawn. Author only. The receipt's `btn_file_act_rename_{id}` → `dialog_file_rename` |
+| move (or copy) a file you wrote ("going out asks": this call IS the ask) | `POST /v1/files/{id}/move {cohort, room_id?, keep_source}` | CIRISServer `move_file` | **live** (0.5.242): resealed at the target room's tier, the source withdrawn unless kept. Author only, and a member of the target. `dialog_file_move` offers Just me and this circle's other rooms |
+| withdraw a file you wrote | `DELETE /v1/files/{id}?cohort&room_id` | CIRISServer `withdraw_file` | **live**, called. Author only; persist then refuses every read of the bytes (CC 2.3) and holders drop it on their next pass. The confirm (`dialog_file_withdraw`) says the others in the room no longer see it |
+| a moderator's takedown of a FILE by legal basis | none yet | CIRISPersist · CIRISServer | **blocked_by CIRISPersist#1160** (persist's signer check cannot authorize a fed-ID moderator); drawn as the unavailable `btn_file_act_takedown_{id}` with that reason |
+| report a file to the room's moderators | none yet | CIRISServer | **blocked_by CIRISServer#665**; drawn as the unavailable `btn_file_act_report_{id}` (CSD-128 is the protected reporter channel) |
 
 Refusals arrive as `{error: <id>, detail: <english>}`; `NodeRefusal.fromBody`
 reads the id from `error` when it is dotted. The `drive.*` ids are localized.

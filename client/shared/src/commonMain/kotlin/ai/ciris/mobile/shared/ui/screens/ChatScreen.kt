@@ -147,8 +147,14 @@ fun ChatScreen(
     /** The one "Where is this file" card (CSD-107), offered on a row that is a file. */
     custody: FileCustodyViewModel? = null,
     nodeVersion: String? = null,
+    /** This room's files panel (CSD-091, CSD-110): a view model for one room's drive. Null hides the panel. */
+    roomFiles: ((roomId: String) -> ai.ciris.mobile.shared.viewmodels.FilesViewModel)? = null,
+    /** Open the Moderation forms for an item's author in this room (CSD-065). Null leaves the items out. */
+    onModerateItem: ((communityId: String, authorKeyId: String) -> Unit)? = null,
 ) {
     val community by viewModel.community.collectAsState()
+    val viewerDuties by viewModel.viewerDuties.collectAsState()
+    var filesOpen by remember { mutableStateOf(false) }
     val roomMembers by viewModel.memberCount.collectAsState()
     val messages by viewModel.messages.collectAsState()
     val transcriptLoaded by viewModel.transcriptLoaded.collectAsState()
@@ -191,6 +197,13 @@ fun ChatScreen(
     var confirmRevision by remember { mutableStateOf<Pair<CegChatMessage, String>?>(null) }
     val history by viewModel.history.collectAsState()
     val editing by viewModel.editing.collectAsState()
+    val moderationLabels = ModerationLabels(
+        moderate = localizedString("mobile.chat_moderate_author"),
+        flag = localizedString("mobile.chat_flag_author"),
+        report = localizedString("mobile.chat_report_message"),
+        onlyModerator = localizedString("mobile.files_act_only_moderator"),
+        reportUnavailable = localizedString("mobile.files_act_report_unavailable"),
+    )
     val whereLabel = localizedString("mobile.files_custody_where")
 
     Scaffold(
@@ -233,6 +246,12 @@ fun ChatScreen(
                     }
                 },
                 actions = {
+                    if (roomFiles != null && community != null) {
+                        TextButton(
+                            onClick = { filesOpen = true },
+                            modifier = Modifier.testableClickable("btn_chat_files") { filesOpen = true },
+                        ) { Text(localizedString("mobile.chat_room_files")) }
+                    }
                     IconButton(
                         onClick = { viewModel.refresh() },
                         enabled = !loading,
@@ -348,7 +367,12 @@ fun ChatScreen(
                             MessageRow(
                                 message = msg,
                                 detailsOpen = detailsFor == msg.attestationId,
-                                extraOps = chatFileOps(msg, custody, whereLabel),
+                                extraOps = chatFileOps(msg, custody, whereLabel) + chatModerationOps(
+                                    message = msg,
+                                    isModerator = isModerator(viewerDuties, messages),
+                                    onModerate = onModerateItem,
+                                    labels = moderationLabels,
+                                ),
                                 onOp = { op ->
                                     // Replace / Withdraw / Recant are enabled
                                     // only where the node's `viewer_ops` lists
@@ -457,6 +481,24 @@ fun ChatScreen(
         }
     }
     custody?.let { FileCustodyHost(it, nodeVersion) }
+    val room = community?.communityId
+    if (filesOpen && roomFiles != null && room != null) {
+        val filesVm = remember(room) { roomFiles(room) }
+        androidx.compose.material3.ModalBottomSheet(onDismissRequest = { filesOpen = false }) {
+            androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().height(560.dp).testable("chat_room_files_panel")) {
+                ai.ciris.mobile.shared.ui.screens.files.FilesScreen(
+                    viewModel = filesVm,
+                    nodeVersion = nodeVersion,
+                    custody = custody,
+                    moderation = if (onModerateItem == null) null else ai.ciris.mobile.shared.ui.screens.files.FileModeration(
+                        isModerator = isModerator(viewerDuties, viewModel.messages.value),
+                        onModerateAuthor = { e -> filesOpen = false; onModerateItem(room, e.authorKeyId) },
+                        onFlagAuthor = { e -> filesOpen = false; onModerateItem(room, e.authorKeyId) },
+                    ),
+                )
+            }
+        }
+    }
     history?.let { h ->
         AttestationHistoryDialog(localizedString("mobile.accord_op_history"), h, viewModel::closeHistory)
     }
@@ -807,4 +849,42 @@ private fun String.toAttStatus(): AttStatus = when (this) {
     CegChatMessage.STATUS_SUPERSEDED -> AttStatus.Superseded
     CegChatMessage.STATUS_RECANTED -> AttStatus.Recanted
     else -> AttStatus.Active
+}
+
+/** The viewer's moderation standing in this room: the node's word when it gives one, else the viewer's own messages. */
+internal fun isModerator(viewerDuties: List<String>?, messages: List<CegChatMessage>): Boolean =
+    viewerDuties?.contains("moderate") ?: messages.any { it.mine && "moderate" in it.authorDuties }
+
+internal data class ModerationLabels(
+    val moderate: String,
+    val flag: String,
+    val report: String,
+    val onlyModerator: String,
+    val reportUnavailable: String,
+)
+
+/**
+ * A message's moderation items (CSD-065), on someone else's message: a room
+ * moderator moderates or flags the AUTHOR (moderation acts on keys), from the
+ * Moderation screen's forms; anyone could report the message to the room's
+ * moderators once the route exists (CIRISServer#665), so that item is drawn
+ * unavailable with its blocker.
+ */
+internal fun chatModerationOps(
+    message: CegChatMessage,
+    isModerator: Boolean,
+    onModerate: ((String, String) -> Unit)?,
+    labels: ModerationLabels,
+): List<ExtraOp> {
+    if (message.mine || message.isSystemEntry) return emptyList()
+    val author = message.author?.takeIf { it.isNotBlank() } ?: message.attestingKeyId
+    val room = message.communityId
+    return buildList {
+        if (onModerate != null) {
+            val why = if (isModerator) null else labels.onlyModerator
+            add(ExtraOp(labels.moderate, "mi_chat_moderate_${message.attestationId}", unavailable = why) { onModerate(room, author) })
+            add(ExtraOp(labels.flag, "mi_chat_flag_${message.attestationId}", unavailable = why) { onModerate(room, author) })
+        }
+        add(ExtraOp(labels.report, "mi_chat_report_${message.attestationId}", unavailable = labels.reportUnavailable) {})
+    }
 }

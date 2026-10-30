@@ -177,6 +177,14 @@ data class SafetyState(
     val targetKeyIdsRaw: String = "",
     val reportNote: String = "",
     val filing: Boolean = false,
+    // ── Flag a subject (POST /v1/safety/flag) ──
+    val flagSubjectKeyId: String = "",
+    /** `infohazard` | `reported`. */
+    val flagClass: String = "reported",
+    /** `flag` | `clear`. */
+    val flagAction: String = "flag",
+    val flagging: Boolean = false,
+    val lastFlagId: String? = null,
     /** Result of the last filing: the attestation id, or null. */
     val lastModerationAttestationId: String? = null,
 
@@ -328,6 +336,56 @@ class SafetyViewModel(
             } catch (e: Exception) {
                 PlatformLogger.w(TAG, "restateAgeBand failed: ${e.message}")
                 _state.value = _state.value.copy(ageRestate = AgeRestate.Failed(band, e.message ?: e::class.simpleName))
+            }
+        }
+    }
+
+    /**
+     * Open the moderation forms for one item, from its menu (a chat message or
+     * a file in a room): the community is the room, and the target and flag
+     * subject are the item's AUTHOR key, since moderation acts on keys.
+     */
+    fun prefillFromItem(communityKeyId: String, authorKeyId: String) {
+        setCommunityKeyId(communityKeyId)
+        _state.value = _state.value.copy(
+            targetKeyIdsRaw = authorKeyId,
+            flagSubjectKeyId = authorKeyId,
+            error = null,
+            message = null,
+        )
+    }
+
+    fun setFlagSubject(v: String) { _state.value = _state.value.copy(flagSubjectKeyId = v) }
+    fun setFlagClass(v: String) { _state.value = _state.value.copy(flagClass = v) }
+    fun setFlagAction(v: String) { _state.value = _state.value.copy(flagAction = v) }
+
+    /** Flag or clear [SafetyState.flagSubjectKeyId] in the community (`POST /v1/safety/flag`); a non-moderator is refused by the node. */
+    fun flagSubject() {
+        val s = _state.value
+        val signer = s.selfKeyId
+        if (signer == null) {
+            _state.value = s.copy(error = "No federation identity on this device yet.")
+            return
+        }
+        if (s.communityKeyId.isBlank() || s.flagSubjectKeyId.isBlank()) {
+            _state.value = s.copy(error = "Community and subject are required.")
+            return
+        }
+        _state.value = s.copy(flagging = true, error = null, message = null, lastFlagId = null)
+        viewModelScope.launch {
+            try {
+                val id = apiClient.flagSubject(
+                    signerKeyId = signer,
+                    communityKeyId = s.communityKeyId.trim(),
+                    subjectKeyId = s.flagSubjectKeyId.trim(),
+                    contentClass = s.flagClass,
+                    action = s.flagAction,
+                )
+                _state.value = _state.value.copy(flagging = false, lastFlagId = id)
+            } catch (e: ai.ciris.mobile.shared.api.NodeRefusal) {
+                _state.value = _state.value.copy(flagging = false, error = e.reasonId ?: e.detail ?: "HTTP ${e.statusCode}")
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(flagging = false, error = e.message ?: e::class.simpleName)
             }
         }
     }
