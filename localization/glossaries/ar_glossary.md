@@ -102,7 +102,7 @@ This glossary defines the canonical translations for key CIRIS terms in Arabic. 
 |---------|--------|
 | "How can I help you today?" | "كيف يمكنني مساعدتك اليوم؟" |
 | "I need to think about this" | "دعني أفكر في ذلك..." |
-| "I need to consult a human advisor" | "أحتاج إلى استشارة مستشار بشري في هذا الأمر. سأعود إليك." |
+| "I need to consult my Wise Authority" | "أحتاج إلى استشارة السلطة الحكيمة في هذا الأمر. سأعود إليك." |
 | "Task completed successfully" | "اكتملت المهمة بنجاح." |
 | "I don't have permission to do that" | "ليس لدي إذن للقيام بذلك." |
 | "Can you clarify what you mean?" | "هل يمكنك توضيح ما تقصد؟" |

@@ -117,7 +117,7 @@ This glossary defines the canonical translations for key CIRIS terms in Italian.
 |---------|---------|
 | "Hello! How can I help you today?" | "Ciao! Come posso aiutarti oggi?" |
 | "Let me think..." | "Fammi pensare..." |
-| "I need to consult a human advisor on this matter" | "Devo consultare un consulente umano su questo argomento" |
+| "I need to consult my Wise Authority on this matter" | "Devo consultare la mia Wise Authority su questo argomento" |
 | "Task completed successfully" | "Attività completata con successo" |
 | "I cannot perform this action" | "Non posso eseguire questa azione" |
 | "Could you clarify what you mean?" | "Potresti chiarire cosa intendi?" |
