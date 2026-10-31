@@ -2117,7 +2117,7 @@
         "languages": 29,
         "keys": 5837
       },
-      "notes": "Tested: the five-platform run on the release commit, against ciris-server 0.5.242 and CIRISAgent 2.17.0. Room files, file acts and the flag route are covered by unit tests and the server's own room_file harness; the moderation read side, viewer_duties and chat attachments are 0.5.243 and not exercised here. Known: the iOS SIGSEGV after the contact code (#239, intermittent). Translations: draft / machine_reviewed.",
+      "notes": "Tested: the five-platform run on the release commit's client tree WITHOUT the AI legs (run 41144774294: windows, linux + android emulator, macos + ios simulator green; the with-AI legs skipped to save the OpenRouter budget), against ciris-server 0.5.242. CIRISAgent 2.17.0 is therefore not exercised by this run; agent_min_tested stays 2.17.0 from the 0.5.236 run. Room files, file acts and the flag route are covered by unit tests and the server's own room_file harness; the moderation read side, viewer_duties and chat attachments are 0.5.243 and not exercised here. Known: the iOS SIGSEGV after the contact code (#239, intermittent). Translations: draft / machine_reviewed.",
       "published": null
     }
   ]
