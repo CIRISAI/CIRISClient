@@ -100,8 +100,8 @@ class SheetCloseOnPhoneTest {
         holders = null,
         notes = listOf(ReceiptNote("peer", "Met at the community meeting; confirmed the code in person.")),
         acts = listOf(
-            ReceiptAct("Open chat", "btn_receipt_act_chat", {}),
-            ReceiptAct("Remove", "btn_receipt_act_remove", {}),
+            ReceiptAct("Open chat", "btn_receipt_act_chat", onAct = {}),
+            ReceiptAct("Remove", "btn_receipt_act_remove", onAct = {}),
         ),
         scopeNote = "The grant itself is a public record. What you send each other is not.",
     )

@@ -88,6 +88,11 @@ pair-room door; the tap hands the room to it (`onOpenRoom`), and back returns
 to this tab. A pair room opens through its contact, and one whose contact is
 gone says "Not a contact any more" and does not open.
 
+**Inside a room.** A room opened from here is CSD-091's chat: its top bar
+carries `btn_chat_files`, the room's own files (CSD-007 in room mode), and each
+message's ⋮ carries History, the author's revisions where the node allows them,
+and, on someone else's message, the moderation items (CSD-065).
+
 ## 3. Contracts (who)
 
 CIRISServer 0.5.217, `src/communities.rs`; node URL
@@ -100,6 +105,7 @@ only, as CSD-102 §3 states and pins.
 | opening a pair room | `POST /v1/chat` `{key_id}` | `contacts_chat.rs::start_chat` | not called here — CSD-091's `UserChatViewModel.enter` calls it on the chat screen this row opens |
 | opening a room of more than two | `GET /v1/chat/{id}/messages`, `POST /v1/chat/{id}/messages` | `contacts_chat.rs` (CIRISServer#594) | not called here — the row hands the room's id to CSD-091's chat screen, which reads and writes the room by id |
 | a pair room still joining (0.5.218) | `GET /v1/communities` lists the rooms the caller is ACTIVE in | CIRISServer (`src/communities.rs::list_communities`) | **by the route, not listed here**: since 0.5.218 a pair room opens by invitation (CIRISServer#706), and until both people are seated the invitee is in no room, so the Chats list cannot show an invitation; the opener's one-member room is listed only once its record is held. An invitation to talk is shown on the contact's People row (CSD-005) and the waiting room in the chat itself (CSD-091 `chat_pair_waiting`) |
+| a room's files | the files panel of CSD-091 (`btn_chat_files`), this room's drive | CIRISServer | **live** (0.5.242) — CSD-091 §3 has the routes |
 
 ## 4. Flow (how)
 

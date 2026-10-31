@@ -163,9 +163,9 @@ fun contactReceipt(
         forAgent = if (g == null) null else wire(g.forKeyId),
         holders = null,
         acts = buildList {
-            add(ReceiptAct(openChatLabel, PeopleTags.receiptActChat(contact.keyId), onOpenChat))
+            add(ReceiptAct(openChatLabel, PeopleTags.receiptActChat(contact.keyId), onAct = onOpenChat))
             if (removeLabel != null && onRemove != null) {
-                add(ReceiptAct(removeLabel, PeopleTags.receiptActRemove(contact.keyId), onRemove))
+                add(ReceiptAct(removeLabel, PeopleTags.receiptActRemove(contact.keyId), onAct = onRemove))
             }
         },
         scopeNote = scopeNote,

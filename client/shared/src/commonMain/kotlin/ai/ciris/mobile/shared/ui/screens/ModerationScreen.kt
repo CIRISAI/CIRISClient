@@ -1,5 +1,6 @@
 package ai.ciris.mobile.shared.ui.screens
 
+import ai.ciris.mobile.shared.platform.testableWithHandler
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.models.AdminMessage
 import ai.ciris.mobile.shared.models.AdminOpResponse
@@ -267,6 +268,56 @@ fun ModerationScreen(
                             fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(top = 6.dp).testable("txt_moderation_filed_id", it))
                     }
+                }
+            }
+
+            // ── Flag a subject (POST /v1/safety/flag, CC 4.5.13) ──
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.fillMaxWidth().testable("card_moderation_flag"),
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    SectionHeader(CIRISIcons.warning, localizedString("mobile.moderation_flag_section"))
+                    Text(localizedString("mobile.moderation_flag_explain"), fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 6.dp))
+                    ai.ciris.mobile.shared.ui.primitives.rememberTextInputDriver("input_flag_subject", state.flagSubjectKeyId) {
+                        viewModel.setFlagSubject(it)
+                    }
+                    OutlinedTextField(
+                        value = state.flagSubjectKeyId,
+                        onValueChange = viewModel::setFlagSubject,
+                        label = { Text(localizedString("mobile.moderation_flag_subject")) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().testable("input_flag_subject"),
+                    )
+                    listOf("reported" to "mobile.moderation_flag_reported", "infohazard" to "mobile.moderation_flag_infohazard").forEach { (cls, key) ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(selected = state.flagClass == cls, onClick = { viewModel.setFlagClass(cls) },
+                                modifier = Modifier.testable("flag_class_$cls"))
+                            Text(localizedString(key), fontSize = 14.sp)
+                        }
+                    }
+                    listOf("flag" to "mobile.moderation_flag_action_flag", "clear" to "mobile.moderation_flag_action_clear").forEach { (act, key) ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(selected = state.flagAction == act, onClick = { viewModel.setFlagAction(act) },
+                                modifier = Modifier.testable("flag_action_$act"))
+                            Text(localizedString(key), fontSize = 14.sp)
+                        }
+                    }
+                    Button(
+                        onClick = { viewModel.flagSubject() },
+                        enabled = !state.flagging,
+                        modifier = Modifier.testableWithHandler("btn_flag_subject") { viewModel.flagSubject() },
+                    ) { Text(localizedString("mobile.moderation_flag_button")) }
+                    state.lastFlagId?.let {
+                        Text(localizedString("mobile.moderation_filed_id", "id", it), fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 6.dp).testable("txt_flag_id", it))
+                    }
+                    Text(localizedString("mobile.moderation_file_takedown_unavailable"), fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 8.dp).testable("txt_file_takedown_unavailable"))
                 }
             }
 

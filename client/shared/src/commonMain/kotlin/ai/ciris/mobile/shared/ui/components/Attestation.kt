@@ -100,7 +100,13 @@ enum class AttOp {
  * adds it. First use: "Where is this file" on a chat row that is a file
  * (CSD-107). [tag] is the item's drivable tag.
  */
-data class ExtraOp(val label: String, val tag: String, val onClick: () -> Unit)
+data class ExtraOp(
+    val label: String,
+    val tag: String,
+    /** Why the act cannot be taken here yet; the item is drawn disabled with this line under it. */
+    val unavailable: String? = null,
+    val onClick: () -> Unit,
+)
 
 /** What the viewer is allowed to do, best-effort (the node re-checks + 401/403s). */
 data class ViewerAuthority(
@@ -338,10 +344,26 @@ fun AttestationHamburger(
             )
         }
         extraOps.forEach { extra ->
+            val why = extra.unavailable
             DropdownMenuItem(
-                text = { Text(extra.label) },
+                enabled = why == null,
+                text = {
+                    Column {
+                        Text(extra.label)
+                        why?.let {
+                            Text(
+                                it,
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.testable("${extra.tag}_why"),
+                            )
+                        }
+                    }
+                },
                 onClick = { onDismiss(); extra.onClick() },
-                modifier = Modifier.testableClickable(extra.tag, extra.label) { onDismiss(); extra.onClick() },
+                modifier = Modifier.testableClickable(extra.tag, extra.label) {
+                    if (why == null) { onDismiss(); extra.onClick() }
+                },
             )
         }
     }

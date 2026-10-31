@@ -1,6 +1,7 @@
 {
   "_note": "Ratchet for packaging/check_csd_routes.py. Uncited routes per Screen and duplicate mutating routes, recorded; the gate fails only on NEW entries. Re-record with --baseline.",
   "duplicate_mutations": [
+    "DELETE /v1/files/{} :: Files, UserChat",
     "DELETE /v1/system/adapters/{} :: Adapters, LLMSettings",
     "POST /v1/accord/provision-holder :: AccordCeremony, ProvisionAccordHolder",
     "POST /v1/auth/device/delegate :: Delegations, Setup",
@@ -10,6 +11,8 @@
     "POST /v1/families/{}/changes/envelope :: HouseholdMembers, LayerFamily",
     "POST /v1/federation/announce :: AddFederationId, Contacts, Setup",
     "POST /v1/federation/consent :: DataManagement, Setup",
+    "POST /v1/files :: Files, UserChat",
+    "POST /v1/files/{}/{} :: Files, UserChat",
     "POST /v1/memory/query :: EnvironmentInfo, Memory",
     "POST /v1/self/age :: ChildSafety, Setup",
     "POST /v1/self/associate :: IdentityManagement, Setup",

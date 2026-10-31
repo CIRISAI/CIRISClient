@@ -1,5 +1,7 @@
 package ai.ciris.mobile.shared.ui.primitives
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import ai.ciris.mobile.shared.ceg.Envelope
 import ai.ciris.mobile.shared.ceg.EnvelopeMember
 import ai.ciris.mobile.shared.ceg.cohortScopeOf
@@ -41,7 +43,7 @@ import androidx.compose.ui.unit.dp
  * deliberately not the empty treatment: an absent fact is a fact about the
  * node, and a person should see it as such.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun ReceiptSheet(
     receipt: Receipt,
@@ -126,10 +128,27 @@ fun ReceiptSheet(
                         style = type.label, color = t.mute,
                         modifier = Modifier.padding(top = 10.dp, bottom = 6.dp),
                     )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    var why by androidx.compose.runtime.remember(receipt.id) { androidx.compose.runtime.mutableStateOf<String?>(null) }
+                    // Wraps: a file's acts (open, where, rename, move, withdraw,
+                    // the moderation acts) do not fit one row on a phone.
+                    androidx.compose.foundation.layout.FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
                         for (act in receipt.acts) {
-                            Chip(ChipSpec(label = act.label, tag = act.tag, kind = ChipKind.CHOICE, tone = Tone.BRAND, onClick = act.onAct))
+                            val reason = act.unavailable
+                            Chip(
+                                ChipSpec(
+                                    label = act.label, tag = act.tag, kind = ChipKind.CHOICE,
+                                    tone = if (reason == null) Tone.BRAND else Tone.DIM,
+                                    onClick = if (reason == null) act.onAct else ({ why = reason }),
+                                ),
+                            )
                         }
+                    }
+                    why?.let {
+                        Text(it, style = type.label, color = t.mute,
+                            modifier = Modifier.padding(top = 6.dp).testable("receipt_act_unavailable"))
                     }
                 }
             }

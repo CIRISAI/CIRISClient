@@ -31,6 +31,15 @@ enum class FilesCohort(val wire: String) { SELF("self"), FAMILY("family"), COMMU
 /** The files of one room: a community circle lists every community room it is in, grouped. */
 data class FileGroup(val roomId: String, val entries: List<DriveEntry>)
 
+/** An author's act on one file (rename, move, withdraw), and how it ended. */
+sealed interface FileActState {
+    enum class Kind { RENAME, MOVE, WITHDRAW }
+    data object Idle : FileActState
+    data class Working(val entry: DriveEntry, val kind: Kind) : FileActState
+    data class Done(val entry: DriveEntry, val kind: Kind) : FileActState
+    data class Refused(val entry: DriveEntry, val kind: Kind, val refusal: NodeRefusal) : FileActState
+}
+
 /** Exactly one of these is true of a Files tab at a time. */
 sealed interface FilesState {
     data object Loading : FilesState
@@ -112,7 +121,51 @@ sealed interface AddState {
 class FilesViewModel(
     private val api: DriveApi,
     val cohort: FilesCohort,
+    /**
+     * One room's files: a chat room's panel (CSD-091, CSD-110) lists exactly
+     * this room (`cohort=community&room_id=…`) and adds into it. Null for a
+     * circle's Files tab.
+     */
+    val room: String? = null,
 ) : ViewModel() {
+
+    private val _act = MutableStateFlow<FileActState>(FileActState.Idle)
+    /** The last rename / move / withdraw and how it ended. */
+    val act: StateFlow<FileActState> = _act.asStateFlow()
+
+    /** Rename [entry] to [filename]: a new row over the same bytes, the old one withdrawn. Author only. */
+    fun renameFile(entry: DriveEntry, filename: String) =
+        runAct(entry, FileActState.Kind.RENAME) { api.renameFile(entry.attestationId, entry.cohort, entry.roomId, filename) }
+
+    /** Move [entry] to another room ([keepSource]: copy instead). Author only, and a member of the target. */
+    fun moveFile(entry: DriveEntry, toCohort: String, toRoomId: String?, keepSource: Boolean = false) =
+        runAct(entry, FileActState.Kind.MOVE) {
+            api.moveFile(entry.attestationId, entry.cohort, entry.roomId, toCohort, toRoomId, keepSource)
+        }
+
+    /** Withdraw [entry]. Author only; the others in the room no longer see it. */
+    fun withdrawFile(entry: DriveEntry) =
+        runAct(entry, FileActState.Kind.WITHDRAW) { api.withdrawFile(entry.attestationId, entry.cohort, entry.roomId) }
+
+    fun dismissAct() {
+        _act.value = FileActState.Idle
+    }
+
+    private fun runAct(entry: DriveEntry, kind: FileActState.Kind, call: suspend () -> Unit) {
+        if (_act.value is FileActState.Working) return
+        _act.value = FileActState.Working(entry, kind)
+        viewModelScope.launch {
+            _act.value = try {
+                call()
+                refresh(familyRoom)
+                FileActState.Done(entry, kind)
+            } catch (e: NodeRefusal) {
+                FileActState.Refused(entry, kind, e)
+            } catch (e: Exception) {
+                FileActState.Refused(entry, kind, NodeRefusal(null, e.message, 0))
+            }
+        }
+    }
 
     private val _state = MutableStateFlow<FilesState>(FilesState.Loading)
     val state: StateFlow<FilesState> = _state.asStateFlow()
@@ -151,7 +204,9 @@ class FilesViewModel(
         viewModelScope.launch {
             readPolicyOnce()
             _state.value = try {
-                val entries = when (cohort) {
+                val entries = if (room != null) {
+                    api.readDrive(cohort = FilesCohort.COMMUNITY.wire, roomId = room).entries
+                } else when (cohort) {
                     FilesCohort.SELF -> api.readDrive(cohort = cohort.wire).entries
                     FilesCohort.FAMILY -> api.readDrive(cohort = cohort.wire, roomId = roomId).entries
                     // `cohort=community` with no room is refused by the node
@@ -267,7 +322,7 @@ class FilesViewModel(
                         roomId = when (cohort) {
                             FilesCohort.SELF -> null
                             FilesCohort.FAMILY -> roomId ?: familyRoom
-                            FilesCohort.COMMUNITY -> roomId
+                            FilesCohort.COMMUNITY -> roomId ?: room
                         },
                         bytesBase64 = picked.dataBase64,
                         mediaType = typeToDeclare(picked),

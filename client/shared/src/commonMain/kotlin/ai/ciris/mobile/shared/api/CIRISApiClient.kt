@@ -1846,6 +1846,46 @@ class CIRISApiClient internal constructor(
      * for in the self room and answered `404 drive.not_in_room`. A `self` file
      * names no room: the room IS the owner, and the node ignores one.
      */
+    /**
+     * The author's file acts (CSD-007, CSD-107; ciris-server 0.5.242):
+     * `POST /v1/files/{id}/rename {filename}` (a new row over the same bytes, the
+     * old withdrawn), `POST /v1/files/{id}/move {cohort, room_id?, keep_source}`
+     * (resealed at the target, the source withdrawn unless kept) and
+     * `DELETE /v1/files/{id}?cohort&room_id` (withdraw). Author only; refusals
+     * come back as [NodeRefusal] with the node's id.
+     */
+    suspend fun fileAct(
+        attestationId: String,
+        act: String,
+        cohort: String,
+        roomId: String?,
+        body: kotlinx.serialization.json.JsonObject?,
+        nodeUrl: String,
+    ) {
+        val method = "fileAct:$act"
+        val base = "$nodeUrl/v1/files/${attestationId.encodeURLPathPart()}"
+        val client = federationHttpClient()
+        try {
+            val response = when (act) {
+                "withdraw" -> client.delete("$base?${fileQuery(cohort, roomId)}") {
+                    authHeader()?.let { header("Authorization", it) }
+                }
+                else -> client.post("$base/$act?${fileQuery(cohort, roomId)}") {
+                    authHeader()?.let { header("Authorization", it) }
+                    contentType(ContentType.Application.Json)
+                    setBody((body ?: buildJsonObject {}).toString())
+                }
+            }
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, response.bodyAsText())
+            logInfo(method, "ok ${attestationId.take(16)}…")
+        } catch (e: Exception) {
+            logException(method, e, "url=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
     internal fun fileQuery(cohort: String, roomId: String?): String = buildList {
         add("cohort=${cohort.encodeURLParameter()}")
         if (cohort != "self") roomId?.takeIf { it.isNotBlank() }?.let { add("room_id=${it.encodeURLParameter()}") }
@@ -7480,6 +7520,48 @@ class CIRISApiClient internal constructor(
      * fails_secure }`). The verdict is one of `operate` / `auto_promote` /
      * `quiesce` (FAIL SECURE — better no group than an unmoderated one).
      */
+    /**
+     * Flag (or clear) a subject in a community — `POST /v1/safety/flag
+     * {signer_key_id, community_key_id, subject_key_id, content_class, action}`
+     * (CC 4.5.13). Duty-gated: a caller without `moderate` there is refused
+     * 403. [contentClass] is `infohazard` | `reported`; [action] `flag` | `clear`.
+     * Returns the emitted attestation id.
+     */
+    suspend fun flagSubject(
+        signerKeyId: String,
+        communityKeyId: String,
+        subjectKeyId: String,
+        contentClass: String,
+        action: String = "flag",
+        nodeUrl: String = LOCAL_NODE_URL,
+        token: String? = accessToken,
+    ): String {
+        val method = "flagSubject"
+        logInfo(method, "POST $nodeUrl/v1/safety/flag community=${communityKeyId.take(16)}… class=$contentClass action=$action")
+        val client = federationHttpClient()
+        return try {
+            val response = client.post("$nodeUrl/v1/safety/flag") {
+                token?.let { header("Authorization", "Bearer $it") }
+                contentType(ContentType.Application.Json)
+                setBody(buildJsonObject {
+                    put("signer_key_id", signerKeyId)
+                    put("community_key_id", communityKeyId)
+                    put("subject_key_id", subjectKeyId)
+                    put("content_class", contentClass)
+                    put("action", action)
+                }.toString())
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            jsonConfig.parseToJsonElement(raw).jsonObject["attestation_id"]?.jsonPrimitive?.contentOrNull ?: ""
+        } catch (e: Exception) {
+            logException(method, e, "url=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
     suspend fun getNamedModerator(
         communityKeyId: String,
         nodeUrl: String = LOCAL_NODE_URL,

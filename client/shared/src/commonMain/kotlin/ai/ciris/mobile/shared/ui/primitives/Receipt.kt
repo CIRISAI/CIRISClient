@@ -37,7 +37,17 @@ sealed interface Fact {
 data class ReceiptNote(val by: String, val text: String)
 
 @Immutable
-data class ReceiptAct(val label: String, val tag: String, val onAct: () -> Unit)
+data class ReceiptAct(
+    val label: String,
+    val tag: String,
+    /**
+     * Why this act cannot be taken yet, when it exists in the model but not on
+     * any node (e.g. a file takedown waiting on CIRISPersist#1160). The chip is
+     * drawn dim and tapping it says why; it never acts.
+     */
+    val unavailable: String? = null,
+    val onAct: () -> Unit = {},
+)
 
 @Immutable
 data class Receipt(

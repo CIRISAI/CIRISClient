@@ -386,6 +386,10 @@ class UserChatViewModel(
         }
     }
 
+    private val _viewerDuties = MutableStateFlow<List<String>?>(null)
+    /** The node's `viewer_duties` for this room, or null when it does not say. */
+    val viewerDuties: StateFlow<List<String>?> = _viewerDuties.asStateFlow()
+
     // ─── History and revisions ─────────────────────────────────────────────────
 
     private val _history = MutableStateFlow<AttHistory?>(null)
@@ -482,6 +486,7 @@ class UserChatViewModel(
             }
             // Server order, verbatim: oldest first, by the SIGNED asserted_at.
             _messages.value = transcript.messages
+            _viewerDuties.value = transcript.viewerDuties
         } catch (e: NodeRefusal) {
             if (epoch == entryEpoch) recordRefusal("listChatMessages", e)
         } catch (e: Exception) {

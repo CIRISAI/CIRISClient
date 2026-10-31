@@ -267,6 +267,28 @@ real**. The `why` column is why a flow cannot go without it.
 | `txt_ladder_limits_unavailable` | the missing-bundle fallback | a limit the app cannot state is its own fact; it is tagged as such wherever a limit block falls back |
 | `txt_ladder_catalogue_fallback` | the compiled ladder standing in | a compiled ladder shown as the node's is the drift `/v1/operations` exists to end |
 | `chip_ladder_delegation_{i}` / `txt_ladder_delegations_*` | the owner's usable delegation ids, or why there are none | the id every act is taken under, from the node, not from a paste |
+| `card_moderation_flag` / `btn_flag_subject` / `txt_flag_id` | the Flag card, its send, and the returned attestation id | the only evidence a flag was recorded; the card says a flag hides nothing yet |
+| `txt_file_takedown_unavailable` | "taking a file down by legal basis isn't available yet" | a blocked act (CIRISPersist#1160) is said, not left out |
+
+### 2.4 Flags, and moderation from an item's menu
+
+**The Flag card** (`POST /v1/safety/flag`, CC 4.5.13): a moderator records that
+a subject key's content was `reported` or is an `infohazard` in this community,
+or clears an earlier flag. The node admits it only from a holder of the
+`moderate` duty and refuses anyone else 403, rendered by id. **A flag is
+recorded and hides nothing yet**: no listing, file read or transcript honours it
+before ciris-server 0.5.243, and the card says so.
+
+**From an item's menu.** A chat message's ⋮ (CSD-091) and a room file's receipt
+(CSD-007) offer *Moderate the author* and *Flag the author*. Both open this
+screen with the report and flag forms prefilled (`SafetyViewModel.prefillFromItem`):
+the community is the room, the target and the flag subject are the item's
+AUTHOR key, because moderation events and flags are about keys. For a viewer who
+does not hold `moderate` in the room they are drawn unavailable, "only a
+moderator of this room". Moderating another member's room file (withdrawing or
+hiding it) **does not work yet**: no route lets a moderator withdraw a file they
+did not author, and no read consults moderation events (§3).
+
 
 ## 3. Contracts (who)
 
@@ -300,6 +322,9 @@ The line numbers above are 0.5.217's; on `integ/0.5.218` the admin rungs are at
 byte-identical.
 | the candidate's track record | **missing** — the verdict body carries `candidate_key_id`, not `moderation_track_record` | CIRISServer | blocks `row_named_moderator_candidate` |
 | **anyone-may-propose** (CC 4.5.13) | `POST /v1/safety/reports` — **missing** | CIRISServer | `blocked_by: CIRISServer#665`. The client calls it (`CIRISApiClient.proposeModeration`, on the NODE url); `src/safety/report.rs` is specified in CIRISServer `FSD/MODERATION_CHILD_SAFETY.md` §4.4 and does not exist on `origin/main` or `integ/0.5.218` (`src/safety/` is six files, no `report.rs`; no route literal). The sheet says so in words (§2.2) |
+| flag or clear a subject | `POST /v1/safety/flag {signer_key_id, community_key_id, subject_key_id, content_class: infohazard\|reported, action: flag\|clear}` | CIRISServer `src/safety/infohazard.rs` `flag` | **live, recorded only** (CC 4.5.13): duty-gated, a non-moderator is refused 403. The row is written, but no reader honours it yet: `GET /v1/drive`, `GET /v1/files/{id}` and the chat transcript still list, serve and show flagged content (the read side is planned for 0.5.243: a `moderation` object on flagged entries, the bytes or body behind a reveal). The card says it does not hide anything. `card_moderation_flag`; reached also from a chat message's or room file's menu, prefilled with the room and the author (`SafetyViewModel.prefillFromItem`) |
+| moderate another member's room file (withdraw / hide) | the moderation event above, on the file's author | CIRISServer | **does not work yet**: no route lets a moderator withdraw or hide a file they did not author (withdraw is author-only), and moderation events are not consulted by any read. Planned for 0.5.243 with the flag read side |
+| take down a file by legal basis (withheld or destroyed on every node, counter-notice, then delete) | none yet | CIRISPersist · CIRISServer | **blocked_by CIRISPersist#1160**; `txt_file_takedown_unavailable` says so on the card |
 
 **The last row is the gap that matters.** The only moderation path CC opens to a
 member who holds no duty has no route behind it. The control is built, the
