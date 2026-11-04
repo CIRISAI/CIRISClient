@@ -2191,7 +2191,7 @@
         "communities.tiers",
         "devices.roster"
       ],
-      "capabilities_note": "new: chat attachments, offered when the transcript says accepts_attachments (CSD-091); the moderation read side on messages and room files, with reveal as the viewer's own per-item consent (CSD-065, CSD-007); three community tiers: Local community as an explainer until the node has a geographic tier, Communities, and Affiliations, each with a list and a Create (CSD-050, CSD-102, CSD-110); My keys, My devices and Agents you own as separate cards (CSD-037, CSD-132, CSD-133); Ally as the setup default with the template list behind Advanced Settings (CSD-082). Fixed: closing the desktop window ends the JVM within 8s even if a shutdown hook hangs; browser sign-in no longer reports \"expired\" when the browser is slow to reach /login on a node before 0.5.245.",
+      "capabilities_note": "new: chat attachments, offered when the transcript says accepts_attachments (CSD-091); the moderation read side on messages and room files, with reveal as the viewer's own per-item consent (CSD-065, CSD-007); three community tiers: Local community, Communities and Affiliations, each with a list and a Create (CSD-050, CSD-102, CSD-110). A local room is not tied to a place and shows as local only on the founder's device until CIRISServer#852; My keys, My devices and Agents you own as separate cards (CSD-037, CSD-132, CSD-133); Ally as the setup default with the template list behind Advanced Settings (CSD-082). Fixed: closing the desktop window ends the JVM within 8s even if a shutdown hook hangs; browser sign-in no longer reports \"expired\" when the browser is slow to reach /login on a node before 0.5.245.",
       "spec_source": {
         "repo": "CIRISAI/CIRISServer",
         "release": null,
@@ -2200,7 +2200,7 @@
       },
       "locale_bundle": {
         "languages": 29,
-        "keys": 5875
+        "keys": 5880
       },
       "notes": "PENDING: replace with the five-platform run before the tag.",
       "published": null

@@ -9,7 +9,7 @@
     "POST /v1/auth/native/apple :: Login, Setup",
     "POST /v1/auth/native/google :: Login, Setup",
     "POST /v1/chat/{}/items/{}/reveal :: Files, UserChat",
-    "POST /v1/communities :: AffiliationsChats, CommunityChats, LayerAffiliations, LayerAgent, LayerFamily, LayerGlobalCommunities, LayerLocalCommunity",
+    "POST /v1/communities :: AffiliationsChats, CommunityChats, LayerAffiliations, LayerAgent, LayerFamily, LayerGlobalCommunities, LayerLocalCommunity, LocalChats",
     "POST /v1/families/{}/changes/envelope :: HouseholdMembers, LayerFamily",
     "POST /v1/federation/announce :: AddFederationId, Contacts, Setup",
     "POST /v1/federation/consent :: DataManagement, Setup",
@@ -19,8 +19,8 @@
     "POST /v1/self/age :: ChildSafety, Setup",
     "POST /v1/self/associate :: IdentityManagement, Setup",
     "POST /v1/self/identity :: AddFederationId, IdentityManagement, Setup",
-    "POST /v1/self/invites/{}/accept :: AffiliationsChats, CommunityChats, LayerAffiliations, LayerAgent, LayerFamily, LayerGlobalCommunities, LayerLocalCommunity",
-    "POST /v1/self/invites/{}/decline :: AffiliationsChats, CommunityChats, Contacts, LayerAffiliations, LayerAgent, LayerFamily, LayerGlobalCommunities, LayerLocalCommunity",
+    "POST /v1/self/invites/{}/accept :: AffiliationsChats, CommunityChats, LayerAffiliations, LayerAgent, LayerFamily, LayerGlobalCommunities, LayerLocalCommunity, LocalChats",
+    "POST /v1/self/invites/{}/decline :: AffiliationsChats, CommunityChats, Contacts, LayerAffiliations, LayerAgent, LayerFamily, LayerGlobalCommunities, LayerLocalCommunity, LocalChats",
     "POST /v1/self/nodes/{}/release :: MyDevices, OwnedAgents",
     "POST /v1/self/occurrence/label :: IdentityManagement, OwnedAgents",
     "POST /v1/setup/claim-remote :: ClaimNode, Setup",
@@ -36,20 +36,6 @@
     "PUT /v1/system/adapters/{}/reload :: Adapters, LLMSettings"
   ],
   "uncited": {
-    "AffiliationsChats": [
-      "GET /v1/communities/{}",
-      "GET /v1/self/invites",
-      "POST /v1/communities",
-      "POST /v1/self/invites/{}/accept",
-      "POST /v1/self/invites/{}/decline"
-    ],
-    "CommunityChats": [
-      "GET /v1/communities/{}",
-      "GET /v1/self/invites",
-      "POST /v1/communities",
-      "POST /v1/self/invites/{}/accept",
-      "POST /v1/self/invites/{}/decline"
-    ],
     "Files": [
       "POST /v1/chat/{}/items/{}/reveal"
     ],

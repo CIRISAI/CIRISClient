@@ -39,8 +39,14 @@ sits) rather than as a second card that would be the same card under another
 name. Both tiers are one circle, each with its own hub in Rules: `tier: community`
 is Communities (not place-bound, pro-social by assumption) and `tier:
 affiliations` is Affiliations (not assumed pro-social). Local community is
-geographic, no wire token carries it yet, and it holds no rooms: CSD-050 §2,
-and a design ruling is owed (persist, CC). It never borrows `tier: community`.
+geographic and has its own rooms, on its own hub and lists: `CommunitiesViewModel`
+with `local = true`. A local room is `tier: community` with `cohort_subkind:
+geographic`. Persist already defines that (`geographic_constraint_cell`,
+`member_in_geographic_constraint`), but `POST /v1/communities` does not accept
+it until CIRISServer#852, so today the node ignores the field. Until then
+`LocalRoomMarks` keeps the room on the founder's Local list, on that device
+only, and every other member sees it under Communities. The room is not tied to
+a place and membership is by invitation, not location.
 
 ## 2. Surface (what)
 
@@ -266,7 +272,7 @@ side authors).
 ## 4. Flow (how)
 
 The draft is `testing/flows/drafts/csd-102-communities.yaml`. Land on
-`LayerLocalCommunity` (the runner walks the derived hop).
+`LayerGlobalCommunities` (the runner walks the derived hop).
 
 ```yaml
 expect:

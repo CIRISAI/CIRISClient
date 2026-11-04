@@ -40,7 +40,7 @@ source is the pair a bisect wants:
 The tree's current recorded state — sha256-of-sha256s over every git-tracked
 file under `client/` except this one:
 
-**state digest:** `c47d2a6409d0be918919f6e43d5dd8ccef25c1c64232da58e31869f6e3eddb84`
+**state digest:** `3a30f0bc4cb8d588298dd67e5a546db12931fcd136768152b30e9364ad2965de`
 
 `packaging/check_vendoring.py` asserts it on every push, and refuses any
 tracked file matching a §2 never-vendor class. **Any commit that touches

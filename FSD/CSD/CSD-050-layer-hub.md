@@ -25,14 +25,14 @@ card that names the scope is the card that says what may cross out of it.
 | circle | screen | what the hub reads | the card that owns it |
 |---|---|---|---|
 | Family | `LayerFamily` | the household — `GET /v1/families` and its acts, at the node URL — then the delegations card | CSD-100 (`familyContent`); its roster is CSD-101 |
-| Local community | `LayerLocalCommunity` | what the tier is (geographic; applies only if you opted in to share your location and are sharing it now), then "not on this node yet", then the Environment card (agent only). No rooms and no Found: the server has no geographic tier and no location-sharing read or write, so an opt-in would be a dead control | this CSD, §6 |
+| Local community | `LayerLocalCommunity` | what the tier is (geographic; applies only if you opted in to share your location and are sharing it now), then what this node cannot do yet, then the Environment card (agent only), then the local rooms (`CommunityGovernanceSection`). Opens on Chats (`NavSurface.LocalChats`), with People at `NavSurface.LocalRoster`. Location sharing and the place constraint wait on CIRISServer#852; CSD-102 §1 says what a local room is until then | CSD-102 |
 | Communities and affiliations | `LayerGlobalCommunities`, `LayerAffiliations` | the community section at `tier: community`, and on its sibling card at `tier: affiliations` — `GET /v1/communities`, `GET /v1/communities/{id}` and its acts, at the node URL | CSD-102 (`communities`) |
 | Just me | `LayerAgent` | **nothing.** Three sections — Identities, Trust, Policies — each a localized sentence describing rows no route serves | this CSD, and it is the gap |
 
 **Where a circle has a group of its own, the description-only sections are not
 drawn.** The household takes their place on Family, the community section on
-Communities and affiliations, and the explainer on Local community (`LayerHubScreen.kt`,
-`return@Column` after the section). Under a real roster they would read as a
+Communities and affiliations, and the explainer and the local rooms on Local community
+(`LayerHubScreen.kt`, `return@Column` after the section). Under a real roster they would read as a
 second list with nobody in it, which is the error-looks-like-empty failure in a
 new costume. They remain only on Just me, where there is nothing else to draw.
 
