@@ -95,7 +95,7 @@ object CirclesNav {
         // family (the household picked in the Family hub, CSD-100) and
         // community. Everyone has no room of its own. ──
 
-        Placement(NavSurface.Files, Tab.FILES, setOf(AGENT, FAMILY, LOCAL_COMMUNITY, GLOBAL_COMMUNITIES)),
+        Placement(NavSurface.Files, Tab.FILES, setOf(AGENT, FAMILY, GLOBAL_COMMUNITIES)),
 
         // ── Chats — CONVERSATIONS. The agent conversation is one today.
         // Cognitive sessions, tickets and the scheduler are how the machine
@@ -127,6 +127,7 @@ object CirclesNav {
         Placement(NavSurface.LayerFamily, Tab.RULES, setOf(FAMILY)),
         Placement(NavSurface.LayerLocalCommunity, Tab.RULES, setOf(LOCAL_COMMUNITY)),
         Placement(NavSurface.LayerGlobalCommunities, Tab.RULES, setOf(GLOBAL_COMMUNITIES)),
+        Placement(NavSurface.LayerAffiliations, Tab.RULES, setOf(GLOBAL_COMMUNITIES)),
         Placement(NavSurface.LayerGlobalCommons, Tab.RULES, setOf(GLOBAL_COMMONS)),
         Placement(NavSurface.Trust, Tab.RULES, ALL),
         Placement(NavSurface.ManageConsent, Tab.RULES, ALL),
@@ -153,11 +154,12 @@ object CirclesNav {
         // ── Communities and affiliations (CSD-102, CSD-103). The community
         // itself (its rule, roles, pending changes) is on the circle's own
         // Rules hub, not a card beside it; who is in it is People, and the
-        // rooms you talk in are Chats. `tier: community` folds to Neighbours
-        // and `tier: affiliations` to Communities and Businesses (CohortScope). ──
-        Placement(NavSurface.CommunityRoster, Tab.PEOPLE, setOf(LOCAL_COMMUNITY)),
+        // rooms you talk in are Chats, each tier's list its own card. Both
+        // tiers sit in one circle; Local community is geographic and holds
+        // neither (CohortScope). ──
+        Placement(NavSurface.CommunityRoster, Tab.PEOPLE, setOf(GLOBAL_COMMUNITIES)),
         Placement(NavSurface.AffiliationsRoster, Tab.PEOPLE, setOf(GLOBAL_COMMUNITIES)),
-        Placement(NavSurface.CommunityChats, Tab.CHATS, setOf(LOCAL_COMMUNITY)),
+        Placement(NavSurface.CommunityChats, Tab.CHATS, setOf(GLOBAL_COMMUNITIES)),
         Placement(NavSurface.AffiliationsChats, Tab.CHATS, setOf(GLOBAL_COMMUNITIES)),
     )
 
@@ -178,8 +180,8 @@ object CirclesNav {
     val instruments: List<Instrument> = listOf(
         Instrument(
             "devices-keys", "nav.instrument.devices_keys", GlyphName.DEVICES,
-            listOf(NavSurface.IdentityManagement, NavSurface.OwnedAgents, NavSurface.AgentSettings, NavSurface.ClientInterface),
-            // My Identity is where this device signs out, on every build
+            listOf(NavSurface.IdentityManagement, NavSurface.MyDevices, NavSurface.OwnedAgents, NavSurface.AgentSettings, NavSurface.ClientInterface),
+            // My keys is where this device signs out, on every build
             // (CIRISClient#51) — there is no "account" in CIRIS, only
             // identities. Settings is this device's too — language, ground —
             // and every build's. The interface tuning calls nothing,
@@ -220,6 +222,17 @@ object CirclesNav {
 
     /** The instruments with something to offer on this build — what My things should list. */
     fun instruments(hasAgent: Boolean): List<Instrument> = instruments.filterNot { it.isEmpty(hasAgent) }
+
+    /**
+     * Where a circle opens, when it has one place people come for. The rest
+     * keep the tab you were on. Communities opens on its lists; Local
+     * community on what it is and why it is empty.
+     */
+    fun landingTab(circle: CohortScope): Tab? = when (circle) {
+        GLOBAL_COMMUNITIES -> Tab.CHATS
+        LOCAL_COMMUNITY -> Tab.RULES
+        else -> null
+    }
 
     /** The cards in a tab, for a circle, on this build. Order is the placement order. */
     fun cards(circle: CohortScope, tab: Tab, hasAgent: Boolean): List<NavSurface> =
@@ -277,6 +290,8 @@ object CirclesNav {
         tab == Tab.DECISIONS && circle == AGENT -> "nav.empty.decisions_agent"
         tab == Tab.DECISIONS && circle == FAMILY -> "nav.empty.decisions_family"
         tab == Tab.FILES && circle == AGENT -> "nav.empty.files_agent"
+        tab == Tab.CHATS && circle == LOCAL_COMMUNITY -> "nav.empty.chats_local"
+        tab == Tab.FILES && circle == LOCAL_COMMUNITY -> "nav.empty.files_local"
         else -> "nav.empty." + tab.id
     }
 }

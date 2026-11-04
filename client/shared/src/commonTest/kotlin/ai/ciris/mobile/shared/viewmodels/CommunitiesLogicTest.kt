@@ -132,9 +132,9 @@ class CommunitiesLogicTest {
     @Test
     fun eachTierLivesInItsOwnCircle() {
         val expected = mapOf(
-            NavSurface.CommunityRoster to (Tab.PEOPLE to CohortScope.LOCAL_COMMUNITY),
+            NavSurface.CommunityRoster to (Tab.PEOPLE to CohortScope.GLOBAL_COMMUNITIES),
             NavSurface.AffiliationsRoster to (Tab.PEOPLE to CohortScope.GLOBAL_COMMUNITIES),
-            NavSurface.CommunityChats to (Tab.CHATS to CohortScope.LOCAL_COMMUNITY),
+            NavSurface.CommunityChats to (Tab.CHATS to CohortScope.GLOBAL_COMMUNITIES),
             NavSurface.AffiliationsChats to (Tab.CHATS to CohortScope.GLOBAL_COMMUNITIES),
         )
         for ((surface, where) in expected) {
@@ -143,10 +143,15 @@ class CommunitiesLogicTest {
             assertEquals(setOf(where.second), p.circles, surface.id)
             assertEquals(false, p.agentOnly, "${surface.id} calls the node only; a bare node must see it")
         }
-        assertEquals(CohortScope.LOCAL_COMMUNITY.cegScope, "community")
-        assertEquals(CohortScope.GLOBAL_COMMUNITIES.cegScope, "affiliations")
+        assertEquals(CohortScope.GLOBAL_COMMUNITIES.cegScope, "community")
+        assertEquals(null, CohortScope.LOCAL_COMMUNITY.cegScope, "no wire token is geographic yet, so no room lands in Local community")
         // The governance half is on the hub that already stands for the circle, not a second Rules card.
+        assertEquals(
+            listOf(NavSurface.LayerGlobalCommunities, NavSurface.LayerAffiliations),
+            CirclesNav.cards(CohortScope.GLOBAL_COMMUNITIES, Tab.RULES, hasAgent = false).take(2),
+        )
         assertEquals(listOf(NavSurface.LayerLocalCommunity), CirclesNav.cards(CohortScope.LOCAL_COMMUNITY, Tab.RULES, hasAgent = false).take(1))
+        assertEquals(Tab.CHATS, CirclesNav.landingTab(CohortScope.GLOBAL_COMMUNITIES), "the circle opens on its lists")
     }
 
     @Test

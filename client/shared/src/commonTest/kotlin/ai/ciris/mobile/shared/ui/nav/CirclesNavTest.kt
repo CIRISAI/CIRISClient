@@ -26,11 +26,11 @@ class CirclesNavTest {
         NavSurface.Config, NavSurface.Skills, NavSurface.AgentSettings, NavSurface.HealthReputation,
         NavSurface.Users, NavSurface.Adapters, NavSurface.NetworkOps, NavSurface.Storage, NavSurface.Audit,
         NavSurface.Consent, NavSurface.Data, NavSurface.Trust, NavSurface.Nodes, NavSurface.ManageConsent,
-        NavSurface.Contacts, NavSurface.Delegations, NavSurface.IdentityManagement, NavSurface.Accord,
+        NavSurface.Contacts, NavSurface.Delegations, NavSurface.IdentityManagement, NavSurface.MyDevices, NavSurface.Accord,
         NavSurface.ProvisionAccordHolder, NavSurface.AccordCeremony, NavSurface.Moderation, NavSurface.ChildSafety,
         NavSurface.Wallet, NavSurface.Billing, NavSurface.LayerAgent, NavSurface.EnvironmentGraph,
         NavSurface.Constitutional, NavSurface.Commons, NavSurface.LayerFamily,
-        NavSurface.LayerLocalCommunity, NavSurface.LayerGlobalCommunities, NavSurface.LayerGlobalCommons,
+        NavSurface.LayerLocalCommunity, NavSurface.LayerGlobalCommunities, NavSurface.LayerAffiliations, NavSurface.LayerGlobalCommons,
         NavSurface.ClientInterface, NavSurface.Help, NavSurface.Files, NavSurface.Notes,
         // Households (CSD-101)
         NavSurface.HouseholdMembers,
@@ -139,6 +139,11 @@ class CirclesNavTest {
         assertTrue(NavSurface.IdentityManagement in inst.surfaces(hasAgent = false), "a bare node cannot reach My Identity, so cannot sign out")
         assertTrue(inst in CirclesNav.instruments(hasAgent = false), "Devices & keys is not offered on a bare node")
         assertFalse(CirclesNav.isAgentOnly(NavSurface.IdentityManagement))
+        // Keys, devices and agents are three cards, so each remove sits on its own.
+        assertEquals(
+            listOf(NavSurface.IdentityManagement, NavSurface.MyDevices, NavSurface.OwnedAgents),
+            inst.surfaces(hasAgent = false).take(3),
+        )
         // Settings stays reachable on every build too (language, ground).
         assertTrue(NavSurface.AgentSettings in inst.surfaces(hasAgent = false))
     }
@@ -223,7 +228,7 @@ class CirclesNavTest {
             assertTrue(cards.all { it == NavSurface.Files }, "${c.id} › files holds something that is not files: $cards")
         }
         // The drive has a cohort for these circles (self, community) and none for the rest.
-        for (c in listOf(CohortScope.AGENT, CohortScope.LOCAL_COMMUNITY, CohortScope.GLOBAL_COMMUNITIES)) {
+        for (c in listOf(CohortScope.AGENT, CohortScope.GLOBAL_COMMUNITIES)) {
             assertEquals(listOf(NavSurface.Files), CirclesNav.cards(c, Tab.FILES, hasAgent = false), "${c.id}: files is a node feature")
         }
         // Households form (CSD-100, CIRISServer 0.5.216), so a family file can

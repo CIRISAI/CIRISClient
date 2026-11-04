@@ -73,13 +73,14 @@ import ai.ciris.mobile.shared.platform.testableVerticalScroll
 import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 
 /**
- * **Identity Management** — "manage my self + log in as myself on another device"
+ * **My keys** (the Identity Management surface) — "manage my self + log in as myself on another device"
  * (CIRISServer#76, CEG §5.6.8.8 / §11.7). The client half of the second-occurrence /
  * laptop-loss-resilience feature.
  *
  * Two roles, one page:
- *  1. **Roster** — your self fed-ID + the list of occurrences (devices) bound to it,
- *     each with a revoke control. Adding a second device makes your fed-ID survive
+ *  1. **Roster** — your self fed-ID + the list of keys (occurrences) bound to it,
+ *     each with a revoke control. Your devices (owned nodes) and what releases
+ *     them are [MyDevicesScreen]; your agents are [OwnedAgentsScreen]. Adding a second device makes your fed-ID survive
  *     the loss of the first.
  *  2. **Add a device** (on the primary) — paste / scan the NEW device's fedcode, then
  *     enroll it. The node signs the enrollment with your fed-ID.
@@ -136,11 +137,9 @@ fun IdentityManagementScreen(
     val error by viewModel.error.collectAsState()
     val notice by viewModel.notice.collectAsState()
     val subjectBlind by viewModel.subjectBlind.collectAsState()
-    val ownedNodes by viewModel.ownedNodes.collectAsState()
     val devicesUnsupported by viewModel.devicesUnsupported.collectAsState()
     val labelling by viewModel.labelling.collectAsState()
     val labelRefusal by viewModel.labelRefusal.collectAsState()
-    val release by viewModel.release.collectAsState()
     val revoke by viewModel.revoke.collectAsState()
     val sealInHardware by viewModel.sealInHardware.collectAsState()
     val associateRefusal by viewModel.associateRefusal.collectAsState()
@@ -433,80 +432,6 @@ fun IdentityManagementScreen(
                 onForce = { viewModel.askForceRevoke() },
                 onRetry = { viewModel.retryRevoke() },
                 onDismiss = { viewModel.cancelRevoke() },
-            )
-
-            // ── Your nodes (release) ──────────────────────────────────────────
-            Spacer(Modifier.height(20.dp))
-            Text(
-                localizedString("mobile.identity_nodes_title"),
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                localizedString("mobile.identity_nodes_desc"),
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(8.dp))
-            if (ownedNodes.isEmpty()) {
-                Text(
-                    localizedString("mobile.identity_nodes_empty"),
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.testable("identity_nodes_empty"),
-                )
-            } else {
-                Column(modifier = Modifier.fillMaxWidth().testable("identity_node_list")) {
-                    ownedNodes.forEach { node ->
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 8.dp)
-                                .testable("identity_node_row_${node.keyId}"),
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        truncMid(node.keyId),
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        fontFamily = FontFamily.Monospace,
-                                    )
-                                    if (node.isSelf) {
-                                        Text(
-                                            localizedString("mobile.identity_node_this"),
-                                            fontSize = 11.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        )
-                                    }
-                                }
-                                if (!devicesUnsupported) {
-                                    OutlinedButton(
-                                        onClick = { viewModel.askRelease(node.keyId) },
-                                        enabled = release !is ReleaseState.Working,
-                                        modifier = Modifier.testableClickable("btn_identity_release_${node.keyId}") {
-                                            viewModel.askRelease(node.keyId)
-                                        },
-                                    ) {
-                                        Text(localizedString("mobile.identity_release_button"))
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            ReleaseOutcome(
-                state = release,
-                onForce = { viewModel.askForceRelease() },
-                onRetry = { viewModel.retryRelease() },
-                onDismiss = { viewModel.cancelRelease() },
             )
 
             // ── Add a device: approve a NEW device that asks to join (CSD-094) ──
@@ -960,8 +885,6 @@ fun IdentityManagementScreen(
         }
     }
 
-    NodeReleaseSheets(viewModel, release)
-
     // ── Evict-a-device confirmations ──────────────────────────────────────────
     // The first names the device, what eviction withholds and what it does
     // not undo, and who signs. The second is only reachable after the node
@@ -1219,14 +1142,14 @@ private fun deviceClassIcon(deviceClass: String) = when (deviceClass.lowercase()
 }
 
 /** Truncate a long key_id in the middle for compact display. */
-private fun truncMid(s: String, head: Int = 12, tail: Int = 8): String =
+internal fun truncMid(s: String, head: Int = 12, tail: Int = 8): String =
     if (s.length <= head + tail + 1) s else "${s.take(head)}…${s.takeLast(tail)}"
 
 /**
  * THIS DEVICE — who it is signed in as, and the way to sign it out.
  *
  * There is no "account" in CIRIS, only identities; signing out is something
- * you do to THIS DEVICE's hold on your identity, so it lives on My Identity,
+ * you do to THIS DEVICE's hold on your identity, so it lives on My keys,
  * which every build offers (Devices & keys is never agent-gated). That keeps
  * CIRISClient#51 closed without the second route onto Settings the "Account"
  * row was. Same `btn_logout` tag Settings carries, so a driver's last click
@@ -1275,7 +1198,7 @@ private fun ThisDeviceSignIn(
 }
 
 /**
- * The release confirmations, shared by My Identity and Agents you own (CSD-132):
+ * The release confirmations, shared by My devices (CSD-133) and Agents you own (CSD-132):
  * the first names the node, what changes, and who signs; the second is only
  * reachable after the node refused because it is the one you are talking to.
  */

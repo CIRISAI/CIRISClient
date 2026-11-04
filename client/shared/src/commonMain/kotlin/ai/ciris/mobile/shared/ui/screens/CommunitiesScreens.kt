@@ -1063,11 +1063,19 @@ fun CommunityChatsScreen(
     onOpenPairChat: (room: CommunityRoom, contact: Contact) -> Unit,
     /** A room of more than two, entered by its id (CSD-091). */
     onOpenRoom: (room: CommunityRoom) -> Unit,
+    /** The invitee's inbox (CSD-106): an invitation is shown where its rooms are looked for. */
+    invitations: InvitationsViewModel? = null,
 ) {
     val t = CirisTheme.tokens
     val type = CirisTheme.type
     val read by viewModel.rooms.collectAsState()
     val contacts by viewModel.contacts.collectAsState()
+    val busy by viewModel.busy.collectAsState()
+    val refusal by viewModel.refusal.collectAsState()
+    val applied by viewModel.applied.collectAsState()
+    val founding = invitations?.support?.collectAsState()?.value ?: InviteSupport.UNKNOWN
+    val affiliations = viewModel.tier == CommunityRoom.TIER_AFFILIATIONS
+    var createOpen by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { viewModel.refresh() }
 
@@ -1077,8 +1085,37 @@ fun CommunityChatsScreen(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(s("community_chats_title"), style = type.title, color = t.ink, modifier = Modifier.weight(1f))
+            Text(
+                s(if (affiliations) "community_section_title_affiliations" else "community_section_title"),
+                style = type.title, color = t.ink, modifier = Modifier.weight(1f),
+            )
             CirisTextButton(localizedString("common_refresh"), tag = CommunityTags.CHATS_REFRESH, onClick = { viewModel.refresh() })
+        }
+        Text(
+            s(if (affiliations) "community_section_body_affiliations" else "community_section_body"),
+            style = type.body, color = t.dim,
+        )
+        invitations?.let { inv -> InvitationsInbox(inv, InboxInvite.KIND_COMMUNITY, hubTier = viewModel.tier, nameOf = { nameOf(it, contacts) }) }
+        RefusalLine(refusal)
+        AppliedLine(applied)
+        if (createOpen) {
+            CreateCommunityCard(
+                affiliations = affiliations,
+                contacts = contacts,
+                foundAlone = founding == InviteSupport.INVITES,
+                busy = busy,
+                onCreate = { name, members, protocol ->
+                    viewModel.create(name, members, protocol)
+                    createOpen = false
+                },
+                onCancel = { createOpen = false },
+            )
+        } else {
+            CirisTextButton(
+                s(if (affiliations) "community_create_open_affiliations" else "community_create_open"),
+                tag = CommunityTags.CREATE_OPEN,
+                onClick = { viewModel.clearRefusal(); viewModel.consumeApplied(); createOpen = true },
+            )
         }
         val rooms = roomsOrState(
             read = read,
@@ -1087,7 +1124,7 @@ fun CommunityChatsScreen(
             emptyTag = CommunityTags.CHATS_EMPTY,
             errorTag = CommunityTags.CHATS_ERROR,
             notOnThisNodeTag = CommunityTags.CHATS_NOT_ON_THIS_NODE,
-            emptyMessage = s("community_chats_empty"),
+            emptyMessage = s(if (affiliations) "community_empty_affiliations" else "community_empty"),
         ) ?: return@Column
         Column(Modifier.fillMaxWidth().testable(CommunityTags.CHATS_LIST), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             for (room in rooms) {

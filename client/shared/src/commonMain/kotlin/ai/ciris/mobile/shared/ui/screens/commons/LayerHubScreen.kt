@@ -105,10 +105,15 @@ fun LayerHubScreen(
                 return@Column
             }
 
+            // ── Local community is geographic, and no node carries that yet ──
+            if (scope == CohortScope.LOCAL_COMMUNITY) {
+                LocalCommunityExplainer()
+                if (hasAgent && onOpenEnvironment != null) LocalCommunityEnvironmentCard(onOpenEnvironment = onOpenEnvironment)
+                return@Column
+            }
+
             // ── Scope-specific feature cards ──
-            if (scope == CohortScope.LOCAL_COMMUNITY && hasAgent && onOpenEnvironment != null) {
-                LocalCommunityEnvironmentCard(onOpenEnvironment = onOpenEnvironment)
-            } else if (scope == CohortScope.FAMILY && onOpenDelegations != null) {
+            if (scope == CohortScope.FAMILY && onOpenDelegations != null) {
                 FamilyDelegationsCard(onOpenDelegations = onOpenDelegations)
             }
 
@@ -386,3 +391,31 @@ private fun trustDescriptionKey(scope: CohortScope): String =
 
 private fun policiesDescriptionKey(scope: CohortScope): String =
     "commons.layer.${scope.id.replace('-', '_')}.policies_description"
+
+/**
+ * What Local community is and what it would take. The sharing state belongs to
+ * the node, which has no read or write for it yet, so there is nothing to
+ * enable here and no rooms to list: an offer would be a dead control, and
+ * tier-community rooms are not local ones.
+ */
+@Composable
+private fun LocalCommunityExplainer() {
+    Column(
+        modifier = Modifier.testable("local_community_explainer"),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(localizedString("mobile.local_community_body"), style = MaterialTheme.typography.bodyMedium)
+        val notYet = localizedString("mobile.local_community_not_on_this_node")
+        Text(
+            notYet,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testable("local_community_not_on_this_node", notYet),
+        )
+        Text(
+            localizedString("mobile.local_community_moved"),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}

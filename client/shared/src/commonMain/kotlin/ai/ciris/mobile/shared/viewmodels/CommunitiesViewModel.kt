@@ -421,7 +421,7 @@ class CommunitiesViewModel(
          * and its roster (People) are N-member rooms only: a pair room's roster
          * IS its identity (`community.pair_room_fixed`), so it has no governance
          * to show. Chats shows every room of the tier, pairs included — a pair
-         * room is `tier: community` on the wire, so it folds to Neighbours.
+         * room is `tier: community` on the wire, so it is listed with Communities.
          */
         fun roomsFor(rooms: List<CommunityRoom>, tier: String, includePairs: Boolean): List<CommunityRoom> =
             rooms.filter { it.tier == tier && (includePairs || !it.isPair) }

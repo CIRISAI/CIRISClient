@@ -4537,6 +4537,13 @@ fun CIRISApp(
                     onVerify = { currentScreen = Screen.VerifyAgent },
                 )
             }
+            Screen.MyDevices -> {
+                ai.ciris.mobile.shared.ui.screens.MyDevicesScreen(
+                    viewModel = identityManagementViewModel,
+                    onAddDevice = { currentScreen = Screen.IdentityManagement },
+                    onClaim = { currentScreen = Screen.ClaimNode },
+                )
+            }
             Screen.IdentityManagement -> {
                 // Identity Management (Manage group): my self fed-ID + the roster of
                 // devices (occurrences) bound to it — add / revoke a device, or "log
@@ -5295,11 +5302,16 @@ fun CIRISApp(
                 hasAgent = clientMode?.isAgent ?: false,
                 onOpenEnvironment = { currentScreen = Screen.EnvironmentInfo },
                 onIssueClick = { url -> uriHandler.openUri(url) },
+            )
+            Screen.LayerGlobalCommunities -> ai.ciris.mobile.shared.ui.screens.commons.LayerHubScreen(
+                scope = ai.ciris.mobile.shared.ui.nav.CohortScope.GLOBAL_COMMUNITIES,
+                hasAgent = clientMode?.isAgent ?: false,
+                onIssueClick = { url -> uriHandler.openUri(url) },
                 communities = communityViewModel,
                 onOpenModeration = { id -> moderationCommunity = id; currentScreen = Screen.Moderation },
                 invitations = invitationsViewModel,
             )
-            Screen.LayerGlobalCommunities -> ai.ciris.mobile.shared.ui.screens.commons.LayerHubScreen(
+            Screen.LayerAffiliations -> ai.ciris.mobile.shared.ui.screens.commons.LayerHubScreen(
                 scope = ai.ciris.mobile.shared.ui.nav.CohortScope.GLOBAL_COMMUNITIES,
                 hasAgent = clientMode?.isAgent ?: false,
                 onIssueClick = { url -> uriHandler.openUri(url) },
@@ -5316,6 +5328,7 @@ fun CIRISApp(
                 val chatsTab = currentScreen
                 ai.ciris.mobile.shared.ui.screens.CommunityChatsScreen(
                     viewModel = if (currentScreen == Screen.CommunityChats) communityViewModel else affiliationsViewModel,
+                    invitations = invitationsViewModel,
                     // A pair room is the two-person chat CSD-091 already draws.
                     onOpenPairChat = { _, contact ->
                         currentScreen = Screen.UserChat(
@@ -5447,7 +5460,9 @@ fun CIRISApp(
                     // A chat's composer owns the bottom edge on a phone (CIRISClient#186).
                     hostsComposer = screenHostsComposer(currentScreen),
                     onBack = shellBack?.let { target -> { currentScreen = target } },
-                    onCircle = { c -> openTab(c, tabNow ?: ai.ciris.mobile.shared.ui.nav.Tab.FILES) },
+                    onCircle = { c ->
+                        openTab(c, ai.ciris.mobile.shared.ui.nav.CirclesNav.landingTab(c) ?: tabNow ?: ai.ciris.mobile.shared.ui.nav.Tab.FILES)
+                    },
                     onTab = { t -> openTab(circleNow, t) },
                     onMyThings = { showMyThings = true },
                     onStop = { showStop = true },
@@ -6335,6 +6350,8 @@ internal sealed class Screen {
     // Node management (CRUD over saved NodeProfiles) — first-class Manage-group
     // surface, promoted from the in-page node-switcher dropdown.
     object ManageNodes : Screen()
+    // My devices (CSD-133): the owned nodes that run no agent, each with its release.
+    object MyDevices : Screen()
     // Agents you own (CSD-132): the owned nodes that run an agent, with
     // rename, announce, verify and release.
     object OwnedAgents : Screen()
@@ -6429,6 +6446,7 @@ internal sealed class Screen {
     object LayerFamily : Screen()
     object LayerLocalCommunity : Screen()
     object LayerGlobalCommunities : Screen()
+    object LayerAffiliations : Screen()
     // Communities and affiliations (CSD-102, CSD-103): who is in each room
     // (People) and the rooms you talk in (Chats), one per tier. The community
     // itself renders on LayerLocalCommunity / LayerGlobalCommunities.
@@ -6558,6 +6576,7 @@ internal fun screenToSurface(s: Screen):ai.ciris.mobile.shared.ui.nav.NavSurface
     is Screen.UserChat -> s.from?.let { screenToSurface(it) } ?: ai.ciris.mobile.shared.ui.nav.NavSurface.Contacts
     Screen.Delegations -> ai.ciris.mobile.shared.ui.nav.NavSurface.Delegations
     Screen.IdentityManagement -> ai.ciris.mobile.shared.ui.nav.NavSurface.IdentityManagement
+    Screen.MyDevices -> ai.ciris.mobile.shared.ui.nav.NavSurface.MyDevices
     Screen.OwnedAgents -> ai.ciris.mobile.shared.ui.nav.NavSurface.OwnedAgents
     Screen.Accord -> ai.ciris.mobile.shared.ui.nav.NavSurface.Accord
         Screen.DutyConferral -> ai.ciris.mobile.shared.ui.nav.NavSurface.Accord
@@ -6578,6 +6597,7 @@ internal fun screenToSurface(s: Screen):ai.ciris.mobile.shared.ui.nav.NavSurface
     Screen.LayerFamily -> ai.ciris.mobile.shared.ui.nav.NavSurface.LayerFamily
     Screen.LayerLocalCommunity -> ai.ciris.mobile.shared.ui.nav.NavSurface.LayerLocalCommunity
     Screen.LayerGlobalCommunities -> ai.ciris.mobile.shared.ui.nav.NavSurface.LayerGlobalCommunities
+    Screen.LayerAffiliations -> ai.ciris.mobile.shared.ui.nav.NavSurface.LayerAffiliations
     Screen.LayerGlobalCommons -> ai.ciris.mobile.shared.ui.nav.NavSurface.LayerGlobalCommons
     Screen.Commons -> ai.ciris.mobile.shared.ui.nav.NavSurface.Commons
     // Communities and affiliations (CSD-103)
@@ -6631,6 +6651,7 @@ private fun surfaceToScreen(s: ai.ciris.mobile.shared.ui.nav.NavSurface): Screen
     ai.ciris.mobile.shared.ui.nav.NavSurface.NetworkOps -> Screen.NetworkOps
     ai.ciris.mobile.shared.ui.nav.NavSurface.NodeSelf -> Screen.NodeSelfStanding // CSD-045
     ai.ciris.mobile.shared.ui.nav.NavSurface.Nodes -> Screen.ManageNodes
+    ai.ciris.mobile.shared.ui.nav.NavSurface.MyDevices -> Screen.MyDevices
     ai.ciris.mobile.shared.ui.nav.NavSurface.OwnedAgents -> Screen.OwnedAgents
     ai.ciris.mobile.shared.ui.nav.NavSurface.ManageConsent -> Screen.ManageConsent
     ai.ciris.mobile.shared.ui.nav.NavSurface.Contacts -> Screen.Contacts
@@ -6656,6 +6677,7 @@ private fun surfaceToScreen(s: ai.ciris.mobile.shared.ui.nav.NavSurface): Screen
     ai.ciris.mobile.shared.ui.nav.NavSurface.LayerFamily -> Screen.LayerFamily
     ai.ciris.mobile.shared.ui.nav.NavSurface.LayerLocalCommunity -> Screen.LayerLocalCommunity
     ai.ciris.mobile.shared.ui.nav.NavSurface.LayerGlobalCommunities -> Screen.LayerGlobalCommunities
+    ai.ciris.mobile.shared.ui.nav.NavSurface.LayerAffiliations -> Screen.LayerAffiliations
     // Communities and affiliations (CSD-103)
     ai.ciris.mobile.shared.ui.nav.NavSurface.CommunityRoster -> Screen.CommunityRoster
     ai.ciris.mobile.shared.ui.nav.NavSurface.AffiliationsRoster -> Screen.AffiliationsRoster
