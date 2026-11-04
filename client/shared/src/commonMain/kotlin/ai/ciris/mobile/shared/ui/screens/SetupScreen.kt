@@ -51,6 +51,8 @@ import ai.ciris.mobile.shared.viewmodels.hasAiStep
 import ai.ciris.mobile.shared.viewmodels.isFinalSetupStep
 import ai.ciris.mobile.shared.viewmodels.SetupFormState
 import ai.ciris.mobile.shared.viewmodels.SetupViewModel
+import ai.ciris.mobile.shared.viewmodels.DEFAULT_TEMPLATE_ID
+import ai.ciris.mobile.shared.viewmodels.templatesDefaultFirst
 import ai.ciris.mobile.shared.viewmodels.SUPPORTED_LANGUAGES
 import ai.ciris.mobile.shared.viewmodels.LocationGranularity
 import androidx.compose.animation.AnimatedVisibility
@@ -3638,65 +3640,92 @@ private fun OptionalFeaturesSection(
         PortalConnectSection(viewModel = viewModel, state = state, apiClient = apiClient)
 
         // ── Template ────────────────────────────────────────────────────────
+        // Ally is the agent's `default` template and the strong default for a
+        // personal install, so the choice is one line and the list sits behind
+        // Advanced Settings. A Portal record sets the template (completeSetup
+        // sends the provisioned one), so there is nothing to choose there.
         Text(
             text = localizedString("mobile.setup_template_title"),
             color = SetupColors.TextPrimary,
             fontSize = 17.sp,
             fontWeight = FontWeight.Bold,
         )
+        val templateLocked = state.deviceAuth.provisionedTemplate != null
+        val templateName = viewModel.getSelectedTemplateName()
         Text(
-            text = localizedString("mobile.setup_template_desc"),
+            text = when {
+                templateLocked -> localizedString("mobile.setup_template_provisioned", mapOf("name" to templateName))
+                state.selectedTemplateId == DEFAULT_TEMPLATE_ID -> localizedString("mobile.setup_template_ally")
+                else -> localizedString("mobile.setup_template_chosen", mapOf("name" to templateName))
+            },
             color = SetupColors.TextSecondary,
             fontSize = 13.sp,
-            modifier = Modifier.padding(top = 4.dp, bottom = 8.dp),
+            modifier = Modifier.padding(top = 4.dp).testable("setup_template_summary"),
         )
-        when {
-            state.templatesLoading -> Text(
-                text = l10nOr("mobile.status_loading", "Loading…"),
+        if (!templateLocked) {
+            val toggleAdvanced = { viewModel.setShowAdvancedSettings(!state.showAdvancedSettings) }
+            TextButton(
+                onClick = toggleAdvanced,
+                modifier = Modifier.testableWithHandler("btn_setup_advanced") { toggleAdvanced() },
+            ) {
+                Text(localizedString("mobile.setup_advanced"))
+            }
+        }
+        if (state.showAdvancedSettings && !templateLocked) {
+            Text(
+                text = localizedString("mobile.setup_template_desc"),
                 color = SetupColors.TextSecondary,
                 fontSize = 13.sp,
+                modifier = Modifier.padding(bottom = 8.dp),
             )
-            state.templatesError -> Text(
-                text = localizedString("mobile.setup_templates_error"),
-                color = SetupColors.ErrorText,
-                fontSize = 13.sp,
-                modifier = Modifier.testable("setup_templates_error"),
-            )
-            state.availableTemplates.isEmpty() -> Text(
-                text = localizedString("mobile.setup_template_default"),
-                color = SetupColors.TextSecondary,
-                fontSize = 13.sp,
-                modifier = Modifier.testable("setup_templates_empty"),
-            )
-            else -> state.availableTemplates.forEach { t ->
-                val selected = t.id == state.selectedTemplateId
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testableClickable("opt_template_${t.id}") { viewModel.setSelectedTemplate(t.id) }
-                        .padding(vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    RadioButton(selected = selected, onClick = { viewModel.setSelectedTemplate(t.id) })
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = t.name,
-                            color = SetupColors.TextPrimary,
-                            fontSize = 14.sp,
-                            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                        )
-                        Text(text = t.description, color = SetupColors.TextSecondary, fontSize = 12.sp)
-                        t.stewardship_tier?.let { tier ->
-                            // Book VI stewardship tier, 1-5: higher means more oversight.
-                            Text(
-                                text = localizedString("mobile.setup_template_stewardship_tier", mapOf("tier" to tier.toString())),
-                                color = SetupColors.TextSecondary,
-                                fontSize = 11.sp,
-                            )
+                when {
+                    state.templatesLoading -> Text(
+                        text = l10nOr("mobile.status_loading", "Loading…"),
+                        color = SetupColors.TextSecondary,
+                        fontSize = 13.sp,
+                    )
+                    state.templatesError -> Text(
+                        text = localizedString("mobile.setup_templates_error"),
+                        color = SetupColors.ErrorText,
+                        fontSize = 13.sp,
+                        modifier = Modifier.testable("setup_templates_error"),
+                    )
+                    state.availableTemplates.isEmpty() -> Text(
+                        text = localizedString("mobile.setup_template_default"),
+                        color = SetupColors.TextSecondary,
+                        fontSize = 13.sp,
+                        modifier = Modifier.testable("setup_templates_empty"),
+                    )
+                    else -> templatesDefaultFirst(state.availableTemplates).forEach { t ->
+                        val selected = t.id == state.selectedTemplateId
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testableClickable("opt_template_${t.id}") { viewModel.setSelectedTemplate(t.id) }
+                                .padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            RadioButton(selected = selected, onClick = { viewModel.setSelectedTemplate(t.id) })
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = t.name,
+                                    color = SetupColors.TextPrimary,
+                                    fontSize = 14.sp,
+                                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                                )
+                                Text(text = t.description, color = SetupColors.TextSecondary, fontSize = 12.sp)
+                                t.stewardship_tier?.let { tier ->
+                                    // Book VI stewardship tier, 1-5: higher means more oversight.
+                                    Text(
+                                        text = localizedString("mobile.setup_template_stewardship_tier", mapOf("tier" to tier.toString())),
+                                        color = SetupColors.TextSecondary,
+                                        fontSize = 11.sp,
+                                    )
+                                }
+                            }
                         }
                     }
                 }
-            }
         }
 
         // ── Optional features (adapters), each with what it grants ─────────

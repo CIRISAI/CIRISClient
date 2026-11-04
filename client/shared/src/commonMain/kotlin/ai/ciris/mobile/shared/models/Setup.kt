@@ -58,15 +58,13 @@ data class LlmProvider(
  * Response from GET /v1/setup/templates
  * Lists available agent identity templates.
  *
- * Required templates (validated by QA):
- * - "default" (name: "Datum")
- * - "ally" (name: "Ally")
- * - Minimum 5 templates total
+ * The id is the agent's file name and the name is inside it: id "default" is
+ * named "Ally", and "datum" is named "Datum". There is no "ally" id.
  */
 @Serializable
 data class AgentTemplate(
-    val id: String,          // "default", "ally", "sage", "scout", "echo"
-    val name: String,        // "Datum", "Ally", "Sage", "Scout", "Echo"
+    val id: String,          // "default", "datum", "sage", "scout", "echo"
+    val name: String,        // "Ally", "Datum", "Sage", "Scout", "Echo"
     val description: String,
     val personality: String? = null,
     val capabilities: List<String> = emptyList()
@@ -292,7 +290,7 @@ data class CompleteSetupRequest(
     val backup_llm_model: String? = null,
 
     // Agent identity
-    val template_id: String,               // "ally", "default", etc
+    val template_id: String,               // "default" (Ally), "datum", etc
 
     // Communication adapters
     val enabled_adapters: List<String>,    // ["api"]

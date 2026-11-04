@@ -81,6 +81,26 @@ class SetupReviewGapsTest {
     // ── the optional features: a failed read is not an empty list
 
     @Test
+    fun allyIsTheDefaultAndGoesOverTheWireAsTheAgentsDefaultId() = runTest {
+        val vm = viewModel()
+        assertEquals("default", vm.state.value.selectedTemplateId, "the agent has no `ally` template id")
+        assertFalse(vm.state.value.showAdvancedSettings, "the chooser starts hidden")
+        assertEquals("Ally", vm.getSelectedTemplateName(), "a failed or empty list still names Ally")
+        vm.loadAvailableTemplates { listOf(template("default", "Ally"), template("scout", "Scout")) }
+        assertEquals("Ally", vm.getSelectedTemplateName())
+        vm.setSelectedTemplate("scout")
+        assertEquals("Scout", vm.getSelectedTemplateName())
+    }
+
+    @Test
+    fun theChooserListsAllyFirstAndKeepsTheAgentsOrderOtherwise() {
+        val listed = listOf(template("scout", "Scout"), template("default", "Ally"), template("sage", "Sage"))
+        assertEquals(listOf("default", "scout", "sage"), templatesDefaultFirst(listed).map { it.id })
+    }
+
+    private fun template(id: String, name: String) = AgentTemplateInfo(id = id, name = name, description = "")
+
+    @Test
     fun aFailedTemplateReadIsNotAnEmptyTemplateList() = runTest {
         val vm = viewModel()
         vm.loadAvailableTemplates { throw RuntimeException("503") }
