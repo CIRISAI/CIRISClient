@@ -105,11 +105,11 @@ fun LayerHubScreen(
                 return@Column
             }
 
-            // ── Local community is geographic, and no node carries that yet ──
+            // ── Local community: what it is, then its rooms below ──
             if (scope == CohortScope.LOCAL_COMMUNITY) {
                 LocalCommunityExplainer()
                 if (hasAgent && onOpenEnvironment != null) LocalCommunityEnvironmentCard(onOpenEnvironment = onOpenEnvironment)
-                return@Column
+                if (communities == null) return@Column
             }
 
             // ── Scope-specific feature cards ──
@@ -393,10 +393,10 @@ private fun policiesDescriptionKey(scope: CohortScope): String =
     "commons.layer.${scope.id.replace('-', '_')}.policies_description"
 
 /**
- * What Local community is and what it would take. The sharing state belongs to
- * the node, which has no read or write for it yet, so there is nothing to
- * enable here and no rooms to list: an offer would be a dead control, and
- * tier-community rooms are not local ones.
+ * What Local community is, and what the node cannot do for it yet. The sharing
+ * state belongs to the node, which has no read or write for it
+ * (CIRISServer#852), so there is nothing to enable here: an offer would be a
+ * dead control.
  */
 @Composable
 private fun LocalCommunityExplainer() {
@@ -411,11 +411,6 @@ private fun LocalCommunityExplainer() {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.testable("local_community_not_on_this_node", notYet),
-        )
-        Text(
-            localizedString("mobile.local_community_moved"),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }

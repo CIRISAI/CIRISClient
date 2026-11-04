@@ -1381,11 +1381,15 @@
     "moderation_appeal_partial": "Le signalement a été partiellement confirmé en appel.",
     "moderation_appeal_reversed": "Le signalement a été annulé en appel.",
     "local_community_body": "La communauté locale est géographique : les personnes près de vous. Elle ne s'applique que si vous avez choisi de partager votre position et que vous la partagez actuellement.",
-    "local_community_not_on_this_node": "Ce nœud ne peut pas encore partager votre position pour cela, il n'y a donc rien à activer et aucune communauté locale à afficher. Votre position n'est pas partagée à cet effet.",
-    "local_community_moved": "Les salons que vous aviez ici se trouvent désormais sous Communautés et affiliations.",
+    "local_community_not_on_this_node": "Ce nœud ne peut pas encore partager votre position, une salle locale n'est donc pas liée à un lieu pour l'instant et c'est vous qui choisissez qui la rejoint. Votre position n'est pas partagée.",
     "setup_template_ally": "Ally, un assistant personnel. C'est le bon choix pour une installation personnelle.",
     "setup_template_chosen": "À partir du modèle {name}.",
     "setup_template_provisioned": "{name}, défini par l'enregistrement Portal de votre organisation.",
+    "community_section_title_local": "Vos salles locales",
+    "community_section_body_local": "Des salles pour les personnes près de vous. Pour l'instant, une salle n'apparaît comme locale que sur l'appareil qui l'a fondée. Les autres membres la voient sous Communautés.",
+    "community_empty_local": "Vous n'avez encore aucune salle locale. Fondez-en une et invitez les personnes près de vous.",
+    "community_create_open_local": "Fonder une salle locale",
+    "community_create_title_local": "Fonder une salle locale",
     "add_fedid_confirm": "Ajouter l'ID de fédération",
     "add_fedid_intro": "Vous êtes déjà connecté — ceci ajoute un ID de fédération à votre compte existant sans le recréer. Votre identifiant de connexion est préservé.",
     "add_fedid_label_heading": "Nommez votre ID de fédération",
@@ -4610,7 +4614,9 @@
       "node_self": "État propre",
       "my_devices": "Mes appareils",
       "layer_communities": "Communautés",
-      "layer_affiliations": "Affiliations"
+      "layer_affiliations": "Affiliations",
+      "local_chats": "Salles locales",
+      "local_roster": "Membres locaux"
     },
     "circle": {
       "agent": "Moi seul",
@@ -4662,8 +4668,7 @@
       "files_agent": "Rien ici pour l'instant. C'est ici que tout commence, et rien ici n'est annoncé.",
       "decisions_agent": "Il n'y a personne ici avec qui décider. Les décisions commencent en Famille.",
       "chats_agent": "Il n'y a aucun agent sur ce nœud, il n'y a donc personne ici à qui parler. Configurez-en un et vos conversations avec lui apparaîtront ici.",
-      "chats_local": "La communauté locale n'est pas encore disponible sur ce nœud. Vos salons se trouvent sous Communautés et affiliations.",
-      "files_local": "La communauté locale n'est pas encore disponible sur ce nœud. Les fichiers de vos salons se trouvent sous Communautés et affiliations."
+      "files_local": "Les fichiers résident dans chaque salle. Ouvrez une salle locale pour voir ses fichiers."
     },
     "my_things": "Mes affaires",
     "stop_everything": "Tout arrêter",

@@ -1190,11 +1190,15 @@
     "moderation_appeal_partial": "La segnalazione è stata parzialmente confermata in appello.",
     "moderation_appeal_reversed": "La segnalazione è stata ribaltata in appello.",
     "local_community_body": "La comunità locale è geografica: le persone vicino a te. Si applica solo se hai scelto di condividere la tua posizione e la stai condividendo in questo momento.",
-    "local_community_not_on_this_node": "Questo nodo non può ancora condividere la tua posizione per questo, quindi non c'è nulla a cui aderire e nessuna comunità locale da mostrare. La tua posizione non viene condivisa per questo scopo.",
-    "local_community_moved": "Le stanze che avevi qui ora si trovano sotto Comunità e affiliazioni.",
+    "local_community_not_on_this_node": "Questo nodo non può ancora condividere la tua posizione, quindi per ora una stanza locale non è legata a un luogo e sei tu a scegliere chi vi partecipa. La tua posizione non viene condivisa.",
     "setup_template_ally": "Ally, un assistente personale. È la scelta giusta per un'installazione personale.",
     "setup_template_chosen": "Si parte dal modello {name}.",
     "setup_template_provisioned": "{name}, impostato dal record Portal della tua organizzazione.",
+    "community_section_title_local": "Le tue stanze locali",
+    "community_section_body_local": "Stanze per le persone vicino a te. Per ora, una stanza appare come locale solo sul dispositivo che l'ha fondata. Gli altri membri la vedono sotto Comunità.",
+    "community_empty_local": "Non hai ancora nessuna stanza locale. Fondane una e invita le persone vicino a te.",
+    "community_create_open_local": "Fonda una stanza locale",
+    "community_create_title_local": "Fonda una stanza locale",
     "final_genesis_amend_title": "Ripeti lo scrub della radice di fiducia",
     "final_genesis_amend_desc": "Un emendamento del bundle su cui questo nodo è in esecuzione: ogni suo byte viene mantenuto così com'è, e viene aggiunta la riga di transito firmata di ciascun nodo canonico insediato, così un nodo nuovo può raggiungere il nodo canonico tramite collegamenti sigillati. Due qualsiasi dei tre detentori lo autorizzano, una volta ciascuno. Esegui questa operazione sul tuo nodo locale, dopo che il nodo canonico avrà eseguito la release di trasporto sigillato.",
     "final_genesis_amend_too_old": "Questo nodo è troppo vecchio per ripetere lo scrub",
@@ -4610,7 +4614,9 @@
       "node_self": "La propria condizione",
       "my_devices": "I miei dispositivi",
       "layer_communities": "Comunità",
-      "layer_affiliations": "Affiliazioni"
+      "layer_affiliations": "Affiliazioni",
+      "local_chats": "Stanze locali",
+      "local_roster": "Membri locali"
     },
     "circle": {
       "agent": "Solo io",
@@ -4662,8 +4668,7 @@
       "decisions_agent": "Non c'è nessuno qui con cui decidere. Le decisioni iniziano in Famiglia.",
       "decisions_family": "Una famiglia decide parlando. Non c'è nulla su cui votare qui.",
       "chats_agent": "Non c'è alcun agente su questo nodo, quindi non c'è nessuno con cui parlare qui. Configurane uno e le tue conversazioni con lui saranno qui.",
-      "chats_local": "La comunità locale non è ancora disponibile su questo nodo. Le tue stanze si trovano sotto Comunità e affiliazioni.",
-      "files_local": "La comunità locale non è ancora disponibile su questo nodo. I file delle tue stanze si trovano sotto Comunità e affiliazioni."
+      "files_local": "I file risiedono in ciascuna stanza. Apri una stanza locale per vedere i suoi file."
     },
     "my_things": "Le mie cose",
     "stop_everything": "Ferma tutto",

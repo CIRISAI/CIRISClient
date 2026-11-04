@@ -2615,11 +2615,15 @@
     "moderation_appeal_partial": "Die Markierung wurde im Einspruch teilweise bestätigt.",
     "moderation_appeal_reversed": "Die Markierung wurde im Einspruch aufgehoben.",
     "local_community_body": "Lokale Gemeinschaft ist geografisch: die Menschen in Ihrer Nähe. Sie gilt nur, wenn Sie zugestimmt haben, Ihren Standort zu teilen, und ihn gerade teilen.",
-    "local_community_not_on_this_node": "Dieser Knoten kann Ihren Standort dafür noch nicht teilen, daher gibt es nichts, dem Sie zustimmen könnten, und keine lokale Gemeinschaft anzuzeigen. Ihr Standort wird dafür nicht geteilt.",
-    "local_community_moved": "Räume, die Sie hier hatten, befinden sich jetzt unter Gemeinschaften und Zugehörigkeiten.",
+    "local_community_not_on_this_node": "Dieser Knoten kann Ihren Standort noch nicht teilen, daher ist ein lokaler Raum vorerst nicht an einen Ort gebunden, und Sie entscheiden, wer beitritt. Ihr Standort wird nicht geteilt.",
     "setup_template_ally": "Ally, ein persönlicher Assistent. Dies ist die richtige Wahl für eine persönliche Installation.",
     "setup_template_chosen": "Ausgehend von der Vorlage {name}.",
     "setup_template_provisioned": "{name}, festgelegt durch den Portal-Eintrag Ihrer Organisation.",
+    "community_section_title_local": "Ihre lokalen Räume",
+    "community_section_body_local": "Räume für die Menschen in Ihrer Nähe. Vorerst wird ein Raum nur auf dem Gerät, das ihn gegründet hat, als lokal angezeigt. Andere Mitglieder sehen ihn unter Communities.",
+    "community_empty_local": "Sie haben noch keine lokalen Räume. Gründen Sie einen und laden Sie die Personen in Ihrer Nähe ein.",
+    "community_create_open_local": "Lokalen Raum gründen",
+    "community_create_title_local": "Lokalen Raum gründen",
     "manage_consent_open_userdata": "Nutzerdaten-Einwilligung öffnen",
     "manage_consent_ratified": "Ratifiziert — beide Gewährungen vorhanden",
     "manage_consent_replication_desc": "Eine bilaterale Gewährung zwischen zwei Knoten. Erst ratifiziert, wenn beide Richtungen gewährt sind.",
@@ -4610,7 +4614,9 @@
       "node_self": "Eigener Stand",
       "my_devices": "Meine Geräte",
       "layer_communities": "Gemeinschaften",
-      "layer_affiliations": "Zugehörigkeiten"
+      "layer_affiliations": "Zugehörigkeiten",
+      "local_chats": "Lokale Räume",
+      "local_roster": "Lokale Mitglieder"
     },
     "circle": {
       "agent": "Nur ich",
@@ -4662,8 +4668,7 @@
       "decisions_agent": "Hier ist niemand, mit dem Sie entscheiden könnten. Entscheidungen beginnen in Familie.",
       "decisions_family": "Eine Familie entscheidet durch Gespräche. Hier gibt es nichts, worüber abgestimmt werden könnte.",
       "chats_agent": "Dieser Knoten hat keinen Agenten, daher ist hier niemand, mit dem Sie sprechen könnten. Richten Sie einen ein, und Ihre Unterhaltungen mit ihm werden hier erscheinen.",
-      "chats_local": "Lokale Gemeinschaft gibt es auf diesem Knoten noch nicht. Ihre Räume befinden sich unter Gemeinschaften und Zugehörigkeiten.",
-      "files_local": "Lokale Gemeinschaft gibt es auf diesem Knoten noch nicht. Die Dateien Ihrer Räume befinden sich unter Gemeinschaften und Zugehörigkeiten."
+      "files_local": "Dateien gehören zu jedem Raum. Öffnen Sie einen lokalen Raum, um seine Dateien zu sehen."
     },
     "my_things": "Meine Sachen",
     "stop_everything": "Alles stoppen",

@@ -4383,11 +4383,15 @@
     "moderation_appeal_partial": "A sinalização foi parcialmente mantida no recurso.",
     "moderation_appeal_reversed": "A sinalização foi revertida no recurso.",
     "local_community_body": "Comunidade local é geográfica: as pessoas perto de você. Ela se aplica somente se você optou por compartilhar sua localização e está compartilhando-a agora.",
-    "local_community_not_on_this_node": "Este nó ainda não pode compartilhar sua localização para isso, portanto não há nada para habilitar e nenhuma comunidade local para mostrar. Sua localização não está sendo compartilhada para isso.",
-    "local_community_moved": "As salas que você tinha aqui agora estão em Comunidades e afiliações.",
+    "local_community_not_on_this_node": "Este nó ainda não pode compartilhar sua localização, portanto, por enquanto, uma sala local não está vinculada a um lugar e você escolhe quem entra. Sua localização não está sendo compartilhada.",
     "setup_template_ally": "Ally, um assistente pessoal. Essa é a escolha certa para uma instalação pessoal.",
     "setup_template_chosen": "Começando a partir do modelo {name}.",
     "setup_template_provisioned": "{name}, definido pelo registro do Portal da sua organização.",
+    "community_section_title_local": "Suas salas locais",
+    "community_section_body_local": "Salas para as pessoas perto de você. Por enquanto, uma sala aparece como local apenas no dispositivo que a fundou. Outros membros a veem em Comunidades.",
+    "community_empty_local": "Você ainda não tem salas locais. Crie uma e convide as pessoas perto de você.",
+    "community_create_open_local": "Fundar sala local",
+    "community_create_title_local": "Fundar sala local",
     "data_erase_self_label": "Apagar você",
     "data_erase_self_blocked": "Ainda não é possível a partir deste aplicativo. O nó só apaga uma pessoa mediante uma solicitação que essa pessoa assina, e este aplicativo não assina (CIRISServer#677). Apagar traços não apaga você.",
     "data_erase_agent_id_label": "ID do agente",
@@ -4610,7 +4614,9 @@
       "node_self": "Situação própria",
       "my_devices": "Meus dispositivos",
       "layer_communities": "Comunidades",
-      "layer_affiliations": "Afiliações"
+      "layer_affiliations": "Afiliações",
+      "local_chats": "Salas locais",
+      "local_roster": "Membros locais"
     },
     "circle": {
       "agent": "Só eu",
@@ -4662,8 +4668,7 @@
       "decisions_agent": "Não há ninguém aqui com quem decidir. As decisões começam em Família.",
       "decisions_family": "Uma família decide conversando. Não há nada para votar aqui.",
       "chats_agent": "Não há agente neste nó, portanto não há ninguém aqui com quem conversar. Configure um e suas conversas com ele estarão aqui.",
-      "chats_local": "A comunidade local ainda não está disponível neste nó. Suas salas estão em Comunidades e afiliações.",
-      "files_local": "A comunidade local ainda não está disponível neste nó. Os arquivos das suas salas estão em Comunidades e afiliações."
+      "files_local": "Os arquivos ficam em cada sala. Abra uma sala local para ver seus arquivos."
     },
     "my_things": "Minhas coisas",
     "stop_everything": "Parar tudo",

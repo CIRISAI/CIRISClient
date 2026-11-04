@@ -411,12 +411,22 @@ sealed class NavSurface(
         id = "affiliations-roster", label = "Affiliation members", icon = CIRISIcons.person,
         labelKey = "nav.surface.affiliations_roster")
 
-    /** The Neighbours rooms you talk in — pair rooms and rooms of more than two. */
+    /** Who is in each local room. */
+    object LocalRoster : NavSurface(
+        id = "local-roster", label = "Local members", icon = CIRISIcons.person,
+        labelKey = "nav.surface.local_roster")
+
+    /** The rooms of the people near you. */
+    object LocalChats : NavSurface(
+        id = "local-chats", label = "Local rooms", icon = CIRISIcons.send,
+        labelKey = "nav.surface.local_chats")
+
+    /** The Communities rooms you talk in — pair rooms and rooms of more than two. */
     object CommunityChats : NavSurface(
         id = "community-chats", label = "Communities", icon = CIRISIcons.send,
         labelKey = "nav.surface.community_chats")
 
-    /** The Communities and Businesses rooms you talk in. */
+    /** The affiliations rooms you talk in. */
     object AffiliationsChats : NavSurface(
         id = "affiliations-chats", label = "Affiliations", icon = CIRISIcons.send,
         labelKey = "nav.surface.affiliations_chats")

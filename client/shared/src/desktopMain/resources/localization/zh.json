@@ -4405,11 +4405,15 @@
     "moderation_appeal_partial": "该标记在申诉中被部分维持。",
     "moderation_appeal_reversed": "该标记在申诉中被撤销。",
     "local_community_body": "本地社区基于地理位置：即您附近的人。仅当您选择共享位置并且当前正在共享时，此功能才适用。",
-    "local_community_not_on_this_node": "此节点尚无法为此功能共享您的位置，因此没有可供选择加入的内容，也没有可显示的本地社区。您的位置未被共享用于此用途。",
-    "local_community_moved": "您原本在此处的房间现已移至“社区与隶属关系”下。",
+    "local_community_not_on_this_node": "此节点尚无法共享您的位置，因此本地房间目前不与地点绑定，由您选择谁可以加入。您的位置信息未被共享。",
     "setup_template_ally": "Ally，个人助手。对于个人安装而言，这是正确的选择。",
     "setup_template_chosen": "从 {name} 模板开始。",
-    "setup_template_provisioned": "{name}，由您所属组织的 Portal 记录设置。"
+    "setup_template_provisioned": "{name}，由您所属组织的 Portal 记录设置。",
+    "community_section_title_local": "您的本地房间",
+    "community_section_body_local": "面向您附近的人的本地房间。目前，房间仅在创建它的设备上显示为本地。其他成员会在“社区”下看到它。",
+    "community_empty_local": "您还没有任何本地房间。创建一个房间，并邀请您附近的人。",
+    "community_create_open_local": "创建本地房间",
+    "community_create_title_local": "创建本地房间"
   },
   "moderation": {
     "ladder": {
@@ -4610,7 +4614,9 @@
       "node_self": "自身状态",
       "my_devices": "我的设备",
       "layer_communities": "社区",
-      "layer_affiliations": "隶属关系"
+      "layer_affiliations": "隶属关系",
+      "local_chats": "本地房间",
+      "local_roster": "本地成员"
     },
     "circle": {
       "agent": "仅我本人",
@@ -4662,8 +4668,7 @@
       "decisions_agent": "这里没有可以共同决策的人。决策从“家族”开始。",
       "decisions_family": "家族通过交谈做出决策。这里没有需要投票的事项。",
       "chats_agent": "此节点上没有智能体，因此这里没有可以交流的对象。设置一个后，您与它的对话记录将显示在这里。",
-      "chats_local": "本地社区尚未在此节点上线。您的房间位于“社区与隶属关系”下。",
-      "files_local": "本地社区尚未在此节点上线。您房间中的文件位于“社区与隶属关系”下。"
+      "files_local": "文件保存在各个房间中。打开一个本地房间以查看其文件。"
     },
     "my_things": "我的内容",
     "stop_everything": "停止一切",

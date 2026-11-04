@@ -161,4 +161,52 @@ class CommunitiesLogicTest {
         assertEquals(NavSurface.CommunityChats, screenToSurface(Screen.CommunityChats))
         assertEquals(NavSurface.AffiliationsChats, screenToSurface(Screen.AffiliationsChats))
     }
+
+    // ── Local rooms ─────────────────────────────────────────────────────────
+
+    @Test
+    fun aRoomIsOnOneListOnly() {
+        val rooms = listOf(
+            room("plain", "community"),
+            room("marked", "community"),
+            room("served", "community").copy(cohortSubkind = CommunityRoom.SUBKIND_GEOGRAPHIC),
+            room("work", "affiliations"),
+        )
+        val marks = setOf("marked")
+        fun ids(tier: String, local: Boolean) =
+            CommunitiesViewModel.roomsFor(rooms, tier, includePairs = true, local = local, localMarks = marks)
+                .map { it.communityId }
+        assertEquals(listOf("marked", "served"), ids("community", local = true))
+        assertEquals(listOf("plain"), ids("community", local = false))
+        assertEquals(listOf("work"), ids("affiliations", local = false))
+    }
+
+    @Test
+    fun aMarkSurvivesARestart() = kotlinx.coroutines.test.runTest {
+        var stored: String? = null
+        val before = LocalRoomMarks(read = { stored }, write = { stored = it })
+        before.add("a")
+        before.add("b")
+        val after = LocalRoomMarks(read = { stored }, write = { stored = it })
+        after.load()
+        assertEquals(setOf("a", "b"), after.ids.value)
+    }
+
+    @Test
+    fun aRoomReadsItsSubkindAndAnOlderNodeSendsNone() {
+        val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+        val served = json.decodeFromString(
+            CommunityRoom.serializer(),
+            """{"community_id":"x","tier":"community","cohort_subkind":"geographic"}""",
+        )
+        assertEquals("geographic", served.cohortSubkind)
+        assertNull(json.decodeFromString(CommunityRoom.serializer(), """{"community_id":"x"}""").cohortSubkind)
+    }
+
+    @Test
+    fun localCommunityOpensOnItsRoomsAndHasPeople() {
+        assertEquals(Tab.CHATS, CirclesNav.landingTab(CohortScope.LOCAL_COMMUNITY))
+        assertEquals(listOf(NavSurface.LocalChats), CirclesNav.cards(CohortScope.LOCAL_COMMUNITY, Tab.CHATS, hasAgent = false))
+        assertEquals(NavSurface.LocalRoster, CirclesNav.cards(CohortScope.LOCAL_COMMUNITY, Tab.PEOPLE, hasAgent = false).first { it == NavSurface.LocalRoster })
+    }
 }

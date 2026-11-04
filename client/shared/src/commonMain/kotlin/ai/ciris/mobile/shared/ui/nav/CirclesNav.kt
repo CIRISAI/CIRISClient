@@ -155,8 +155,10 @@ object CirclesNav {
         // itself (its rule, roles, pending changes) is on the circle's own
         // Rules hub, not a card beside it; who is in it is People, and the
         // rooms you talk in are Chats, each tier's list its own card. Both
-        // tiers sit in one circle; Local community is geographic and holds
-        // neither (CohortScope). ──
+        // tiers sit in one circle, and Local community has its own rooms
+        // (CohortScope). ──
+        Placement(NavSurface.LocalRoster, Tab.PEOPLE, setOf(LOCAL_COMMUNITY)),
+        Placement(NavSurface.LocalChats, Tab.CHATS, setOf(LOCAL_COMMUNITY)),
         Placement(NavSurface.CommunityRoster, Tab.PEOPLE, setOf(GLOBAL_COMMUNITIES)),
         Placement(NavSurface.AffiliationsRoster, Tab.PEOPLE, setOf(GLOBAL_COMMUNITIES)),
         Placement(NavSurface.CommunityChats, Tab.CHATS, setOf(GLOBAL_COMMUNITIES)),
@@ -225,12 +227,10 @@ object CirclesNav {
 
     /**
      * Where a circle opens, when it has one place people come for. The rest
-     * keep the tab you were on. Communities opens on its lists; Local
-     * community on what it is and why it is empty.
+     * keep the tab you were on. Both open on their lists of rooms.
      */
     fun landingTab(circle: CohortScope): Tab? = when (circle) {
-        GLOBAL_COMMUNITIES -> Tab.CHATS
-        LOCAL_COMMUNITY -> Tab.RULES
+        GLOBAL_COMMUNITIES, LOCAL_COMMUNITY -> Tab.CHATS
         else -> null
     }
 
@@ -290,7 +290,6 @@ object CirclesNav {
         tab == Tab.DECISIONS && circle == AGENT -> "nav.empty.decisions_agent"
         tab == Tab.DECISIONS && circle == FAMILY -> "nav.empty.decisions_family"
         tab == Tab.FILES && circle == AGENT -> "nav.empty.files_agent"
-        tab == Tab.CHATS && circle == LOCAL_COMMUNITY -> "nav.empty.chats_local"
         tab == Tab.FILES && circle == LOCAL_COMMUNITY -> "nav.empty.files_local"
         else -> "nav.empty." + tab.id
     }

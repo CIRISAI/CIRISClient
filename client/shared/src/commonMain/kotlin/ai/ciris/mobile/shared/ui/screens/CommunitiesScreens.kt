@@ -310,7 +310,8 @@ fun CommunityGovernanceSection(
     val applied by viewModel.applied.collectAsState()
     val pending by viewModel.pending.collectAsState()
     val cosignature by viewModel.cosignature.collectAsState()
-    val affiliations = viewModel.tier == CommunityRoom.TIER_AFFILIATIONS
+    val tierKey = tierKey(viewModel)
+    val localMarks by viewModel.localMarks.ids.collectAsState()
 
     LaunchedEffect(Unit) { viewModel.refresh() }
 
@@ -323,28 +324,28 @@ fun CommunityGovernanceSection(
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Column(Modifier.weight(1f)) {
                 Text(
-                    s(if (affiliations) "community_section_title_affiliations" else "community_section_title"),
+                    s("community_section_title$tierKey"),
                     style = type.title, color = t.ink,
                 )
                 Text(
-                    s(if (affiliations) "community_section_body_affiliations" else "community_section_body"),
+                    s("community_section_body$tierKey"),
                     style = type.body, color = t.dim,
                 )
             }
         }
-        invitations?.let { inv -> InvitationsInbox(inv, InboxInvite.KIND_COMMUNITY, hubTier = viewModel.tier, nameOf = { nameOf(it, contacts) }) }
+        invitations?.takeUnless { viewModel.local }?.let { inv -> InvitationsInbox(inv, InboxInvite.KIND_COMMUNITY, hubTier = viewModel.tier, nameOf = { nameOf(it, contacts) }) }
         RefusalLine(refusal)
         AppliedLine(applied)
 
         // ── The list ──
         val rooms = roomsOrState(
             read = read,
-            rooms = { CommunitiesViewModel.roomsFor(it, viewModel.tier, includePairs = false) },
+            rooms = { CommunitiesViewModel.roomsFor(it, viewModel.tier, includePairs = false, viewModel.local, localMarks) },
             loadingTag = CommunityTags.LOADING,
             emptyTag = CommunityTags.EMPTY,
             errorTag = CommunityTags.ERROR,
             notOnThisNodeTag = CommunityTags.NOT_ON_THIS_NODE,
-            emptyMessage = s(if (affiliations) "community_empty_affiliations" else "community_empty"),
+            emptyMessage = s("community_empty$tierKey"),
         )
         if (rooms != null) {
             Column(
@@ -374,7 +375,7 @@ fun CommunityGovernanceSection(
                 communityId = id,
                 read = detail,
                 contacts = contacts,
-                affiliations = affiliations,
+                affiliations = viewModel.tier == CommunityRoom.TIER_AFFILIATIONS,
                 busy = busy,
                 pending = pending[id],
                 onClose = { viewModel.clearSelection() },
@@ -406,7 +407,7 @@ fun CommunityGovernanceSection(
         // ── Found one ──
         if (createOpen) {
             CreateCommunityCard(
-                affiliations = affiliations,
+                tierKey = tierKey,
                 contacts = contacts,
                 foundAlone = founding == InviteSupport.INVITES,
                 busy = busy,
@@ -418,7 +419,7 @@ fun CommunityGovernanceSection(
             )
         } else {
             CirisTextButton(
-                s(if (affiliations) "community_create_open_affiliations" else "community_create_open"),
+                s("community_create_open$tierKey"),
                 tag = CommunityTags.CREATE_OPEN,
                 onClick = { viewModel.clearRefusal(); viewModel.consumeApplied(); createOpen = true },
             )
@@ -484,10 +485,17 @@ fun CommunityModerationPicker(
     }
 }
 
+/** The string suffix for a list's tier: Communities has none. */
+private fun tierKey(viewModel: CommunitiesViewModel): String = when {
+    viewModel.local -> "_local"
+    viewModel.tier == CommunityRoom.TIER_AFFILIATIONS -> "_affiliations"
+    else -> ""
+}
+
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun CreateCommunityCard(
-    affiliations: Boolean,
+    tierKey: String,
     contacts: List<Contact>,
     /** 0.5.218+: a room is founded by its founder alone, and the others are invited (CSD-106). */
     foundAlone: Boolean,
@@ -505,7 +513,7 @@ private fun CreateCommunityCard(
     val quorumIncomplete = choice == "quorum" && protocol == null
 
     CardShell(tag = CommunityTags.CREATE_CARD, accent = t.brand) {
-        Text(s(if (affiliations) "community_create_title_affiliations" else "community_create_title"), style = type.title, color = t.ink)
+        Text(s("community_create_title$tierKey"), style = type.title, color = t.ink)
         Spacer(Modifier.height(6.dp))
         FieldRow(
             label = s("community_create_name"),
@@ -854,6 +862,7 @@ fun CommunityRosterScreen(viewModel: CommunitiesViewModel) {
     val inviteSupport by viewModel.inviteSupport.collectAsState()
     val inviteNotice by viewModel.inviteNotice.collectAsState()
     val myKeyId by viewModel.myKeyId.collectAsState()
+    val localMarks by viewModel.localMarks.ids.collectAsState()
     var addFor by remember { mutableStateOf<String?>(null) }
     var addKey by remember { mutableStateOf("") }
     var removing by remember { mutableStateOf<Pair<CommunityRoom, CommunityRoomMember>?>(null) }
@@ -889,7 +898,7 @@ fun CommunityRosterScreen(viewModel: CommunitiesViewModel) {
 
         val rooms = roomsOrState(
             read = read,
-            rooms = { CommunitiesViewModel.roomsFor(it, viewModel.tier, includePairs = false) },
+            rooms = { CommunitiesViewModel.roomsFor(it, viewModel.tier, includePairs = false, viewModel.local, localMarks) },
             loadingTag = CommunityTags.ROSTER_LOADING,
             emptyTag = CommunityTags.ROSTER_EMPTY,
             errorTag = CommunityTags.ROSTER_ERROR,
@@ -1074,7 +1083,8 @@ fun CommunityChatsScreen(
     val refusal by viewModel.refusal.collectAsState()
     val applied by viewModel.applied.collectAsState()
     val founding = invitations?.support?.collectAsState()?.value ?: InviteSupport.UNKNOWN
-    val affiliations = viewModel.tier == CommunityRoom.TIER_AFFILIATIONS
+    val tierKey = tierKey(viewModel)
+    val localMarks by viewModel.localMarks.ids.collectAsState()
     var createOpen by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { viewModel.refresh() }
@@ -1086,21 +1096,21 @@ fun CommunityChatsScreen(
     ) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(
-                s(if (affiliations) "community_section_title_affiliations" else "community_section_title"),
+                s("community_section_title$tierKey"),
                 style = type.title, color = t.ink, modifier = Modifier.weight(1f),
             )
             CirisTextButton(localizedString("common_refresh"), tag = CommunityTags.CHATS_REFRESH, onClick = { viewModel.refresh() })
         }
         Text(
-            s(if (affiliations) "community_section_body_affiliations" else "community_section_body"),
+            s("community_section_body$tierKey"),
             style = type.body, color = t.dim,
         )
-        invitations?.let { inv -> InvitationsInbox(inv, InboxInvite.KIND_COMMUNITY, hubTier = viewModel.tier, nameOf = { nameOf(it, contacts) }) }
+        invitations?.takeUnless { viewModel.local }?.let { inv -> InvitationsInbox(inv, InboxInvite.KIND_COMMUNITY, hubTier = viewModel.tier, nameOf = { nameOf(it, contacts) }) }
         RefusalLine(refusal)
         AppliedLine(applied)
         if (createOpen) {
             CreateCommunityCard(
-                affiliations = affiliations,
+                tierKey = tierKey,
                 contacts = contacts,
                 foundAlone = founding == InviteSupport.INVITES,
                 busy = busy,
@@ -1112,19 +1122,19 @@ fun CommunityChatsScreen(
             )
         } else {
             CirisTextButton(
-                s(if (affiliations) "community_create_open_affiliations" else "community_create_open"),
+                s("community_create_open$tierKey"),
                 tag = CommunityTags.CREATE_OPEN,
                 onClick = { viewModel.clearRefusal(); viewModel.consumeApplied(); createOpen = true },
             )
         }
         val rooms = roomsOrState(
             read = read,
-            rooms = { CommunitiesViewModel.roomsFor(it, viewModel.tier, includePairs = true) },
+            rooms = { CommunitiesViewModel.roomsFor(it, viewModel.tier, includePairs = true, viewModel.local, localMarks) },
             loadingTag = CommunityTags.CHATS_LOADING,
             emptyTag = CommunityTags.CHATS_EMPTY,
             errorTag = CommunityTags.CHATS_ERROR,
             notOnThisNodeTag = CommunityTags.CHATS_NOT_ON_THIS_NODE,
-            emptyMessage = s(if (affiliations) "community_empty_affiliations" else "community_empty"),
+            emptyMessage = s("community_empty$tierKey"),
         ) ?: return@Column
         Column(Modifier.fillMaxWidth().testable(CommunityTags.CHATS_LIST), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             for (room in rooms) {

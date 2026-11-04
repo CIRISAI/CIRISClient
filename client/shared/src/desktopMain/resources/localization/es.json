@@ -4341,11 +4341,15 @@
     "moderation_appeal_partial": "La marca fue parcialmente confirmada en apelación.",
     "moderation_appeal_reversed": "La marca fue revocada en apelación.",
     "local_community_body": "La comunidad local es geográfica: las personas cerca de ti. Se aplica solo si aceptaste compartir tu ubicación y la estás compartiendo en este momento.",
-    "local_community_not_on_this_node": "Este nodo aún no puede compartir tu ubicación para esto, así que no hay nada a lo que suscribirte ni comunidad local que mostrar. Tu ubicación no se está compartiendo para ello.",
-    "local_community_moved": "Las salas que tenías aquí ahora están en Comunidades y afiliaciones.",
+    "local_community_not_on_this_node": "Este nodo todavía no puede compartir tu ubicación, así que por ahora una sala local no está ligada a un lugar y tú eliges quién se une. Tu ubicación no se está compartiendo.",
     "setup_template_ally": "Ally, un asistente personal. Esta es la opción adecuada para una instalación personal.",
     "setup_template_chosen": "Partiendo de la plantilla {name}.",
     "setup_template_provisioned": "{name}, establecido por el registro del Portal de tu organización.",
+    "community_section_title_local": "Tus salas locales",
+    "community_section_body_local": "Salas para las personas cerca de ti. Por ahora, una sala aparece como local solo en el dispositivo que la fundó. Los demás miembros la ven en Comunidades.",
+    "community_empty_local": "Aún no tienes salas locales. Funda una e invita a las personas cerca de ti.",
+    "community_create_open_local": "Fundar una sala local",
+    "community_create_title_local": "Fundar una sala local",
     "data_receipt_uncheckable": "No se puede verificar aquí",
     "data_receipt_key_label": "Clave",
     "data_receipt_key_not_current": "Firmado con una clave que este agente ya no usa. Solo se comprueba contra su clave actual, así que este recibo se interpreta como que no se comprueba aunque sea genuino.",
@@ -4610,7 +4614,9 @@
       "node_self": "Situación propia",
       "my_devices": "Mis dispositivos",
       "layer_communities": "Comunidades",
-      "layer_affiliations": "Afiliaciones"
+      "layer_affiliations": "Afiliaciones",
+      "local_chats": "Salas locales",
+      "local_roster": "Miembros locales"
     },
     "circle": {
       "agent": "Solo yo",
@@ -4662,8 +4668,7 @@
       "files_agent": "Aún no hay nada aquí. Aquí es donde todo comienza, y nada aquí se anuncia.",
       "decisions_agent": "No hay nadie aquí con quien decidir. Las decisiones comienzan en el círculo Familia.",
       "chats_agent": "No hay agente en este nodo, así que no hay nadie aquí con quien hablar. Configura uno y tus conversaciones con él aparecerán aquí.",
-      "chats_local": "La comunidad local aún no está en este nodo. Tus salas están en Comunidades y afiliaciones.",
-      "files_local": "La comunidad local aún no está en este nodo. Los archivos de tus salas están en Comunidades y afiliaciones."
+      "files_local": "Los archivos viven en cada sala. Abre una sala local para ver sus archivos."
     },
     "my_things": "Mis cosas",
     "stop_everything": "Detener todo",

@@ -16008,16 +16008,18 @@ class CIRISApiClient internal constructor(
     }
 
     /**
-     * `POST {nodeUrl}/v1/communities` `{name, members, tier, consensus_protocol?}`
+     * `POST {nodeUrl}/v1/communities` `{name, members, tier, consensus_protocol?, cohort_subkind?}`
      * — found a room; the caller is its founder, each initial member must be a
      * contact whose grant covers `chat:`. A quorum room is founded with its whole
-     * roster, because a quorum's N is its roster size.
+     * roster, because a quorum's N is its roster size. [cohortSubkind] asks for
+     * a geographic room; a node without CIRISServer#852 ignores it.
      */
     suspend fun createCommunity(
         name: String,
         tier: String,
         members: List<String> = emptyList(),
         consensusProtocol: String? = null,
+        cohortSubkind: String? = null,
         nodeUrl: String = LOCAL_NODE_URL,
     ): ai.ciris.mobile.shared.models.federation.CommunityRoom {
         val method = "createCommunity"
@@ -16028,6 +16030,7 @@ class CIRISApiClient internal constructor(
             put("tier", tier)
             put("members", kotlinx.serialization.json.JsonArray(members.map { kotlinx.serialization.json.JsonPrimitive(it) }))
             consensusProtocol?.let { put("consensus_protocol", it) }
+            cohortSubkind?.let { put("cohort_subkind", it) }
         }
         val raw = communityCall(method, url) { client ->
             client.post(url) {

@@ -9,7 +9,7 @@ package ai.ciris.mobile.shared.ui.nav
  * - `self` → [AGENT]
  * - `family` → [FAMILY]
  * - `community`, `affiliations` → [GLOBAL_COMMUNITIES], two sections of one circle
- * - no wire token yet → [LOCAL_COMMUNITY], the geographic tier, which needs a design ruling
+ * - no wire token yet → [LOCAL_COMMUNITY], the geographic rooms (CIRISServer#852)
  * - `species` + `planet` + `federation` → [GLOBAL_COMMONS]
  *
  * Each layer surfaces three concerns in the UX: a list of *identities*
@@ -35,8 +35,10 @@ enum class CohortScope(
 
     /**
      * Geographic: the people near you, for someone who opted in to share their
-     * location and is sharing it now. Nothing on the wire carries it yet, and
-     * tier-community rooms are never borrowed to fill it.
+     * location and is sharing it now. A local room is a `community` room with
+     * `cohort_subkind: geographic`. Until the node carries that
+     * (CIRISServer#852) only the device that founded it knows, through
+     * [ai.ciris.mobile.shared.viewmodels.LocalRoomMarks].
      */
     LOCAL_COMMUNITY(id = "local-community", cegScope = null),
 

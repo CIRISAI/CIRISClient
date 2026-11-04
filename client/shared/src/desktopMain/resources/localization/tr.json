@@ -4405,11 +4405,15 @@
     "moderation_appeal_partial": "İşaret, itirazda kısmen onaylandı.",
     "moderation_appeal_reversed": "İşaret, itirazda geri alındı.",
     "local_community_body": "Yerel topluluk coğrafidir: size yakın kişiler. Yalnızca konumunuzu paylaşmayı tercih ettiyseniz ve şu anda paylaşıyorsanız geçerlidir.",
-    "local_community_not_on_this_node": "Bu düğüm bunun için konumunuzu henüz paylaşamıyor, bu yüzden katılabileceğiniz bir şey ve gösterilecek bir yerel topluluk yok. Konumunuz bunun için paylaşılmıyor.",
-    "local_community_moved": "Burada sahip olduğunuz odalar artık Topluluklar ve Aidiyetler altında.",
+    "local_community_not_on_this_node": "Bu düğüm henüz konumunuzu paylaşamıyor, bu yüzden şimdilik yerel bir oda bir yere bağlı değildir ve kimin katılacağını siz seçersiniz. Konumunuz paylaşılmıyor.",
     "setup_template_ally": "Ally, kişisel bir asistandır. Kişisel bir kurulum için doğru seçim budur.",
     "setup_template_chosen": "{name} şablonundan başlanıyor.",
-    "setup_template_provisioned": "{name}, kuruluşunuzun Portal kaydı tarafından ayarlandı."
+    "setup_template_provisioned": "{name}, kuruluşunuzun Portal kaydı tarafından ayarlandı.",
+    "community_section_title_local": "Yerel odalarınız",
+    "community_section_body_local": "Size yakın kişiler için odalar. Şimdilik bir oda, yalnızca onu kuran cihazda yerel olarak görünür. Diğer üyeler onu Topluluklar altında görür.",
+    "community_empty_local": "Henüz hiç yerel odanız yok. Bir tane kurun ve size yakın kişileri davet edin.",
+    "community_create_open_local": "Yerel bir oda kurun",
+    "community_create_title_local": "Yerel bir oda kurun"
   },
   "moderation": {
     "ladder": {
@@ -4610,7 +4614,9 @@
       "node_self": "Kendi Durumu",
       "my_devices": "Cihazlarım",
       "layer_communities": "Topluluklar",
-      "layer_affiliations": "Aidiyetler"
+      "layer_affiliations": "Aidiyetler",
+      "local_chats": "Yerel odalar",
+      "local_roster": "Yerel üyeler"
     },
     "circle": {
       "agent": "Sadece ben",
@@ -4662,8 +4668,7 @@
       "decisions_agent": "Burada birlikte karar verecek kimse yok. Kararlar Aile'de başlar.",
       "decisions_family": "Bir aile konuşarak karar verir. Burada oylanacak bir şey yok.",
       "chats_agent": "Bu düğümde bir ajan yok, bu yüzden burada konuşacak kimse yok. Bir ajan kurun; onunla olan sohbetleriniz burada olacak.",
-      "chats_local": "Yerel topluluk bu düğümde henüz yok. Odalarınız Topluluklar ve Aidiyetler altında.",
-      "files_local": "Yerel topluluk bu düğümde henüz yok. Odalarınızın dosyaları Topluluklar ve Aidiyetler altında."
+      "files_local": "Dosyalar her odada bulunur. Dosyalarını görmek için bir yerel oda açın."
     },
     "my_things": "Kendi şeylerim",
     "stop_everything": "Her şeyi durdur",

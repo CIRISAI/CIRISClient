@@ -4499,11 +4499,15 @@
     "moderation_appeal_partial": "The flag was partly upheld on appeal.",
     "moderation_appeal_reversed": "The flag was reversed on appeal.",
     "local_community_body": "Local community is geographic: the people near you. It applies only if you opted in to share your location and are sharing it right now.",
-    "local_community_not_on_this_node": "This node can't share your location for this yet, so there is nothing to opt in to and no local community to show. Your location is not being shared for it.",
-    "local_community_moved": "Rooms you had here are now under Communities and affiliations.",
+    "local_community_not_on_this_node": "This node can't share your location yet, so a local room isn't tied to a place for now and you choose who joins. Your location is not being shared.",
     "setup_template_ally": "Ally, a personal assistant. This is the right choice for a personal install.",
     "setup_template_chosen": "Starting from the {name} template.",
-    "setup_template_provisioned": "{name}, set by your organisation's Portal record."
+    "setup_template_provisioned": "{name}, set by your organisation's Portal record.",
+    "community_section_title_local": "Your local rooms",
+    "community_section_body_local": "Rooms for the people near you. For now, a room shows as local only on the device that founded it. Other members see it under Communities.",
+    "community_empty_local": "You have no local rooms yet. Found one and invite the people near you.",
+    "community_create_open_local": "Found a local room",
+    "community_create_title_local": "Found a local room"
   },
   "moderation": {
     "ladder": {
@@ -4704,7 +4708,9 @@
       "node_self": "Own standing",
       "my_devices": "My devices",
       "layer_communities": "Communities",
-      "layer_affiliations": "Affiliations"
+      "layer_affiliations": "Affiliations",
+      "local_chats": "Local rooms",
+      "local_roster": "Local members"
     },
     "circle": {
       "agent": "Just me",
@@ -4756,8 +4762,7 @@
       "decisions_agent": "There is nobody here to decide with. Decisions start in Family.",
       "decisions_family": "A family decides by talking. There is nothing to vote on here.",
       "chats_agent": "There is no agent on this node, so there is nobody here to talk to. Set one up and your conversations with it will be here.",
-      "chats_local": "Local community isn't on this node yet. Your rooms are under Communities and affiliations.",
-      "files_local": "Local community isn't on this node yet. Your rooms' files are under Communities and affiliations."
+      "files_local": "Files live in each room. Open a local room to see its files."
     },
     "my_things": "My things",
     "stop_everything": "Stop everything",

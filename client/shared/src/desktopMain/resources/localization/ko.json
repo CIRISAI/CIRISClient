@@ -1307,11 +1307,15 @@
     "moderation_appeal_partial": "이의 제기에서 플래그가 부분적으로 유지되었습니다.",
     "moderation_appeal_reversed": "이의 제기에서 플래그가 취소되었습니다.",
     "local_community_body": "로컬 커뮤니티는 지리적 범위로, 가까이 있는 사람들을 가리킵니다. 위치 공유에 동의했고 현재 위치를 공유하고 있는 경우에만 적용됩니다.",
-    "local_community_not_on_this_node": "이 노드는 아직 이를 위해 본인의 위치를 공유할 수 없어, 동의할 대상도 없고 표시할 로컬 커뮤니티도 없습니다. 이를 위해 본인의 위치가 공유되고 있지 않습니다.",
-    "local_community_moved": "여기에 있던 룸은 이제 '커뮤니티 및 소속 관계' 아래에 있습니다.",
+    "local_community_not_on_this_node": "이 노드는 아직 사용자의 위치를 공유할 수 없으므로, 현재 로컬 룸은 장소에 얽매이지 않으며 누가 참여할지는 사용자가 직접 선택합니다. 사용자의 위치는 공유되고 있지 않습니다.",
     "setup_template_ally": "Ally는 개인용 어시스턴트입니다. 개인 설치에 적합한 선택입니다.",
     "setup_template_chosen": "{name} 템플릿으로 시작합니다.",
     "setup_template_provisioned": "{name}, 조직의 포털 기록에 의해 설정되었습니다.",
+    "community_section_title_local": "내 로컬 룸",
+    "community_section_body_local": "가까이 있는 사람들을 위한 룸입니다. 현재 룸은 그것을 창립한 기기에서만 로컬로 표시됩니다. 다른 멤버에게는 커뮤니티 아래에 표시됩니다.",
+    "community_empty_local": "아직 로컬 룸이 없습니다. 하나를 창립하고 근처에 있는 사람들을 초대하세요.",
+    "community_create_open_local": "로컬 룸 창립하기",
+    "community_create_title_local": "로컬 룸 창립",
     "startup_services_timeout": "서비스 시작을 기다리는 동안 시간이 초과되었습니다 ({total}개 중 {online}개가 온라인 상태입니다).",
     "startup_fatal_disk_space": "이 기기의 저장 공간이 부족합니다: 여유 공간 {free} MB, CIRIS 시작에 필요한 공간 {required} MB. CIRIS 자체는 {ciris} MB를 사용하고 있습니다.",
     "startup_fatal_disk_space_short": "이 기기의 저장 공간이 부족합니다: 여유 공간 {free} MB, CIRIS 시작에 필요한 공간 {required} MB.",
@@ -4610,7 +4614,9 @@
       "node_self": "자신의 상태",
       "my_devices": "내 기기",
       "layer_communities": "커뮤니티",
-      "layer_affiliations": "소속 관계"
+      "layer_affiliations": "소속 관계",
+      "local_chats": "로컬 룸",
+      "local_roster": "로컬 멤버"
     },
     "circle": {
       "agent": "나만",
@@ -4662,8 +4668,7 @@
       "decisions_agent": "여기에는 함께 결정할 사람이 없습니다. 결정은 패밀리에서 시작됩니다.",
       "decisions_family": "패밀리는 대화로 결정합니다. 여기에는 투표할 것이 없습니다.",
       "chats_agent": "이 노드에는 에이전트가 없어 대화할 상대가 없습니다. 에이전트를 설정하면 그와의 대화가 여기에 표시됩니다.",
-      "chats_local": "이 노드에는 아직 로컬 커뮤니티가 없습니다. 보유한 룸은 '커뮤니티 및 소속 관계' 아래에 있습니다.",
-      "files_local": "이 노드에는 아직 로컬 커뮤니티가 없습니다. 보유한 룸의 파일은 '커뮤니티 및 소속 관계' 아래에 있습니다."
+      "files_local": "파일은 각 룸 안에 있습니다. 로컬 룸을 열어 파일을 확인하세요."
     },
     "my_things": "내 것",
     "stop_everything": "모두 중단",

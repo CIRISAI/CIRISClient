@@ -38,6 +38,7 @@ class CirclesNavTest {
         // Communities and affiliations (CSD-102, CSD-103)
         NavSurface.CommunityRoster, NavSurface.AffiliationsRoster,
         NavSurface.CommunityChats, NavSurface.AffiliationsChats,
+            NavSurface.LocalChats,
     )
 
     /**
@@ -245,7 +246,7 @@ class CirclesNavTest {
         for (c in CirclesNav.circles) {
             val cards = CirclesNav.cards(c, Tab.CHATS, hasAgent = true)
             // The agent conversation, the notes, and the rooms people talk in (CSD-103).
-            val conversations = setOf(NavSurface.Interact, NavSurface.Notes, NavSurface.CommunityChats, NavSurface.AffiliationsChats)
+            val conversations = setOf(NavSurface.Interact, NavSurface.Notes, NavSurface.CommunityChats, NavSurface.AffiliationsChats, NavSurface.LocalChats)
             assertTrue(cards.all { it in conversations }, "${c.id} › chats holds something that is not a conversation: $cards")
         }
         // How the machine runs is not who you talk to.

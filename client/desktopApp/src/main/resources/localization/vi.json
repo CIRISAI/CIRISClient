@@ -4405,11 +4405,15 @@
     "moderation_appeal_partial": "Cờ đã được giữ nguyên một phần sau kháng nghị.",
     "moderation_appeal_reversed": "Cờ đã bị bác bỏ sau kháng nghị.",
     "local_community_body": "Cộng đồng địa phương mang tính địa lý: những người gần bạn. Nó chỉ áp dụng nếu bạn đã chọn chia sẻ vị trí của mình và đang chia sẻ vị trí đó ngay bây giờ.",
-    "local_community_not_on_this_node": "Nút này chưa thể chia sẻ vị trí của bạn cho việc này, nên không có gì để chọn tham gia và không có cộng đồng địa phương nào để hiển thị. Vị trí của bạn không được chia sẻ cho việc đó.",
-    "local_community_moved": "Các phòng bạn từng có ở đây giờ nằm trong mục Cộng đồng và liên kết.",
+    "local_community_not_on_this_node": "Nút này chưa thể chia sẻ vị trí của bạn, nên hiện tại một phòng địa phương không gắn với một địa điểm nào và bạn tự chọn ai được tham gia. Vị trí của bạn hiện không được chia sẻ.",
     "setup_template_ally": "Ally, một trợ lý cá nhân. Đây là lựa chọn phù hợp cho một bản cài đặt cá nhân.",
     "setup_template_chosen": "Bắt đầu từ mẫu {name}.",
-    "setup_template_provisioned": "{name}, được đặt bởi hồ sơ Portal của tổ chức bạn."
+    "setup_template_provisioned": "{name}, được đặt bởi hồ sơ Portal của tổ chức bạn.",
+    "community_section_title_local": "Phòng địa phương của bạn",
+    "community_section_body_local": "Phòng dành cho những người gần bạn. Hiện tại, một phòng chỉ hiển thị là địa phương trên thiết bị đã sáng lập nó. Các thành viên khác sẽ thấy nó trong mục Cộng đồng.",
+    "community_empty_local": "Bạn chưa có phòng địa phương nào. Hãy sáng lập một phòng và mời những người gần bạn.",
+    "community_create_open_local": "Sáng lập một phòng địa phương",
+    "community_create_title_local": "Sáng lập một phòng địa phương"
   },
   "moderation": {
     "ladder": {
@@ -4610,7 +4614,9 @@
       "node_self": "Trạng Thái Riêng",
       "my_devices": "Thiết bị của tôi",
       "layer_communities": "Cộng đồng",
-      "layer_affiliations": "Liên kết"
+      "layer_affiliations": "Liên kết",
+      "local_chats": "Phòng địa phương",
+      "local_roster": "Thành viên địa phương"
     },
     "circle": {
       "agent": "Chỉ mình tôi",
@@ -4662,8 +4668,7 @@
       "decisions_agent": "Không có ai ở đây để cùng quyết định. Quyết định bắt đầu từ Gia đình.",
       "decisions_family": "Một gia đình quyết định bằng cách trò chuyện. Không có gì để bỏ phiếu ở đây.",
       "chats_agent": "Không có tác nhân nào trên nút này, nên không có ai ở đây để nói chuyện. Hãy thiết lập một tác nhân và các cuộc trò chuyện của bạn với nó sẽ ở đây.",
-      "chats_local": "Cộng đồng địa phương chưa có trên nút này. Các phòng của bạn nằm trong mục Cộng đồng và liên kết.",
-      "files_local": "Cộng đồng địa phương chưa có trên nút này. Các tệp của phòng bạn nằm trong mục Cộng đồng và liên kết."
+      "files_local": "Tệp tồn tại trong từng phòng. Hãy mở một phòng địa phương để xem tệp của nó."
     },
     "my_things": "Của tôi",
     "stop_everything": "Dừng tất cả",

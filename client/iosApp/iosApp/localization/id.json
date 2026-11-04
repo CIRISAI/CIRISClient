@@ -4405,11 +4405,15 @@
     "moderation_appeal_partial": "Tanda tersebut sebagian dipertahankan dalam banding.",
     "moderation_appeal_reversed": "Tanda tersebut dibatalkan dalam banding.",
     "local_community_body": "Komunitas lokal bersifat geografis: orang-orang di dekat Anda. Ini hanya berlaku jika Anda memilih untuk membagikan lokasi dan sedang membagikannya sekarang.",
-    "local_community_not_on_this_node": "Node ini belum dapat membagikan lokasi Anda untuk ini, sehingga tidak ada yang bisa diikuti dan tidak ada komunitas lokal untuk ditampilkan. Lokasi Anda tidak sedang dibagikan untuk ini.",
-    "local_community_moved": "Ruang yang Anda miliki di sini sekarang berada di bawah Komunitas dan afiliasi.",
+    "local_community_not_on_this_node": "Node ini belum dapat membagikan lokasi Anda, sehingga ruang lokal belum terikat pada suatu tempat untuk saat ini dan Anda yang memilih siapa yang bergabung. Lokasi Anda tidak sedang dibagikan.",
     "setup_template_ally": "Ally, asisten pribadi. Ini adalah pilihan yang tepat untuk instalasi pribadi.",
     "setup_template_chosen": "Memulai dari template {name}.",
-    "setup_template_provisioned": "{name}, ditetapkan oleh catatan Portal organisasi Anda."
+    "setup_template_provisioned": "{name}, ditetapkan oleh catatan Portal organisasi Anda.",
+    "community_section_title_local": "Ruang lokal Anda",
+    "community_section_body_local": "Ruang untuk orang-orang di dekat Anda. Untuk saat ini, sebuah ruang tampil sebagai lokal hanya pada perangkat yang mendirikannya. Anggota lain melihatnya di bawah Komunitas.",
+    "community_empty_local": "Anda belum memiliki ruang lokal. Dirikan satu dan undang orang-orang di dekat Anda.",
+    "community_create_open_local": "Dirikan Ruang Lokal",
+    "community_create_title_local": "Dirikan Ruang Lokal"
   },
   "moderation": {
     "ladder": {
@@ -4610,7 +4614,9 @@
       "node_self": "Status Sendiri",
       "my_devices": "Perangkat saya",
       "layer_communities": "Komunitas",
-      "layer_affiliations": "Afiliasi"
+      "layer_affiliations": "Afiliasi",
+      "local_chats": "Ruang lokal",
+      "local_roster": "Anggota lokal"
     },
     "circle": {
       "agent": "Hanya saya",
@@ -4662,8 +4668,7 @@
       "decisions_agent": "Tidak ada siapa pun di sini untuk memutuskan bersama. Keputusan dimulai di Keluarga.",
       "decisions_family": "Keluarga memutuskan dengan berbicara. Tidak ada yang perlu dipungut suara di sini.",
       "chats_agent": "Tidak ada agen di node ini, sehingga tidak ada siapa pun di sini untuk diajak bicara. Siapkan satu, dan percakapan Anda dengannya akan ada di sini.",
-      "chats_local": "Komunitas lokal belum ada di node ini. Ruang Anda berada di bawah Komunitas dan afiliasi.",
-      "files_local": "Komunitas lokal belum ada di node ini. Berkas ruang Anda berada di bawah Komunitas dan afiliasi."
+      "files_local": "File berada di setiap ruang. Buka ruang lokal untuk melihat filenya."
     },
     "my_things": "Milik saya",
     "stop_everything": "Hentikan semuanya",
