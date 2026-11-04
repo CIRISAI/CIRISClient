@@ -22,12 +22,14 @@ import ai.ciris.mobile.shared.ui.primitives.CirisButton
 import ai.ciris.mobile.shared.ui.primitives.CirisTextButton
 import ai.ciris.mobile.shared.ui.primitives.Fact
 import ai.ciris.mobile.shared.ui.primitives.ItemRow
+import ai.ciris.mobile.shared.ui.primitives.RowFlag
 import ai.ciris.mobile.shared.ui.primitives.ListState
 import ai.ciris.mobile.shared.ui.primitives.Receipt
 import ai.ciris.mobile.shared.ui.primitives.ReceiptAct
 import ai.ciris.mobile.shared.ui.primitives.ReceiptSheet
 import ai.ciris.mobile.shared.ui.primitives.StateBlock
 import ai.ciris.mobile.shared.ui.screens.ReadFailureBlock
+import ai.ciris.mobile.shared.ui.screens.RevealConfirm
 import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 import ai.ciris.mobile.shared.ui.theme.CirisTheme
 import ai.ciris.mobile.shared.viewmodels.AddState
@@ -69,6 +71,7 @@ import androidx.compose.ui.unit.dp
 /** Tags the gates and the atlas drive. Stable: CSD-007 names them. */
 object FilesTags {
     const val LIST = "files_list"
+    const val PICK_HINT = "files_pick_hint"
     const val EMPTY = "files_empty"
     const val LOADING = "files_loading"
     const val ERROR = "files_error"
@@ -93,6 +96,7 @@ object FilesTags {
     const val AWAITING_KEY = "file_awaiting_key"
     const val CHECK_AGAIN = "btn_file_check_again"
     fun row(attestationId: String) = "files_row_$attestationId"
+    fun withheld(attestationId: String) = "files_withheld_$attestationId"
     fun room(roomId: String) = "files_room_$roomId"
     fun pickRoom(roomId: String) = "btn_files_room_$roomId"
 }
@@ -171,6 +175,8 @@ fun FilesScreen(
      * false leaves the acts visible and unavailable, with the reason.
      */
     moderation: FileModeration? = null,
+    /** Set while choosing a file for a chat message: a row then picks instead of opening. */
+    onPick: ((DriveEntry) -> Unit)? = null,
 ) {
     val t = CirisTheme.tokens
     val state by viewModel.state.collectAsState()
@@ -184,6 +190,7 @@ fun FilesScreen(
     var renaming by remember { mutableStateOf<DriveEntry?>(null) }
     var moving by remember { mutableStateOf<DriveEntry?>(null) }
     var withdrawing by remember { mutableStateOf<DriveEntry?>(null) }
+    var revealing by remember { mutableStateOf<DriveEntry?>(null) }
 
     // Which household, for a family tab: the one the hub's switcher picked.
     val family = viewModel.cohort == FilesCohort.FAMILY
@@ -249,6 +256,13 @@ fun FilesScreen(
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
             AddStatus(add, onDismiss = { viewModel.dismissAdd() })
+            if (onPick != null) {
+                Text(
+                    localizedString("mobile.files_pick_hint"),
+                    style = CirisTheme.type.label, color = t.mute,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).testable(FilesTags.PICK_HINT),
+                )
+            }
             if (household != null) {
                 Text(
                     localizedString("mobile.files_household", "name", household.name.ifBlank { shortKey(household.familyId) }),
@@ -335,6 +349,9 @@ fun FilesScreen(
                                     tag = FilesTags.row(entry.attestationId),
                                     meta = "${entry.assertedAt.take(10)} · ${shortKey(entry.authorKeyId)}",
                                     secondary = byteStateText(entry.byteState),
+                                    flags = entry.moderation?.takeIf { it.withheld }
+                                        ?.let { listOf(RowFlag(localizedString("mobile.files_withheld"), tag = FilesTags.withheld(entry.attestationId))) }
+                                        .orEmpty(),
                                     receipt = fileReceipt(
                                         entry,
                                         acts = listOfNotNull(
@@ -356,9 +373,16 @@ fun FilesScreen(
                                             onWithdraw = { receiptFor = null; withdrawing = entry },
                                             onModerate = { receiptFor = null; moderation?.onModerateAuthor?.invoke(entry) },
                                             onFlag = { receiptFor = null; moderation?.onFlagAuthor?.invoke(entry) },
+                                            onReveal = { receiptFor = null; revealing = entry },
                                         ),
                                     ),
-                                    onClick = { viewModel.openFile(entry) },
+                                    onClick = {
+                                        when {
+                                            entry.moderation?.withheld == true -> revealing = entry
+                                            onPick != null -> onPick(entry)
+                                            else -> viewModel.openFile(entry)
+                                        }
+                                    },
                                     onOpenReceipt = { receiptFor = it },
                                 )
                             }
@@ -366,6 +390,12 @@ fun FilesScreen(
                     }
                 }
             }
+        }
+    }
+
+    revealing?.let { entry ->
+        entry.moderation?.let { m ->
+            RevealConfirm(m, onConfirm = { revealing = null; viewModel.revealFile(entry) }, onDismiss = { revealing = null })
         }
     }
 
@@ -651,8 +681,12 @@ internal fun fileActs(
     onWithdraw: () -> Unit,
     onModerate: () -> Unit,
     onFlag: () -> Unit,
+    onReveal: () -> Unit,
 ): List<ReceiptAct> = buildList {
     val id = entry.attestationId
+    if (entry.moderation?.withheld == true) {
+        add(ReceiptAct(localizedString("mobile.moderation_reveal"), "btn_file_act_reveal_$id", onAct = onReveal))
+    }
     add(ReceiptAct(localizedString("mobile.files_act_rename"), "btn_file_act_rename_$id", onAct = onRename))
     add(ReceiptAct(localizedString("mobile.files_act_move"), "btn_file_act_move_$id", onAct = onMove))
     add(ReceiptAct(localizedString("mobile.files_act_withdraw"), "btn_file_act_withdraw_$id", onAct = onWithdraw))
@@ -734,6 +768,7 @@ private fun FileActDialogs(
             FileActState.Kind.RENAME -> "mobile.files_act_renamed"
             FileActState.Kind.MOVE -> "mobile.files_act_moved"
             FileActState.Kind.WITHDRAW -> "mobile.files_act_withdrawn"
+            FileActState.Kind.REVEAL -> "mobile.files_act_revealed"
         })
         is FileActState.Refused -> refusalText(state.refusal)
         FileActState.Idle -> null

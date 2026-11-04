@@ -47,6 +47,10 @@ interface DriveApi {
         throw UnsupportedOperationException("moveFile")
 
     /** `DELETE /v1/files/{id}?cohort&room_id` — withdraw; author only. */
+    /** `POST /v1/chat/{room}/items/{id}/reveal`, the viewer's own consent to open one flagged room file. */
+    suspend fun revealItem(roomId: String, itemId: String): Unit =
+        throw UnsupportedOperationException("revealItem")
+
     suspend fun withdrawFile(attestationId: String, cohort: String, roomId: String?): Unit =
         throw UnsupportedOperationException("withdrawFile")
 }
@@ -83,4 +87,6 @@ class ClientDrive(
             }, nodeUrl())
     override suspend fun withdrawFile(attestationId: String, cohort: String, roomId: String?) =
         client.fileAct(attestationId, "withdraw", cohort, roomId, null, nodeUrl())
+    override suspend fun revealItem(roomId: String, itemId: String) =
+        client.revealRoomItem(roomId, itemId, nodeUrl = nodeUrl())
 }

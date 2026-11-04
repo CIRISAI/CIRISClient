@@ -2433,6 +2433,7 @@ class CIRISApiClient internal constructor(
         communityId: String,
         body: String,
         contentType: String? = null,
+        attachmentId: String? = null,
         nodeUrl: String = LOCAL_NODE_URL,
     ): SendChatMessageResult {
         val method = "sendChatMessage"
@@ -2442,6 +2443,7 @@ class CIRISApiClient internal constructor(
             val payload = buildJsonObject {
                 put("body", body)
                 contentType?.let { put("content_type", it) }
+                attachmentId?.let { put("attachment_attestation_id", it) }
             }
             val response = client.post("$nodeUrl/v1/chat/$communityId/messages") {
                 authHeader()?.let { header("Authorization", it) }
@@ -2456,6 +2458,29 @@ class CIRISApiClient internal constructor(
                 "attestation=${decoded.attestationId.take(24)}… readback=${if (decoded.message != null) "ok" else "deferred"}",
             )
             decoded
+        } catch (e: Exception) {
+            logException(method, e, "url=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * This viewer's consent to see one flagged item, a message or a room file.
+     * Hits ``POST /v1/chat/{communityId}/items/{itemId}/reveal`` with no body;
+     * it is per item and stays on the viewer's own devices (0.5.243).
+     */
+    suspend fun revealRoomItem(communityId: String, itemId: String, nodeUrl: String = LOCAL_NODE_URL) {
+        val method = "revealRoomItem"
+        val client = federationHttpClient()
+        try {
+            val response = client.post(
+                "$nodeUrl/v1/chat/${communityId.encodeURLPathPart()}/items/${itemId.encodeURLPathPart()}/reveal",
+            ) {
+                authHeader()?.let { header("Authorization", it) }
+            }
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, response.bodyAsText())
         } catch (e: Exception) {
             logException(method, e, "url=$nodeUrl")
             throw e

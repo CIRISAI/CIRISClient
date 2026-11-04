@@ -107,6 +107,7 @@ private fun presentationOfMessage(entry: CegChatMessage): Presentation = when {
  */
 val UNOPENED_TOKENS: List<String> = listOf(
     "not_fetched", "not_granted", "awaiting_key", "evicted", "withdrawn", "seal_mismatch", "malformed_row", "not_text", "substrate",
+    "withheld_by_moderation",
 )
 
 /**

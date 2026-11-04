@@ -29,6 +29,14 @@ interface ChatApi {
     /** `POST {nodeUrl}/v1/chat/{id}/messages`. */
     suspend fun send(nodeUrl: String, communityId: String, body: String): SendChatMessageResult
 
+    /** The same route, carrying a file already in this room ([body] is its caption, and may be blank). */
+    suspend fun sendAttachment(nodeUrl: String, communityId: String, body: String, attachmentId: String): SendChatMessageResult =
+        throw UnsupportedOperationException("sendAttachment")
+
+    /** `POST {nodeUrl}/v1/chat/{id}/items/{itemId}/reveal`: this viewer's own consent to see one flagged item. */
+    suspend fun reveal(nodeUrl: String, communityId: String, itemId: String): Unit =
+        throw UnsupportedOperationException("reveal")
+
     /**
      * `GET {nodeUrl}/v1/chat/{id}/messages/{attestationId}/history`, oldest first;
      * null when the node predates the route (a bare 404).
@@ -58,6 +66,10 @@ class ClientChatApi(private val client: CIRISApiClient) : ChatApi {
         client.listChatMessages(communityId, nodeUrl = nodeUrl)
     override suspend fun send(nodeUrl: String, communityId: String, body: String): SendChatMessageResult =
         client.sendChatMessage(communityId, body, nodeUrl = nodeUrl)
+    override suspend fun sendAttachment(nodeUrl: String, communityId: String, body: String, attachmentId: String): SendChatMessageResult =
+        client.sendChatMessage(communityId, body, attachmentId = attachmentId, nodeUrl = nodeUrl)
+    override suspend fun reveal(nodeUrl: String, communityId: String, itemId: String) =
+        client.revealRoomItem(communityId, itemId, nodeUrl = nodeUrl)
     override suspend fun history(nodeUrl: String, communityId: String, attestationId: String): ChatMessageHistory? =
         client.getChatMessageHistory(communityId, attestationId, nodeUrl = nodeUrl)
     override suspend fun revise(

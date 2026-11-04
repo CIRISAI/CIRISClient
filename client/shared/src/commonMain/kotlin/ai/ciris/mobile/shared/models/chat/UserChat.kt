@@ -155,6 +155,10 @@ data class CegChatMessage(
     /** The substrate's own sentence for [unopenedReason] — for a person or a log, never for branching. */
     @SerialName("unopened_detail")
     val unopenedDetail: String? = null,
+    /** The room file this message carries (0.5.243), its body the caption. An edit keeps it. */
+    val attachment: String? = null,
+    /** Absent when no moderator ever flagged this message. */
+    val moderation: RoomModeration? = null,
 ) {
     val isLive: Boolean get() = status == STATUS_LIVE
 
@@ -377,6 +381,9 @@ data class ChatTranscript(
      */
     @SerialName("viewer_duties")
     val viewerDuties: List<String>? = null,
+    /** This node takes an attachment on the send (0.5.243). Absent on an older node, which would drop the file. */
+    @SerialName("accepts_attachments")
+    val acceptsAttachments: Boolean = false,
     @SerialName("cohort_scope")
     val cohortScope: String = CegChatMessage.COHORT_SCOPE_COMMUNITY,
     val messages: List<CegChatMessage> = emptyList(),
