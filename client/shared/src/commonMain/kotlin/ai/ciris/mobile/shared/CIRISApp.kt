@@ -1900,7 +1900,7 @@ fun CIRISApp(
                                             tokenManager.on401Error()
                                             // Wait for refresh to complete - callback will set apiClient token
                                             var refreshWait = 0
-                                            while (refreshWait < 50) {
+                                            while (refreshWait < 50 && !tokenManager.needsInteractiveLogin.value) {
                                                 kotlinx.coroutines.delay(100)
                                                 refreshWait++
                                                 if (refreshWait % 10 == 0) {
@@ -2029,7 +2029,8 @@ fun CIRISApp(
                                     }
                                 }
 
-                                currentScreen = homeTarget
+                                // A session the node refused, with no silent path, is a sign-in.
+                                currentScreen = if (tokenManager.needsInteractiveLogin.value) Screen.Login else homeTarget
                             } else {
                                 // Token invalid and couldn't refresh - need interactive login
                                 PlatformLogger.i(TAG, " Token invalid/expired and silent refresh failed - redirecting to login")

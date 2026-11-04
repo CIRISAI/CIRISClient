@@ -178,6 +178,17 @@ class TokenManager(
                 "minValid=${MIN_TOKEN_VALIDITY_SECONDS}s")
 
         if (remainingSeconds == null) {
+            // A node session (`sess:…`) is not a JWT and carries no expiry to
+            // read, so "unreadable" says nothing about it. The caller verifies
+            // it against the node, and only a 401 ends it (on401Error). There
+            // is no periodic refresh: that clock is the provider ID token's.
+            if (isOpaqueSession(storedToken)) {
+                logInfo(method, "Opaque node session - expiry unknown, the node decides")
+                _tokenState.value = TokenState.VALID
+                _currentToken.value = storedToken
+                _needsInteractiveLogin.value = false
+                return true
+            }
             logWarn(method, "Could not parse token expiry - treating as expired")
             return attemptSilentRefresh(CredentialUse.SESSION)
         }
@@ -403,6 +414,10 @@ class TokenManager(
     fun clearInteractiveLoginNeeded() {
         _needsInteractiveLogin.value = false
     }
+
+    /** Not a JWT: a compact JWT is three parts, and its header starts `eyJ`. */
+    fun isOpaqueSession(token: String): Boolean =
+        !(token.startsWith("eyJ") && token.count { it == '.' } == 2)
 
     /**
      * Get the expiry time (in seconds since epoch) from a JWT token.

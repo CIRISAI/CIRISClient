@@ -35,6 +35,39 @@ class TokenManagerCredentialSplitTest {
     }
 
     @Test
+    fun a_node_session_has_no_expiry_to_read_and_is_not_expired() = runTest {
+        val tm = TokenManager(backgroundScope)
+
+        assertTrue(tm.checkAndRefreshToken("sess:wa-root-1.9f2c1e"), "a live session is kept")
+        runCurrent()
+
+        assertEquals(TokenState.VALID, tm.tokenState.value)
+        assertEquals("sess:wa-root-1.9f2c1e", tm.currentToken.value)
+        assertFalse(tm.needsInteractiveLogin.value, "only a 401 ends it")
+    }
+
+    @Test
+    fun a_jwt_that_cannot_be_read_is_still_expired() = runTest {
+        val tm = TokenManager(backgroundScope)
+
+        assertFalse(tm.checkAndRefreshToken("eyJhbGciOiJSUzI1NiJ9.not-base64!.sig"))
+        runCurrent()
+
+        assertTrue(tm.needsInteractiveLogin.value)
+    }
+
+    @Test
+    fun a_refused_node_session_needs_a_sign_in() = runTest {
+        val tm = TokenManager(backgroundScope)
+
+        tm.checkAndRefreshToken("sess:wa-root-1.9f2c1e")
+        tm.on401Error()
+        runCurrent()
+
+        assertTrue(tm.needsInteractiveLogin.value)
+    }
+
+    @Test
     fun a_session_401_with_no_silent_path_keeps_todays_behaviour() = runTest {
         val tm = TokenManager(backgroundScope)
 
