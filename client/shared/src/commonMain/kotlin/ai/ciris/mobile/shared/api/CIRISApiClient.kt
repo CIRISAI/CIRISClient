@@ -642,6 +642,7 @@ class CIRISApiClient internal constructor(
             connectTimeoutMillis = 10000
             socketTimeoutMillis = 30000
         }
+        it.install(InteractOutlastsTheAgent)
     }
 
     // Generated API instances (var to allow recreation when baseUrl changes)

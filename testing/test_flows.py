@@ -1047,3 +1047,28 @@ def test_no_back_arrow_means_the_missing_circle_is_still_named():
                                          hop_timeout=0.3, arrive_timeout=0.1))
     assert got and "hop tag 'circle_agent' never appeared" in got, got
     assert not [c for c in h.calls if c.startswith("click")], h.calls
+
+
+def test_a_regex_under_text_is_refused_at_load():
+    """`text:` is a substring, so this could only ever fail, on a live leg."""
+    from testing.gate.flow_spec import Condition
+
+    with pytest.raises(SpecError, match="use `matches:`"):
+        Condition.parse({"text": {"msg_agent_0": "(?s)^(?!.*no)"}}, "expect")
+    assert Condition.parse({"text": {"msg_agent_0": "plain words"}}, "expect")
+
+
+@pytest.mark.parametrize(
+    "bubble, ok",
+    [
+        ("I am Ally, a personal assistant.", True),
+        ("I encountered an issue processing your request. Try again.", False),
+        ("First line.\nI encountered an issue processing your request.", False),
+    ],
+)
+def test_the_chat_flows_reply_check_tells_a_reply_from_a_failed_thought(bubble, ok):
+    """The real flow's real pattern: both verdicts, one of them across lines."""
+    spec = yaml.safe_load((AGENT_FLOWS / "csd-010-interact-chat.yaml").read_text())
+    step = next(s for s in spec["steps"] if s["step_id"] == "a_real_reply")
+    pattern = step["expect"]["matches"]["msg_agent_0"]
+    assert bool(re.search(pattern, bubble)) is ok

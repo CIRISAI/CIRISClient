@@ -66,5 +66,5 @@ steps:
       absent: [msg_error_0, btn_interact_refresh_billing_signin]
       # A failed thought arrives as an ordinary bubble, so a bubble is not proof
       # of a reply: run 41877052707 passed here with every model call refused.
-      text:
+      matches:
         msg_agent_0: '(?s)^(?!.*I encountered an issue processing your request)'
