@@ -137,7 +137,7 @@ were found on a different platform from the one they were fixed on:
 Android FATAL EXCEPTION, iOS SIGABRT), **#48** (`checkFirstRunStatus` must not
 park on "Backend unreachable" polling `:8080` while a healthy `:4243` answers,
 `CIRISApp.kt:5066`), **#51** (a run-without-AI install has no Agent group and
-so no Settings; its sign-out is My Identity's `btn_logout` and My things'
+so no Settings; its sign-out is My keys's `btn_logout` and My things'
 `btn_my_things_sign_out`, the one sign-out, CSD-037 §3), **#66** (a node-only
 backend reports no services, so macOS must not stall on "Restarting your node…"
 at Starting Services 0/22), **#67** (Windows: the session is saved, the

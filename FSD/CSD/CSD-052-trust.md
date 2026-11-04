@@ -194,7 +194,7 @@ node path and two exercise both.
 **The recommendation, so it is on the record.** Trust should move to **My things
 › This node**. It is one install's integrity, identical in all five circles, and
 CC 3.4.5 puts artifact-integrity verification explicitly outside "a subject's
-conduct or capacity" — which is what a person opening Rules in the Neighbours
+conduct or capacity" — which is what a person opening Rules in the Local community
 circle is looking for. The word "Trust" should go with it or be given up: CSD-050
 shows that `LayerHubScreen` already has a section called Trust meaning
 `trust:{job}:{version}`, in the same tab, so today the Rules tab of every circle

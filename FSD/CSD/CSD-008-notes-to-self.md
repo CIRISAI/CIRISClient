@@ -88,7 +88,7 @@ The new note is **not** listed under Files (CSD-007: `DriveEntry.isNote`).
 
 ## 5. QA plan
 
-**`testable`**: the flow (`testing/flows/csd-008-notes-to-self.yaml`, floor `>=0.5.225`) passes on all five legs of five-platform run 36775704425 (node v0.5.217) — Linux, macOS and Windows desktop, the Android emulator and the iOS simulator. The runner verifies each hop against `/state`: a node client signs in under Neighbours, and a tab clicked before its circle hop completes opens the wrong circle's tab (Rooms instead of Chats).
+**`testable`**: the flow (`testing/flows/csd-008-notes-to-self.yaml`, floor `>=0.5.225`) passes on all five legs of five-platform run 36775704425 (node v0.5.217) — Linux, macOS and Windows desktop, the Android emulator and the iOS simulator. The runner verifies each hop against `/state`: a node client signs in under Local community, and a tab clicked before its circle hop completes opens the wrong circle's tab (Rooms instead of Chats).
 
 **Verified live** (desktop, ciris-server 0.5.215): writing a note from the UI
 and reading it back from `/v1/notes`; a readable note rendering its body (the

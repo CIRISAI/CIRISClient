@@ -1,4 +1,4 @@
-# CSD-110 — The rooms you talk in (Neighbours › Chats, Communities and Businesses › Chats)
+# CSD-110 — The rooms you talk in (Communities and affiliations › Chats)
 
 **CSD**: CSD-110 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the route-coverage gate (#111): the routes `CommunityChats` / `AffiliationsChats` call are cited by a CSD on that screen
 **Covers**: `Screen.CommunityChats` and its sibling `Screen.AffiliationsChats` — one composable, `CommunityChatsScreen` (`ui/screens/CommunitiesScreens.kt`), over the tier's `CommunitiesViewModel`. CSD-103 §2.0 describes these screens, but its `csd:surface` names only the roster, and a chats screen is not a roster sibling.
@@ -12,20 +12,22 @@ owner: CIRISClient
 
 ## 1. Mission (why)
 
-**In Neighbours and in Communities and Businesses, the Chats tab lists the
-rooms this person is in at that tier, as the node's fold has them, and a
-two-person room opens the chat.** The Locked Spec gives every circle a Chats
+**In Communities and affiliations, the Chats tab holds one list per tier. Each
+says what the tier is, shows the invitations waiting, offers Found one, and
+lists the rooms this person is in at that tier, as the node's fold has them. A
+two-person room opens the chat.** It is where the circle opens, because a room
+nobody can find without being told (Eric's first room) is not browsable. The Locked Spec gives every circle a Chats
 tab; without this card the non-self circles' Chats tabs would be empty while
 the conversation they are named for is reachable only from a contact (CSD-091
 §2). Serves **Contextual Integrity**: the rows here are only rooms the
 caller is active in, which is all `GET /v1/communities` serves (CC 2.1, a
 roster is never globally enumerable).
 
-**Pair rooms are Neighbours chats, on the wire's say-so.** A pair room comes
+**Pair rooms are listed with Communities, on the wire's say-so.** A pair room comes
 back with `kind: pair, tier: community` (`src/communities.rs::room_json` :1362;
 `Tier::of` :150 reads an absent policy blob as `community`). Which circle a
 pair room appears in is therefore not a client-side audience judgment: the
-wire says `community`, and `community` folds to Neighbours
+wire says `community`, and `community` is the Communities list
 (`ui/nav/CohortScope.kt`). A pair room is
 never an affiliations chat.
 
@@ -126,8 +128,7 @@ needs CSD-102's founding on a node with contacts.
 **Platforms.** All five; the chain ends on the tab.
 
 **Acceptance — functional**
-1. A pair room lists under Neighbours and never under Communities and
-   Businesses (`CommunitiesLogicTest.chatsShowPairRoomsAtTheCommunityTierOnly`).
+1. A pair room lists under Communities and never under Affiliations (`CommunitiesLogicTest.chatsShowPairRoomsAtTheCommunityTierOnly`).
 2. A pair room resolves to the contact whose `chat_community_id` is its id, and
    to nobody otherwise (`CommunitiesLogicTest.aPairRoomIsWithTheContactWhosePairIdItIs`).
 3. A room of more than two opens by its id, never through `POST /v1/chat`

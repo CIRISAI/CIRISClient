@@ -1,7 +1,7 @@
 # CSD-094 — Approve a new device (the device you already have)
 
 **CSD**: CSD-094 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: CIRISServer 0.5.231 `FSD/ADD_DEVICE.md` (CIRISServer#177): a peer-to-peer join request the new device sends to this one, not a QR scan that drives `claim-remote` at it over HTTP
-**Pairs with**: CSD-093 (Add this device to an existing CIRIS ID, on the new device) · CSD-037 (My Identity, the page this card sits on)
+**Pairs with**: CSD-093 (Add this device to an existing CIRIS ID, on the new device) · CSD-037 (My keys, the page this card sits on)
 **Flow**: `testing/flows/drafts/csd-094-approve-new-device.yaml` (floor `unreleased`)
 **Card**: `ui/screens/AddDeviceScreens.kt` (`ApproveDeviceCard`, `AddDeviceTags`), placed on `ui/screens/IdentityManagementScreen.kt` above the roster's older "add a key" card; `viewmodels/ApproveDeviceViewModel.kt`; wire `api/AddDeviceApi.kt` (`DeviceRequestsApi`) + `CIRISApiClient.{open,list,approve,deny}DeviceRequest(s)`; tests `ApproveDeviceViewModelTest` (commonTest), `AddDeviceWireTest.theApprovingDevicesCallsCarryItsOwnerSession` (desktopTest)
 
@@ -39,7 +39,7 @@ screen: IdentityManagement
 
 **Where it lives, decided by routes.** The page `nav_map` derives as
 `btn_my_things -> nav_instrument_devices_keys -> nav_epistemic_identity_management`
-(My things › Devices & keys › My Identity) already holds the person's devices:
+(My things › Devices & keys › My keys) already holds the person's devices:
 the roster (`GET /v1/self/occurrences`, CSD-037) and the older "add a key a
 device already made" card (`POST /v1/self/occurrence`). No other screen calls
 `/v1/self/device-requests`, so it is not a duplicate; it is
@@ -144,7 +144,7 @@ on the previous node (`AddDeviceWireTest.afterANodeSwitchTheApprovalGoesToTheNew
 ## 4. Flow (how)
 
 Two nodes, one person. On device A (signed in), open My things › Devices &
-keys › My Identity.
+keys › My keys.
 
 ```yaml
 expect:

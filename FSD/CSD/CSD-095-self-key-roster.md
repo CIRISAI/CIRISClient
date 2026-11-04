@@ -1,7 +1,7 @@
 # CSD-095 — Changes to your devices (the self-key roster's held changes)
 
 **CSD**: CSD-095 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: CIRISServer#794 (CC 3.3.6.3), in CIRISServer#802 (`feat/multi-device-csd4`). The rule, the rows and the executor are persist's (`self_roster`, CIRISPersist v59.0.0)
-**Pairs with**: CSD-094 (Approve a new device: from two devices its approval IS an add proposal) · CSD-037 (My Identity: the revoke on the roster IS an evict proposal) · CSD-093 (the new device, which waits while the add is held)
+**Pairs with**: CSD-094 (Approve a new device: from two devices its approval IS an add proposal) · CSD-037 (My keys: the revoke on the roster IS an evict proposal) · CSD-093 (the new device, which waits while the add is held)
 **Flow**: unwritten. The quorum path (three keys) can be driven; the lone path cannot until persist's `W_self` seam ships (CIRISPersist#1111, §5). The server QA runs it on T10, three tests (§5)
 **Card**: `ui/screens/SelfRosterCard.kt` (`SelfRosterCard`, `RosterTags`), placed on `ui/screens/IdentityManagementScreen.kt` directly below the Approve card; `viewmodels/SelfRosterViewModel.kt`; wire `api/SelfRosterApi.kt` + `CIRISApiClient.{getRosterProposals,answerRosterProposal}`; shapes `models/federation/SelfRoster.kt`; tests `SelfRosterViewModelTest` (commonTest), `SelfRosterWireTest`, `RosterHeldWireTest.aHeldApprovalAnswers202AndIsHeldNotApproved` (desktopTest)
 
@@ -54,7 +54,7 @@ screen: IdentityManagement
 
 **Where it lives, decided by routes.** No other card calls `/v1/self/roster/*`,
 so it is not a duplicate. Its proposals are made by two
-existing controls, and it sits beside them on My Identity
+existing controls, and it sits beside them on My keys
 (`btn_my_things -> nav_instrument_devices_keys -> nav_epistemic_identity_management`):
 CSD-094's Approve, and CSD-037's revoke on the roster. Neither control gets a
 new route. When the roster holds the change, the approval or the revoke IS the
@@ -222,7 +222,7 @@ while it watched (§2).
 
 Three devices of one person (the quorum path): A, B, C, with A and B on the
 roster. On A, approve C (CSD-094); A's card shows the held line. On B, open My
-things › Devices & keys (the badge reads 1) › My Identity:
+things › Devices & keys (the badge reads 1) › My keys:
 
 ```yaml
 expect:

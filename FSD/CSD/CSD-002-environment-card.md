@@ -28,11 +28,11 @@ screen: EnvironmentInfo
 ```
 
 `nav_map` derives `circle_local_community -> tab_decisions ->
-nav_epistemic_environment_graph` — Neighbours › Decisions
+nav_epistemic_environment_graph` — Local community › Decisions
 (`CirclesNav.kt:125`), sharing that tab with Health & Reputation, which is why
 the chain ends on the row rather than the tab.
 
-**Neighbours only**, and that is right: an open call is made to the people near
+**Local community only**, and that is right: an open call is made to the people near
 enough to answer it. It is not in Everyone, where a broadcast need is a
 different mechanism with different consent; it is not in Just me, where there is
 nobody to answer.
@@ -152,7 +152,7 @@ and the shell owns where it goes, so the flow asserts a chain nobody walks.
 
 What replaces it, using real tags:
 
-Land on `EnvironmentInfo` (Neighbours › Decisions, derived).
+Land on `EnvironmentInfo` (Local community › Decisions, derived).
 
 ```yaml
 expect:

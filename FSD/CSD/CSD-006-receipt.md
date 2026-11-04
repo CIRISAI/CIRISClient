@@ -49,7 +49,7 @@ fields:
     use: display-only
     type: "enum[self,family,community,affiliations,species,planet,federation]"
     example: "family"
-    renders: "Who can see it — a ScopePill: Just me / Family / Neighbours / Communities and Businesses / Everyone (the 7→5 fold on CohortScope)"
+    renders: "Who can see it — a ScopePill: Just me / Family / Local community / Communities and affiliations / Everyone (the 7→5 fold on CohortScope)"
     tag: receipt_scope
   - ceg: x_private:dimension
     use: display-only

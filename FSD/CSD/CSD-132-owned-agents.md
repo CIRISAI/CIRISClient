@@ -31,7 +31,7 @@ surface: owned-agents
 screen: OwnedAgents
 ```
 
-**Its own row under My things › Devices & keys,** beside My Identity. One card
+**Its own row under My things › Devices & keys,** beside My keys and My devices (CSD-133). One card
 per agent node, agents first:
 
 | row | when | what it says |
@@ -48,7 +48,7 @@ Stopping or retiring an agent is the agent's own ladder (T16, CIRISAgent) and
 is said, not offered.
 
 **Release and Rename are one action with two doors.** They are the same view
-model, confirm and route as on My Identity (CSD-037), reached from where a
+model, confirm and route as on My devices (CSD-133), reached from where a
 person looks for the agent; the route checker's baseline records the pair.
 
 ```yaml csd:shows
@@ -97,7 +97,7 @@ All at the local node, owner session.
 | rename | `POST /v1/self/occurrence/label {occurrence_key_id: <node key>, label}` | CIRISServer#840 | **unreleased** for a node key (live for roster devices since 0.5.216) |
 | announce | `POST /v1/self/nodes/{node_key_id}/announce` | CIRISServer | live |
 | release | `POST /v1/self/nodes/{node_key_id}/release` | CIRISServer | live; held for the roster's quorum on the release branch (CSD-037) |
-| shared reads of the view model it shares with My Identity (CSD-037) | `GET /v1/federation/self-key-record`, `GET /v1/self/occurrences`, `GET /v1/system/health` | CIRISServer | live — read once on entry by `IdentityManagementViewModel.load()`; this screen draws none of them |
+| shared reads of the view model it shares with My keys (CSD-037) | `GET /v1/federation/self-key-record`, `GET /v1/self/occurrences`, `GET /v1/system/health` | CIRISServer | live — read once on entry by `IdentityManagementViewModel.load()`; this screen draws none of them |
 | version, status, last seen | none | CIRISServer · CC | **not carried**: needs a signed node-status row (a new family), not yet scoped. Rendered as nothing, never as a guess |
 
 ## 4. Flow (how)
@@ -111,7 +111,7 @@ All at the local node, owner session.
 
 `OwnedAgentsTest`: the new fields decode and an older row leaves them unknown;
 agents come first, nodes that may run one next, and the owner's own plain
-devices never appear. The nav tests cover the placement and the screen's
+devices never appear. Every owned node is on exactly one of this card and My devices. The nav tests cover the placement and the screen's
 mapping.
 
 ## 6. Delta — card vs API vs CC

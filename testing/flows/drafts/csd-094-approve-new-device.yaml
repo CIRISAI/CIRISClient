@@ -24,7 +24,7 @@ fixture: two_node
 
 steps:
   - step_id: on_my_identity
-    title: My Identity carries the card, closed until opened
+    title: My keys carries the card, closed until opened
     requires:
       screen: IdentityManagement
     expect:

@@ -13,7 +13,7 @@ where the card is drafted or asked for. **To adopt a reserved card**, add its fi
 delete its row in the same commit; `--check` refuses a card on a number that is still
 reserved. **A retired number is never reused.**
 
-**84 cards** — 1 envisioned · 6 sketched · 69 building · 8 testable. **19 reserved**, **2 retired**.
+**85 cards** — 1 envisioned · 6 sketched · 70 building · 8 testable. **19 reserved**, **2 retired**.
 
 ## Cards
 
@@ -49,12 +49,12 @@ reserved. **A retired number is never reused.**
 | [CSD-033](CSD-033-network-peers.md) | The peers this node holds (the Peers tile) | `building` | `testing/flows/drafts/csd-033-network-peers.yaml` |
 | [CSD-035](CSD-035-nodes.md) | Nodes (My things › This node › Nodes) | `building` | none yet |
 | [CSD-036](CSD-036-network-ops.md) | Network (My things › This node › Network) | `building` | `testing/flows/drafts/csd-036-network-ops.yaml` |
-| [CSD-037](CSD-037-identity-management.md) | My Identity (My things › Devices & keys › My Identity) | `sketched` | none yet |
+| [CSD-037](CSD-037-identity-management.md) | My keys (My things › Devices & keys) | `sketched` | none yet |
 | [CSD-039](CSD-039-data.md) | Data (My things › Everything I shared › Data) | `building` | `testing/flows/drafts/csd-039-data-erasure.yaml` |
 | [CSD-040](CSD-040-storage.md) | Storage (My things › Everything I shared › Storage) | `building` | `testing/flows/drafts/csd-040-storage.yaml` |
 | [CSD-041](CSD-041-wise-authority.md) | Wise Authority (My things › Someone I trust) | `building` | none yet |
 | [CSD-042](CSD-042-help.md) | Help (My things › Help) | `sketched` | none yet |
-| [CSD-043](CSD-043-users.md) | Users (Communities and Businesses › People) | `building` | none yet |
+| [CSD-043](CSD-043-users.md) | Users (Communities and affiliations › People) | `building` | none yet |
 | [CSD-044](CSD-044-health-reputation.md) | Health & Reputation, the card in its circles (Decisions) | `sketched` | none yet |
 | [CSD-045](CSD-045-node-self-standing.md) | This node's own standing (shed load · stop accepting · legal compulsion) | `building` | `testing/flows/drafts/csd-045-node-self-standing.yaml` |
 | [CSD-046](CSD-046-network-trust-graph.md) | The peer set as a graph (the Trust graph tile; the Map tile folded in) | `building` | `testing/flows/drafts/csd-046-network-trust-graph.yaml` |
@@ -100,9 +100,10 @@ reserved. **A retired number is never reused.**
 | [CSD-107](CSD-107-file-custody.md) | Where is this file (file custody, one card from every file surface) | `building` | `testing/flows/drafts/csd-107-file-custody.yaml` |
 | [CSD-108](CSD-108-steward-purge.md) | Steward purge (remove rows that never belonged, under the global trust root) | `sketched` | none yet |
 | [CSD-109](CSD-109-contact-requests.md) | Contact requests (someone added you; you say yes, or ignore it) | `building` | `testing/flows/drafts/csd-109-contact-requests.yaml` |
-| [CSD-110](CSD-110-community-chats.md) | The rooms you talk in (Neighbours › Chats, Communities and Businesses › Chats) | `building` | none yet |
+| [CSD-110](CSD-110-community-chats.md) | The rooms you talk in (Communities and affiliations › Chats) | `building` | none yet |
 | [CSD-131](CSD-131-owner-requests.md) | Requests from your nodes (sign or decide) | `sketched` | none yet |
 | [CSD-132](CSD-132-owned-agents.md) | Agents you own (My things › Devices & keys) | `building` | none yet |
+| [CSD-133](CSD-133-my-devices.md) | My devices (My things › Devices & keys) | `building` | none yet |
 
 ## Reserved
 
@@ -144,4 +145,4 @@ this directory yet.
 
 ## Unassigned
 
-Below CSD-132, these numbers are free: 009, 017–019, 038, 058–064, 072–079, 088–089, 097–099, 129–130. Numbers above CSD-132 are free too, up to the test range.
+Below CSD-133, these numbers are free: 009, 017–019, 038, 058–064, 072–079, 088–089, 097–099, 129–130. Numbers above CSD-133 are free too, up to the test range.

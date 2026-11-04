@@ -1,4 +1,4 @@
-# CSD-037 — My Identity (My things › Devices & keys › My Identity)
+# CSD-037 — My keys (My things › Devices & keys)
 
 **CSD**: CSD-037 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, wave 1
 **Flow**: unwritten — the tags below are the contract the flow will drive
@@ -10,8 +10,8 @@ owner: CIRISClient
 
 ## 1. Mission (why)
 
-**A person can see every device that is currently *them*, add another one, and
-evict a lost or stolen one from any device they still hold — and the screen tells
+**A person can see every key that is currently *them*, one for each device that
+acts as them, add another one, and evict a lost or stolen one from any device they still hold — and the screen tells
 them the truth about what eviction does and does not undo.**
 
 Serves **CC 3.3.6** (`identity_occurrence`, the legacy §5.6.8.8): the roster is
@@ -29,6 +29,13 @@ recovering the confidentiality of previously-wrapped content." The revoke
 confirmation says that (§3, §6).
 
 ## 2. Surface (what)
+
+**Three rosters, three cards (the steward's ruling, 2026-11-04).** My keys is the
+self-key roster and its one remove, Revoke. Your devices (owned nodes) and
+Release moved to My devices (CSD-133); agents and their Release are Agents you
+own (CSD-132). Approve a new device stays here, because it adds a key to this
+roster, and My devices links to it. The release confirmations and the rows below
+that describe `release` are shared with those two cards.
 
 ```yaml csd:surface
 surface: identity-management
@@ -176,7 +183,7 @@ an error also must not look alike.
 
 ## 4. Flow (how)
 
-Sign in on an enrolled device; open My things › Devices & keys › My Identity.
+Sign in on an enrolled device; open My things › Devices & keys › My keys.
 
 ```yaml
 expect:

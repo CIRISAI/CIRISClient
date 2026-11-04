@@ -1,6 +1,6 @@
 # CSD-102 — Communities and affiliations: the community itself (Rules)
 
-**CSD**: CSD-102 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, B6 Neighbours / B7 Communities and Businesses
+**CSD**: CSD-102 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, B6 Local community / B7 Communities and affiliations
 **Companion**: CSD-103 (who is in it, in People; the rooms you talk in, in Chats) — one view model per tier serves both.
 **Flow**: `testing/flows/drafts/csd-102-communities.yaml` (floor `unreleased`)
 
@@ -11,7 +11,7 @@ owner: CIRISClient
 
 ## 1. Mission (why)
 
-**Standing in Neighbours or in Communities and Businesses, a person can found a
+**Standing in Communities and affiliations, a person can found a
 group, see the rule it declared for who may change it, change a member's role,
 see who holds the moderation duty, finish a change the rule is holding for more
 signatures, and leave or dissolve it — and every act says, before it is signed,
@@ -36,9 +36,11 @@ the card CSD-050 describes as "who is in it … and the standing rules". The
 community IS that circle's group, so the governance section is mounted on the
 hub (`LayerHubScreen.kt`, the scope-specific slot where Environment already
 sits) rather than as a second card that would be the same card under another
-name. `tier: community` is Neighbours and `tier: affiliations` is Communities
-and Businesses — `CohortScope`'s fold, `community → LOCAL_COMMUNITY`,
-`affiliations → GLOBAL_COMMUNITIES` (`ui/nav/CohortScope.kt`).
+name. Both tiers are one circle, each with its own hub in Rules: `tier: community`
+is Communities (not place-bound, pro-social by assumption) and `tier:
+affiliations` is Affiliations (not assumed pro-social). Local community is
+geographic, no wire token carries it yet, and it holds no rooms: CSD-050 §2,
+and a design ruling is owed (persist, CC). It never borrows `tier: community`.
 
 ## 2. Surface (what)
 
@@ -67,7 +69,7 @@ fields:
     use: emit
     type: "enum[community,affiliations]"
     example: "community"
-    renders: "not a control: the circle you found it from IS the tier. Neighbours founds `community`, Communities and Businesses founds `affiliations`"
+    renders: "not a control: the circle you found it from IS the tier. the Communities list and hub found `community`, the Affiliations ones found `affiliations`"
     tag: section_communities
   - ceg: x_private:consensus_protocol
     use: emit

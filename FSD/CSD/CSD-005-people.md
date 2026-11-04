@@ -39,10 +39,10 @@ screen: Contacts
 them.** `CirclesNav.placements` puts `NavSurface.Contacts` on `Tab.PEOPLE` for
 `ALL` circles. In Just me and Everyone it is the only card there, so `nav_map`
 derives `circle_<circle> -> tab_people` and the shell shows it directly. In
-Family, Neighbours and Communities and Businesses it is one card among siblings
+Family, Local community and Communities and affiliations it is one card among siblings
 — the household roster (`HouseholdMembers`, CSD-101), the community and
 affiliation rosters (`CommunityRoster` / `AffiliationsRoster`, CSD-103) and, in
-Communities and Businesses, `Users` — so the tab is a list and the chain is
+Communities and affiliations, `Users` — so the tab is a list and the chain is
 `circle_<circle> -> tab_people -> nav_epistemic_contacts` (`docs/atlas.json`
 predates the rosters and shows the two-hop chain). The visible title is
 "People"; the screen class, the nav id and every `contacts_*` tag keep the
