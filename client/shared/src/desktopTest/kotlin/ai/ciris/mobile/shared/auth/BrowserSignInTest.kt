@@ -61,6 +61,42 @@ class BrowserSignInTest {
     }
 
     @Test
+    fun an_expired_answer_before_the_browser_arrives_is_not_yet() = runTest {
+        var polls = 0
+        val result = collectBrowserSignIn(
+            poll = { _, _ ->
+                polls++
+                if (polls < 4) OAuthHandoffPoll.Failed("auth.oauth.flow_expired", null) else OAuthHandoffPoll.Ready(handoff)
+            },
+            nonce = "n",
+        )
+        assertIs<BrowserSignInResult.Collected>(result)
+        assertEquals(4, polls)
+    }
+
+    @Test
+    fun an_expired_answer_past_the_grace_is_the_refusal_it_says_it_is() = runTest {
+        var polls = 0
+        val result = collectBrowserSignIn(
+            poll = { _, _ -> polls++; OAuthHandoffPoll.Failed("auth.oauth.flow_expired", null) },
+            nonce = "n",
+        )
+        assertIs<BrowserSignInResult.Refused>(result)
+        assertEquals(16, polls, "about 30s of polling, then stop (CIRISClient#57)")
+    }
+
+    @Test
+    fun a_parked_failure_is_terminal_even_inside_the_grace() = runTest {
+        var polls = 0
+        val result = collectBrowserSignIn(
+            poll = { _, _ -> polls++; OAuthHandoffPoll.Failed("auth.oauth.flow_expired", "failed") },
+            nonce = "n",
+        )
+        assertIs<BrowserSignInResult.Refused>(result)
+        assertEquals(1, polls)
+    }
+
+    @Test
     fun a_refusal_without_a_reason_is_the_expired_flow() = runTest {
         val result = collectBrowserSignIn(
             poll = { _, _ -> OAuthHandoffPoll.Failed(null, null) },

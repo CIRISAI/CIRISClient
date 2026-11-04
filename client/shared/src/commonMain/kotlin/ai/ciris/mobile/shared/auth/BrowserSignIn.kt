@@ -30,6 +30,8 @@ sealed class BrowserSignInResult {
     data class TimedOut(val waitedSeconds: Int) : BrowserSignInResult()
 }
 
+private const val FLOW_EXPIRED = "auth.oauth.flow_expired"
+
 /** A 32-character app nonce for `?app_nonce=` — what binds the browser tab to this process. */
 fun newAppNonce(): String = buildString {
     val alphabet = "abcdefghijklmnopqrstuvwxyz0123456789"
@@ -47,6 +49,8 @@ fun newAppNonce(): String = buildString {
  * @param unboundAfterAttempts after ~20s our own tab has had its chance;
  *   accept a sign-in that completed in a stray tab rather than spin while the
  *   node holds a perfectly good session.
+ * @param unseenGraceAttempts for ~30s a 410 `auth.oauth.flow_expired` is still
+ *   NOT YET; after that it is the refusal it says it is.
  */
 suspend fun collectBrowserSignIn(
     poll: suspend (nonce: String, allowUnbound: Boolean) -> OAuthHandoffPoll,
@@ -54,6 +58,7 @@ suspend fun collectBrowserSignIn(
     maxAttempts: Int = 90,
     intervalMs: Long = 2000,
     unboundAfterAttempts: Int = 10,
+    unseenGraceAttempts: Int = 15,
     log: (String) -> Unit = {},
 ): BrowserSignInResult {
     var attempts = 0
@@ -62,9 +67,17 @@ suspend fun collectBrowserSignIn(
         attempts++
         when (val answer = poll(nonce, attempts > unboundAfterAttempts)) {
             is OAuthHandoffPoll.Ready -> return BrowserSignInResult.Collected(answer.handoff)
-            // A 410 with `reason_id` is the server saying STOP; the old loop
-            // polled through three of them (CIRISClient#57).
-            is OAuthHandoffPoll.Failed -> return BrowserSignInResult.Refused(answer.reasonId ?: "auth.oauth.flow_expired")
+            // A `reason_id` is the server saying STOP; the old loop polled
+            // through three of them (CIRISClient#57). The one exception is a 410
+            // while the browser may not have reached /login yet: a node before
+            // 0.5.245 answers an unseen nonce that way, and stopping there
+            // reports "expired" while the sign-in goes on to succeed.
+            is OAuthHandoffPoll.Failed -> {
+                val notYetSeen = answer.reasonId == FLOW_EXPIRED && answer.status == null
+                if (!notYetSeen || attempts > unseenGraceAttempts) {
+                    return BrowserSignInResult.Refused(answer.reasonId ?: FLOW_EXPIRED)
+                }
+            }
             OAuthHandoffPoll.Pending -> Unit
         }
         // Heartbeat every ~20s: "still waiting" must be visible, or a stalled
