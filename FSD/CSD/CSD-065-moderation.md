@@ -270,6 +270,8 @@ real**. The `why` column is why a flow cannot go without it.
 | `card_moderation_flag` / `btn_flag_subject` / `txt_flag_id` | the Flag card, its send, and the returned attestation id | the only evidence a flag was recorded; the card says a flag hides nothing yet |
 | `txt_file_takedown_unavailable` | "taking a file down by legal basis isn't available yet" | a blocked act (CIRISPersist#1160) is said, not left out |
 
+**What is not offered at 0.5.245.** No room window, 2/3 threshold, expected-active base or 48-hour fallback is enforced until persist v62 (CIRISPersist#1173), so no surface may promise one: the bundle's "The 48-hour community window is open" stays unshown. `POST /v1/safety/reports` and `POST /v1/safety/moderation` are not offered for a room, and `POST /v1/safety/flag` only to a founder or a delegated holder once persist 61.0.2 narrows the duty reads (#1195).
+
 ### 2.4 Flags, and moderation from an item's menu
 
 **The Flag card** (`POST /v1/safety/flag`, CC 4.5.13): a moderator records that
