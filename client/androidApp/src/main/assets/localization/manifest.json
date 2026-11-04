@@ -500,5 +500,6 @@
   },
   "updated_at": "2026-04-20T05:00:00Z",
   "version": "2.1.0",
-  "review_status_note": "machine_reviewed: translated and MQM-reviewed by models, the judge from a different family than the writer. There is no native-reviewer pipeline behind this project, so the previous 'needs_native_review' named a queue nobody was working. status stays draft and no output may be described as native quality."
+  "review_status_note": "machine_reviewed: translated and MQM-reviewed by models, the judge from a different family than the writer. There is no native-reviewer pipeline behind this project, so the previous 'needs_native_review' named a queue nobody was working. status stays draft and no output may be described as native quality.",
+  "mobile": {}
 }
