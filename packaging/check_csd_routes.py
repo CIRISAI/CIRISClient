@@ -1686,6 +1686,14 @@ def _plant_composable(root: Path, rel: str, fn: str, lines: list[str]) -> None:
     f.write_text(t[:at] + "".join(f"    {ln}\n" for ln in lines) + t[at:])
 
 
+def _csd_names_screen(root: Path, screen: str) -> bool:
+    """Whether a CSD's csd:surface names `screen`."""
+    return any(
+        re.search(rf"^screen:\s*{screen}\s*$", f.read_text(), re.M)
+        for f in (root / CSD_DIR).glob("CSD-*.md")
+    )
+
+
 def _cite_in_csd(root: Path, screen: str, route: str) -> str:
     """Append a §3 row citing `route` to a CSD whose csd:surface names `screen`."""
     for f in sorted((root / CSD_DIR).glob("CSD-*.md")):
@@ -1789,11 +1797,14 @@ def self_test() -> int:
         if "same MUTATING route" in out:
             return fail(out, "sibling Screens (one composable) were reported as a duplicate mutation")
         print(f"  planted the POST inside LayerHubScreen: red on {', '.join(hubs)}, and NOT a duplicate")
-        csd = _cite_in_csd(d, hubs[0], "POST /v1/zz-self-test/planted")
+        # Any hub with a card will do: the point is that one citation covers its
+        # siblings, and not every hub is named by a csd:surface of its own.
+        cited_hub = next(sc for sc in hubs if _csd_names_screen(d, sc))
+        csd = _cite_in_csd(d, cited_hub, "POST /v1/zz-self-test/planted")
         rc, out = run(d)
         if rc != 0:
-            return fail(out, f"a citation on {csd} ({hubs[0]}) did not cover its siblings")
-        print(f"  cited on {csd} ({hubs[0]}): green for all siblings")
+            return fail(out, f"a citation on {csd} ({cited_hub}) did not cover its siblings")
+        print(f"  cited on {csd} ({cited_hub}): green for all siblings")
         _plant_arm(d, "Wallet", ["LaunchedEffect(Unit) { apiClient.plantedSelfTestProbe() }"])
         rc, out = run(d)
         if rc == 0 or "same MUTATING route" not in out or f"{', '.join(hubs)}, Wallet" not in out:

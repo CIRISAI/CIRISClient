@@ -31,7 +31,7 @@ who signs it.** Serves **Contextual Integrity** and **Justice**, on CC 4.4.3.2:
   moderators list are two lists.
 
 **Placement, and why there is no new Rules card.** The circle's Rules tab
-already opens with its hub — `LayerLocalCommunity` / `LayerGlobalCommunities`,
+already opens with its hub — `LayerGlobalCommunities` / `LayerAffiliations`,
 the card CSD-050 describes as "who is in it … and the standing rules". The
 community IS that circle's group, so the governance section is mounted on the
 hub (`LayerHubScreen.kt`, the scope-specific slot where Environment already
@@ -45,14 +45,14 @@ and a design ruling is owed (persist, CC). It never borrows `tier: community`.
 ## 2. Surface (what)
 
 ```yaml csd:surface
-surface: layer-local-community
-screen: LayerLocalCommunity
-scopes: [layer-local-community, layer-global-communities]
+surface: layer-global-communities
+screen: LayerGlobalCommunities
+scopes: [layer-global-communities, layer-affiliations]
 ```
 
-`nav_map` derives `circle_local_community -> tab_rules ->
-nav_epistemic_layer_local_community`; the affiliations twin derives
-`circle_global_communities -> tab_rules -> nav_epistemic_layer_global_communities`.
+`nav_map` derives `circle_global_communities -> tab_rules ->
+nav_epistemic_layer_global_communities`; the affiliations twin derives
+`circle_global_communities -> tab_rules -> nav_epistemic_layer_affiliations`.
 The section is `CommunityGovernanceSection` (`ui/screens/CommunitiesScreens.kt`)
 over `CommunitiesViewModel(tier)`, and every tag is the same at both tiers.
 
