@@ -1072,3 +1072,16 @@ def test_the_chat_flows_reply_check_tells_a_reply_from_a_failed_thought(bubble, 
     step = next(s for s in spec["steps"] if s["step_id"] == "a_real_reply")
     pattern = step["expect"]["matches"]["msg_agent_0"]
     assert bool(re.search(pattern, bubble)) is ok
+
+
+def test_a_fresh_launch_starts_the_backend_supervisor():
+    """Runs 41901714445 and 40951641548: nothing started it on a fresh launch.
+
+    The scene is active before Python is ready, so only an explicit start after
+    `pythonReady = true` ticks the supervisor. Otherwise it reports Thawing for
+    ever and "Resuming..." covers the app, which automation clicks straight
+    through. Read from source because Linux cannot compile the Swift host.
+    """
+    swift = (REPO / "client/iosApp/iosApp/ContentView.swift").read_text()
+    after_ready = swift.split("pythonReady = true", 1)[1].split("return", 1)[0]
+    assert "IosBackendBridge.shared.start()" in after_ready

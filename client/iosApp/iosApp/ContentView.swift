@@ -282,6 +282,13 @@ struct ContentView: View {
 
                 await MainActor.run {
                     pythonReady = true
+                    // Start the supervisor now, not on the first resume. The
+                    // scene went active before Python was ready, so a fresh
+                    // launch never reaches the `.active && pythonReady` branch,
+                    // and a supervisor nobody ticks reports Thawing for ever:
+                    // "Resuming..." over a working app until the person leaves
+                    // the app and comes back. start() is idempotent.
+                    IosBackendBridge.shared.start()
                 }
                 return
             }

@@ -84,8 +84,15 @@ steps:
       - click: btn_send
       - wait: msg_user_latest_attachment_2
         wait_ms: 5000
+    # The three chips by name, not by being on screen together: on a phone a
+    # tall bubble does not fit the transcript, and a person scrolls it. `text:`
+    # reads a composed chip wherever it sits; the newest is asserted visible.
     expect:
-      visible: [msg_user_latest, msg_user_latest_attachment_0, msg_user_latest_attachment_1, msg_user_latest_attachment_2]
+      visible: [msg_user_latest, msg_user_latest_attachment_2]
+      text:
+        msg_user_latest_attachment_0: notes.pdf
+        msg_user_latest_attachment_1: notes.docx
+        msg_user_latest_attachment_2: swatch.png
 
   - step_id: the_reply_gives_both_references
     title: The reply to this message gives both documents' references, and no file came back refused
