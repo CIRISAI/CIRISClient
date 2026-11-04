@@ -4386,7 +4386,7 @@
     "moderation_appeal_partial": "Alama ilithibitishwa kwa sehemu katika rufaa.",
     "moderation_appeal_reversed": "Alama ilibatilishwa katika rufaa.",
     "local_community_body": "Jamii ya Karibu ni ya kijiografia: watu walio karibu nawe. Inatumika tu ikiwa umekubali kushiriki mahali pako na unashiriki kwa sasa.",
-    "local_community_not_on_this_node": "Nodi hii haiwezi kushiriki mahali pako kwa ajili ya hili bado, kwa hivyo hakuna la kukubali na hakuna Jamii ya Karibu ya kuonyesha. Mahali pako hapashirikiwi kwa ajili ya hili.",
+    "local_community_not_on_this_node": "Nodi hii haiwezi kushiriki mahali pako bado, kwa hivyo chumba cha ndani hakijafungwa na mahali fulani kwa sasa, na wewe ndiye unayechagua nani ajiunge. Mahali pako hapashirikiwi.",
     "setup_template_ally": "Ally, msaidizi wa kibinafsi. Huu ndio uchaguzi sahihi kwa usakinishaji wa kibinafsi.",
     "setup_template_chosen": "Kuanzia kiolezo cha {name}.",
     "setup_template_provisioned": "{name}, iliyowekwa na rekodi ya Portal ya shirika lako.",

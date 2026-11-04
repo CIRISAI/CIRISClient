@@ -163,6 +163,10 @@ so a lesson learned here reaches the models that would otherwise repeat it.
   Turkish string writes "token'ı". Before flagging terminology, the glossary
   row and the anchors are the evidence, not a guess at what the corpus says.
 
+- **"Found" in a button is the verb "to establish".** "Found a community" and
+  "Found a local room" are imperatives: set one up. A reviewer in two languages
+  read them as the past tense of "find" and rejected correct translations.
+
 ## 4. Writing them in
 
 Never hand-edit the JSON. Four mirrors must stay byte-identical and key order
