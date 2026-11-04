@@ -3,6 +3,7 @@ package ai.ciris.desktop
 import ai.ciris.desktop.testing.TestAutomationServer
 import ai.ciris.mobile.shared.CIRISApp
 import ai.ciris.mobile.shared.localization.LocalizationResourceLoader
+import ai.ciris.mobile.shared.platform.armExitDeadline
 import ai.ciris.mobile.shared.platform.TestAutomation
 import ai.ciris.mobile.shared.platform.createEnvFileUpdater
 import ai.ciris.mobile.shared.platform.createPythonRuntime
@@ -198,7 +199,9 @@ fun main() {
             // server accept loop, Python subprocess watchers, etc.).
             // The JVM would keep living invisibly. Force-exit on a
             // short watchdog so the app ALWAYS dies when the user
-            // clicks the red close button.
+            // clicks the red close button. System.exit itself waits on the
+            // hooks, so a hard deadline sits behind it.
+            armExitDeadline()
             Thread {
                 runCatching { testServer?.stop() }
             }.also { it.isDaemon = true }.start()

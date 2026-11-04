@@ -7,6 +7,7 @@ actual object AppRestarter {
         // On desktop, we can't easily restart the app.
         // The user should manually restart.
         println("[AppRestarter] Please restart the application manually.")
+        armExitDeadline()
         exitProcess(0)
     }
 }
