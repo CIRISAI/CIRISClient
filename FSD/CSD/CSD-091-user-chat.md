@@ -2,7 +2,7 @@
 
 **CSD**: CSD-091 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, leftovers
 **Flow**: `testing/flows/drafts/csd-091-user-chat.yaml` (floor `>=0.5.225`)
-**Reads with**: CSD-005 (People, where a pair room starts), CSD-103 (the Chats tab that lists rooms), CSD-006 (the receipt every row carries), CSD-107 (Where is this file, on a row that is a file)
+**Reads with**: CSD-134 (calls, which this card's header will start), CSD-005 (People, where a pair room starts), CSD-103 (the Chats tab that lists rooms), CSD-006 (the receipt every row carries), CSD-107 (Where is this file, on a row that is a file)
 
 ```yaml csd:stage
 stage: building
