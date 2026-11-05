@@ -13,7 +13,7 @@ where the card is drafted or asked for. **To adopt a reserved card**, add its fi
 delete its row in the same commit; `--check` refuses a card on a number that is still
 reserved. **A retired number is never reused.**
 
-**86 cards** — 1 envisioned · 7 sketched · 70 building · 8 testable. **19 reserved**, **2 retired**.
+**87 cards** — 1 envisioned · 8 sketched · 70 building · 8 testable. **19 reserved**, **2 retired**.
 
 ## Cards
 
@@ -84,6 +84,7 @@ reserved. **A retired number is never reused.**
 | [CSD-085](CSD-085-claim-node.md) | Claim a node (binding a responsible party to an unowned key) | `building` | `testing/flows/drafts/csd-085-claim-node.yaml` |
 | [CSD-086](CSD-086-add-federation-id.md) | Add Federation ID (the catch-up, not the wizard again) | `building` | none yet |
 | [CSD-087](CSD-087-verify-agent.md) | Verify an agent build (the surface shipped ahead of its API) | `building` | `testing/flows/drafts/csd-087-verify-agent.yaml` |
+| [CSD-088](CSD-088-first-run.md) | First run (the wizard's order, and what every choice gives and costs) | `sketched` | none yet |
 | [CSD-090](CSD-090-duty-conferral.md) | Duty Conferral (two holders hand someone the authority to moderate) | `building` | `testing/flows/drafts/csd-090-duty-conferral.yaml` |
 | [CSD-091](CSD-091-user-chat.md) | User chat (one room, two people, every message an attestation) | `building` | `testing/flows/drafts/csd-091-user-chat.yaml` |
 | [CSD-092](CSD-092-share-contact-code.md) | Share my contact code (a card on People) | `testable` | `testing/flows/csd-092-share-contact-code.yaml` |
@@ -146,4 +147,4 @@ this directory yet.
 
 ## Unassigned
 
-Below CSD-134, these numbers are free: 009, 017–019, 038, 058–064, 072–079, 088–089, 097–099, 129–130. Numbers above CSD-134 are free too, up to the test range.
+Below CSD-134, these numbers are free: 009, 017–019, 038, 058–064, 072–079, 089, 097–099, 129–130. Numbers above CSD-134 are free too, up to the test range.
