@@ -192,7 +192,7 @@ Card checked against CIRISAgent `main` and CIRISServer `main`. Tests: `client/sh
 
 **Duplicate pair (Memory ↔ EnvironmentInfo CSD-002): two doors onto one READ,
 kept.** Both call `POST /v1/memory/query`. Memory is the operator's graph browser
-(any scope, any type, the node or the agent); EnvironmentInfo is Neighbours ›
+(any scope, any type, the node or the agent); EnvironmentInfo is Local community ›
 Decisions asking the same route for one scope (`environment`) and drawing it as
 the circle's have/want/need list, with add and delete. Same read, two audiences,
 two acts; neither can stand in for the other. The mutating routes (store, delete)

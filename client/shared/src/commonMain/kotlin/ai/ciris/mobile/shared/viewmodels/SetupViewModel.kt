@@ -2395,12 +2395,14 @@ class SetupViewModel(
     }
 
     /**
-     * Get selected template name for display.
+     * Get selected template name for display. Without a readable list the
+     * agent's `default` template is still Ally, and any other id is shown as is.
      */
     fun getSelectedTemplateName(): String {
         val templates = _state.value.availableTemplates
         val selectedId = _state.value.selectedTemplateId
-        return templates.find { it.id == selectedId }?.name ?: "Default"
+        return templates.find { it.id == selectedId }?.name
+            ?: if (selectedId == DEFAULT_TEMPLATE_ID) "Ally" else selectedId
     }
 
     // ========== Adapter Configuration ==========
@@ -3087,7 +3089,7 @@ class SetupViewModel(
                             stewardshipTier = result.stewardshipTier
                         ),
                         // Lock template to provisioned value in node flow
-                        selectedTemplateId = result.template ?: "default",
+                        selectedTemplateId = result.template ?: DEFAULT_TEMPLATE_ID,
                         enabledAdapterIds = (result.adapters ?: emptyList()).toSet() + "api"
                     )
                 }
@@ -3647,8 +3649,16 @@ class SetupViewModel(
      */
     fun resetDeviceAuth() {
         PlatformLogger.i(TAG, "resetDeviceAuth: Clearing device auth state")
-        _state.value = _state.value.copy(
-            deviceAuth = DeviceAuthState()  // Reset to default empty state
+        val current = _state.value
+        _state.value = current.copy(
+            deviceAuth = DeviceAuthState(),  // Reset to default empty state
+            // The Portal's template goes with the Portal, or it would stay
+            // selected behind Advanced Settings on a personal install.
+            selectedTemplateId = if (current.deviceAuth.provisionedTemplate != null) {
+                DEFAULT_TEMPLATE_ID
+            } else {
+                current.selectedTemplateId
+            },
         )
     }
 }

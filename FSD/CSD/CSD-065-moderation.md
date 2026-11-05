@@ -50,7 +50,7 @@ screen: Moderation
 ```
 
 `nav_map` derives `circle_local_community -> tab_safety ->
-nav_epistemic_moderation` — Neighbours › Safety, placed for `NEIGHBOURS_OUT`
+nav_epistemic_moderation` — Local community › Safety, placed for `NEIGHBOURS_OUT`
 (`CirclesNav.kt:99`), and the chain ends on the row because Child Safety shares
 that tab. Not in Just me and not in Family: a duty is exercised over a
 *community*, and there is no community in those two circles for
@@ -220,7 +220,7 @@ on **`InteractScreen.kt:765`**, the chat surface in Just me › Chats. So the
 circles that carry the Moderation card carry only the duty-holder's half, and
 the half CC opens to every member is reachable only from a conversation.
 
-A person in Neighbours › Safety who does not hold `moderate` has, on this
+A person in Local community › Safety who does not hold `moderate` has, on this
 screen, nothing they are permitted to do.
 
 What the sheet does while the route does not exist
@@ -289,6 +289,15 @@ moderator of this room". Moderating another member's room file (withdrawing or
 hiding it) **does not work yet**: no route lets a moderator withdraw a file they
 did not author, and no read consults moderation events (§3).
 
+
+**Reveal (server 0.5.243).** Flags come only from holders of the room's
+`moderate` duty. A withheld message shows why and offers Reveal
+(`btn_moderation_reveal_{id}`); a confirm says it opens the item for this viewer,
+on their own devices, and nobody else, signed as their own consent to this one
+item, `POST /v1/chat/{room}/items/{item_attestation_id}/reveal`. The note beneath
+(`chat_moderation_note_{id}`) gives the flag, or that it was cleared, and any
+appeal's standing. Delegates are refused. Flag, clear, appeal and ruling have no
+route yet (CIRISPersist#1161), so nothing here offers them.
 
 ## 3. Contracts (who)
 

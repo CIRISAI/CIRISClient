@@ -1,7 +1,7 @@
 # CSD-050 — The layer hub (one card, four scopes)
 
 **CSD**: CSD-050 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, Rules tab
-**Flow**: none of its own — the Family, Neighbours and Communities hubs are driven by CSD-100's and CSD-102's flows; Just me's rows are `proposed:` and may not enter a flow
+**Flow**: none of its own — the Family, Local community and Communities hubs are driven by CSD-100's and CSD-102's flows; Just me's rows are `proposed:` and may not enter a flow
 **Covers**: `layer-agent`, `layer-family`, `layer-local-community`, `layer-global-communities`.
 **Does NOT cover**: `layer-global-commons` — see CSD-051 and §2.0.
 
@@ -25,14 +25,14 @@ card that names the scope is the card that says what may cross out of it.
 | circle | screen | what the hub reads | the card that owns it |
 |---|---|---|---|
 | Family | `LayerFamily` | the household — `GET /v1/families` and its acts, at the node URL — then the delegations card | CSD-100 (`familyContent`); its roster is CSD-101 |
-| Neighbours | `LayerLocalCommunity` | the Environment card (agent only), then the community section at `tier: community` — `GET /v1/communities`, `GET /v1/communities/{id}` and its acts, at the node URL | CSD-102 (`communities`) |
-| Communities and Businesses | `LayerGlobalCommunities` | the community section at `tier: affiliations` | CSD-102 |
+| Local community | `LayerLocalCommunity` | what the tier is (geographic; applies only if you opted in to share your location and are sharing it now), then what this node cannot do yet, then the Environment card (agent only), then the local rooms (`CommunityGovernanceSection`). Opens on Chats (`NavSurface.LocalChats`), with People at `NavSurface.LocalRoster`. Location sharing and the place constraint wait on CIRISServer#852; CSD-102 §1 says what a local room is until then | CSD-102 |
+| Communities and affiliations | `LayerGlobalCommunities`, `LayerAffiliations` | the community section at `tier: community`, and on its sibling card at `tier: affiliations` — `GET /v1/communities`, `GET /v1/communities/{id}` and its acts, at the node URL | CSD-102 (`communities`) |
 | Just me | `LayerAgent` | **nothing.** Three sections — Identities, Trust, Policies — each a localized sentence describing rows no route serves | this CSD, and it is the gap |
 
 **Where a circle has a group of its own, the description-only sections are not
-drawn.** The household takes their place on Family, and the community section
-on Neighbours and on Communities and Businesses (`LayerHubScreen.kt`,
-`return@Column` after the section). Under a real roster they would read as a
+drawn.** The household takes their place on Family, the community section on
+Communities and affiliations, and the explainer and the local rooms on Local community
+(`LayerHubScreen.kt`, `return@Column` after the section). Under a real roster they would read as a
 second list with nobody in it, which is the error-looks-like-empty failure in a
 new costume. They remain only on Just me, where there is nothing else to draw.
 
@@ -80,7 +80,7 @@ fields:
     use: display-only
     type: "enum[self,family,community,affiliations,species,biosphere,federation]"
     example: "self"
-    renders: "the circle you are standing in, as its own name — Just me / Family / Neighbours / Communities and Businesses — in the header"
+    renders: "the circle you are standing in, as its own name — Just me / Family / Local community / Communities and affiliations — in the header"
     tag: "proposed:layer_hub_scope"
   - ceg: x_private:cohort_identities
     use: display-only
@@ -119,14 +119,14 @@ fields:
   checkable here: the hub shows conferrals and accepts, and mints neither.
 
 ```yaml csd:states
-populated: {tag: "proposed:layer_row_identity", renders: "Just me: at least one identity row under Who is here. Family: CSD-100's household_record. Neighbours / Communities: CSD-102's communities_list"}
-empty:     {tag: "proposed:layer_empty", renders: "Just me: Nobody is here yet. Family: households_empty. Neighbours / Communities: communities_empty"}
-loading:   {tag: "proposed:layer_loading", renders: "Just me: nothing to load. Family: households_loading. Neighbours / Communities: communities_loading"}
-error:     {tag: "proposed:layer_error", renders: "Just me: nothing is asked, so nothing can fail. Family: households_error / households_not_on_this_node. Neighbours / Communities: communities_error / communities_not_on_this_node"}
+populated: {tag: "proposed:layer_row_identity", renders: "Just me: at least one identity row under Who is here. Family: CSD-100's household_record. Local community / Communities: CSD-102's communities_list"}
+empty:     {tag: "proposed:layer_empty", renders: "Just me: Nobody is here yet. Family: households_empty. Local community / Communities: communities_empty"}
+loading:   {tag: "proposed:layer_loading", renders: "Just me: nothing to load. Family: households_loading. Local community / Communities: communities_loading"}
+error:     {tag: "proposed:layer_error", renders: "Just me: nothing is asked, so nothing can fail. Family: households_error / households_not_on_this_node. Local community / Communities: communities_error / communities_not_on_this_node"}
 ```
 
 **The states are real on three circles and `proposed:` on one.** Family,
-Neighbours and Communities and Businesses have four distinct states each, with
+Local community and Communities and affiliations have four distinct states each, with
 real tags, owned by CSD-100 and CSD-102 — error never draws as empty there.
 Just me still has exactly one state: it asks nothing, so a node that refuses,
 a node too old to answer and a circle with nobody in it all render the same
@@ -142,7 +142,7 @@ no `shows:` row binds them.
 | value | endpoint | owner | state |
 |---|---|---|---|
 | the household (Family) | `GET /v1/families` and the five household writes | CIRISServer `src/family_api.rs` | **live, called** — CSD-100 §3 is the table (node URL) |
-| the community at a tier (Neighbours, Communities) | `GET /v1/communities`, `GET /v1/communities/{id}`, and found / role / leave / dissolve / cosign / assemble | CIRISServer `src/communities.rs` | **live, called** — CSD-102 §3 is the table (node URL) |
+| the community at a tier (Local community, Communities) | `GET /v1/communities`, `GET /v1/communities/{id}`, and found / role / leave / dissolve / cosign / assemble | CIRISServer `src/communities.rs` | **live, called** — CSD-102 §3 is the table (node URL) |
 | names for keys on those cards | `GET /v1/contacts` | CIRISServer `src/contacts_chat.rs` | **live, called** by both view models — CSD-005 |
 | identities at a cohort scope (Just me) | none | CIRISServer | **missing**. `GET /v1/federation/peers` (`src/federation_peers.rs:597`) takes no scope parameter. CIRISServer#662 |
 | trust state per identity, grouped by scope | `PUT /v1/federation/peers/{key_id}/trust` sets one | CIRISServer | **missing** for the read shape. CIRISServer#662 |
@@ -185,7 +185,7 @@ expect:
 ## 6. Status
 
 * **Verified by composition, not a unit test**: the description-only sections
-  do not render under the community section on Neighbours and Communities and
+  do not render under the community section on Local community and Communities and
   Businesses (verified by compile and by CSD-102's flow asserting the
   section). Moderation receives the room's id from the community card
   (CSD-102 §3.2).

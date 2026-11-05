@@ -1,6 +1,6 @@
 # CSD-102 — Communities and affiliations: the community itself (Rules)
 
-**CSD**: CSD-102 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, B6 Neighbours / B7 Communities and Businesses
+**CSD**: CSD-102 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, B6 Local community / B7 Communities and affiliations
 **Companion**: CSD-103 (who is in it, in People; the rooms you talk in, in Chats) — one view model per tier serves both.
 **Flow**: `testing/flows/drafts/csd-102-communities.yaml` (floor `unreleased`)
 
@@ -11,7 +11,7 @@ owner: CIRISClient
 
 ## 1. Mission (why)
 
-**Standing in Neighbours or in Communities and Businesses, a person can found a
+**Standing in Communities and affiliations, a person can found a
 group, see the rule it declared for who may change it, change a member's role,
 see who holds the moderation duty, finish a change the rule is holding for more
 signatures, and leave or dissolve it — and every act says, before it is signed,
@@ -31,26 +31,34 @@ who signs it.** Serves **Contextual Integrity** and **Justice**, on CC 4.4.3.2:
   moderators list are two lists.
 
 **Placement, and why there is no new Rules card.** The circle's Rules tab
-already opens with its hub — `LayerLocalCommunity` / `LayerGlobalCommunities`,
+already opens with its hub — `LayerGlobalCommunities` / `LayerAffiliations`,
 the card CSD-050 describes as "who is in it … and the standing rules". The
 community IS that circle's group, so the governance section is mounted on the
 hub (`LayerHubScreen.kt`, the scope-specific slot where Environment already
 sits) rather than as a second card that would be the same card under another
-name. `tier: community` is Neighbours and `tier: affiliations` is Communities
-and Businesses — `CohortScope`'s fold, `community → LOCAL_COMMUNITY`,
-`affiliations → GLOBAL_COMMUNITIES` (`ui/nav/CohortScope.kt`).
+name. Both tiers are one circle, each with its own hub in Rules: `tier: community`
+is Communities (not place-bound, pro-social by assumption) and `tier:
+affiliations` is Affiliations (not assumed pro-social). Local community is
+geographic and has its own rooms, on its own hub and lists: `CommunitiesViewModel`
+with `local = true`. A local room is `tier: community` with `cohort_subkind:
+geographic`. Persist already defines that (`geographic_constraint_cell`,
+`member_in_geographic_constraint`), but `POST /v1/communities` does not accept
+it until CIRISServer#852, so today the node ignores the field. Until then
+`LocalRoomMarks` keeps the room on the founder's Local list, on that device
+only, and every other member sees it under Communities. The room is not tied to
+a place and membership is by invitation, not location.
 
 ## 2. Surface (what)
 
 ```yaml csd:surface
-surface: layer-local-community
-screen: LayerLocalCommunity
-scopes: [layer-local-community, layer-global-communities]
+surface: layer-global-communities
+screen: LayerGlobalCommunities
+scopes: [layer-global-communities, layer-affiliations]
 ```
 
-`nav_map` derives `circle_local_community -> tab_rules ->
-nav_epistemic_layer_local_community`; the affiliations twin derives
-`circle_global_communities -> tab_rules -> nav_epistemic_layer_global_communities`.
+`nav_map` derives `circle_global_communities -> tab_rules ->
+nav_epistemic_layer_global_communities`; the affiliations twin derives
+`circle_global_communities -> tab_rules -> nav_epistemic_layer_affiliations`.
 The section is `CommunityGovernanceSection` (`ui/screens/CommunitiesScreens.kt`)
 over `CommunitiesViewModel(tier)`, and every tag is the same at both tiers.
 
@@ -67,7 +75,7 @@ fields:
     use: emit
     type: "enum[community,affiliations]"
     example: "community"
-    renders: "not a control: the circle you found it from IS the tier. Neighbours founds `community`, Communities and Businesses founds `affiliations`"
+    renders: "not a control: the circle you found it from IS the tier. the Communities list and hub found `community`, the Affiliations ones found `affiliations`"
     tag: section_communities
   - ceg: x_private:consensus_protocol
     use: emit
@@ -264,7 +272,7 @@ side authors).
 ## 4. Flow (how)
 
 The draft is `testing/flows/drafts/csd-102-communities.yaml`. Land on
-`LayerLocalCommunity` (the runner walks the derived hop).
+`LayerGlobalCommunities` (the runner walks the derived hop).
 
 ```yaml
 expect:

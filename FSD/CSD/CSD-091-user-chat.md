@@ -42,15 +42,15 @@ surface: null                     # NOT a NavSurface
 flow_only: true                   # no sidebar row reaches it
 screen: UserChat                  # `data class UserChat(...) : Screen()` — CIRISApp.kt:5773
 scopes: [agent, family, local_community, global_communities, global_commons]
-entry: "two doors. (1) Contacts' `onOpenChat` — People is on every circle, so a PAIR room is started from whichever circle the contact was read in. (2) A circle's Chats tab — `CommunityChatsScreen` (Neighbours) and its affiliations sibling (Communities and Businesses), CSD-103 — lists every room the node says you are in, pair rooms included; a pair row opens through its contact, a room of more than two opens BY ID"
+entry: "two doors. (1) Contacts' `onOpenChat` — People is on every circle, so a PAIR room is started from whichever circle the contact was read in. (2) A circle's Chats tab — `CommunityChatsScreen`, one card per tier in Communities and affiliations, CSD-110 — lists every room the node says you are in, pair rooms included; a pair row opens through its contact, a room of more than two opens BY ID"
 exit: "back to WHERE THE ROOM WAS OPENED FROM — `Screen.UserChat.from`, Contacts or the Chats tab (CIRISApp.kt — the back map, the arm's `onBack`, and the shell's legacy map all read it); `screenToSurface` keeps THAT surface lit while the room is open — a chat is a leaf of the surface it was opened from, not a destination beside it. Until this review all three sites hard-coded `Screen.Contacts`, so a room opened from Chats went back to People"
 ```
 
 **Placement, resolved.** The Locked Spec gives every circle a **Chats** tab,
-and Neighbours and Communities and Businesses have one that lists rooms
-(CSD-103): `NavSurface.CommunityChats` / `AffiliationsChats` on
+and Communities and affiliations has one list per tier
+(CSD-110): `NavSurface.CommunityChats` / `AffiliationsChats` on
 `Tab.CHATS` (`CirclesNav.kt`). A pair room is `tier: community` on the wire, so
-it folds to Neighbours with the substrate's backing and not by a client guess;
+it is listed with Communities on the substrate's backing and not by a client guess;
 Contacts keeps the "start one" move, because starting a pair room is
 `POST /v1/chat` with a contact's key and that key lives on the People row. Just
 me's Chats holds the agent conversation (`Interact`, `agentOnly`) and, on the
@@ -212,6 +212,15 @@ are unavailable, with "only a moderator of this room", unless the viewer holds
 recorded and hides nothing yet. *Report to the room's moderators*
 (`mi_chat_report_<id>`) is drawn unavailable: no route (CIRISServer#665).
 
+**Attachments (server 0.5.243).** Attach (`btn_chat_attach`) is offered only when
+the transcript says `accepts_attachments: true`, since an older node drops the
+file. It opens this room's Files panel to pick, or add, a file; the composer shows
+it (`chat_attached`), and a message may then have a blank caption. The send names
+`attachment_attestation_id`; a file not in this room answers 409
+`chat.attachment_not_in_room`, by id, and stays attached. A message that carries a
+file offers Open attached file (`btn_chat_attachment_{id}`) through the room's
+drive. Replacing a message keeps its file, so Attach is hidden while editing.
+
 ## 3. Contracts (who)
 
 | value | endpoint | owner | state |
@@ -302,7 +311,7 @@ expect:
   absent: [chat_empty]
 ```
 
-Open a room of more than two from Neighbours › Chats (CSD-103's
+Open a room of more than two from Communities and affiliations › Chats › Communities (CSD-103's
 `community_chat_row_*`): the transcript composes with no `POST /v1/chat`, the
 header counts the room's members, and back returns to Chats, not to People:
 

@@ -39,8 +39,7 @@ fun shortKey(keyId: String, head: Int = 8, tail: Int = 4): String =
 fun cohortScopeOf(wire: String): CohortScope? = when (wire.trim().lowercase()) {
     "self" -> CohortScope.AGENT
     "family" -> CohortScope.FAMILY
-    "community" -> CohortScope.LOCAL_COMMUNITY
-    "affiliations" -> CohortScope.GLOBAL_COMMUNITIES
+    "community", "affiliations" -> CohortScope.GLOBAL_COMMUNITIES
     "species", "biosphere", "planet", "federation" -> CohortScope.GLOBAL_COMMONS
     else -> null
 }

@@ -41,7 +41,7 @@ screen: Wallet
 ```
 
 `nav_map` derives `circle_global_communities -> tab_rules ->
-nav_epistemic_wallet` — Communities and Businesses › Rules, beside Billing.
+nav_epistemic_wallet` — Communities and affiliations › Rules, beside Billing.
 
 ```yaml csd:shows
 registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
@@ -182,7 +182,7 @@ and the key lives with `IdentityManagement`, which is already there. The
 positive argument against the current placement is CC's own default for this
 family: a settlement record is `cohort_scope: self` unless the producer opts in
 — *"the federation log is **not** a public payment trail unless the producer
-chooses it"* (CC 3.3.10). Communities and Businesses is `affiliations`. Putting
+chooses it"* (CC 3.3.10). Communities and affiliations is `affiliations`. Putting
 the self-scoped object in the affiliations circle inverts the default it ships
 with, and a person reading the Rules tab of a circle reasonably concludes the
 things in it are that circle's.

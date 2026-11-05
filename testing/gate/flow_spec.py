@@ -155,6 +155,12 @@ class Condition:
             relation=raw.get("relation"),
             state=raw.get("state"),
         )
+        # LOCAL DELTA: `text:` is a substring and `matches:` a regex. A pattern
+        # under `text:` can only fail, and only once a live leg reaches it
+        # (run 41885890061 spent two with-AI legs learning this).
+        for tag, want in cond.text.items():
+            if isinstance(want, str) and want.startswith(("(?", "^")):
+                raise SpecError(f"{where}: text[{tag!r}] is a regex; use `matches:`")
         cond._validate(where)
         return cond
 

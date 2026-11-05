@@ -84,13 +84,19 @@ enum class OwnedAgentKind {
 /**
  * The owned nodes for the Agents list, agents first, each with how sure the
  * list is. A node the owner's own roster holds with no paired agent is a
- * device, not an agent, and is left to My Identity.
+ * device, not an agent, and is left to My devices.
  */
 fun ownedAgents(nodes: List<OwnedNodeDto>): List<Pair<OwnedNodeDto, OwnedAgentKind>> {
     val sure = nodes.filter { !it.agents.isNullOrEmpty() }.map { it to OwnedAgentKind.AGENT }
     val maybe = nodes.filter { it.agents == null && it.rosterMember != true && !it.isSelf }
         .map { it to OwnedAgentKind.MAYBE_AGENT }
     return sure + maybe
+}
+
+/** My devices: every owned node [ownedAgents] does not claim, so each release sits on one card. */
+fun ownedDevices(nodes: List<OwnedNodeDto>): List<OwnedNodeDto> {
+    val agents = ownedAgents(nodes).map { it.first.keyId }.toSet()
+    return nodes.filter { it.keyId !in agents }
 }
 
 /**

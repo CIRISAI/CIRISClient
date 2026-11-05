@@ -3,7 +3,7 @@ flow: csd_102_communities
 title: Found a community on the Neighbours hub, read its rule, and see who signs before leaving
 description: >-
   CSD-102 §4, driven. The governance section sits on the circle's own Rules hub
-  (LayerLocalCommunity), not on a card beside it. A room of one needs no
+  (LayerGlobalCommunities), not on a card beside it. A room of one needs no
   contact, so everything here runs on one node: found it under the default rule,
   read the rule and your role back from the node, and open the leave confirm to
   see its three facts — then cancel, because leaving is the one act a flow
@@ -22,7 +22,7 @@ steps:
       The node may have no rooms for this owner yet, so the list state is not
       asserted here — only that the section composed and can found one.
     requires:
-      screen: LayerLocalCommunity
+      screen: LayerGlobalCommunities
     expect:
       visible: [section_communities, btn_community_create_open]
 
@@ -34,7 +34,7 @@ steps:
       - click: opt_community_protocol_founder_only
       - click: btn_community_create_submit
     expect:
-      screen: LayerLocalCommunity
+      screen: LayerGlobalCommunities
       state: populated
       visible: [communities_list, card_community_detail, txt_community_protocol, txt_community_my_role, txt_community_member_count]
       absent: [communities_not_on_this_node, communities_error]
@@ -71,7 +71,7 @@ steps:
       communities_not_on_this_node and never the empty sentence.
     optional_step: true
     requires:
-      screen: LayerLocalCommunity
+      screen: LayerGlobalCommunities
       visible: [communities_not_on_this_node]
     expect:
       absent: [communities_empty, communities_list]

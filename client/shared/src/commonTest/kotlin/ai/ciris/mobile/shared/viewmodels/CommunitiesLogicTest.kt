@@ -132,9 +132,9 @@ class CommunitiesLogicTest {
     @Test
     fun eachTierLivesInItsOwnCircle() {
         val expected = mapOf(
-            NavSurface.CommunityRoster to (Tab.PEOPLE to CohortScope.LOCAL_COMMUNITY),
+            NavSurface.CommunityRoster to (Tab.PEOPLE to CohortScope.GLOBAL_COMMUNITIES),
             NavSurface.AffiliationsRoster to (Tab.PEOPLE to CohortScope.GLOBAL_COMMUNITIES),
-            NavSurface.CommunityChats to (Tab.CHATS to CohortScope.LOCAL_COMMUNITY),
+            NavSurface.CommunityChats to (Tab.CHATS to CohortScope.GLOBAL_COMMUNITIES),
             NavSurface.AffiliationsChats to (Tab.CHATS to CohortScope.GLOBAL_COMMUNITIES),
         )
         for ((surface, where) in expected) {
@@ -143,10 +143,15 @@ class CommunitiesLogicTest {
             assertEquals(setOf(where.second), p.circles, surface.id)
             assertEquals(false, p.agentOnly, "${surface.id} calls the node only; a bare node must see it")
         }
-        assertEquals(CohortScope.LOCAL_COMMUNITY.cegScope, "community")
-        assertEquals(CohortScope.GLOBAL_COMMUNITIES.cegScope, "affiliations")
+        assertEquals(CohortScope.GLOBAL_COMMUNITIES.cegScope, "community")
+        assertEquals(null, CohortScope.LOCAL_COMMUNITY.cegScope, "no wire token is geographic yet, so no room lands in Local community")
         // The governance half is on the hub that already stands for the circle, not a second Rules card.
+        assertEquals(
+            listOf(NavSurface.LayerGlobalCommunities, NavSurface.LayerAffiliations),
+            CirclesNav.cards(CohortScope.GLOBAL_COMMUNITIES, Tab.RULES, hasAgent = false).take(2),
+        )
         assertEquals(listOf(NavSurface.LayerLocalCommunity), CirclesNav.cards(CohortScope.LOCAL_COMMUNITY, Tab.RULES, hasAgent = false).take(1))
+        assertEquals(Tab.CHATS, CirclesNav.landingTab(CohortScope.GLOBAL_COMMUNITIES), "the circle opens on its lists")
     }
 
     @Test
@@ -155,5 +160,53 @@ class CommunitiesLogicTest {
         assertEquals(NavSurface.AffiliationsRoster, screenToSurface(Screen.AffiliationsRoster))
         assertEquals(NavSurface.CommunityChats, screenToSurface(Screen.CommunityChats))
         assertEquals(NavSurface.AffiliationsChats, screenToSurface(Screen.AffiliationsChats))
+    }
+
+    // ── Local rooms ─────────────────────────────────────────────────────────
+
+    @Test
+    fun aRoomIsOnOneListOnly() {
+        val rooms = listOf(
+            room("plain", "community"),
+            room("marked", "community"),
+            room("served", "community").copy(cohortSubkind = CommunityRoom.SUBKIND_GEOGRAPHIC),
+            room("work", "affiliations"),
+        )
+        val marks = setOf("marked")
+        fun ids(tier: String, local: Boolean) =
+            CommunitiesViewModel.roomsFor(rooms, tier, includePairs = true, local = local, localMarks = marks)
+                .map { it.communityId }
+        assertEquals(listOf("marked", "served"), ids("community", local = true))
+        assertEquals(listOf("plain"), ids("community", local = false))
+        assertEquals(listOf("work"), ids("affiliations", local = false))
+    }
+
+    @Test
+    fun aMarkSurvivesARestart() = kotlinx.coroutines.test.runTest {
+        var stored: String? = null
+        val before = LocalRoomMarks(read = { stored }, write = { stored = it })
+        before.add("a")
+        before.add("b")
+        val after = LocalRoomMarks(read = { stored }, write = { stored = it })
+        after.load()
+        assertEquals(setOf("a", "b"), after.ids.value)
+    }
+
+    @Test
+    fun aRoomReadsItsSubkindAndAnOlderNodeSendsNone() {
+        val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+        val served = json.decodeFromString(
+            CommunityRoom.serializer(),
+            """{"community_id":"x","tier":"community","cohort_subkind":"geographic"}""",
+        )
+        assertEquals("geographic", served.cohortSubkind)
+        assertNull(json.decodeFromString(CommunityRoom.serializer(), """{"community_id":"x"}""").cohortSubkind)
+    }
+
+    @Test
+    fun localCommunityOpensOnItsRoomsAndHasPeople() {
+        assertEquals(Tab.CHATS, CirclesNav.landingTab(CohortScope.LOCAL_COMMUNITY))
+        assertEquals(listOf(NavSurface.LocalChats), CirclesNav.cards(CohortScope.LOCAL_COMMUNITY, Tab.CHATS, hasAgent = false))
+        assertEquals(NavSurface.LocalRoster, CirclesNav.cards(CohortScope.LOCAL_COMMUNITY, Tab.PEOPLE, hasAgent = false).first { it == NavSurface.LocalRoster })
     }
 }

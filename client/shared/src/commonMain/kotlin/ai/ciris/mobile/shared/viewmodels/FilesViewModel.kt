@@ -33,7 +33,7 @@ data class FileGroup(val roomId: String, val entries: List<DriveEntry>)
 
 /** An author's act on one file (rename, move, withdraw), and how it ended. */
 sealed interface FileActState {
-    enum class Kind { RENAME, MOVE, WITHDRAW }
+    enum class Kind { RENAME, MOVE, WITHDRAW, REVEAL }
     data object Idle : FileActState
     data class Working(val entry: DriveEntry, val kind: Kind) : FileActState
     data class Done(val entry: DriveEntry, val kind: Kind) : FileActState
@@ -147,6 +147,12 @@ class FilesViewModel(
     fun withdrawFile(entry: DriveEntry) =
         runAct(entry, FileActState.Kind.WITHDRAW) { api.withdrawFile(entry.attestationId, entry.cohort, entry.roomId) }
 
+    /** See one file a moderator flagged: the viewer's own consent, for this file only (0.5.243). */
+    fun revealFile(entry: DriveEntry) {
+        val item = entry.moderation?.itemAttestationId ?: return
+        runAct(entry, FileActState.Kind.REVEAL) { api.revealItem(entry.roomId, item) }
+    }
+
     fun dismissAct() {
         _act.value = FileActState.Idle
     }
@@ -169,6 +175,10 @@ class FilesViewModel(
 
     private val _state = MutableStateFlow<FilesState>(FilesState.Loading)
     val state: StateFlow<FilesState> = _state.asStateFlow()
+
+    private val _viewerDuties = MutableStateFlow<List<String>?>(null)
+    /** The listing's `viewer_duties` for this room (0.5.243), or null when the node does not say. */
+    val viewerDuties: StateFlow<List<String>?> = _viewerDuties.asStateFlow()
 
     private val _open = MutableStateFlow<OpenState>(OpenState.Closed)
     val open: StateFlow<OpenState> = _open.asStateFlow()
@@ -205,7 +215,9 @@ class FilesViewModel(
             readPolicyOnce()
             _state.value = try {
                 val entries = if (room != null) {
-                    api.readDrive(cohort = FilesCohort.COMMUNITY.wire, roomId = room).entries
+                    api.readDrive(cohort = FilesCohort.COMMUNITY.wire, roomId = room).also {
+                        _viewerDuties.value = it.viewerDuties
+                    }.entries
                 } else when (cohort) {
                     FilesCohort.SELF -> api.readDrive(cohort = cohort.wire).entries
                     FilesCohort.FAMILY -> api.readDrive(cohort = cohort.wire, roomId = roomId).entries
@@ -295,6 +307,12 @@ class FilesViewModel(
                 OpenState.NotOpened(entry, null, e.message ?: "error")
             }
         }
+    }
+
+    /** Open the file a message in this room carries: the id and the room are all the read needs. */
+    fun openAttachment(attestationId: String) {
+        val roomId = room ?: return
+        openFile(DriveEntry(FilesCohort.COMMUNITY.wire, roomId, attestationId, authorKeyId = "", assertedAt = "", bytes = ""))
     }
 
     fun closeFile() {

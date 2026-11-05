@@ -1,7 +1,7 @@
-# CSD-110 — The rooms you talk in (Neighbours › Chats, Communities and Businesses › Chats)
+# CSD-110 — The rooms you talk in (Communities and affiliations › Chats)
 
 **CSD**: CSD-110 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the route-coverage gate (#111): the routes `CommunityChats` / `AffiliationsChats` call are cited by a CSD on that screen
-**Covers**: `Screen.CommunityChats` and its sibling `Screen.AffiliationsChats` — one composable, `CommunityChatsScreen` (`ui/screens/CommunitiesScreens.kt`), over the tier's `CommunitiesViewModel`. CSD-103 §2.0 describes these screens, but its `csd:surface` names only the roster, and a chats screen is not a roster sibling.
+**Covers**: `Screen.CommunityChats` and its siblings `Screen.AffiliationsChats` and `Screen.LocalChats` — one composable, `CommunityChatsScreen` (`ui/screens/CommunitiesScreens.kt`), over the tier's `CommunitiesViewModel`. CSD-103 §2.0 describes these screens, but its `csd:surface` names only the roster, and a chats screen is not a roster sibling.
 **Reads with**: CSD-103 (who is in each room), CSD-102 (the community itself), CSD-091 (the chat a pair room opens)
 **Flow**: none yet — every step it could take on one node is CSD-103's list-state steps under other tags; a pair room needs a second person
 
@@ -12,20 +12,22 @@ owner: CIRISClient
 
 ## 1. Mission (why)
 
-**In Neighbours and in Communities and Businesses, the Chats tab lists the
-rooms this person is in at that tier, as the node's fold has them, and a
-two-person room opens the chat.** The Locked Spec gives every circle a Chats
+**In Communities and affiliations, the Chats tab holds one list per tier. Each
+says what the tier is, shows the invitations waiting, offers Found one, and
+lists the rooms this person is in at that tier, as the node's fold has them. A
+two-person room opens the chat.** It is where the circle opens, because a room
+nobody can find without being told (Eric's first room) is not browsable. The Locked Spec gives every circle a Chats
 tab; without this card the non-self circles' Chats tabs would be empty while
 the conversation they are named for is reachable only from a contact (CSD-091
 §2). Serves **Contextual Integrity**: the rows here are only rooms the
 caller is active in, which is all `GET /v1/communities` serves (CC 2.1, a
 roster is never globally enumerable).
 
-**Pair rooms are Neighbours chats, on the wire's say-so.** A pair room comes
+**Pair rooms are listed with Communities, on the wire's say-so.** A pair room comes
 back with `kind: pair, tier: community` (`src/communities.rs::room_json` :1362;
 `Tier::of` :150 reads an absent policy blob as `community`). Which circle a
 pair room appears in is therefore not a client-side audience judgment: the
-wire says `community`, and `community` folds to Neighbours
+wire says `community`, and `community` is the Communities list
 (`ui/nav/CohortScope.kt`). A pair room is
 never an affiliations chat.
 
@@ -101,6 +103,9 @@ only, as CSD-102 §3 states and pins.
 | value | route | handler | notes |
 |---|---|---|---|
 | the rooms | `GET /v1/communities` | `list_communities` :1418 | every room the caller is ACTIVE in, pair rooms included (`kind_of` :202); the tier filter is the client's, on the row's `tier` |
+| found a room | `POST /v1/communities` | `create_community` | sends `tier`; a local room also sends `cohort_subkind: geographic`, which a node ignores until CIRISServer#852 (CSD-102 §1) |
+| the room just selected | `GET /v1/communities/{id}` | `CommunitiesViewModel.select` | after founding, the list opens the new room |
+| the invitee's inbox | `GET /v1/self/invites` · `POST /v1/self/invites/{id}/accept` · `POST /v1/self/invites/{id}/decline` | CIRISServer (CSD-106) | drawn on Communities and Affiliations, not on Local rooms: an invitation carries no `cohort_subkind` yet |
 | the contact a pair room is with | `GET /v1/contacts` | `list_contacts`, `src/contacts_chat.rs` (CSD-005) | each contact carries the derived `chat_community_id`; the pair room whose id equals it is that contact's. Best effort: a failed contacts read leaves every pair room listed as "not a contact any more", which is the honest reading of "no grant this node can see" |
 | opening a pair room | `POST /v1/chat` `{key_id}` | `contacts_chat.rs::start_chat` | not called here — CSD-091's `UserChatViewModel.enter` calls it on the chat screen this row opens |
 | opening a room of more than two | `GET /v1/chat/{id}/messages`, `POST /v1/chat/{id}/messages` | `contacts_chat.rs` (CIRISServer#594) | not called here — the row hands the room's id to CSD-091's chat screen, which reads and writes the room by id |
@@ -126,8 +131,7 @@ needs CSD-102's founding on a node with contacts.
 **Platforms.** All five; the chain ends on the tab.
 
 **Acceptance — functional**
-1. A pair room lists under Neighbours and never under Communities and
-   Businesses (`CommunitiesLogicTest.chatsShowPairRoomsAtTheCommunityTierOnly`).
+1. A pair room lists under Communities and never under Affiliations (`CommunitiesLogicTest.chatsShowPairRoomsAtTheCommunityTierOnly`).
 2. A pair room resolves to the contact whose `chat_community_id` is its id, and
    to nobody otherwise (`CommunitiesLogicTest.aPairRoomIsWithTheContactWhosePairIdItIs`).
 3. A room of more than two opens by its id, never through `POST /v1/chat`

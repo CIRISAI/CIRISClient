@@ -217,8 +217,12 @@ sealed class NavSurface(
      * "log in as yourself on another device". Laptop-loss resilience (§5.6.8.8 /
      * §11.7). The app holds no keys; the node signs. Live (no gate).
      */
-    object IdentityManagement : NavSurface("identity-management", "My Identity", CIRISIcons.identity,
+    object IdentityManagement : NavSurface("identity-management", "My keys", CIRISIcons.identity,
         labelKey = "nav.surface.identity_management")
+
+    /** My devices (CSD-133): the owned nodes that run no agent, each with its release. */
+    object MyDevices : NavSurface("my-devices", "My devices", CIRISIcons.identity,
+        labelKey = "nav.surface.my_devices")
 
     /** Agents you own (CSD-132): the owned nodes that run an agent. */
     object OwnedAgents : NavSurface("owned-agents", "Agents you own", CIRISIcons.identity,
@@ -355,8 +359,8 @@ sealed class NavSurface(
 
     /** Cross-community affinity groups the agent has joined (CEG affiliations). */
     object LayerGlobalCommunities : NavSurface(
-        id = "layer-global-communities", label = "Global Communities", icon = CIRISIcons.shield,
-        labelKey = "commons.layer.global_communities.title",
+        id = "layer-global-communities", label = "Communities", icon = CIRISIcons.shield,
+        labelKey = "nav.surface.layer_communities",
     )
 
     /** The federation as the universal layer (folds species + planet + federation). */
@@ -393,23 +397,38 @@ sealed class NavSurface(
     // ═══════════════════════════════════════════════════════════════════════════
 
     /** Who is in each Neighbours room (`tier: community`), as the fold has it now. */
+    /** The affiliations tier's rule and acts, beside Communities on the same circle's Rules. */
+    object LayerAffiliations : NavSurface(
+        id = "layer-affiliations", label = "Affiliations", icon = CIRISIcons.shield,
+        labelKey = "nav.surface.layer_affiliations")
+
     object CommunityRoster : NavSurface(
         id = "community-roster", label = "Community members", icon = CIRISIcons.person,
         labelKey = "nav.surface.community_roster")
 
     /** Who is in each Communities and Businesses room (`tier: affiliations`). */
     object AffiliationsRoster : NavSurface(
-        id = "affiliations-roster", label = "Members", icon = CIRISIcons.person,
+        id = "affiliations-roster", label = "Affiliation members", icon = CIRISIcons.person,
         labelKey = "nav.surface.affiliations_roster")
 
-    /** The Neighbours rooms you talk in — pair rooms and rooms of more than two. */
+    /** Who is in each local room. */
+    object LocalRoster : NavSurface(
+        id = "local-roster", label = "Local members", icon = CIRISIcons.person,
+        labelKey = "nav.surface.local_roster")
+
+    /** The rooms of the people near you. */
+    object LocalChats : NavSurface(
+        id = "local-chats", label = "Local rooms", icon = CIRISIcons.send,
+        labelKey = "nav.surface.local_chats")
+
+    /** The Communities rooms you talk in — pair rooms and rooms of more than two. */
     object CommunityChats : NavSurface(
-        id = "community-chats", label = "Rooms", icon = CIRISIcons.send,
+        id = "community-chats", label = "Communities", icon = CIRISIcons.send,
         labelKey = "nav.surface.community_chats")
 
-    /** The Communities and Businesses rooms you talk in. */
+    /** The affiliations rooms you talk in. */
     object AffiliationsChats : NavSurface(
-        id = "affiliations-chats", label = "Rooms", icon = CIRISIcons.send,
+        id = "affiliations-chats", label = "Affiliations", icon = CIRISIcons.send,
         labelKey = "nav.surface.affiliations_chats")
 }
 

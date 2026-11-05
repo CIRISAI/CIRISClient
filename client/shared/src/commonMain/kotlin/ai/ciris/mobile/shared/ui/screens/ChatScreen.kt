@@ -155,6 +155,12 @@ fun ChatScreen(
     val community by viewModel.community.collectAsState()
     val viewerDuties by viewModel.viewerDuties.collectAsState()
     var filesOpen by remember { mutableStateOf(false) }
+    // The Files panel, opened to pick a file for this message.
+    var attaching by remember { mutableStateOf(false) }
+    var openingAttachment by remember { mutableStateOf<String?>(null) }
+    var revealing by remember { mutableStateOf<ai.ciris.mobile.shared.models.chat.RoomModeration?>(null) }
+    val attached by viewModel.attached.collectAsState()
+    val acceptsAttachments by viewModel.acceptsAttachments.collectAsState()
     val roomMembers by viewModel.memberCount.collectAsState()
     val messages by viewModel.messages.collectAsState()
     val transcriptLoaded by viewModel.transcriptLoaded.collectAsState()
@@ -367,6 +373,9 @@ fun ChatScreen(
                             MessageRow(
                                 message = msg,
                                 detailsOpen = detailsFor == msg.attestationId,
+                                // Only a room with a panel can open what a message carries.
+                                onOpenAttachment = if (roomFiles == null) null else ({ openingAttachment = it; filesOpen = true }),
+                                onReveal = { revealing = it },
                                 extraOps = chatFileOps(msg, custody, whereLabel) + chatModerationOps(
                                     message = msg,
                                     isModerator = isModerator(viewerDuties, messages),
@@ -419,8 +428,37 @@ fun ChatScreen(
                             ) { Text(localizedString("mobile.confirm_cancel")) }
                         }
                     }
+                    // What this message carries. The node takes the file by its id
+                    // in this room, so the panel it came from is this room's drive.
+                    attached?.let { file ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().testable("chat_attached", file.attestationId),
+                        ) {
+                            Text(
+                                localizedString("mobile.chat_attached", "name", file.name ?: localizedString("mobile.files_untitled")),
+                                fontSize = 12.sp,
+                                modifier = Modifier.weight(1f),
+                            )
+                            TextButton(
+                                onClick = viewModel::clearAttachment,
+                                modifier = Modifier.testableClickable("btn_chat_attachment_remove") { viewModel.clearAttachment() },
+                            ) { Text(localizedString("mobile.chat_attachment_remove")) }
+                        }
+                    }
                     rememberTextInputDriver("input_chat_body", draft, enabled = !sending, onValueChange = viewModel::setDraft)
                     Row(verticalAlignment = Alignment.Bottom) {
+                        // Gated on the transcript: an older node drops the file. A
+                        // replacement keeps the attachment it already has.
+                        if (acceptsAttachments && roomFiles != null && community != null && editing == null) {
+                            TextButton(
+                                onClick = { attaching = true; filesOpen = true },
+                                enabled = !sending,
+                                modifier = Modifier.testableWithHandler("btn_chat_attach", enabled = !sending) {
+                                    if (!sending) { attaching = true; filesOpen = true }
+                                },
+                            ) { Text(localizedString("mobile.chat_attach")) }
+                        }
                         OutlinedTextField(
                             value = draft,
                             onValueChange = viewModel::setDraft,
@@ -438,7 +476,7 @@ fun ChatScreen(
                         // is irreversible. `testableWithHandler` registers for
                         // automation without adding a clickable, and the
                         // handler re-checks the SAME predicate the button uses.
-                        val canSend = !sending && draft.isNotBlank() &&
+                        val canSend = !sending && (draft.isNotBlank() || attached != null) &&
                             draftBytes <= MAX_MESSAGE_BYTES
                         Button(
                             onClick = { viewModel.send() },
@@ -484,20 +522,30 @@ fun ChatScreen(
     val room = community?.communityId
     if (filesOpen && roomFiles != null && room != null) {
         val filesVm = remember(room) { roomFiles(room) }
-        androidx.compose.material3.ModalBottomSheet(onDismissRequest = { filesOpen = false }) {
+        val closePanel = { filesOpen = false; attaching = false; openingAttachment = null }
+        val listingDuties by filesVm.viewerDuties.collectAsState()
+        LaunchedEffect(openingAttachment) { openingAttachment?.let(filesVm::openAttachment) }
+        androidx.compose.material3.ModalBottomSheet(onDismissRequest = closePanel) {
             androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().height(560.dp).testable("chat_room_files_panel")) {
                 ai.ciris.mobile.shared.ui.screens.files.FilesScreen(
                     viewModel = filesVm,
                     nodeVersion = nodeVersion,
                     custody = custody,
                     moderation = if (onModerateItem == null) null else ai.ciris.mobile.shared.ui.screens.files.FileModeration(
-                        isModerator = isModerator(viewerDuties, viewModel.messages.value),
-                        onModerateAuthor = { e -> filesOpen = false; onModerateItem(room, e.authorKeyId) },
-                        onFlagAuthor = { e -> filesOpen = false; onModerateItem(room, e.authorKeyId) },
+                        isModerator = isModerator(listingDuties ?: viewerDuties, viewModel.messages.value),
+                        onModerateAuthor = { e -> closePanel(); onModerateItem(room, e.authorKeyId) },
+                        onFlagAuthor = { e -> closePanel(); onModerateItem(room, e.authorKeyId) },
                     ),
+                    onPick = if (!attaching) null else ({ e ->
+                        viewModel.attach(ai.ciris.mobile.shared.viewmodels.AttachedFile(e.attestationId, e.filename))
+                        closePanel()
+                    }),
                 )
             }
         }
+    }
+    revealing?.let { m ->
+        RevealConfirm(m, onConfirm = { revealing = null; viewModel.reveal(m.itemAttestationId) }, onDismiss = { revealing = null })
     }
     history?.let { h ->
         AttestationHistoryDialog(localizedString("mobile.accord_op_history"), h, viewModel::closeHistory)
@@ -676,6 +724,8 @@ private fun MessageRow(
     detailsOpen: Boolean,
     onOp: (AttOp) -> Unit,
     extraOps: List<ExtraOp> = emptyList(),
+    onOpenAttachment: ((String) -> Unit)? = null,
+    onReveal: (ai.ciris.mobile.shared.models.chat.RoomModeration) -> Unit = {},
 ) {
     val badge = localizedString("mobile.chat_badge_message")
     val att = Attestation(
@@ -793,6 +843,30 @@ private fun MessageRow(
                         locked.detail?.let {
                             Text(it, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f))
                         }
+                    }
+                }
+                message.attachment?.let { file ->
+                    if (onOpenAttachment != null) {
+                        TextButton(
+                            onClick = { onOpenAttachment(file) },
+                            modifier = Modifier.testableClickable("btn_chat_attachment_${message.attestationId}") { onOpenAttachment(file) },
+                        ) { Text(localizedString("mobile.chat_attachment_open")) }
+                    }
+                }
+                message.moderation?.let { m ->
+                    moderationNote(m)?.let { note ->
+                        Text(
+                            note,
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testable("chat_moderation_note_${message.attestationId}", note),
+                        )
+                    }
+                    if (m.withheld) {
+                        TextButton(
+                            onClick = { onReveal(m) },
+                            modifier = Modifier.testableClickable("btn_moderation_reveal_${message.attestationId}") { onReveal(m) },
+                        ) { Text(localizedString("mobile.moderation_reveal")) }
                     }
                 }
                 if (detailsOpen) {

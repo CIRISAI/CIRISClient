@@ -55,6 +55,8 @@ enum class ByteState {
 data class DriveListing(
     val rooms: List<DriveRoom> = emptyList(),
     val entries: List<DriveEntry> = emptyList(),
+    /** The duties this viewer holds in the listed community room (0.5.243). Null when the node does not say. */
+    @SerialName("viewer_duties") val viewerDuties: List<String>? = null,
     /** `null` when the drive is exhausted; otherwise passed back as `after` for the next page. */
     val resume: String? = null,
 )
@@ -81,6 +83,8 @@ data class DriveEntry(
     val bytes: String,
     /** The plain-words version of [bytes], written by the server for a client that renders state. */
     val detail: String = "",
+    /** Absent when no moderator of the room ever flagged this file. */
+    val moderation: ai.ciris.mobile.shared.models.chat.RoomModeration? = null,
 ) {
     val byteState: ByteState get() = ByteState.of(bytes)
 

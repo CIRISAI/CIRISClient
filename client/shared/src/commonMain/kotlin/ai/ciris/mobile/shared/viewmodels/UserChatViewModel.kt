@@ -319,6 +319,26 @@ class UserChatViewModel(
         _draft.value = text
     }
 
+    /** Carry [file] on the next send. It must already be in this room's drive; the node refuses otherwise. */
+    fun attach(file: AttachedFile) {
+        _attached.value = file
+    }
+
+    fun clearAttachment() {
+        _attached.value = null
+    }
+
+    /** See one flagged item: this viewer's own consent, then the transcript again with what it opened. */
+    fun reveal(itemId: String) {
+        val id = _community.value?.communityId ?: return
+        val node = roomNodeUrl ?: return
+        val epoch = entryEpoch
+        viewModelScope.launch {
+            callTyped("reveal") { chat.reveal(node, id, itemId) } ?: return@launch
+            loadMessages(node, id, epoch)
+        }
+    }
+
     /**
      * Send the draft.
      *
@@ -334,7 +354,8 @@ class UserChatViewModel(
         // The room's node, captured with the room — never the provider's answer now.
         val node = roomNodeUrl ?: return
         val text = _draft.value
-        if (text.isBlank()) return
+        val attached = _attached.value.takeIf { _editing.value == null }
+        if (text.isBlank() && attached == null) return
         // Captured at SEND TIME, not at completion. Reading `entryEpoch` after
         // the round-trip compares against whatever room is CURRENT — so a send
         // finishing after the user entered room B passed the guard and painted
@@ -357,9 +378,11 @@ class UserChatViewModel(
                     loadMessages(node, id, epochAtSend)
                     return@launch
                 }
-                val result = chat.send(node, id, text)
+                val result = if (attached != null) chat.sendAttachment(node, id, text, attached.attestationId)
+                else chat.send(node, id, text)
                 if (epochAtSend == entryEpoch) {
                     _draft.value = ""
+                    _attached.value = null
                 }
                 if (result.message != null) {
                     PlatformLogger.i(tag, "[send] ${result.attestationId.take(24)}… projected")
@@ -385,6 +408,14 @@ class UserChatViewModel(
             }
         }
     }
+
+    private val _attached = MutableStateFlow<AttachedFile?>(null)
+    /** The room file the next send carries, if any. */
+    val attached: StateFlow<AttachedFile?> = _attached.asStateFlow()
+
+    private val _acceptsAttachments = MutableStateFlow(false)
+    /** The transcript's `accepts_attachments`: an older node would drop the file, so Attach is not offered. */
+    val acceptsAttachments: StateFlow<Boolean> = _acceptsAttachments.asStateFlow()
 
     private val _viewerDuties = MutableStateFlow<List<String>?>(null)
     /** The node's `viewer_duties` for this room, or null when it does not say. */
@@ -487,6 +518,7 @@ class UserChatViewModel(
             // Server order, verbatim: oldest first, by the SIGNED asserted_at.
             _messages.value = transcript.messages
             _viewerDuties.value = transcript.viewerDuties
+            _acceptsAttachments.value = transcript.acceptsAttachments
         } catch (e: NodeRefusal) {
             if (epoch == entryEpoch) recordRefusal("listChatMessages", e)
         } catch (e: Exception) {
@@ -529,6 +561,9 @@ class UserChatViewModel(
 }
 
 /** A chain step as the shared History dialog draws it. */
+/** A room file chosen for the next send. */
+data class AttachedFile(val attestationId: String, val name: String?)
+
 private fun ai.ciris.mobile.shared.models.chat.ChatHistoryStep.toHistoryEntry() = HistoryEntry(
     attestationId = attestationId,
     step = when (op) {

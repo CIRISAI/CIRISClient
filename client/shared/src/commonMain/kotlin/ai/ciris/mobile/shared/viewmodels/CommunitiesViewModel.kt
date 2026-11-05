@@ -47,11 +47,15 @@ class CommunitiesViewModel(
     apiClient: CIRISApiClient,
     /** `community` or `affiliations` — this instance's tier, fixed for its life. */
     val tier: String,
+    /** Local community's rooms rather than this tier's others. Only the `community` tier has them. */
+    val local: Boolean = false,
+    /** The rooms this device founded as local, until the node carries that itself. */
+    val localMarks: LocalRoomMarks = LocalRoomMarks(),
     /** The node these routes live on. Node-owned: never the agent's base URL (CIRISAgent#1213). */
     private val nodeUrl: () -> String = { CIRISApiClient.LOCAL_NODE_URL },
 ) : BaseFederationViewModel(apiClient) {
 
-    override val tag: String = "CommunitiesVM[$tier]"
+    override val tag: String = "CommunitiesVM[$tier${if (local) ",local" else ""}]"
 
     /** Advanced by [clearSessionState]; every publish after an await re-checks it (ContactsViewModel's rule). */
     private var sessionEpoch: Long = 0L
@@ -169,7 +173,12 @@ class CommunitiesViewModel(
      */
     fun create(name: String, members: List<String>, protocol: String?) {
         act("create") {
-            val room = apiClient.createCommunity(name.trim(), tier, members, protocol, nodeUrl())
+            val room = apiClient.createCommunity(
+                name.trim(), tier, members, protocol,
+                cohortSubkind = if (local) CommunityRoom.SUBKIND_GEOGRAPHIC else null,
+                nodeUrl = nodeUrl(),
+            )
+            if (local) localMarks.add(room.communityId)
             _applied.value = "create"
             refresh()
             select(room.communityId)
@@ -421,10 +430,19 @@ class CommunitiesViewModel(
          * and its roster (People) are N-member rooms only: a pair room's roster
          * IS its identity (`community.pair_room_fixed`), so it has no governance
          * to show. Chats shows every room of the tier, pairs included — a pair
-         * room is `tier: community` on the wire, so it folds to Neighbours.
+         * room is `tier: community` on the wire, so it is listed with Communities.
          */
-        fun roomsFor(rooms: List<CommunityRoom>, tier: String, includePairs: Boolean): List<CommunityRoom> =
-            rooms.filter { it.tier == tier && (includePairs || !it.isPair) }
+        fun roomsFor(
+            rooms: List<CommunityRoom>,
+            tier: String,
+            includePairs: Boolean,
+            local: Boolean = false,
+            localMarks: Set<String> = emptySet(),
+        ): List<CommunityRoom> =
+            rooms.filter { room ->
+                val isLocal = room.cohortSubkind == CommunityRoom.SUBKIND_GEOGRAPHIC || room.communityId in localMarks
+                room.tier == tier && (includePairs || !room.isPair) && isLocal == local
+            }
                 .sortedWith(compareBy<CommunityRoom> { it.isPair }.thenBy { it.name.lowercase() }.thenBy { it.communityId })
 
         /** The contact a pair room is with: the contact whose derived pair id IS the room's id. */

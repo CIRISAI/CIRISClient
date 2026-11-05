@@ -37,7 +37,7 @@ surface: null
 screen: Setup
 flow_only: true
 entry: "Login `btn_local_login` on a first-run node, then `opt_run_without_ai` on step 1 — the same Screen as CSD-082, entered the same way and answered differently"
-exit: "Login, then the node home (Contacts) — the hand-off re-points the client from the agent on :8080 to the node on :4243"
+exit: "the node home (Contacts) when this process still holds a session the node accepts, otherwise Login first — the hand-off re-points the client from the agent on :8080 to the node on :4243"
 ```
 
 No nav hop; CSD-080 §2 records why `flow_only:` is a checked key.
@@ -137,7 +137,7 @@ were found on a different platform from the one they were fixed on:
 Android FATAL EXCEPTION, iOS SIGABRT), **#48** (`checkFirstRunStatus` must not
 park on "Backend unreachable" polling `:8080` while a healthy `:4243` answers,
 `CIRISApp.kt:5066`), **#51** (a run-without-AI install has no Agent group and
-so no Settings; its sign-out is My Identity's `btn_logout` and My things'
+so no Settings; its sign-out is My keys's `btn_logout` and My things'
 `btn_my_things_sign_out`, the one sign-out, CSD-037 §3), **#66** (a node-only
 backend reports no services, so macOS must not stall on "Restarting your node…"
 at Starting Services 0/22), **#67** (Windows: the session is saved, the
@@ -232,10 +232,13 @@ expect:
   visible: [setup_ownership_claimed]
 ```
 
-Then the hand-off: the node restarts, the client re-points to `:4243`, and the
-app returns to **Login** with `banner_setup_complete_relogin`. Signing in lands
-on the node home — `Contacts`, which is `homeScreen(hasAgent = false)` and
-CIRISClient#48's settled answer.
+Then the hand-off: the node restarts and the client re-points to `:4243`. A
+session this process still holds is checked against the node: if the node
+accepts it, the app lands on the node home, `Contacts`, which is
+`homeScreen(hasAgent = false)` and CIRISClient#48's settled answer. If the node
+answers 401, the app returns to **Login** with
+`banner_setup_complete_relogin`, and signing in lands on the same home. A node
+session is opaque, so the client never judges it expired by reading it.
 
 ## 5. QA plan
 

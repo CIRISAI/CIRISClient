@@ -45,7 +45,7 @@ routes are the places the invitation replaces them:
 
 | role | where it is | the card it extends | what it replaces |
 |---|---|---|---|
-| **the inviter's Invite and pending rows** — "Invited: waiting for them to accept · expires {date}" under the members, Withdraw on your own, and "Propose adding" on an accepted row of a quorum household | Family › People › Household; Neighbours / Communities and Businesses › People | CSD-101 (`HouseholdMembers`), CSD-103 (`CommunityRoster`) | `POST /v1/families/{id}/members`, `POST /v1/communities/{id}/members` |
+| **the inviter's Invite and pending rows** — "Invited: waiting for them to accept · expires {date}" under the members, Withdraw on your own, and "Propose adding" on an accepted row of a quorum household | Family › People › Household; Local community / Communities and affiliations › People | CSD-101 (`HouseholdMembers`), CSD-103 (`CommunityRoster`) | `POST /v1/families/{id}/members`, `POST /v1/communities/{id}/members` |
 | **founding alone** — on a node that carries invitations the founding cards drop their member chips and say "you form it on your own, then invite" | Family › Rules; the two community Rules hubs | CSD-100 (`LayerFamily`), CSD-102 (`LayerLocalCommunity` / `LayerGlobalCommunities`) | `members` on `POST /v1/families` and `POST /v1/communities` |
 | **the invitee's inbox** — accept or decline | the same hubs, above the household or community list | CSD-100, CSD-102 | none; it is new |
 
@@ -57,10 +57,10 @@ already stand. One app-scoped view model (`InvitationsViewModel`) reads
 `family` rows and each community hub the `community` rows
 (`inboxFor`, `ui/screens/InvitesSupport.kt`). A pair room's invitation is left
 out: a two-person chat is answered by opening it (CSD-091, `POST /v1/chat`).
-**A row's `tier` places it on its own community hub** (`community` →
-Neighbours, `affiliations` → Communities and Businesses). A row without `tier`
-(0.5.218 does not send it) is drawn on **both** community hubs rather than
-hidden from either (§6).
+**A row's `tier` places it on its own list and hub** (`community` →
+Communities, `affiliations` → Affiliations, both in Communities and
+affiliations › Chats and Rules). A row without `tier` (no server sends it yet)
+is drawn on **both** rather than hidden from either (§6).
 
 **Accept and decline are each behind a ConfirmSheet with three facts**: *who
 invites you* (the inviter, by your contact's name for them when you have one),

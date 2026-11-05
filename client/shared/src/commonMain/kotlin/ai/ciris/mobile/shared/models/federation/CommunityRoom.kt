@@ -28,6 +28,9 @@ data class CommunityRoom(
     val tier: String = TIER_COMMUNITY,
     @SerialName("cohort_scope")
     val cohortScope: String? = null,
+    /** `geographic` for a local room. No node sends it yet (CIRISServer#852). */
+    @SerialName("cohort_subkind")
+    val cohortSubkind: String? = null,
     /** `founder_only`, `unanimous`, `majority` or `quorum:M/N`. */
     @SerialName("consensus_protocol")
     val consensusProtocol: String = "",
@@ -63,6 +66,7 @@ data class CommunityRoom(
         const val KIND_ROOM = "room"
         const val TIER_COMMUNITY = "community"
         const val TIER_AFFILIATIONS = "affiliations"
+        const val SUBKIND_GEOGRAPHIC = "geographic"
     }
 }
 

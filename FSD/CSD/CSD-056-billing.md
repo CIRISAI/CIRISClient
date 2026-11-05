@@ -22,7 +22,7 @@ identifiers … **Billing remains entirely Portal+Stripe, off-wire.**"*
 (`part_3_the_namespace.md:1351`).
 
 A thing CC forbids the wire to carry has no `cohort_scope`, and a card with no
-`cohort_scope` has no circle. It is in one: **Communities and Businesses ›
+`cohort_scope` has no circle. It is in one: **Communities and affiliations ›
 Rules** (`Placement(NavSurface.Billing, Tab.RULES, setOf(GLOBAL_COMMUNITIES))`).
 
 ## 2. Surface (what)
@@ -202,7 +202,7 @@ shows the card's not-on-this-node state (§2).
 keys**, beside `Account` — which is already described as *"the account, not the
 agent"* (`EpistemicNav.kt`, `Account`). Billing is the account. CC 3.3.10 puts
 payment-processor data outside the envelope entirely, so there is no
-`cohort_scope` that makes it a fact about Communities and Businesses rather than
+`cohort_scope` that makes it a fact about Communities and affiliations rather than
 about any other circle; it is in that circle because that circle's name sounds
 commercial, which is the kind of placement the Card Atlas exists to stop. Keep
 the not-on-this-node state rather than marking it `agentOnly`, for the reason

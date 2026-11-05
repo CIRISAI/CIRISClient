@@ -47,4 +47,19 @@ class OwnedAgentsTest {
             ownedAgents(nodes).map { (n, k) -> n.keyId to k },
         )
     }
+
+    @Test
+    fun everyOwnedNodeIsOnExactlyOneCardSoEachReleaseHasOneHome() {
+        val nodes = listOf(
+            OwnedNodeDto("phone", isSelf = true, agents = emptyList(), rosterMember = true),
+            OwnedNodeDto("managed", agents = null, rosterMember = false),
+            OwnedNodeDto("home-agent", agents = listOf("occ-9"), rosterMember = true),
+            OwnedNodeDto("server", agents = emptyList(), rosterMember = false),
+        )
+        assertEquals(listOf("phone", "server"), ownedDevices(nodes).map { it.keyId })
+        assertEquals(
+            nodes.map { it.keyId }.toSet(),
+            (ownedDevices(nodes).map { it.keyId } + ownedAgents(nodes).map { it.first.keyId }).toSet(),
+        )
+    }
 }

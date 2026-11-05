@@ -906,7 +906,7 @@ data class SetupFormState(
 
     // V1.9.7: Template selection (Advanced Settings)
     val availableTemplates: List<AgentTemplateInfo> = emptyList(),
-    val selectedTemplateId: String = "default",
+    val selectedTemplateId: String = DEFAULT_TEMPLATE_ID,
     val showAdvancedSettings: Boolean = false,
     val templatesLoading: Boolean = false,
     // The template list could not be READ. Distinct from an empty list: an
@@ -1339,6 +1339,17 @@ data class SetupCompletionResult(
     val adminUserId: String? = null,
     val error: String? = null
 )
+
+/**
+ * The agent's `default.yaml`, whose name is Ally. Ally is the strong default for
+ * a personal install; there is no `ally` template id, and sending one would
+ * write a template that does not exist into the agent's config.
+ */
+const val DEFAULT_TEMPLATE_ID = "default"
+
+/** The chooser's order: Ally first, the rest as the agent listed them. */
+fun templatesDefaultFirst(templates: List<AgentTemplateInfo>): List<AgentTemplateInfo> =
+    templates.sortedBy { it.id != DEFAULT_TEMPLATE_ID }
 
 /**
  * Agent template info for display in setup wizard.

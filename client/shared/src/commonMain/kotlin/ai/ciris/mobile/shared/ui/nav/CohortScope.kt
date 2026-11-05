@@ -8,8 +8,8 @@ package ai.ciris.mobile.shared.ui.nav
  * The 7 → 5 fold:
  * - `self` → [AGENT]
  * - `family` → [FAMILY]
- * - `community` → [LOCAL_COMMUNITY]
- * - `affiliations` → [GLOBAL_COMMUNITIES]
+ * - `community`, `affiliations` → [GLOBAL_COMMUNITIES], two sections of one circle
+ * - no wire token yet → [LOCAL_COMMUNITY], the geographic rooms (CIRISServer#852)
  * - `species` + `planet` + `federation` → [GLOBAL_COMMONS]
  *
  * Each layer surfaces three concerns in the UX: a list of *identities*
@@ -25,7 +25,7 @@ package ai.ciris.mobile.shared.ui.nav
  */
 enum class CohortScope(
     val id: String,
-    val cegScope: String,
+    val cegScope: String?,
 ) {
     /** The agent itself — implicit "self" in the user's mental model. */
     AGENT(id = "agent", cegScope = "self"),
@@ -33,11 +33,17 @@ enum class CohortScope(
     /** Other CIRIS occurrences sharing the same operator identity. */
     FAMILY(id = "family", cegScope = "family"),
 
-    /** Locally-trusted peers — typically one home channel / Discord guild / household. */
-    LOCAL_COMMUNITY(id = "local-community", cegScope = "community"),
+    /**
+     * Geographic: the people near you, for someone who opted in to share their
+     * location and is sharing it now. A local room is a `community` room with
+     * `cohort_subkind: geographic`. Until the node carries that
+     * (CIRISServer#852) only the device that founded it knows, through
+     * [ai.ciris.mobile.shared.viewmodels.LocalRoomMarks].
+     */
+    LOCAL_COMMUNITY(id = "local-community", cegScope = null),
 
-    /** Cross-community affinity groups the agent has joined. */
-    GLOBAL_COMMUNITIES(id = "global-communities", cegScope = "affiliations"),
+    /** Communities (pro-social, not place-bound) and affiliations (not assumed pro-social). */
+    GLOBAL_COMMUNITIES(id = "global-communities", cegScope = "community"),
 
     /**
      * The federation as the universal layer. Folds CEG `species`

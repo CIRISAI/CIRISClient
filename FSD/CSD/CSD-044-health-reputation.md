@@ -43,7 +43,7 @@ nav_epistemic_health_reputation`. `EnvironmentGraph` is placed in the same
 circle and tab (`CirclesNav.kt`), so the chain ends on the row, not the tab
 (CSD-004 §2).
 
-The placement is `NEIGHBOURS_OUT` — **Neighbours, Communities and Businesses, and
+The placement is `NEIGHBOURS_OUT` — **Local community, Communities and affiliations, and
 Everyone**. One card, three circles, and the same bytes in all three.
 
 ```yaml csd:shows
@@ -53,7 +53,7 @@ fields:
     use: display-only
     type: unconfirmed
     example: "unconfirmed"
-    renders: "NOT RENDERED, in any circle. This is the family that would make the card mean something different in Neighbours than in Everyone — the standing of this subject within one cohort."
+    renders: "NOT RENDERED, in any circle. This is the family that would make the card mean something different in Local community than in Everyone — the standing of this subject within one cohort."
     tag: "proposed:standing_row_cohort"
     blocked_by: CIRISLensCore#25
   - ceg: "manifold_conformity:{cohort}"
@@ -129,7 +129,7 @@ error:     {tag: federation_capacity_local_only, renders: "CSD-004 owns this: /v
 
 ## 4. Flow (how)
 
-Sign in on a node with a brain; stand in **Neighbours** and open Decisions ›
+Sign in on a node with a brain; stand in **Local community** and open Decisions ›
 Health & Reputation.
 
 ```yaml
@@ -174,7 +174,7 @@ sub-section, the `min_of` relation, the maturity note, the attester row. The
 
 * **One card, three circles, no cohort.** The Decisions tab is documented in
   `CirclesNav.kt` as "how the circle is doing … standing and health", and this
-  card shows how the *agent* is doing, identically in Neighbours, Communities and
+  card shows how the *agent* is doing, identically in Local community, Communities and
   Everyone. CC 4.3 rule 2 says reputation is "relative and positional, never a
   single global score"; CC 3.1.8.3 registers the two cohort-parameterised
   families that would make it relative. **Ask (CIRISLensCore, via
@@ -205,6 +205,6 @@ sub-section, the `min_of` relation, the maturity note, the attester row. The
   and points at CC 4.5.5 `reconsideration:{grounds}` as the contest path. This
   card is where a "contest this" affordance belongs.
 * **Placement.** Decisions is the right tab. **Three** circles is wrong while the
-  card does not vary by circle; the recommendation is Neighbours only, because that is
+  card does not vary by circle; the recommendation is Local community only, because that is
   the smallest cohort CC 4.4.3.2.1 gives a non-self scope to and the one a person
   can actually check a standing against.

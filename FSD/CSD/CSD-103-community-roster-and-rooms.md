@@ -1,6 +1,6 @@
 # CSD-103 — Communities and affiliations: who is in it (People) and the rooms (Chats)
 
-**CSD**: CSD-103 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, B6 Neighbours / B7 Communities and Businesses
+**CSD**: CSD-103 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, B6 Local community / B7 Communities and affiliations
 **Companion**: CSD-102 (the community itself, on the circle's Rules hub) — the same `CommunitiesViewModel` per tier.
 **Flow**: `testing/flows/drafts/csd-103-community-roster.yaml` (floor `unreleased`)
 
@@ -11,7 +11,7 @@ owner: CIRISClient
 
 ## 1. Mission (why)
 
-**In Neighbours and in Communities and Businesses, a person can see who is in
+**In Communities and affiliations, a person can see who is in
 each group they belong to — by the node's fold, as it is now — add a contact to
 one, remove someone, and see which members joined late and cannot read yet; and
 the Chats tab lists the rooms they talk in.** Serves **Contextual Integrity**:
@@ -47,16 +47,15 @@ so the chain ends on the row. Both render `CommunityRosterScreen`
 
 ### 2.0 The rooms, in Chats — and why pair rooms are listed there
 
-`community-chats` (Neighbours › Chats) and `affiliations-chats` (Communities and
-Businesses › Chats) render `CommunityChatsScreen`. Their chains end on the tab,
-`circle_local_community -> tab_chats`, because each is its tab's only card.
+`community-chats` and `affiliations-chats` render `CommunityChatsScreen`, two
+cards in Communities and affiliations › Chats (CSD-110).
 
-**Pair rooms are chats, and they are listed in Neighbours › Chats.** A pair room
+**Pair rooms are chats, and they are listed under Communities.** A pair room
 comes back from `GET /v1/communities` with `kind: pair, tier: community`
 (`room_json`, `communities.rs:1362`; `Tier::of` reads an absent policy blob as
 `community`, :150). Which circle a pair room appears in is therefore not a
 client-side audience judgment: the wire says `community`, and `community`
-folds to Neighbours. A pair room is
+is the Communities list. A pair room is
 never an affiliations chat. Tapping one opens the chat CSD-091 already draws
 (`Screen.UserChat`, keyed by the contact whose `chat_community_id` IS the room's
 id). A pair room whose contact is gone is listed with "Not a contact any more"
@@ -234,7 +233,7 @@ late member's flag, or a pair room in Chats — each needs a second person.
    display name.
 2. A late member is flagged from `joined_at` > `founded_at`, and an unparseable
    instant is not flagged (`CommunitiesLogicTest.aMemberAddedAfterFoundingIsLate_andUnknownIsNotLate`).
-3. A pair room is a Neighbours chat and never an affiliations one
+3. A pair room is listed with Communities and never with Affiliations
    (`CommunitiesLogicTest.chatsShowPairRoomsAtTheCommunityTierOnly`).
 4. Each tier is placed only in its own circle, and no placement is agent-only
    (`CommunitiesLogicTest.eachTierLivesInItsOwnCircle`).

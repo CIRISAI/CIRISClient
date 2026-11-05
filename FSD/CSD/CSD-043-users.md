@@ -1,4 +1,4 @@
-# CSD-043 — Users (Communities and Businesses › People)
+# CSD-043 — Users (Communities and affiliations › People)
 
 **CSD**: CSD-043 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, wave 1
 **Flow**: unwritten — the tags below are the contract the flow will drive
@@ -145,7 +145,7 @@ a trap for the next hand-written call.
 ## 4. Flow (how)
 
 Sign in on a node with a brain, as an account with roster access; open
-Communities and Businesses › People › Users.
+Communities and affiliations › People › Users.
 
 ```yaml
 expect:

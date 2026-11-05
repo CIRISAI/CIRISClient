@@ -38,7 +38,7 @@ No "reached from" column: `nav_map` derives `circle_local_community ->
 tab_decisions -> nav_epistemic_health_reputation` from the client's own tag
 rules, and the checker refuses this block if that route does not exist.
 
-**The chain ends on the row, not the tab** — Neighbours › Decisions carries
+**The chain ends on the row, not the tab** — Local community › Decisions carries
 three cards (`CirclesNav.kt:124-126`: Health & Reputation, Environment Graph,
 Commons), so `expected_tail("health-reputation")` returns
 `nav_epistemic_health_reputation`, and a CSD claiming the tab would fail the

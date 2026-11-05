@@ -86,7 +86,7 @@ authority and its own card.
 It is a **new card and not a fifth rung on CSD-065's ladder**, because the
 authority is different. Descend is a *community's* `slash` duty, re-derived
 along a `delegates_to` chain (CC 4.5.5). That is why it lives in
-Neighbours › Safety. A steward purge is the *global trust root's* `takedown`
+Local community › Safety. A steward purge is the *global trust root's* `takedown`
 duty over the canonical that root anchors. It is authorised by a cosigned
 `takedown_notice` under the root's `consensus_protocol`
 (CIRISConstitution#165 §1: "no new family, no new power"). The second authority

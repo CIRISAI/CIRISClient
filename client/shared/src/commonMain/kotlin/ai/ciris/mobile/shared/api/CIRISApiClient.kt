@@ -642,6 +642,7 @@ class CIRISApiClient internal constructor(
             connectTimeoutMillis = 10000
             socketTimeoutMillis = 30000
         }
+        it.install(InteractOutlastsTheAgent)
     }
 
     // Generated API instances (var to allow recreation when baseUrl changes)
@@ -2433,6 +2434,7 @@ class CIRISApiClient internal constructor(
         communityId: String,
         body: String,
         contentType: String? = null,
+        attachmentId: String? = null,
         nodeUrl: String = LOCAL_NODE_URL,
     ): SendChatMessageResult {
         val method = "sendChatMessage"
@@ -2442,6 +2444,7 @@ class CIRISApiClient internal constructor(
             val payload = buildJsonObject {
                 put("body", body)
                 contentType?.let { put("content_type", it) }
+                attachmentId?.let { put("attachment_attestation_id", it) }
             }
             val response = client.post("$nodeUrl/v1/chat/$communityId/messages") {
                 authHeader()?.let { header("Authorization", it) }
@@ -2456,6 +2459,29 @@ class CIRISApiClient internal constructor(
                 "attestation=${decoded.attestationId.take(24)}… readback=${if (decoded.message != null) "ok" else "deferred"}",
             )
             decoded
+        } catch (e: Exception) {
+            logException(method, e, "url=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * This viewer's consent to see one flagged item, a message or a room file.
+     * Hits ``POST /v1/chat/{communityId}/items/{itemId}/reveal`` with no body;
+     * it is per item and stays on the viewer's own devices (0.5.243).
+     */
+    suspend fun revealRoomItem(communityId: String, itemId: String, nodeUrl: String = LOCAL_NODE_URL) {
+        val method = "revealRoomItem"
+        val client = federationHttpClient()
+        try {
+            val response = client.post(
+                "$nodeUrl/v1/chat/${communityId.encodeURLPathPart()}/items/${itemId.encodeURLPathPart()}/reveal",
+            ) {
+                authHeader()?.let { header("Authorization", it) }
+            }
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, response.bodyAsText())
         } catch (e: Exception) {
             logException(method, e, "url=$nodeUrl")
             throw e
@@ -15983,16 +16009,18 @@ class CIRISApiClient internal constructor(
     }
 
     /**
-     * `POST {nodeUrl}/v1/communities` `{name, members, tier, consensus_protocol?}`
+     * `POST {nodeUrl}/v1/communities` `{name, members, tier, consensus_protocol?, cohort_subkind?}`
      * — found a room; the caller is its founder, each initial member must be a
      * contact whose grant covers `chat:`. A quorum room is founded with its whole
-     * roster, because a quorum's N is its roster size.
+     * roster, because a quorum's N is its roster size. [cohortSubkind] asks for
+     * a geographic room; a node without CIRISServer#852 ignores it.
      */
     suspend fun createCommunity(
         name: String,
         tier: String,
         members: List<String> = emptyList(),
         consensusProtocol: String? = null,
+        cohortSubkind: String? = null,
         nodeUrl: String = LOCAL_NODE_URL,
     ): ai.ciris.mobile.shared.models.federation.CommunityRoom {
         val method = "createCommunity"
@@ -16003,6 +16031,7 @@ class CIRISApiClient internal constructor(
             put("tier", tier)
             put("members", kotlinx.serialization.json.JsonArray(members.map { kotlinx.serialization.json.JsonPrimitive(it) }))
             consensusProtocol?.let { put("consensus_protocol", it) }
+            cohortSubkind?.let { put("cohort_subkind", it) }
         }
         val raw = communityCall(method, url) { client ->
             client.post(url) {

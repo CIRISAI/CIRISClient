@@ -198,6 +198,13 @@ dim chip that says why when tapped (`receipt_act_unavailable`); it never acts.
 **One room's files.** The same card, in room mode, is the files panel of a chat
 room: it lists exactly that room (`cohort=community&room_id`) and adds into it.
 
+**In a room (server 0.5.243).** A row a moderator of the room flagged carries
+`moderation`. While `withheld` it shows "Withheld by a moderator" (`files_withheld_{id}`);
+tapping it, or Reveal under its menu (`btn_file_act_reveal_{id}`), opens the
+reveal confirm, and the bytes otherwise answer 403 `drive.withheld_by_moderation`.
+Moving a live-flagged file answers 409 `drive.flagged_by_moderation`, by id. The
+listing's `viewer_duties` settles the moderator's acts on the panel.
+
 ## 3. Contracts (who)
 
 Sources: CIRISServer `v0.5.217` and `v0.5.218`, `src/drive.rs` and
