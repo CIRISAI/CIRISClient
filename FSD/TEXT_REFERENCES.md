@@ -12,13 +12,15 @@ CSD-088 (the pilot), CIRISServer#858 and #851.
 
 1. **One id namespace.** The keys of this repo's bundle are the ids of every `text-ref`, on every
    surface: client, node, agent and CEWPOS.
-2. **One translation pipeline.** Text is authored and translated in `localization/` here. No other
-   repo translates. A surface consumes the result.
+2. **One translation pipeline.** UX strings are authored and translated in `localization/` here, and
+   a surface consumes the result. CIRISAgent translates its own content (accord text, prompts) with
+   a vendored copy of this same pipeline, gated by `check_localize_vendoring.py`; that stays. No
+   repo builds a second pipeline, and nobody else translates a UX string.
 3. **Migration in stages, one card at a time,** measured by the distance CC 4.5.13 defines: what a
    consumer holds and a node does not serve, and the reverse.
 4. **A string is checked against what it describes,** not only against another copy of itself (§4).
 
-**Not decided here:** the final key scheme for items (§6, stage 4), which needs CIRISServer.
+**Not decided here:** the exact form of item keys (§5), which CIRISServer proposes in #858.
 
 ## 2. Why
 
@@ -49,9 +51,22 @@ judges the translation alone.
 | What a thing means, its costs and limits | CC, and the family model for impact | The source of truth for meaning |
 | The source-language sentence | Whoever emits the id: CIRISServer for what it serves, CIRISClient for the rest | One author per id |
 | Whether it reads right to a person | CIRISClient: `docs/five-year-old-test.md`, glossaries | The UX is the final consumer, whoever serves it |
-| Translation and review | CIRISClient: `localization/`, drafter and judge from different model families | Only here |
-| Distribution | The release's `ciris-client-X-localization.zip` | Already published, and the agent app already takes it. The node and CEWPOS take the same artifact |
-| Serving | The node, and the agent's thin routes | Resolves id + locale |
+| Translation and review of UX strings | CIRISClient: `localization/`, drafter and judge from different model families | Only here |
+| Distribution to a node | The installed `ciris-client` package, whose base wheel carries the bundle (`ciris_client/_artifacts/localization/`), or a path its host hands in. **A node never fetches text at run time:** login has to work offline and on a mesh-only network | `ciris-server` depends on `ciris-client>=0.5.237,<0.6` |
+| Distribution elsewhere | The release's `ciris-client-X-localization.zip`, for consumers without the package such as CEWPOS and the agent's string check | Same data, so one pipeline still holds |
+| Serving | The node, and the agent's thin routes | Resolves id + locale, loading one locale on demand: the bundle is about 20 MB unpacked, too much to hold in a phone's memory |
+
+**What a node has on disk.** Read from source, not tested on a device.
+
+| Host | Locale data | Consequence |
+|---|---|---|
+| Wheel-installed node | The `ciris-client` package | Reads it. A range, so it can lag the server's ids; `lang` covers that |
+| Android embedded | Declared by `ciris-server`, so pip likely installs it, unconfirmed. The APK's `assets/localization` is not a Python path | Confirm in stage 3 |
+| iOS embedded | No `ciris-client` package; files at `Resources/app/localization` | The host hands the node that path |
+| Bare `ciris-server` binary | None | English with `lang` marked |
+
+So the node's lookup order is a path its host hands in, then the installed package, then source
+language marked with `lang`. A phone's host passes the path at start-up.
 
 **The end state (Eric, 2026-11-05).** A client without a node cannot exist: it is impossible to render
 the epistemic state without one. So the node serves every string, login and startup included. The
@@ -64,9 +79,10 @@ app holds only what it must say when no node has answered:
 | Browsing and connecting to nodes (`ServerConnection`: the address form, recent nodes, connect, remove, status) | Eric, 2026-11-05: the client must be able to find a node with no node answering. Pinned by `testing/test_node_connect_strings.py` |
 
 Everything else leaves the app, including the first-run wizard, sign-in and the startup screen once a
-node answers. This matches CC 4.5.13's "the client holds no copy of its own". Authoring here is not
+node answers. Those are served before any session exists, so they are public text and stay outside
+the operator gate. This matches CC 4.5.13's "the client holds no copy of its own". Authoring here is not
 holding a copy at run time: the app's bundle shrinks to that list, this repo's pipeline stays, and a
-node's locale data comes from this repo's zip.
+node's locale data comes from this repo's pipeline.
 
 **What this does not cost.** No translation output is ever unreviewed, and no surface falls back to
 English silently: `lang` marks it, per CC.
@@ -109,15 +125,25 @@ text-ref = { id: tstr, text: tstr, ? params: { * tstr => tstr / int }, ? lang: t
 
 Never a raw key, and never an invented string.
 
-**Changing a sentence means a new id.** A changed value under an old id leaves 28 stale translations
+**Item keys are derived, not listed.** From CC's `manifests/transitions.json`, which gives family and
+verb: `item.<family_slug>.<verb>.title`, `.why`, `.option.<value>.title|benefit|downside`. Family
+names contain colons, so the slug is a defined function, never a hand edit. Anything about a
+particular instance goes in `params`, never in the key. The exact form is proposed in #858.
+
+**Changing a sentence means a new id**, with a stated suffix (`_2`). A changed value under an old id leaves 28 stale translations
 stating the old meaning, and the gates point at each other: the client checks the server's released
 text while the server checks the released bundle. A new id avoids both. An older client falls back to
 correct English, and the server's debt list carries the id until a bundle has it. This is how
 `mesh.announce_costs` is landing. Spelling fixes that keep the meaning may stay under the old id.
 
 **Pins.** Client pins server emitters and server pins a client floor, so a new id goes in this order:
-server emits and debt-lists it, server tags, client pins and translates, client tags, server raises
-the floor and drops the entry.
+
+1. Server emits the id, adds it to `KNOWN_UNLOCALIZED` and raises `MAX_UNCOVERED` in
+   `tests/localization_gate.rs`. Without the raise the ratchet goes red.
+2. Server tags.
+3. Client pins the tag, translates the id, and tags.
+4. Server raises the floor, drops the entry and lowers `MAX_UNCOVERED`. Its gate fails on a stale
+   debt entry, so these go together.
 
 ## 6. Stages
 
@@ -128,7 +154,7 @@ Each has an exit test. None depends on renaming shipped keys, and most keys neve
 | 1 | **Inventory.** Each key: owner, used or not, surfaces, and for duplicates whether they mean the same | A generated table in this repo, regenerated by a check | Nothing; read-only |
 | 2 | **One pipeline, stated.** CIRISServer and CEWPOS consume the zip; no other translation | Written into both repos' agent guides; CEWPOS's first strings use bundle ids | Their agreement |
 | 3 | **Wire shape.** `text-ref` with `params` and `lang` in #858; the client resolves per §5 | One served item renders through the resolver, in a test with a locale gap | CIRISServer#858 |
-| 4 | **Pilot.** CSD-088's new items use the item key scheme, agreed in #858. Nothing shipped is renamed | CSD-088 renders from served items in 29 languages | #853, client 0.5.239 at the earliest |
+| 4 | **Pilot.** CSD-088's new items use the item key scheme (§5), agreed in #858. Nothing shipped is renamed | CSD-088 renders from served items in 29 languages | #853, client 0.5.239 at the earliest |
 | 5 | **Flip card by card.** Confirmation facts first: their keys go once impact is derived. A card is flipped when its action list is the served queue filtered by object (`formal/event_lifecycle`) | The distance report falls; each card's test passes | #851 |
 | 6 | **Retire.** Delete a client string once the minimum server version serves it. Prune dead keys in small batches, each with its translations | The app's bundle holds only §3's list; no key without an owner | Stage 1, the floor |
 
@@ -153,9 +179,9 @@ marks the rest.
 | # | Question | Whose |
 |---|---|---|
 | 1 | Does CEWPOS render text only through `text-ref`, with no held bundle? | CEWPOS |
-| 2 | The key scheme: `item.<family>.<id>.title` and `.option.<value>.benefit`, or something else | #858 |
+| 2 | The exact slug function and suffix for derived item keys (§5) | #858 |
 | 3 | `prompts.*` (153 keys) feed the agent's language guidance, not a person's screen. Are they in scope? | Stage 1. Proposed: out, kept where they are |
-| 4 | Does the agent translate anything of its own today? | CIRISAgent, stage 2 |
+| 4 | Does Android's embedded Python get `ciris-client`, or must its host hand in a path? | Stage 3, on a device |
 
 **Method for §2.** Keys are the dotted leaf paths of en.json at `v0.5.238`. Duplicates compare trimmed,
 lowercased English of four characters or more. A key counts as referenced if it appears as a string
