@@ -4419,7 +4419,11 @@
     "community_section_body_local": "اتاق‌هایی برای افراد نزدیک شما. فعلاً، یک اتاق فقط روی دستگاهی که آن را بنیان‌گذاری کرده است محلی نمایش داده می‌شود. سایر اعضا آن را زیر «جامعه‌ها» می‌بینند.",
     "community_empty_local": "شما هنوز هیچ اتاق محلی ندارید. یکی بنیان‌گذاری کنید و افراد نزدیک خود را دعوت کنید.",
     "community_create_open_local": "بنیان‌گذاری اتاق محلی",
-    "community_create_title_local": "بنیان‌گذاری اتاق محلی"
+    "community_create_title_local": "بنیان‌گذاری اتاق محلی",
+    "server_local_desc": "مدیریت گره‌ای که روی این دستگاه اجرا می‌شود.",
+    "server_remote_desc": "اتصال به گره‌ای که جای دیگری اجرا می‌شود.",
+    "server_url_label": "نشانی گره",
+    "server_current": "فعلی"
   },
   "moderation": {
     "ladder": {

@@ -4413,6 +4413,10 @@
     "community_empty_local": "У вас пока нет локальных комнат. Основайте одну и пригласите людей рядом с вами.",
     "community_create_open_local": "Основать локальную комнату",
     "community_create_title_local": "Основать локальную комнату",
+    "server_local_desc": "Управляйте узлом, работающим на этом устройстве.",
+    "server_remote_desc": "Подключитесь к узлу, работающему в другом месте.",
+    "server_url_label": "Адрес узла",
+    "server_current": "Текущий",
     "approve_device_consent": "Дать согласие на добавление {label}?"
   },
   "moderation": {

@@ -4413,6 +4413,10 @@
     "community_empty_local": "உங்களுக்கு இன்னும் உள்ளூர் அறைகள் இல்லை. ஒன்றை நிறுவி, உங்களுக்கு அருகிலுள்ளவர்களை அழைக்கவும்.",
     "community_create_open_local": "உள்ளூர் அறையை நிறுவுங்கள்",
     "community_create_title_local": "உள்ளூர் அறையை நிறுவு",
+    "server_local_desc": "இந்தச் சாதனத்தில் இயங்கும் நோடை நிர்வகிக்கவும்.",
+    "server_remote_desc": "வேறு எங்காவது இயங்கும் நோடுடன் இணைக்கவும்.",
+    "server_url_label": "நோடு முகவரி",
+    "server_current": "தற்போதையது",
     "approve_device_approve": "அங்கீகரி"
   },
   "moderation": {

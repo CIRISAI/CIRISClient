@@ -4413,7 +4413,11 @@
     "community_section_body_local": "Size yakın kişiler için odalar. Şimdilik bir oda, yalnızca onu kuran cihazda yerel olarak görünür. Diğer üyeler onu Topluluklar altında görür.",
     "community_empty_local": "Henüz hiç yerel odanız yok. Bir tane kurun ve size yakın kişileri davet edin.",
     "community_create_open_local": "Yerel bir oda kurun",
-    "community_create_title_local": "Yerel bir oda kurun"
+    "community_create_title_local": "Yerel bir oda kurun",
+    "server_local_desc": "Bu cihazda çalışan düğümü yönetin.",
+    "server_remote_desc": "Başka bir yerde çalışan bir düğüme bağlanın.",
+    "server_url_label": "Düğüm adresi",
+    "server_current": "Mevcut"
   },
   "moderation": {
     "ladder": {

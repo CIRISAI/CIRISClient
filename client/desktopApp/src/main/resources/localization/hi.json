@@ -4413,7 +4413,11 @@
     "community_section_body_local": "आपके आसपास के लोगों के लिए रूम। फिलहाल, कोई रूम केवल उसी डिवाइस पर स्थानीय रूप में दिखता है जिसने उसे स्थापित किया है। अन्य सदस्य इसे Communities के अंतर्गत देखते हैं।",
     "community_empty_local": "आपके पास अभी कोई स्थानीय रूम नहीं है। एक स्थानीय रूम स्थापित करें और अपने आसपास के लोगों को आमंत्रित करें।",
     "community_create_open_local": "स्थानीय रूम स्थापित करें",
-    "community_create_title_local": "स्थानीय रूम स्थापित करें"
+    "community_create_title_local": "स्थानीय रूम स्थापित करें",
+    "server_local_desc": "इस डिवाइस पर चल रहे नोड को प्रबंधित करें।",
+    "server_remote_desc": "कहीं और चल रहे नोड से कनेक्ट करें।",
+    "server_url_label": "नोड पता",
+    "server_current": "वर्तमान"
   },
   "moderation": {
     "ladder": {

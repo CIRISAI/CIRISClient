@@ -4413,7 +4413,11 @@
     "community_section_body_local": "ਤੁਹਾਡੇ ਨੇੜੇ ਦੇ ਲੋਕਾਂ ਲਈ ਕਮਰੇ। ਫ਼ਿਲਹਾਲ, ਇੱਕ ਕਮਰਾ ਸਿਰਫ਼ ਉਸ ਡਿਵਾਈਸ ਉੱਤੇ ਸਥਾਨਕ ਵਜੋਂ ਦਿਖਾਈ ਦਿੰਦਾ ਹੈ ਜਿਸਨੇ ਇਸਨੂੰ ਸਥਾਪਤ ਕੀਤਾ ਸੀ। ਹੋਰ ਮੈਂਬਰ ਇਸਨੂੰ Communities ਅਧੀਨ ਦੇਖਦੇ ਹਨ।",
     "community_empty_local": "ਤੁਹਾਡੇ ਕੋਲ ਹਾਲੇ ਕੋਈ ਸਥਾਨਕ ਕਮਰਾ ਨਹੀਂ ਹੈ। ਇੱਕ ਬਣਾਓ ਅਤੇ ਆਪਣੇ ਨੇੜੇ ਦੇ ਲੋਕਾਂ ਨੂੰ ਸੱਦਾ ਦਿਓ।",
     "community_create_open_local": "ਇੱਕ ਸਥਾਨਕ ਕਮਰਾ ਸਥਾਪਤ ਕਰੋ",
-    "community_create_title_local": "ਇੱਕ ਸਥਾਨਕ ਕਮਰਾ ਸਥਾਪਤ ਕਰੋ"
+    "community_create_title_local": "ਇੱਕ ਸਥਾਨਕ ਕਮਰਾ ਸਥਾਪਤ ਕਰੋ",
+    "server_local_desc": "ਇਸ ਡਿਵਾਈਸ 'ਤੇ ਚੱਲ ਰਹੇ ਨੋਡ ਦਾ ਪ੍ਰਬੰਧਨ ਕਰੋ।",
+    "server_remote_desc": "ਕਿਤੇ ਹੋਰ ਚੱਲ ਰਹੇ ਨੋਡ ਨਾਲ ਜੁੜੋ।",
+    "server_url_label": "ਨੋਡ ਪਤਾ",
+    "server_current": "ਮੌਜੂਦਾ"
   },
   "moderation": {
     "ladder": {

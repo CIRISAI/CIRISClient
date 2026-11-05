@@ -65,7 +65,7 @@ fields:
     use: emit
     type: string
     example: "http://192.168.50.8:8080"
-    renders: "the URL field — 'Connect to a CIRIS agent running on a remote server'"
+    renders: "the URL field — 'Connect to a node running somewhere else', and its label 'Node address'"
     tag: input_server_url
   - ceg: x_private:is_local_server
     use: display-only
