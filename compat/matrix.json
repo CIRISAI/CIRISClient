@@ -2202,7 +2202,7 @@
         "languages": 29,
         "keys": 5880
       },
-      "notes": "PENDING: replace with the five-platform run before the tag.",
+      "notes": "Tested: the five-platform run on the release client tree WITH the AI legs (run 41926904757 on 8efcbd87: windows, linux + android emulator, macos + ios simulator against ciris-server 0.5.244; linux, windows and ios simulator with AI on CIRISAgent 2.19.2, whose node is 0.5.243, using openai/gpt-4o through OpenRouter). Known in this release: POST /v1/setup/add-device gives up at 30 s while the node waits up to 30 s, so a slow owner route shows a raw timeout with no retry (found by the server session in run 41896619027, fixed in 0.5.239). The iOS AI leg's files flow checks chips 0 and 1 by name, not as visible together, because a tall bubble does not fit a phone's transcript. The iOS overlay fix reaches only this repo's client/iosApp host; the agent's apps/ios shell does not call the supervisor. Automation clicks through a SwiftUI overlay, so the leg cannot fail on one: this run's screenshots were read by hand.",
       "published": null
     }
   ]
