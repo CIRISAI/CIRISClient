@@ -4413,7 +4413,11 @@
     "community_section_body_local": "Phòng dành cho những người gần bạn. Hiện tại, một phòng chỉ hiển thị là địa phương trên thiết bị đã sáng lập nó. Các thành viên khác sẽ thấy nó trong mục Cộng đồng.",
     "community_empty_local": "Bạn chưa có phòng địa phương nào. Hãy sáng lập một phòng và mời những người gần bạn.",
     "community_create_open_local": "Sáng lập một phòng địa phương",
-    "community_create_title_local": "Sáng lập một phòng địa phương"
+    "community_create_title_local": "Sáng lập một phòng địa phương",
+    "server_local_desc": "Quản lý nút đang chạy trên thiết bị này.",
+    "server_remote_desc": "Kết nối tới một nút đang chạy ở nơi khác.",
+    "server_url_label": "Địa chỉ nút",
+    "server_current": "Hiện tại"
   },
   "moderation": {
     "ladder": {

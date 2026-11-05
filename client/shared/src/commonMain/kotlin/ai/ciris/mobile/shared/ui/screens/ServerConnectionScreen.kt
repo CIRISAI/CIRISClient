@@ -411,7 +411,7 @@ private fun LocalServerControlsCard(
             }
 
             Text(
-                text = "Manage the local CIRIS backend server running on this device.",
+                text = localizedString("mobile.server_local_desc"),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -501,7 +501,7 @@ private fun RemoteConnectionCard(
             }
 
             Text(
-                text = "Connect to a CIRIS agent running on a remote server.",
+                text = localizedString("mobile.server_remote_desc"),
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -518,7 +518,7 @@ private fun RemoteConnectionCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testable("input_server_url", urlInput),
-                label = { Text("Server URL") },
+                label = { Text(localizedString("mobile.server_url_label")) },
                 placeholder = { Text(localizedString("mobile.server_url_placeholder")) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
@@ -627,7 +627,7 @@ private fun RecentConnectionItem(
                     color = Color(0xFF10B981).copy(alpha = 0.15f)
                 ) {
                     Text(
-                        text = "Current",
+                        text = localizedString("mobile.server_current"),
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                         fontSize = 11.sp,
                         color = Color(0xFF10B981)

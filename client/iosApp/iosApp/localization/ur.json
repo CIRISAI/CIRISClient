@@ -4413,7 +4413,11 @@
     "community_section_body_local": "آپ کے قریب کے لوگوں کے لیے روم۔ فی الحال، کوئی روم صرف اس آلے پر مقامی کے طور پر ظاہر ہوتا ہے جس نے اسے قائم کیا۔ دیگر اراکین اسے کمیونٹیز کے تحت دیکھتے ہیں۔",
     "community_empty_local": "آپ کے پاس ابھی تک کوئی مقامی روم نہیں۔ ایک قائم کریں اور اپنے قریب کے لوگوں کو دعوت دیں۔",
     "community_create_open_local": "مقامی روم قائم کریں",
-    "community_create_title_local": "مقامی روم قائم کریں"
+    "community_create_title_local": "مقامی روم قائم کریں",
+    "server_local_desc": "اس ڈیوائس پر چلنے والے نوڈ کا نظم کریں۔",
+    "server_remote_desc": "کہیں اور چلنے والے نوڈ سے جڑیں۔",
+    "server_url_label": "نوڈ کا پتہ",
+    "server_current": "موجودہ"
   },
   "moderation": {
     "ladder": {

@@ -4507,7 +4507,11 @@
     "community_section_body_local": "Rooms for the people near you. For now, a room shows as local only on the device that founded it. Other members see it under Communities.",
     "community_empty_local": "You have no local rooms yet. Found one and invite the people near you.",
     "community_create_open_local": "Found a local room",
-    "community_create_title_local": "Found a local room"
+    "community_create_title_local": "Found a local room",
+    "server_local_desc": "Manage the node running on this device.",
+    "server_remote_desc": "Connect to a node running somewhere else.",
+    "server_url_label": "Node address",
+    "server_current": "Current"
   },
   "moderation": {
     "ladder": {

@@ -4413,7 +4413,11 @@
     "community_section_body_local": "Ruang untuk orang-orang di dekat Anda. Untuk saat ini, sebuah ruang tampil sebagai lokal hanya pada perangkat yang mendirikannya. Anggota lain melihatnya di bawah Komunitas.",
     "community_empty_local": "Anda belum memiliki ruang lokal. Dirikan satu dan undang orang-orang di dekat Anda.",
     "community_create_open_local": "Dirikan Ruang Lokal",
-    "community_create_title_local": "Dirikan Ruang Lokal"
+    "community_create_title_local": "Dirikan Ruang Lokal",
+    "server_local_desc": "Kelola node yang berjalan di perangkat ini.",
+    "server_remote_desc": "Hubungkan ke node yang berjalan di tempat lain.",
+    "server_url_label": "Alamat node",
+    "server_current": "Saat Ini"
   },
   "moderation": {
     "ladder": {
