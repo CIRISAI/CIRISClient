@@ -82,6 +82,13 @@ jobs:
           python3 client/tools/check_localization_sync.py --self-test --server-src .emitters
           python3 client/tools/check_localization_sync.py --server-src .emitters --strict
 
+      - name: The string inventory is current
+        # FSD/TEXT_REFERENCES.md stage 1: every key has a row, regenerated from the
+        # bundle, the app and the server at the pin. --self-test plants each defect.
+        run: |
+          python3 packaging/gen_string_inventory.py --self-test
+          python3 packaging/gen_string_inventory.py --server-src .emitters --check
+
       - name: Vendoring state
         # client/ is the tree of record. The tracked tree must match the state
         # digest VENDORING.md §1 records (re-recorded by any commit that touches

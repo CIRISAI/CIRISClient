@@ -251,6 +251,7 @@ This glossary defines the canonical translations for key CIRIS terms in German. 
 | Local Community | Lokale Gemeinschaft | Locally-trusted peers — home channel, household, single guild |
 | Global Communities | Globale Gemeinschaften | Plural — affinity groups spanning across borders (CEG affiliations) |
 | Global Commons | Globales Gemeingut | Universal federation layer (CEG species + planet + federation folded) |
+| Node | Knoten | A CIRIS node. Never "Node": 668 shipped strings use Knoten |
 | Federation | Föderation | The CIRIS federation as network of peers (matches existing `network.*` usage) |
 | The Commons | Das Gemeingut | Federation contribution cards screen (distinct from Global Commons layer) |
 | Constitutional | Verfassungsmäßig | Accord-holder identity surface per FSD-002 §4.1 |
