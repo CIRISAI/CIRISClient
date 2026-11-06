@@ -356,7 +356,9 @@ jobs:
   # ── iOS. The only host that can compile the Kotlin or check the Swift ───────
   ios-kotlin:
     name: ios-kotlin
-    runs-on: macos-14
+    # macos-15: GitHub stopped serving macos-14 on 2026-11-05 ("The configuration
+    # 'macos-14-arm64-us-default' is not supported"), cancelling this job in two seconds.
+    runs-on: macos-15
     # 70, not 45: the job now also LINKS a debug simulator framework so the
     # Swift can be type-checked against it. Debug linking is minutes, not the
     # ~161 measured for the release XCFramework, but it is not free either.
