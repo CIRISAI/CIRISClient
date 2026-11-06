@@ -178,6 +178,8 @@ marks the rest.
 | Translation cost | A flipped card's keys are removed and not re-translated; a moved key carries its value and is not re-translated |
 | One shared wrong string | §4 |
 | A node with a stale locale set | `lang` marks it; the client's step 2 still applies until stage 6 |
+| The agent's own copy of these strings, `ciris_engine/data/localized/` | A third copy outside this table. Stage 2 asks whether it can read the same package |
+| Half-English strings pass every structural check | About 50 strings in 8 languages still hold English fragments. Needs a check of its own |
 
 ## 8. Open questions
 

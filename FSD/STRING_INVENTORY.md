@@ -9,14 +9,14 @@ not a key to delete.
 
 Agent usage recorded at CIRISAgent `5743471e6`. CI carries it forward.
 
-**5881 keys in 29 languages.**
+**5834 keys in 29 languages.**
 
 | Owner | Keys |
 |---|---|
 | client | 4661 |
 | server | 551 |
 | agent | 216 |
-| unclaimed | 453 |
+| unclaimed | 406 |
 
 ## Held in the app
 
@@ -30,12 +30,12 @@ bound: the node serves that screen once it answers.
 
 ## Duplicates
 
-382 English strings sit under 1037 keys.
+373 English strings sit under 1013 keys.
 
-- **Same in every language:** 67 groups, 142 keys.
+- **Same in every language:** 93 groups, 199 keys.
   Candidates to share a key, for a person to confirm.
-- **Short, and differ in at least one language:** 288 groups, 836 keys. Context can explain these: read before merging.
-- **Sentences that differ:** 27 groups, 59 keys.
+- **Short, and differ in at least one language:** 280 groups, 814 keys. Context can explain these: read before merging.
+- **Sentences that differ:** 0 groups, 0 keys.
   Identical English, translated differently: drift until read.
 - **Confirmation facts:** 129 keys, 43 of them duplicates.
   CC 4.5.13 derives these, so they go when their card flips.
@@ -44,37 +44,10 @@ Sentences that differ, most languages first:
 
 | English | Keys | Languages |
 |---|---|---|
-| The node could not read its identity store, so sign-in could not | 2 | 25 |
-| Bring Your Own Key | 2 | 23 |
-| The node could not read that request. Check the fields and try a | 2 | 22 |
-| This session's delegation does not grant that action. | 3 | 22 |
-| Cosigning — touch your YubiKey… | 4 | 22 |
-| Prefer not to say | 2 | 22 |
-| Who is in it from the start | 2 | 21 |
-| Cosign — touch your YubiKey | 2 | 18 |
-| The plane was read and no objection has been raised against this | 2 | 17 |
-| Welcome! Choose how to set up your AI assistant. | 2 | 17 |
-| Name this device (optional) | 2 | 17 |
-| State your age range | 2 | 17 |
-| No audit entries found | 2 | 16 |
-| Proposing — touch your YubiKey… | 2 | 14 |
-| Re-mint existing trust root | 2 | 14 |
-| API Key is required | 2 | 14 |
-| The named delegation id is not a delegates_to row. | 2 | 12 |
-| Password must be at least 8 characters | 3 | 12 |
-| The node refused (HTTP {status}) | 2 | 10 |
-| That session is invalid or expired. | 3 | 9 |
-| Page {page} of {total} | 2 | 9 |
-| Waiting for authorization in browser... | 2 | 7 |
-| Agent rejected the message | 2 | 2 |
-| Claim ownership of a node | 2 | 2 |
-| Found a local room | 2 | 2 |
-| Missing required parameters: latitude and longitude | 2 | 1 |
-| Tool not implemented: {tool_name} | 2 | 1 |
 
 ## Dead root keys
 
-47 root keys nobody calls, each beside a `mobile.` twin. Lookup never falls
+0 root keys nobody calls, each beside a `mobile.` twin. Lookup never falls
 back to them, so they are unreachable and still translated. Marked `dead_root`.
 
 ## Unclaimed, by section
