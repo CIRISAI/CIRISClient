@@ -4300,6 +4300,7 @@ mobile.tools_search_placeholder	client	client	literal	-	-	-	-
 mobile.tools_total	client	client	literal	-	-	-	-
 mobile.tools_when_to_use	client	client	literal	-	-	-	-
 mobile.trace_consent_decline_note	client	client	literal	-	-	-	-
+mobile.trace_consent_unanswered_note	client	client	literal	-	-	-	-
 mobile.transport_not_on_this_node	client	client	literal	-	-	-	-
 mobile.trust_agent_ver	client	client	literal	-	-	-	-
 mobile.trust_app_attest	client	client	literal	-	-	-	-
@@ -4513,6 +4514,9 @@ mobile.wa_reject	client	client	dynamic	-	234	differs:2	-
 mobile.wa_resolve	client	client	dynamic	-	-	-	-
 mobile.wa_service_status	client	client	dynamic	-	-	-	-
 mobile.wa_status	client	client	dynamic	-	-	-	-
+mobile.wa_update_changed	client	client	literal	-	-	-	-
+mobile.wa_update_failed	client	client	literal	-	-	-	-
+mobile.wa_update_not_allowed	client	client	literal	-	-	-	-
 mobile.wallet_address	client	client	literal	-	-	-	-
 mobile.wallet_address_copied	client	client	dynamic	-	-	-	-
 mobile.wallet_amount	client	client	literal	-	-	-	-
@@ -5612,7 +5616,7 @@ setup_validation_password_mismatch	client	client	literal	-	311	same	-
 setup_validation_password_required	client	client	literal	-	314	differs:11	-
 setup_validation_proxy_needs_token	client	client	literal	-	-	-	-
 setup_validation_select_provider	client	client	literal	-	-	-	-
-setup_validation_trace_consent_required	client	client	literal	-	-	-	-
+setup_validation_trace_consent_required	unclaimed	-	-	-	-	-	-
 setup_validation_username_required	client	client	literal	-	315	differs:11	-
 setup_validation_username_reserved	client	client	literal	-	-	-	-
 sign_owner_binding.bad_request	server	server	-	-	-	-	-

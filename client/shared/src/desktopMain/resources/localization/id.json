@@ -4438,7 +4438,11 @@
     "trust_hosts_disagree": "Dua host akar kepercayaan memberikan jawaban yang berbeda, sehingga tidak ada akar kepercayaan yang dipilih. Node ini dibatasi hingga keduanya sepakat.",
     "trust_host_verified": "Terverifikasi",
     "trust_host_unreachable": "Tidak dapat dijangkau",
-    "trust_host_not_verified": "Terjangkau, belum terverifikasi"
+    "trust_host_not_verified": "Terjangkau, belum terverifikasi",
+    "wa_update_not_allowed": "Hanya admin atau Otoritas Bijak yang dapat memutuskan proposal yang sedang menunggu. Akun ini tidak bisa.",
+    "wa_update_changed": "Seseorang telah memutuskan proposal ini sebelum Anda, sehingga tidak ada yang berubah. Daftar ini sekarang menampilkan statusnya.",
+    "wa_update_failed": "Agen tidak menerima perubahan tersebut. Coba lagi.",
+    "trace_consent_unanswered_note": "Anda boleh membiarkan ini tanpa jawaban. Tidak ada yang akan dikirim sampai Anda mengatakan ya, dan Anda dapat menjawabnya nanti."
   },
   "moderation": {
     "ladder": {

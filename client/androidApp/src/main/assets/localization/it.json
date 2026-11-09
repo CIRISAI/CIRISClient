@@ -4438,7 +4438,11 @@
     "trust_hosts_disagree": "Due host radice di fiducia hanno fornito risposte diverse, quindi non è stata scelta alcuna radice di fiducia. Questo nodo è limitato finché non concordano.",
     "trust_host_verified": "Verificato",
     "trust_host_unreachable": "Non raggiungibile",
-    "trust_host_not_verified": "Raggiunto, non verificato"
+    "trust_host_not_verified": "Raggiunto, non verificato",
+    "wa_update_not_allowed": "Solo un amministratore o una Wise Authority può decidere una proposta in attesa. Questo account non può.",
+    "wa_update_changed": "Qualcuno ha deciso questa proposta prima di te, quindi nulla è cambiato. L'elenco ora mostra a che punto si trova.",
+    "wa_update_failed": "L'agente non ha accettato quella modifica. Riprova.",
+    "trace_consent_unanswered_note": "Puoi lasciare questo senza risposta. Non verrà inviato nulla finché non dici di sì, e puoi rispondere in seguito."
   },
   "moderation": {
     "ladder": {

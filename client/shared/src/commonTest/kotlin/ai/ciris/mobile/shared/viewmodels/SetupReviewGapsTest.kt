@@ -40,6 +40,7 @@ class SetupReviewGapsTest {
     @Test
     fun aDisclosureWithNoTraceGrantDoesNotStrandScreenTwo() {
         val vm = viewModel()
+        vm.noteConsentDisclosureShown()
         vm.noteTraceQuestionAbsent()
         val s = vm.state.value.copy(currentStep = SetupStep.JOIN_FEDERATION)
         assertFalse(s.traceQuestionOffered, "the step must know there was no question")
@@ -47,10 +48,18 @@ class SetupReviewGapsTest {
         assertFalse(s.accordMetricsConsent, "no grant was offered, so nothing is sent")
     }
 
+    /** CC 4.5.13: unanswered never blocks, but the costs must have been on screen. */
     @Test
-    fun anOfferedTraceQuestionStillHasToBeAnswered() {
-        val s = SetupFormState(currentStep = SetupStep.JOIN_FEDERATION)
-        assertFalse(s.canProceedFromCurrentStep())
+    fun anUnansweredTraceQuestionProceedsOnceTheDisclosureIsShown() {
+        val shown = SetupFormState(currentStep = SetupStep.JOIN_FEDERATION, consentDisclosureShown = true)
+        assertTrue(shown.canProceedFromCurrentStep())
+        assertFalse(shown.accordMetricsConsent, "unanswered sends nothing")
+    }
+
+    /** Announce is preselected on; without the disclosure its cost was never shown. */
+    @Test
+    fun screenTwoWaitsForTheDisclosure() {
+        assertFalse(SetupFormState(currentStep = SetupStep.JOIN_FEDERATION).canProceedFromCurrentStep())
     }
 
     // ── 0.5.218: announce is per device, and not offered to an under-18 account

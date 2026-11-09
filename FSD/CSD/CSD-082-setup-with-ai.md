@@ -71,7 +71,7 @@ fields:
     use: display-only
     type: bool
     example: true
-    renders: "the send-traces question in the substrate's own words (GET /v1/setup/consent-disclosure), Yes / No with neither preselected, and the cost of No stated underneath: no capacity score, no commons credits"
+    renders: "the send-traces question in the substrate's own words (GET /v1/setup/consent-disclosure), Yes / No with neither preselected, and the cost of No stated underneath: no capacity score, no commons credits. It may be left unanswered (CC 4.5.13): Next does not wait for it, nothing is sent, and `txt_trace_consent_unanswered` says so. Next waits instead for the disclosure itself (`consentDisclosureShown`), because announce is preselected on and its cost must be on screen"
     tag: trace_consent_yes
   - ceg: "consent:{kind}"
     bind: {kind: analyze}

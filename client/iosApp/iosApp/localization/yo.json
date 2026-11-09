@@ -2695,6 +2695,9 @@
     "provision_holder_err_other": "Ìpèsè kùnà: {detail}",
     "trust_root_import_not_yet_accepted": "A ti kó wọlé, a ò tíì gbà á",
     "trust_root_import_not_yet_accepted_why": "Àwọn àkọsílẹ̀ gbòngbò náà wà lórí node yìí, ṣùgbọ́n node yìí kò tíì gbẹ́kẹ̀lé e. Bóyá kò tíì ní àwọn àkọsílẹ̀ ìpilẹ̀ṣẹ̀ gbòngbò náà, a ó sì tún gbìyànjú gbígbà á nígbà ìbẹ̀rẹ̀ tàbí ìkówọlé tó ń bọ̀, tàbí a kò lè kọ gbígbà rẹ̀ sílẹ̀.",
+    "wa_update_changed": "Ẹnì kan ti pinnu lórí àbá yìí kí o tó ṣe bẹ́ẹ̀, nítorí náà kò sí ohun tí ó yí padà. Àkọsílẹ̀ náà ń fi ipò tí ó wà hàn nísinsìnyí.",
+    "wa_update_failed": "Aṣojú kò gba àyípadà náà. Gbìyànjú lẹ́ẹ̀kan síi.",
+    "trace_consent_unanswered_note": "O lè fi èyí sílẹ̀ láìdáhùn. A kò níí fi ohunkóhun ránṣẹ́ títí o fi sọ bẹ́ẹ̀ni, o sì lè dáhùn nígbà mìíràn.",
     "yubikey_probe_failed": "A KÒ LÈ KA IPÒ YUBIKEY",
     "yubikey_probe_not_on_this_node": "NÓDÙ YÌÍ KÒ ṢE ÌJÁBỌ̀ NÍPA IPÒ YUBIKEY",
     "yubikey_probe_reason": "Ìdí: {detail}",
@@ -4438,7 +4441,8 @@
     "moderation_reveal_signer": "Kọ́kọ́rọ́ tìrẹ, gẹ́gẹ́ bí ìyọ̀ọ́da rẹ láti wo nǹkan kan yìí",
     "moderation_note_flagged": "Olùdarí kan fi àmì sí èyí gẹ́gẹ́ bí {flag}.",
     "moderation_note_revealed": "Olùdarí kan fi àmì sí èyí gẹ́gẹ́ bí {flag}. O yàn láti rí i.",
-    "moderation_note_cleared": "Wọ́n ti pa àmì olùmójútó kan rẹ́ lórí èyí."
+    "moderation_note_cleared": "Wọ́n ti pa àmì olùmójútó kan rẹ́ lórí èyí.",
+    "wa_update_not_allowed": "Olùṣàkóso tàbí ALÁṢẸ ỌLỌ́GBỌ́N nìkan ló lè pinnu lórí àbá tí ó ń dúró. Àkàǹtì yìí kò lè ṣe bẹ́ẹ̀."
   },
   "moderation": {
     "ladder": {

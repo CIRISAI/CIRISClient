@@ -4438,7 +4438,11 @@
     "trust_hosts_disagree": "两个信任根主机给出了不同的答案，因此未选定任何信任根。在它们达成一致之前，本节点将受到限制。",
     "trust_host_verified": "已验证",
     "trust_host_unreachable": "无法联系",
-    "trust_host_not_verified": "已联系，未验证"
+    "trust_host_not_verified": "已联系，未验证",
+    "wa_update_not_allowed": "只有管理员或智慧权威才能裁定一项等待中的提案。此账户无法执行此操作。",
+    "wa_update_changed": "有人在您之前就已经对此提案做出了裁定，因此未发生任何更改。列表现在显示的是其当前状态。",
+    "wa_update_failed": "智能体未接受该更改。请重试。",
+    "trace_consent_unanswered_note": "您可以暂不回答此问题。在您同意之前，不会发送任何内容，您也可以稍后再回答。"
   },
   "moderation": {
     "ladder": {

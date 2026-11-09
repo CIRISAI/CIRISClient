@@ -4438,7 +4438,11 @@
     "trust_hosts_disagree": "İki güven kökü sunucusu farklı yanıtlar verdi, bu yüzden bir güven kökü seçilmedi. Bu düğüm, onlar hemfikir olana dek kısıtlıdır.",
     "trust_host_verified": "Doğrulandı",
     "trust_host_unreachable": "Erişilemiyor",
-    "trust_host_not_verified": "Ulaşıldı, doğrulanmadı"
+    "trust_host_not_verified": "Ulaşıldı, doğrulanmadı",
+    "wa_update_not_allowed": "Bekleyen bir öneriye yalnızca bir yönetici veya bir Bilge Otorite karar verebilir. Bu hesap karar veremez.",
+    "wa_update_changed": "Biri bu öneriye sizden önce karar verdi, bu yüzden hiçbir şey değişmedi. Liste artık durumunu gösteriyor.",
+    "wa_update_failed": "Ajan bu değişikliği kabul etmedi. Tekrar deneyin.",
+    "trace_consent_unanswered_note": "Bunu yanıtsız bırakabilirsiniz. Siz evet demeden hiçbir şey gönderilmez ve daha sonra yanıtlayabilirsiniz."
   },
   "moderation": {
     "ladder": {

@@ -127,9 +127,19 @@ class WiseAuthorityViewModelTest {
             return grantOutcome
         }
 
-        override suspend fun updateTicketStatus(ticketId: String, status: String, notes: String?): Boolean {
+        var lastExpected: String? = null
+        var updateOutcome: ai.ciris.mobile.shared.approvals.TicketUpdateOutcome? = null
+
+        override suspend fun updateTicketStatus(
+            ticketId: String,
+            status: String,
+            notes: String?,
+            expectedStatus: String?,
+        ): ai.ciris.mobile.shared.approvals.TicketUpdateOutcome {
             statusUpdates += ticketId to status
-            return statusUpdateOk
+            lastExpected = expectedStatus
+            return updateOutcome ?: if (statusUpdateOk) ai.ciris.mobile.shared.approvals.TicketUpdateOutcome.OK
+            else ai.ciris.mobile.shared.approvals.TicketUpdateOutcome.FAILED
         }
 
         override suspend fun readTicketStatus(ticketId: String): String =
@@ -805,6 +815,42 @@ class WiseAuthorityViewModelTest {
         advanceUntilIdle()
 
         assertEquals(listOf("t1" to "cancelled"), api.statusUpdates)
+    }
+
+    /** Agent #1346: the write names the status it expects, so a stale write is refused. */
+    @Test
+    fun aDecisionSendsTheStatusItExpects() = runTest {
+        val api = FakeApprovalsApi(proposals = listOf(proposalTicket("t1")))
+        val (vm, _) = viewModel(api)
+
+        vm.rejectProposal("t1", "not warranted")
+        advanceUntilIdle()
+
+        assertEquals("blocked", api.lastExpected)
+    }
+
+    @Test
+    fun aRoleThatCannotDecideIsToldSo() = runTest {
+        val api = FakeApprovalsApi(proposals = listOf(proposalTicket("t1")))
+        api.updateOutcome = ai.ciris.mobile.shared.approvals.TicketUpdateOutcome.NOT_ALLOWED
+        val (vm, _) = viewModel(api)
+
+        vm.rejectProposal("t1", "not warranted")
+        advanceUntilIdle()
+
+        assertEquals(ai.ciris.mobile.shared.localization.LocalizationHelper.getString("mobile.wa_update_not_allowed"), vm.error.value)
+    }
+
+    @Test
+    fun aProposalDecidedElsewhereIsToldSoNotOverwritten() = runTest {
+        val api = FakeApprovalsApi(proposals = listOf(proposalTicket("t1")))
+        api.updateOutcome = ai.ciris.mobile.shared.approvals.TicketUpdateOutcome.CHANGED
+        val (vm, _) = viewModel(api)
+
+        vm.rejectProposal("t1", "not warranted")
+        advanceUntilIdle()
+
+        assertEquals(ai.ciris.mobile.shared.localization.LocalizationHelper.getString("mobile.wa_update_changed"), vm.error.value)
     }
 
     @Test

@@ -4438,7 +4438,11 @@
     "trust_hosts_disagree": "Hai máy chủ gốc tin cậy đưa ra câu trả lời khác nhau, nên không có gốc tin cậy nào được chọn. Nút này bị hạn chế cho đến khi chúng đồng thuận.",
     "trust_host_verified": "Đã xác minh",
     "trust_host_unreachable": "Không thể liên hệ được",
-    "trust_host_not_verified": "Đã liên hệ được, chưa xác minh"
+    "trust_host_not_verified": "Đã liên hệ được, chưa xác minh",
+    "wa_update_not_allowed": "Chỉ quản trị viên hoặc Cơ Quan Sáng Suốt mới có thể quyết định một đề xuất đang chờ. Tài khoản này không thể.",
+    "wa_update_changed": "Ai đó đã quyết định đề xuất này trước bạn, nên không có gì thay đổi. Danh sách hiện đang hiển thị trạng thái hiện tại của nó.",
+    "wa_update_failed": "Tác nhân không chấp nhận thay đổi đó. Hãy thử lại.",
+    "trace_consent_unanswered_note": "Bạn có thể không cần trả lời. Không có gì được gửi đi cho đến khi bạn đồng ý, và bạn có thể trả lời sau."
   },
   "moderation": {
     "ladder": {

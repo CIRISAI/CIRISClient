@@ -878,14 +878,23 @@ data class SetupFormState(
     val traceQuestionOffered: Boolean = true,
 
     /**
+     * Has the node's consent disclosure been shown on screen 2? Next waits on THIS,
+     * not on the traces answer (CC 4.5.13: an unanswered choice never blocks). It
+     * still has to wait for something: announce is preselected ON, and "its cost
+     * on screen" is only true once the disclosure that states the cost has loaded.
+     * Loading or failed, Next stays shut (CSD-082 §2).
+     */
+    val consentDisclosureShown: Boolean = false,
+
+    /**
      * **Be scored** — CC#46 `analyze`. The peer may SCORE your traces, which is
      * what builds reputation. A SEPARATE grant on the opposite edge: granting
-     * one does not grant the other. ON by default, but genuinely declinable —
-     * the substrate publishes three named costs and says in as many words that
-     * marking it required "misrepresents a legitimate choice as a
-     * misconfiguration". It shipped hardcoded true with no UI until 2.9.14.
+     * one does not grant the other. OFF until the person turns it on: CC 4.5.13
+     * says a grant to a peer starts unanswered and is never preselected
+     * (CSD-088). It is only sent at all when traces are, and its three named
+     * costs are on screen beside it.
      */
-    val traceAnalyze: Boolean = true,
+    val traceAnalyze: Boolean = false,
 
     /**
      * **Run without AI** — writes `CIRIS_SERVICES_DISABLED=true`, the same state
@@ -1112,10 +1121,11 @@ data class SetupFormState(
             }
         }
 
-        // Announce, be-scored and location have stated defaults and declining
-        // any of them is valid. SEND TRACES has no default: like the age band
-        // it must be answered, and either answer proceeds.
-        SetupStep.JOIN_FEDERATION -> traceConsentAnswered || !traceQuestionOffered
+        // CC 4.5.13: a choice the node does not need in order to run never blocks
+        // the person. Send traces starts unanswered and is never preselected;
+        // left unanswered it is deferred and NOTHING is sent (setup only writes
+        // the grant on a yes), the same effect as "no" with no answer recorded.
+        SetupStep.JOIN_FEDERATION -> consentDisclosureShown
 
         SetupStep.AI -> hasUsableLlmChoice()
 
@@ -1216,11 +1226,7 @@ data class SetupFormState(
             ageError ?: fedIdError ?: accountError ?: stewardshipError
         }
 
-        SetupStep.JOIN_FEDERATION -> if (traceConsentAnswered || !traceQuestionOffered) {
-            null
-        } else {
-            LocalizationHelper.getString("setup_validation_trace_consent_required")
-        }
+        SetupStep.JOIN_FEDERATION -> null
 
         SetupStep.AI -> when {
             runWithoutAi -> null

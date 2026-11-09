@@ -2346,6 +2346,8 @@ class SetupViewModel(
         _state.value = _state.value.copy(
             accordMetricsConsent = consent,
             traceConsentAnswered = _state.value.traceConsentAnswered || answered,
+            // The question only renders inside the loaded disclosure.
+            consentDisclosureShown = _state.value.consentDisclosureShown || answered,
         )
     }
 
@@ -2355,9 +2357,19 @@ class SetupViewModel(
      * author — and screen 2 may be left; the step states why instead of
      * holding a disabled Next with nothing on screen (CSD-082 §2 `empty`).
      */
+    /** Screen 2's disclosure is on screen, so its stated costs are too. */
+    fun noteConsentDisclosureShown() {
+        _state.value = _state.value.copy(consentDisclosureShown = true)
+    }
+
     fun noteTraceQuestionAbsent() {
         PlatformLogger.w(TAG, "[consent] disclosure carries no replication grant — no trace question, nothing sent")
-        _state.value = _state.value.copy(traceQuestionOffered = false, accordMetricsConsent = false)
+        _state.value = _state.value.copy(
+            traceQuestionOffered = false,
+            accordMetricsConsent = false,
+            // Known only from a disclosure that loaded.
+            consentDisclosureShown = true,
+        )
     }
 
     /**

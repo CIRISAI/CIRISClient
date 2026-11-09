@@ -297,11 +297,12 @@ class SetupStepValidationTest {
 
     @Test
     fun consentScreenWaitsForTheTraceAnswer() {
-        // Send traces is a QUESTION, like the age band: no default, and Next
-        // stays disabled until it is answered.
-        val unanswered = SetupFormState(currentStep = SetupStep.JOIN_FEDERATION)
-        assertFalse(unanswered.canProceedFromCurrentStep())
-        assertTrue(unanswered.getStepValidationError() != null)
+        // CC 4.5.13: send traces starts unanswered and never blocks the person.
+        // Left unanswered it is deferred, and nothing is sent.
+        val unanswered = SetupFormState(currentStep = SetupStep.JOIN_FEDERATION, consentDisclosureShown = true)
+        assertTrue(unanswered.canProceedFromCurrentStep())
+        assertEquals(null, unanswered.getStepValidationError())
+        assertFalse(unanswered.accordMetricsConsent, "unanswered must not read as consent")
     }
 
     @Test
@@ -309,6 +310,7 @@ class SetupStepValidationTest {
         // Declining is an answer; so is declining everything else with it.
         val declined = SetupFormState(
             currentStep = SetupStep.JOIN_FEDERATION,
+            consentDisclosureShown = true,
             announceOwnership = false,
             accordMetricsConsent = false,
             traceConsentAnswered = true,
@@ -360,7 +362,7 @@ class SetupStepValidationTest {
         assertTrue(fresh.announceOwnership)
         assertFalse(fresh.traceConsentAnswered)
         assertFalse(fresh.accordMetricsConsent)
-        assertTrue(fresh.traceAnalyze)
+        assertFalse(fresh.traceAnalyze, "a grant to a peer starts unanswered (CC 4.5.13)")
         assertFalse(fresh.shareLocationInTraces, "location is required:false and defaults off")
     }
 

@@ -73,7 +73,12 @@ interface ApprovalsApi {
      * Move a ticket to a new status. Promotion (`blocked` → `pending`) is what
      * actually starts the work; granting a budget does not.
      */
-    suspend fun updateTicketStatus(ticketId: String, status: String, notes: String?): Boolean
+    suspend fun updateTicketStatus(
+        ticketId: String,
+        status: String,
+        notes: String?,
+        expectedStatus: String? = null,
+    ): TicketUpdateOutcome
 
     /**
      * The ticket's status NOW (`GET /v1/tickets/{ticket_id}`), read just before
@@ -184,8 +189,12 @@ class CIRISApprovalsApi(private val client: CIRISApiClient) : ApprovalsApi {
     ): BudgetGrantOutcome =
         client.grantTicketBudget(ticketId, amount, currency, purpose, expiresInHours)
 
-    override suspend fun updateTicketStatus(ticketId: String, status: String, notes: String?): Boolean =
-        client.updateTicketStatus(ticketId, status, notes)
+    override suspend fun updateTicketStatus(
+        ticketId: String,
+        status: String,
+        notes: String?,
+        expectedStatus: String?,
+    ): TicketUpdateOutcome = client.updateTicketStatus(ticketId, status, notes, expectedStatus)
 
     override suspend fun readTicketStatus(ticketId: String): String =
         client.getTicket(ticketId).status
@@ -239,4 +248,24 @@ fun TicketData.toPendingApprovalOrNull(): PendingApproval? {
         budgetSpend = BudgetApprovalSeam.parseBudgetSpend(metadata),
         proposal = proposal,
     )
+}
+
+
+/**
+ * What `PATCH /v1/tickets/{id}` answered (Agent #1346, agent 2.19.3). A blocked
+ * ticket moves only for ADMIN, AUTHORITY or SYSTEM_ADMIN, and `expected_status`
+ * makes a stale write a 409 instead of a silent overwrite. An older agent ignores
+ * `expected_status`, so the client still re-reads first.
+ */
+enum class TicketUpdateOutcome {
+    OK,
+
+    /** 403: this account's role cannot decide a waiting proposal. */
+    NOT_ALLOWED,
+
+    /** 409: the ticket is no longer in the expected status; someone else decided first. */
+    CHANGED,
+
+    /** Any other failure. */
+    FAILED,
 }

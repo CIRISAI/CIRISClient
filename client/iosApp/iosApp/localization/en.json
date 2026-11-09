@@ -4532,7 +4532,11 @@
     "trust_hosts_disagree": "Two trust-root hosts gave different answers, so no trust root was chosen. This node is restricted until they agree.",
     "trust_host_verified": "Verified",
     "trust_host_unreachable": "Unreachable",
-    "trust_host_not_verified": "Reached, not verified"
+    "trust_host_not_verified": "Reached, not verified",
+    "wa_update_not_allowed": "Only an admin or a Wise Authority can decide a waiting proposal. This account cannot.",
+    "wa_update_changed": "Someone decided this proposal before you did, so nothing changed. The list now shows where it stands.",
+    "wa_update_failed": "The agent did not take that change. Try again.",
+    "trace_consent_unanswered_note": "You can leave this unanswered. Nothing is sent until you say yes, and you can answer later."
   },
   "moderation": {
     "ladder": {

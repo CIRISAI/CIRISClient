@@ -13507,25 +13507,40 @@ class CIRISApiClient internal constructor(
      * @return true on success; false when the server refused (the caller
      *   surfaces a message rather than throwing into a poll loop).
      */
-    suspend fun updateTicketStatus(ticketId: String, status: String, notes: String? = null): Boolean {
+    suspend fun updateTicketStatus(
+        ticketId: String,
+        status: String,
+        notes: String? = null,
+        expectedStatus: String? = null,
+    ): ai.ciris.mobile.shared.approvals.TicketUpdateOutcome {
         val method = "updateTicketStatus"
-        logInfo(method, "Updating ticket $ticketId -> status=$status")
-
+        logInfo(method, "Updating ticket $ticketId -> status=$status expected=$expectedStatus")
+        // A raw call: the generated UpdateTicketRequest predates `expected_status`.
+        val client = agentHttpClient {}
         return try {
-            val request = ai.ciris.api.models.UpdateTicketRequest(
-                status = status,
-                notes = notes
-            )
-            val response = ticketsApi.updateExistingTicketV1TicketsTicketIdPatch(ticketId, request)
-            logDebug(method, "Response: status=${response.status}")
-            if (!response.success) {
-                logError(method, "API returned non-success status: ${response.status}")
-                return false
+            val body = buildJsonObject {
+                put("status", status)
+                notes?.let { put("notes", it) }
+                expectedStatus?.let { put("expected_status", it) }
+            }.toString()
+            val response = client.patch("$baseUrl/v1/tickets/$ticketId") {
+                header("Authorization", "Bearer $accessToken")
+                contentType(ContentType.Application.Json)
+                setBody(body)
             }
-            true
+            val code = response.status.value
+            logDebug(method, "Response: status=$code")
+            when {
+                code in 200..299 -> ai.ciris.mobile.shared.approvals.TicketUpdateOutcome.OK
+                code == 403 -> ai.ciris.mobile.shared.approvals.TicketUpdateOutcome.NOT_ALLOWED
+                code == 409 -> ai.ciris.mobile.shared.approvals.TicketUpdateOutcome.CHANGED
+                else -> ai.ciris.mobile.shared.approvals.TicketUpdateOutcome.FAILED
+            }
         } catch (e: Exception) {
             logException(method, e, "ticketId=$ticketId status=$status")
-            false
+            ai.ciris.mobile.shared.approvals.TicketUpdateOutcome.FAILED
+        } finally {
+            client.close()
         }
     }
 
