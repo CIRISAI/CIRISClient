@@ -916,7 +916,9 @@ fun CIRISApp(
                         val nonce = newAppNonce()
                         val signInUrl = apiClient.oauthBrowserLoginUrl("google", nonce, nodeBaseUrl)
                         platformLog(TAG, "[INFO][billing] opening browser for a fresh billing token: $signInUrl")
-                        openUrlInBrowser(signInUrl)
+                        if (!openUrlInBrowser(signInUrl)) {
+                            platformLog(TAG, "[WARN][billing] no browser accepted the sign-in URL; open it by hand: $signInUrl")
+                        }
                         refreshBillingCredentialFromBrowser(
                             signIn = {
                                 collectBrowserSignIn(
@@ -2414,7 +2416,15 @@ fun CIRISApp(
                         // a perfectly successful sign-in. Without this line the
                         // two are indistinguishable from the client side.
                         platformLog(TAG, "[INFO][onGoogleSignIn] opening browser: $signInUrl")
-                        openUrlInBrowser(signInUrl)
+                        if (!openUrlInBrowser(signInUrl)) {
+                            // Say so now, with the address, instead of polling for a
+                            // browser nobody asked to open (CIRISClient#284). The poll
+                            // still runs, so opening the address by hand still works.
+                            platformLog(TAG, "[WARN][onGoogleSignIn] no browser accepted the sign-in URL")
+                            loginStatusMessage = LocalizationHelper.getString(
+                                "auth.browser_signin.no_browser", mapOf("url" to signInUrl),
+                            )
+                        }
                         coroutineScope.launch {
                             // ONE LOOP, SHARED WITH THE BILLING REFRESH
                             // (BrowserSignIn.kt): ~3 minutes of polling, 204 is
@@ -2447,6 +2457,14 @@ fun CIRISApp(
                                     loginErrorMessage =
                                         LocalizationHelper.getString("auth.browser_signin.timed_out")
                                     platformLog(TAG, "[WARN][onGoogleSignIn] no hand-off after ${result.waitedSeconds}s. If you signed in successfully, the browser tab was probably an OLD one opened without ?app_nonce= — close stray CIRIS sign-in tabs and use the button again.")
+                                    return@launch
+                                }
+                                is BrowserSignInResult.BrowserNeverArrived -> {
+                                    // Not an expiry: the node never heard from the browser
+                                    // at all, so the fix is the browser, not the account.
+                                    loginErrorMessage =
+                                        LocalizationHelper.getString("auth.browser_signin.never_arrived")
+                                    platformLog(TAG, "[WARN][onGoogleSignIn] the node never saw the browser for this nonce in ${result.waitedSeconds}s — did a browser open at $signInUrl?")
                                     return@launch
                                 }
                                 is BrowserSignInResult.Collected -> result.handoff

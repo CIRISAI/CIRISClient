@@ -33,7 +33,8 @@ class OAuthHandoffPollTest {
     @Test
     fun notYetAndBlipsKeepWaitingAndAnExpiryStops() {
         assertEquals(OAuthHandoffPoll.Pending, OAuthHandoffPoll.classify(204, ""))
-        assertEquals(OAuthHandoffPoll.Pending, OAuthHandoffPoll.classify(502, "<html>bad gateway</html>"))
+        // A blip keeps waiting but is not the node saying it knows the flow (CIRISClient#284).
+        assertEquals(OAuthHandoffPoll.Unclear, OAuthHandoffPoll.classify(502, "<html>bad gateway</html>"))
         assertEquals(
             OAuthHandoffPoll.Failed("auth.oauth.flow_expired", null),
             OAuthHandoffPoll.classify(410, """{"reason_id":"auth.oauth.flow_expired"}"""),

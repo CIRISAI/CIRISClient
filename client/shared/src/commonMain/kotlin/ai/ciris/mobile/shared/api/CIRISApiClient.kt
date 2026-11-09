@@ -3088,7 +3088,7 @@ class CIRISApiClient internal constructor(
                 if (response.status.value == 204) "" else response.bodyAsText(),
             )
         } catch (_: Exception) {
-            OAuthHandoffPoll.Pending
+            OAuthHandoffPoll.Unclear
         } finally {
             client.close()
         }
