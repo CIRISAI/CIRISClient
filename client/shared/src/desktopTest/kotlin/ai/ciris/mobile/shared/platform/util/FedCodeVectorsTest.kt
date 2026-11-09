@@ -15,10 +15,10 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 /**
- * The client's FedCode decoder against CIRISVerify's golden vectors (v22.1.0,
- * CIRISVerify#329), the file the agent and server pin too. Every valid code, every
- * normalised spelling, every decode refusal, and the four known disagreements, where
- * this decoder follows CC 2.6.8 rather than the shipped Rust.
+ * The client's FedCode decoder against CIRISVerify's golden vectors (v22.2.0,
+ * CIRISVerify#329 and #331), the file the agent and server pin too. Every valid code,
+ * every normalised spelling and every decode refusal. Since #331 the Rust follows
+ * CC 2.6.8 too, so the file records no disagreements, and that is asserted.
  */
 class FedCodeVectorsTest {
     private val file: JsonObject = Json.parseToJsonElement(
@@ -57,8 +57,8 @@ class FedCodeVectorsTest {
 
     @Test fun theFileIsThere() {
         // A parser that finds nothing must fail loudly.
-        assertTrue(valid.size >= 20)
-        assertTrue(file["refusals"]!!.jsonArray.size >= 37)
+        assertTrue(valid.size >= 24)
+        assertTrue(file["refusals"]!!.jsonArray.size >= 41)
     }
 
     @Test fun everyValidCodeDecodesInBothForms() {
@@ -99,17 +99,21 @@ class FedCodeVectorsTest {
         }
     }
 
-    /** Where the shipped Rust departs from CC 2.6.8, the client follows the CC. */
-    @Test fun theKnownDisagreementsFollowTheConstitution() {
-        for (c in file["known_disagreements"]!!.jsonObject["cases"]!!.jsonArray.map { it.jsonObject }) {
-            val id = c["id"].str()
-            val outcome = c["conformant_outcome"].str()!!
-            if (outcome.startsWith("refused")) {
-                assertFailsWith<NodeCodeException.Malformed>(id) { FedCodeCodec.decode(c["code"].str()!!) }
-            } else {
-                assertEquals(c["encoder_input"]!!.jsonObject.asFile(), FedCodeCodec.decode(c["code"].str()!!).asFile(), id)
-            }
-        }
+    /**
+     * v22.1.0 recorded four places the Rust departed from CC 2.6.8; #331 fixed them and
+     * moved their inputs into `valid` and `refusals`, where the tests above run them.
+     * A new departure must be read before it is pinned, so a non-empty list fails.
+     */
+    @Test fun verifyRecordsNoDisagreementWithTheConstitution() {
+        val cases = file["known_disagreements"]!!.jsonObject["cases"]!!.jsonArray
+        assertTrue(cases.isEmpty(), "Verify records a departure from CC 2.6.8: ${cases.map { it.jsonObject["id"].str() }}")
+    }
+
+    /** New in v22.2.0: a key_id that does not hash to the code's sha256 is refused. */
+    @Test fun dec_key_id_swappedIsRefused() {
+        val r = file["refusals"]!!.jsonArray.map { it.jsonObject }.firstOrNull { it["id"].str() == "dec_key_id_swapped" }
+            ?: fail("dec_key_id_swapped missing from refusals")
+        assertFailsWith<NodeCodeException.Malformed> { FedCodeCodec.decode(r["code"].str()!!) }
     }
 
     /** The node screen's decoder: a v3 node code now decodes, with its commitment. */

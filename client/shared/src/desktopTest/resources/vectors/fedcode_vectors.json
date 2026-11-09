@@ -49,172 +49,8 @@
     }
   ],
   "known_disagreements": {
-    "cases": [
-      {
-        "cc_rule": "CC 2.6.8 wire format: `sha256(key_id)` binds the display key_id into the payload; a decoder MUST verify it against key_id.",
-        "code": "CIRIS-V2-AIAQ-AAAA-AAAA-AAAA-AAAA-AAAA-AAAA-AAAA-AAAA-AAAA-AAAA-AAAA-AAAA-AAEK-RDR5-25AJ-6GK7-2UW3-FU6L-UXLS-ZJTQ-TPY5-SQJB-X43U-RAA3-ID3P-LQIG-C3DJ-MNSS-2Z3S-GJYT-OZ3G-GVWG-QHLI-OR2H-A4Z2-F4XW-K6DB-NVYG-YZJO-NFXH-MYLM-NFSC-6Y3J-OJUX-GD3B-NRUW-GZJA-FBSG-S43Q-NRQX-SKIA-EG4A",
-        "code_qr": "CIRIS-V2-AIAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEKRDR525AJ6GK72UW3FU6LUXLSZJTQTPY5SQJBX43URAA3ID3PLQIGC3DJMNSS2Z3SGJYTOZ3GGVWGQHLIOR2HA4Z2F4XWK6DBNVYGYZJONFXHMYLMNFSC6Y3JOJUXGD3BNRUWGZJAFBSGS43QNRQXSKIAEG4A",
-        "codec_as_shipped": "decode skips the 32-byte key_id hash and accepts a code whose hash is all zeros.",
-        "conformant_outcome": "refused (Malformed)",
-        "crc16_ccitt_hex": "21b8",
-        "id": "dis_key_id_hash_not_verified",
-        "payload_hex": "020100000000000000000000000000000000000000000000000000000000000000008a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c10616c6963652d67723271376766356c681d68747470733a2f2f6578616d706c652e696e76616c69642f63697269730f616c6963652028646973706c61792900",
-        "shipped_outcome": {
-          "decoded": {
-            "alias_hint": "alice (display)",
-            "group_key_id": null,
-            "key_id": "alice-gr2q7gf5lh",
-            "kind": "user",
-            "ml_dsa_65_pubkey_sha256": null,
-            "owned_nodes": [],
-            "pubkey_ed25519_base64": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w=",
-            "transport_hint": "https://example.invalid/ciris"
-          }
-        }
-      },
-      {
-        "cc_rule": "CC 2.6.8 constraint 3: total payload <= 1024 bytes before base32, enforced at encoder AND decoder.",
-        "code": "CIRIS-V3-AMAS-BOIZ-4ICZ-REAU-MDIE-2OSY-G5WI-N7EB-QXON-YPRJ-5DXL-BQVL-2LAX-4U4K-RDR5-25AJ-6GK7-2UW3-FU6L-UXLS-ZJTQ-TPY5-SQJB-X43U-RAA3-ID3P-LQIG-C3DJ-MNSS-2Z3S-GJYT-OZ3G-GVWG-QWTY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6AP-MFWG-SY3F-EAUG-I2LT-OBWG-C6JJ-AAIB-C3TP-MRST-AMJN-ORVW-U3TG-NZVW-W5DK-SPNZ-6LXA-67RZ-5FBP-WWKE-CGIL-6IFZ-YQ6P-ZSFA-KGQV-ESM4-6OJL-PI3R-C3TP-MRST-AMRN-M5RW-YNTG-PB4G-G6TO-7IAT-I6UZ-DYCK-4DY2-NWA5-WKNF-5JHO-WWLF-6V32-ZHX3-ITT3-D4X3-WAUB-C3TP-MRST-AMZN-OB3X-S3DB-NB5H-UMTG-25W7-Y3R5-LZ4P-I3CU-5FBB-ZF45-ZXAN-TUBZ-QG3B-VBS2-WIBL-DAEN-Z2IB-C3TP-MRST-ANBN-O5TG-I4LM-MNSX-A2TK-HZXK-PLF2-LFLI-YXZW-VS2B-QFX3-C2VS-WJ5L-COV5-HCYJ-ETFC-NENN-MWMR-C3TP-MRST-ANJN-M43G-CZLH-NB3H-I3DS-CAF2-SC2V-HTFS-H7YT-2UEM-D6RL-GPEC-WK6W-QWE2-AQBZ-7ICS-6GTQ-FZVR-C3TP-MRST-ANRN-OJXH-I33M-OJUT-ONTK-M46W-XIX2-JDHH-N3HR-QEEQ-ZWTA-PFAM-KBJA-ISQD-O7YV-TRM4-Z6SU-VUSB-C3TP-MRST-ANZN-NVYH-O6TM-OZ2G-CNDC-6XVM-VN3V-C7C3-JM5U-G44B-DRXY-OT77-WPOU-MV62-SCFU-F6RM-P7QK-YDMB-C3TP-MRST-AOBN-OF4W-K4RU-GQ2T-E3RS-WJER-3FIC-VYUG-GCRL-VSZO-BR2F-CD74-3UZI-YM2P-6PQT-SPTV-WLJR-47OB-C3TP-MRST-AOJN-NF2W-UZTP-OUZT-M2DJ-UEO3-4KGW-WLBN-QDCP-NSZL-BPFG-POVC-7DE4-5OA4-BSKK-YR7D-Z4DJ-OA2R-C3TP-MRST-CMBN-NZ2T-M6JV-N5YG-S4T2-7UKQ-H4M7-LFZR-YFXR-37HO-SHJH-UQLP-6ASL-HSWE-VYYZ-GYWV-4PPX-3PFB-C3TP-MRST-CMJN-NRXG-CM3H-MJTT-OMTZ-I3OJ-XH2W-QTQF-WYQN-5JIS-BZ2B-MW7B-JGYQ-CM4H-TRKW-NY56-P62T-NCKB-C3TP-MRST-CMRN-O5ZT-M6TJ-MV4H-QNTN-7S7D-QYZE-C65V-XB25-JGR4-AITQ-MM4R-PRQJ-H7IB-5O2Z-75SB-NY32-7YGB-C3TP-MRST-CMZN-OBZT-I3LK-GN3D-E4L2-RQ62-Q6N5-BHEC-DNRV-NWKS-JXTT-Q3SC-EQLK-5R2B-HGSG-6AYB-DF6R-WLNR-C3TP-MRST-CNBN-OF4W-S5LT-NFUT-G2DM-VM72-F7NL-O74Y-OBWH-M2L3-IK6J-TV5V-7FT4-VXGV-TQMW-GPVF-AL6R-3TZR-C3TP-MRST-CNJN-O52W-C43Q-MU2W-CYLJ-VDXL-4DPR-24XT-QS5G-2YLS-WGW6-A7IC-UE5Y-4VND-TIOH-44DH-NKDN-LIDR-C3TP-MRST-CNRN-GU2G-4NLU-OI2H-G6TU-DI4B-Q6PY-VDOJ-ONQ5-AEXD-WRZC-A7GH-GE7N-DKA4-SGHO-X6UH-FOJU-CTMQ-CLWC-L3OM-EI65-PCDY-OZM4-3A22-EJGW-GYVF-HRL5-P47W-FSAX-OPGQ-3F6B-3E2Q",
-        "code_qr": "CIRIS-V3-AMASBOIZ4ICZREAUMDIE2OSYG5WIN7EBQXONYPRJ5DXLBQVL2LAX4U4KRDR525AJ6GK72UW3FU6LUXLSZJTQTPY5SQJBX43URAA3ID3PLQIGC3DJMNSS2Z3SGJYTOZ3GGVWGQWTYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6DYPB4HQ6APMFWGSY3FEAUGI2LTOBWGC6JJAAIBC3TPMRSTAMJNORVWU3TGNZVWW5DKSPNZ6LXA67RZ5FBPWWKECGIL6IFZYQ6PZSFAKGQVESM46OJLPI3RC3TPMRSTAMRNM5RWYNTGPB4GG6TO7IATI6UZDYCK4DY2NWA5WKNF5JHOWWLF6V32ZHX3ITT3D4X3WAUBC3TPMRSTAMZNOB3XS3DBNB5HUMTG25W7Y3R5LZ4PI3CU5FBBZF45ZXANTUBZQG3BVBS2WIBLDAENZ2IBC3TPMRSTANBNO5TGI4LMMNSXA2TKHZXKPLF2LFLIYXZWVS2BQFX3C2VSWJ5LCOV5HCYJETFCNENNMWMRC3TPMRSTANJNM43GCZLHNB3HI3DSCAF2SC2VHTFSH7YT2UEMD6RLGPECWK6WQWE2AQBZ7ICS6GTQFZVRC3TPMRSTANRNOJXHI33MOJUTONTKM46WXIX2JDHHN3HRQEEQZWTAPFAMKBJAISQDO7YVTRM4Z6SUVUSBC3TPMRSTANZNNVYHO6TMOZ2GCNDC6XVMVN3VC7C3JM5UG44BDRXYOT77WPOUMV62SCFUF6RMP7QKYDMBC3TPMRSTAOBNOF4WK4RUGQ2TE3RSWJER3FICVYUGGCRLVSZOBR2FCD743UZIYM2P6PQTSPTVWLJR47OBC3TPMRSTAOJNNF2WUZTPOUZTM2DJUEO34KGWWLBNQDCPNSZLBPFGPOVC7DE45OA4BSKKYR7DZ4DJOA2RC3TPMRSTCMBNNZ2TM6JVN5YGS4T27UKQH4M7LFZRYFXR37HOSHJHUQLP6ASLHSWEVYYZGYWV4PPX3PFBC3TPMRSTCMJNNRXGCM3HMJTTOMTZI3OJXH2WQTQFWYQN5JISBZ2BMW7BJGYQCM4HTRKWNY56P62TNCKBC3TPMRSTCMRNO5ZTM6TJMV4HQNTN7S7DQYZEC65VXB25JGR4AITQMM4RPRQJH7IB5O2Z75SBNY327YGBC3TPMRSTCMZNOBZTI3LKGN3DE4L2RQ62Q6N5BHECDNRVNWKSJXTTQ3SCEQLK5R2BHGSG6AYBDF6RWLNRC3TPMRSTCNBNOF4WS5LTNFUTG2DMVM72F7NLO74YOBWHM2L3IK6JTV5V7FT4VXGVTQMWGPVFAL6R3TZRC3TPMRSTCNJNO52WC43QMU2WCYLJVDXL4DPR24XTQS5G2YLSWGW6A7ICUE5Y4VNDTIOH44DHNKDNLIDRC3TPMRSTCNRNGU2G4NLUOI2HG6TUDI4BQ6PYVDOJONQ5AEXDWRZCA7GHGE7NDKA4SGHOX6UHFOJUCTMQCLWCL3OMEI65PCDYOZM43A22EJGWGYVFHRL5P47WFSAXOPGQ3F6B3E2Q",
-        "codec_as_shipped": "encode refuses 1,025 bytes (see `enc_payload_1025`); decode accepts them.",
-        "conformant_outcome": "refused (Malformed)",
-        "crc16_ccitt_hex": "d935",
-        "id": "dis_payload_1025_accepted_on_decode",
-        "payload_hex": "030120b919e20598901460d04d3a58376c86fc8185dcdc3e29e8eeb0c2abd2c17e538a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c10616c6963652d67723271376766356c685a7878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878780f616c6963652028646973706c6179290010116e6f646530312d746b6a6e666e6b6b746a93db9f2ee0f7e39e942fb59441190bf20b9c43cfcc8a051a152499cf392b7a37116e6f646530322d67636c36667878637a6efa01347a991e04ae0f1a6d81db29a5ea4eeb5965f577ac9efb44e7b1f2fbb028116e6f646530332d7077796c61687a7a3266d76dfc6e3d5e78f46c54e9421c979dcdc0d9d03981b61a865ab202b1808dce90116e6f646530342d776664716c6365706a6a3e6ea7acba59568c5f36acb41816fb16ab2b27ab13abd38b0924ca2691ad6599116e6f646530352d67366165676876746c72100ba90b553ccb23ff13d508c1fa2b33c82b2bd68589a04039fa052f1a702e6b116e6f646530362d726e746f6c726937366a673d6ba2fa48ce76ecf181090cda607940c5052044a0377f159c59ccfa54ad24116e6f646530372d6d70777a6c7674613462f5eacab77517c5b4b3b4373811c6f874fffb3dd4657da908b42fa2c7fe0ac0d8116e6f646530382d71796572343435326e32b2491d9502ae28630a2bacb2e0c74510ffcdd328c334ff3e1393e75b2d31e7dc116e6f646530392d69756a666f7533366869a11dbe28d6b2c2d80c4f6cb2b0bca67baa2f8c9ceb81c0c94ac47e3cf0697035116e6f646531302d6e753679356f7069727afd1503f19f59731c16f1dfcee91d27a416ff024b3cac4ae319362d5e3df7dbca116e6f646531312d6c6e613367626737327946dc9b9f5684e05b620dea5120e74165be149b10133879c5566e3be7fb536894116e6f646531322d7773367a69657878366dfcbe38632417bb5b875d49a3c02270633917c6093fd01ebb59ff6416e37afe0c116e6f646531332d7073346d6a337632717a8c3da879bd09c821b6356d9524de7386e422416aec74139a46f0301197d1b2db116e6f646531342d7179697573696933686cab3fa2fdab77f98706c76697b42bc99d7b5f967cadcd59c19633ea502fd1dcf3116e6f646531352d77756173706535616169a8eebe0df1d72f384ba6d6172b1ade07d02a13b8e55a39a1c7e70676a86d5a07116e6f646531362d35346e35747234737a741a381879f8a8dc97361d012e3b472207cc7313ed1a81c918eebfa872b93414d9012ec25edcc223dd788787659cd835a224d6362a53c57d7f3f62c81773cd0d97c1",
-        "payload_len": 1025,
-        "shipped_outcome": {
-          "decoded": {
-            "alias_hint": "alice (display)",
-            "group_key_id": null,
-            "key_id": "alice-gr2q7gf5lh",
-            "kind": "user",
-            "ml_dsa_65_pubkey_sha256": "2ec25edcc223dd788787659cd835a224d6362a53c57d7f3f62c81773cd0d97c1",
-            "owned_nodes": [
-              {
-                "key_id": "node01-tkjnfnkktj",
-                "transport_pubkey_ed25519_base64": "k9ufLuD3456UL7WUQRkL8gucQ8/MigUaFSSZzzkrejc="
-              },
-              {
-                "key_id": "node02-gcl6fxxczn",
-                "transport_pubkey_ed25519_base64": "+gE0epkeBK4PGm2B2yml6k7rWWX1d6ye+0TnsfL7sCg="
-              },
-              {
-                "key_id": "node03-pwylahzz2f",
-                "transport_pubkey_ed25519_base64": "1238bj1eePRsVOlCHJedzcDZ0DmBthqGWrICsYCNzpA="
-              },
-              {
-                "key_id": "node04-wfdqlcepjj",
-                "transport_pubkey_ed25519_base64": "Pm6nrLpZVoxfNqy0GBb7FqsrJ6sTq9OLCSTKJpGtZZk="
-              },
-              {
-                "key_id": "node05-g6aeghvtlr",
-                "transport_pubkey_ed25519_base64": "EAupC1U8yyP/E9UIwforM8grK9aFiaBAOfoFLxpwLms="
-              },
-              {
-                "key_id": "node06-rntolri76j",
-                "transport_pubkey_ed25519_base64": "Zz1rovpIznbs8YEJDNpgeUDFBSBEoDd/FZxZzPpUrSQ="
-              },
-              {
-                "key_id": "node07-mpwzlvta4b",
-                "transport_pubkey_ed25519_base64": "9erKt3UXxbSztDc4Ecb4dP/7PdRlfakItC+ix/4KwNg="
-              },
-              {
-                "key_id": "node08-qyer4452n2",
-                "transport_pubkey_ed25519_base64": "skkdlQKuKGMKK6yy4MdFEP/N0yjDNP8+E5PnWy0x59w="
-              },
-              {
-                "key_id": "node09-iujfou36hi",
-                "transport_pubkey_ed25519_base64": "oR2+KNaywtgMT2yysLyme6ovjJzrgcDJSsR+PPBpcDU="
-              },
-              {
-                "key_id": "node10-nu6y5opirz",
-                "transport_pubkey_ed25519_base64": "/RUD8Z9ZcxwW8d/O6R0npBb/Aks8rErjGTYtXj3328o="
-              },
-              {
-                "key_id": "node11-lna3gbg72y",
-                "transport_pubkey_ed25519_base64": "Rtybn1aE4FtiDepRIOdBZb4UmxATOHnFVm475/tTaJQ="
-              },
-              {
-                "key_id": "node12-ws6ziexx6m",
-                "transport_pubkey_ed25519_base64": "/L44YyQXu1uHXUmjwCJwYzkXxgk/0B67Wf9kFuN6/gw="
-              },
-              {
-                "key_id": "node13-ps4mj3v2qz",
-                "transport_pubkey_ed25519_base64": "jD2oeb0JyCG2NW2VJN5zhuQiQWrsdBOaRvAwEZfRsts="
-              },
-              {
-                "key_id": "node14-qyiusii3hl",
-                "transport_pubkey_ed25519_base64": "qz+i/at3+YcGx2aXtCvJnXtflnytzVnBljPqUC/R3PM="
-              },
-              {
-                "key_id": "node15-wuaspe5aai",
-                "transport_pubkey_ed25519_base64": "qO6+DfHXLzhLptYXKxreB9AqE7jlWjmhx+cGdqhtWgc="
-              },
-              {
-                "key_id": "node16-54n5tr4szt",
-                "transport_pubkey_ed25519_base64": "GjgYefio3Jc2HQEuO0ciB8xzE+0agckY7r+ocrk0FNk="
-              }
-            ],
-            "pubkey_ed25519_base64": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w=",
-            "transport_hint": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-          }
-        }
-      },
-      {
-        "cc_rule": "CC 2.6.8 PQC rule (b): the commitment applies to ANY kind of code; constraint 2 restricts only embedded nodes.",
-        "code": "CIRIS-V3-AMBG-IVI2-QZFP-P66E-ZB6L-2UPA-H6NW-KXHN-PSB3-MGZU-45H3-JZIK-ABNF-VS4B-HF3Q-5KD5-C5PV-NI2U-M3BU-Y7WM-ZOGY-VENU-5Y32-EXPW-B5NY-7SNT-SQLW-QZLM-OBSX-ELLB-M5SW-45BN-NZUT-IYLI-OZYH-C3DH-AAAA-AAAB-F3BF-5XGC-EPOX-RB4H-MWON-QNNC-ETLD-MKST-YV6X-6P3C-ZALX-HTIN-S7A6-BLY",
-        "code_qr": "CIRIS-V3-AMBGIVI2QZFPP66EZB6L2UPAH6NWKXHNPSB3MGZU45H3JZIKABNFVS4BHF3Q5KD5C5PVNI2UM3BUY7WMZOGYVENU5Y32EXPWB5NY7SNTSQLWQZLMOBSXELLBM5SW45BNNZUTIYLIOZYHC3DHAAAAAAABF3BF5XGCEPOXRB4HMWONQNNCETLDMKSTYV6X6P3CZALXHTINS7A6BLY",
-        "codec_as_shipped": "encode emits CIRIS-V3- for an `agent` code with a commitment and node_count = 0; decode refuses every v3 code whose kind is not `user` before reading node_count, so the code cannot be read back.",
-        "conformant_outcome": "decodes to the encoder input",
-        "crc16_ccitt_hex": "e0af",
-        "encoder_input": {
-          "alias_hint": null,
-          "group_key_id": null,
-          "key_id": "helper-agent-ni4ahvpqlg",
-          "kind": "agent",
-          "ml_dsa_65_pubkey_sha256": "2ec25edcc223dd788787659cd835a224d6362a53c57d7f3f62c81773cd0d97c1",
-          "owned_nodes": [],
-          "pubkey_ed25519_base64": "gTl3Dqh9F19Wo1Rmw0x+zMuNipG07jeiXfYPW4/Js5Q=",
-          "transport_hint": null
-        },
-        "id": "dis_non_user_commitment_only_refused_on_decode",
-        "owner": {
-          "ed25519_pubkey_base64": "gTl3Dqh9F19Wo1Rmw0x+zMuNipG07jeiXfYPW4/Js5Q=",
-          "ed25519_pubkey_hex": "8139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b394",
-          "ed25519_seed_hex": "0202020202020202020202020202020202020202020202020202020202020202",
-          "key_id": "helper-agent-ni4ahvpqlg",
-          "key_id_hash_sha256_hex": "64551a864af7fbc4c87cbd51e03f9b655ced7c83b61b34e74fb4e50a005a5acb",
-          "label": "helper-agent"
-        },
-        "payload_hex": "030264551a864af7fbc4c87cbd51e03f9b655ced7c83b61b34e74fb4e50a005a5acb8139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b3941768656c7065722d6167656e742d6e693461687670716c6700000000012ec25edcc223dd788787659cd835a224d6362a53c57d7f3f62c81773cd0d97c1",
-        "shipped_outcome": {
-          "error": "Malformed"
-        }
-      },
-      {
-        "cc_rule": "CC 2.6.8 v2 payload ends with hint(group_key_id); the byte is part of the layout.",
-        "code": "CIRIS-V2-AIAS-BOIZ-4ICZ-REAU-MDIE-2OSY-G5WI-N7EB-QXON-YPRJ-5DXL-BQVL-2LAX-4U4K-RDR5-25AJ-6GK7-2UW3-FU6L-UXLS-ZJTQ-TPY5-SQJB-X43U-RAA3-ID3P-LQIG-C3DJ-MNSS-2Z3S-GJYT-OZ3G-GVWG-QHLI-OR2H-A4Z2-F4XW-K6DB-NVYG-YZJO-NFXH-MYLM-NFSC-6Y3J-OJUX-GD3B-NRUW-GZJA-FBSG-S43Q-NRQX-SKNK-YQ",
-        "code_qr": "CIRIS-V2-AIASBOIZ4ICZREAUMDIE2OSYG5WIN7EBQXONYPRJ5DXLBQVL2LAX4U4KRDR525AJ6GK72UW3FU6LUXLSZJTQTPY5SQJBX43URAA3ID3PLQIGC3DJMNSS2Z3SGJYTOZ3GGVWGQHLIOR2HA4Z2F4XWK6DBNVYGYZJONFXHMYLMNFSC6Y3JOJUXGD3BNRUWGZJAFBSGS43QNRQXSKNKYQ",
-        "codec_as_shipped": "decode reads the group_key_id hint only if bytes remain, so a v2 payload ending after hint(alias) decodes with group_key_id absent.",
-        "conformant_outcome": "refused (Malformed, truncated)",
-        "crc16_ccitt_hex": "aac4",
-        "id": "dis_v2_missing_group_hint_tolerated",
-        "payload_hex": "020120b919e20598901460d04d3a58376c86fc8185dcdc3e29e8eeb0c2abd2c17e538a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c10616c6963652d67723271376766356c681d68747470733a2f2f6578616d706c652e696e76616c69642f63697269730f616c6963652028646973706c617929",
-        "shipped_outcome": {
-          "decoded": {
-            "alias_hint": "alice (display)",
-            "group_key_id": null,
-            "key_id": "alice-gr2q7gf5lh",
-            "kind": "user",
-            "ml_dsa_65_pubkey_sha256": null,
-            "owned_nodes": [],
-            "pubkey_ed25519_base64": "iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w=",
-            "transport_hint": "https://example.invalid/ciris"
-          }
-        }
-      }
-    ],
-    "note": "What ciris_verify_core::fedcode v22 does where CC 2.6.8 asks for something else. Recorded, not endorsed: a port should implement the CC rule and may use these inputs as its own refusal cases. When the codec is fixed these entries change and the regenerated file is the review."
+    "cases": [],
+    "note": "Where ciris_verify_core::fedcode departs from CC 2.6.8. Empty: the four departures recorded in v22.1.0 (unverified sha256(key_id), encoder-only payload bound, unreadable non-user commitment-only v3, tolerated missing group_key_id hint) were fixed in CIRISVerify#331 and their inputs now sit in `refusals` and `valid`."
   },
   "material": {
     "ed25519": "Every pubkey is ed25519-dalek's verifying key for the 32-byte seed shown (seed byte repeated 32 times).",
@@ -1005,6 +841,50 @@
       "payload_hex": "020120b919e20598901460d04d3a58376c86fc8185dcdc3e29e8eeb0c2abd2c17e538a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5cff616c6963652d67723271376766356c681d68747470733a2f2f6578616d706c652e696e76616c69642f63697269730f616c6963652028646973706c61792900",
       "payload_len": 130,
       "stage": "decode"
+    },
+    {
+      "code": "CIRIS-V2-AIAQ-AAAA-AAAA-AAAA-AAAA-AAAA-AAAA-AAAA-AAAA-AAAA-AAAA-AAAA-AAAA-AAEK-RDR5-25AJ-6GK7-2UW3-FU6L-UXLS-ZJTQ-TPY5-SQJB-X43U-RAA3-ID3P-LQIG-C3DJ-MNSS-2Z3S-GJYT-OZ3G-GVWG-QHLI-OR2H-A4Z2-F4XW-K6DB-NVYG-YZJO-NFXH-MYLM-NFSC-6Y3J-OJUX-GD3B-NRUW-GZJA-FBSG-S43Q-NRQX-SKIA-EG4A",
+      "constraint": "CC 2.6.8 wire format (a decoder MUST verify sha256(key_id) against key_id)",
+      "crc16_ccitt_hex": "21b8",
+      "description": "The `v2_user_hints` payload with its sha256(key_id) zeroed, CRC recomputed: the hash does not match the display key_id.",
+      "error": "Malformed",
+      "id": "dec_key_id_hash_zeroed",
+      "payload_hex": "020100000000000000000000000000000000000000000000000000000000000000008a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c10616c6963652d67723271376766356c681d68747470733a2f2f6578616d706c652e696e76616c69642f63697269730f616c6963652028646973706c61792900",
+      "payload_len": 130,
+      "stage": "decode"
+    },
+    {
+      "code": "CIRIS-V2-AIAS-BOIZ-4ICZ-REAU-MDIE-2OSY-G5WI-N7EB-QXON-YPRJ-5DXL-BQVL-2LAX-4U4K-RDR5-25AJ-6GK7-2UW3-FU6L-UXLS-ZJTQ-TPY5-SQJB-X43U-RAA3-ID3P-LQIG-23DJ-MNSS-2Z3S-GJYT-OZ3G-GVWG-QHLI-OR2H-A4Z2-F4XW-K6DB-NVYG-YZJO-NFXH-MYLM-NFSC-6Y3J-OJUX-GD3B-NRUW-GZJA-FBSG-S43Q-NRQX-SKIA-ACYA",
+      "constraint": "CC 2.6.8 wire format (a decoder MUST verify sha256(key_id) against key_id)",
+      "crc16_ccitt_hex": "00b0",
+      "description": "The `v2_user_hints` payload with the display key_id's first byte changed (`alice-…` to `mlice-…`), the minted sha256(key_id) kept and the CRC recomputed: refused.",
+      "error": "Malformed",
+      "id": "dec_key_id_swapped",
+      "payload_hex": "020120b919e20598901460d04d3a58376c86fc8185dcdc3e29e8eeb0c2abd2c17e538a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c106d6c6963652d67723271376766356c681d68747470733a2f2f6578616d706c652e696e76616c69642f63697269730f616c6963652028646973706c61792900",
+      "payload_len": 130,
+      "stage": "decode"
+    },
+    {
+      "code": "CIRIS-V3-AMAS-BOIZ-4ICZ-REAU-MDIE-2OSY-G5WI-N7EB-QXON-YPRJ-5DXL-BQVL-2LAX-4U4K-RDR5-25AJ-6GK7-2UW3-FU6L-UXLS-ZJTQ-TPY5-SQJB-X43U-RAA3-ID3P-LQIG-C3DJ-MNSS-2Z3S-GJYT-OZ3G-GVWG-QWTY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6DY-PB4H-Q6AP-MFWG-SY3F-EAUG-I2LT-OBWG-C6JJ-AAIB-C3TP-MRST-AMJN-ORVW-U3TG-NZVW-W5DK-SPNZ-6LXA-67RZ-5FBP-WWKE-CGIL-6IFZ-YQ6P-ZSFA-KGQV-ESM4-6OJL-PI3R-C3TP-MRST-AMRN-M5RW-YNTG-PB4G-G6TO-7IAT-I6UZ-DYCK-4DY2-NWA5-WKNF-5JHO-WWLF-6V32-ZHX3-ITT3-D4X3-WAUB-C3TP-MRST-AMZN-OB3X-S3DB-NB5H-UMTG-25W7-Y3R5-LZ4P-I3CU-5FBB-ZF45-ZXAN-TUBZ-QG3B-VBS2-WIBL-DAEN-Z2IB-C3TP-MRST-ANBN-O5TG-I4LM-MNSX-A2TK-HZXK-PLF2-LFLI-YXZW-VS2B-QFX3-C2VS-WJ5L-COV5-HCYJ-ETFC-NENN-MWMR-C3TP-MRST-ANJN-M43G-CZLH-NB3H-I3DS-CAF2-SC2V-HTFS-H7YT-2UEM-D6RL-GPEC-WK6W-QWE2-AQBZ-7ICS-6GTQ-FZVR-C3TP-MRST-ANRN-OJXH-I33M-OJUT-ONTK-M46W-XIX2-JDHH-N3HR-QEEQ-ZWTA-PFAM-KBJA-ISQD-O7YV-TRM4-Z6SU-VUSB-C3TP-MRST-ANZN-NVYH-O6TM-OZ2G-CNDC-6XVM-VN3V-C7C3-JM5U-G44B-DRXY-OT77-WPOU-MV62-SCFU-F6RM-P7QK-YDMB-C3TP-MRST-AOBN-OF4W-K4RU-GQ2T-E3RS-WJER-3FIC-VYUG-GCRL-VSZO-BR2F-CD74-3UZI-YM2P-6PQT-SPTV-WLJR-47OB-C3TP-MRST-AOJN-NF2W-UZTP-OUZT-M2DJ-UEO3-4KGW-WLBN-QDCP-NSZL-BPFG-POVC-7DE4-5OA4-BSKK-YR7D-Z4DJ-OA2R-C3TP-MRST-CMBN-NZ2T-M6JV-N5YG-S4T2-7UKQ-H4M7-LFZR-YFXR-37HO-SHJH-UQLP-6ASL-HSWE-VYYZ-GYWV-4PPX-3PFB-C3TP-MRST-CMJN-NRXG-CM3H-MJTT-OMTZ-I3OJ-XH2W-QTQF-WYQN-5JIS-BZ2B-MW7B-JGYQ-CM4H-TRKW-NY56-P62T-NCKB-C3TP-MRST-CMRN-O5ZT-M6TJ-MV4H-QNTN-7S7D-QYZE-C65V-XB25-JGR4-AITQ-MM4R-PRQJ-H7IB-5O2Z-75SB-NY32-7YGB-C3TP-MRST-CMZN-OBZT-I3LK-GN3D-E4L2-RQ62-Q6N5-BHEC-DNRV-NWKS-JXTT-Q3SC-EQLK-5R2B-HGSG-6AYB-DF6R-WLNR-C3TP-MRST-CNBN-OF4W-S5LT-NFUT-G2DM-VM72-F7NL-O74Y-OBWH-M2L3-IK6J-TV5V-7FT4-VXGV-TQMW-GPVF-AL6R-3TZR-C3TP-MRST-CNJN-O52W-C43Q-MU2W-CYLJ-VDXL-4DPR-24XT-QS5G-2YLS-WGW6-A7IC-UE5Y-4VND-TIOH-44DH-NKDN-LIDR-C3TP-MRST-CNRN-GU2G-4NLU-OI2H-G6TU-DI4B-Q6PY-VDOJ-ONQ5-AEXD-WRZC-A7GH-GE7N-DKA4-SGHO-X6UH-FOJU-CTMQ-CLWC-L3OM-EI65-PCDY-OZM4-3A22-EJGW-GYVF-HRL5-P47W-FSAX-OPGQ-3F6B-3E2Q",
+      "constraint": "CC 2.6.8 constraint 3 (payload <= 1024 bytes before base32, enforced at encoder AND decoder)",
+      "crc16_ccitt_hex": "d935",
+      "description": "The `v3_user_payload_1024` payload with one more transport-hint byte (1,025 bytes), CRC recomputed: refused by the decoder as `enc_payload_1025` is by the encoder.",
+      "error": "Malformed",
+      "id": "dec_payload_1025",
+      "payload_hex": "030120b919e20598901460d04d3a58376c86fc8185dcdc3e29e8eeb0c2abd2c17e538a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c10616c6963652d67723271376766356c685a7878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878787878780f616c6963652028646973706c6179290010116e6f646530312d746b6a6e666e6b6b746a93db9f2ee0f7e39e942fb59441190bf20b9c43cfcc8a051a152499cf392b7a37116e6f646530322d67636c36667878637a6efa01347a991e04ae0f1a6d81db29a5ea4eeb5965f577ac9efb44e7b1f2fbb028116e6f646530332d7077796c61687a7a3266d76dfc6e3d5e78f46c54e9421c979dcdc0d9d03981b61a865ab202b1808dce90116e6f646530342d776664716c6365706a6a3e6ea7acba59568c5f36acb41816fb16ab2b27ab13abd38b0924ca2691ad6599116e6f646530352d67366165676876746c72100ba90b553ccb23ff13d508c1fa2b33c82b2bd68589a04039fa052f1a702e6b116e6f646530362d726e746f6c726937366a673d6ba2fa48ce76ecf181090cda607940c5052044a0377f159c59ccfa54ad24116e6f646530372d6d70777a6c7674613462f5eacab77517c5b4b3b4373811c6f874fffb3dd4657da908b42fa2c7fe0ac0d8116e6f646530382d71796572343435326e32b2491d9502ae28630a2bacb2e0c74510ffcdd328c334ff3e1393e75b2d31e7dc116e6f646530392d69756a666f7533366869a11dbe28d6b2c2d80c4f6cb2b0bca67baa2f8c9ceb81c0c94ac47e3cf0697035116e6f646531302d6e753679356f7069727afd1503f19f59731c16f1dfcee91d27a416ff024b3cac4ae319362d5e3df7dbca116e6f646531312d6c6e613367626737327946dc9b9f5684e05b620dea5120e74165be149b10133879c5566e3be7fb536894116e6f646531322d7773367a69657878366dfcbe38632417bb5b875d49a3c02270633917c6093fd01ebb59ff6416e37afe0c116e6f646531332d7073346d6a337632717a8c3da879bd09c821b6356d9524de7386e422416aec74139a46f0301197d1b2db116e6f646531342d7179697573696933686cab3fa2fdab77f98706c76697b42bc99d7b5f967cadcd59c19633ea502fd1dcf3116e6f646531352d77756173706535616169a8eebe0df1d72f384ba6d6172b1ade07d02a13b8e55a39a1c7e70676a86d5a07116e6f646531362d35346e35747234737a741a381879f8a8dc97361d012e3b472207cc7313ed1a81c918eebfa872b93414d9012ec25edcc223dd788787659cd835a224d6362a53c57d7f3f62c81773cd0d97c1",
+      "payload_len": 1025,
+      "stage": "decode"
+    },
+    {
+      "code": "CIRIS-V2-AIAS-BOIZ-4ICZ-REAU-MDIE-2OSY-G5WI-N7EB-QXON-YPRJ-5DXL-BQVL-2LAX-4U4K-RDR5-25AJ-6GK7-2UW3-FU6L-UXLS-ZJTQ-TPY5-SQJB-X43U-RAA3-ID3P-LQIG-C3DJ-MNSS-2Z3S-GJYT-OZ3G-GVWG-QHLI-OR2H-A4Z2-F4XW-K6DB-NVYG-YZJO-NFXH-MYLM-NFSC-6Y3J-OJUX-GD3B-NRUW-GZJA-FBSG-S43Q-NRQX-SKNK-YQ",
+      "constraint": "CC 2.6.8 wire format (hint(group_key_id) is 0x00 when absent, never omitted)",
+      "crc16_ccitt_hex": "aac4",
+      "description": "The `v2_user_hints` payload ending after hint(alias), its 0x00 group_key_id hint byte removed, CRC recomputed: truncated.",
+      "error": "Malformed",
+      "id": "dec_v2_missing_group_hint",
+      "payload_hex": "020120b919e20598901460d04d3a58376c86fc8185dcdc3e29e8eeb0c2abd2c17e538a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c10616c6963652d67723271376766356c681d68747470733a2f2f6578616d706c652e696e76616c69642f63697269730f616c6963652028646973706c617929",
+      "payload_len": 129,
+      "stage": "decode"
     }
   ],
   "spec": {
@@ -1553,6 +1433,162 @@
       },
       "payload_hex": "030120b919e20598901460d04d3a58376c86fc8185dcdc3e29e8eeb0c2abd2c17e538a88e3dd7409f195fd52db2d3cba5d72ca6709bf1d94121bf3748801b40f6f5c10616c6963652d67723271376766356c6800000000012ec25edcc223dd788787659cd835a224d6362a53c57d7f3f62c81773cd0d97c1",
       "payload_len": 120,
+      "prefix": "CIRIS-V3-",
+      "version_byte_hex": "03"
+    },
+    {
+      "code": "CIRIS-V3-AMBG-IVI2-QZFP-P66E-ZB6L-2UPA-H6NW-KXHN-PSB3-MGZU-45H3-JZIK-ABNF-VS4B-HF3Q-5KD5-C5PV-NI2U-M3BU-Y7WM-ZOGY-VENU-5Y32-EXPW-B5NY-7SNT-SQLW-QZLM-OBSX-ELLB-M5SW-45BN-NZUT-IYLI-OZYH-C3DH-AAAA-AAAB-F3BF-5XGC-EPOX-RB4H-MWON-QNNC-ETLD-MKST-YV6X-6P3C-ZALX-HTIN-S7A6-BLY",
+      "code_qr": "CIRIS-V3-AMBGIVI2QZFPP66EZB6L2UPAH6NWKXHNPSB3MGZU45H3JZIKABNFVS4BHF3Q5KD5C5PVNI2UM3BUY7WMZOGYVENU5Y32EXPWB5NY7SNTSQLWQZLMOBSXELLBM5SW45BNNZUTIYLIOZYHC3DHAAAAAAABF3BF5XGCEPOXRB4HMWONQNNCETLDMKSTYV6X6P3CZALXHTINS7A6BLY",
+      "crc16_ccitt_hex": "e0af",
+      "decoded": {
+        "alias_hint": null,
+        "group_key_id": null,
+        "key_id": "helper-agent-ni4ahvpqlg",
+        "kind": "agent",
+        "ml_dsa_65_pubkey_sha256": "2ec25edcc223dd788787659cd835a224d6362a53c57d7f3f62c81773cd0d97c1",
+        "owned_nodes": [],
+        "pubkey_ed25519_base64": "gTl3Dqh9F19Wo1Rmw0x+zMuNipG07jeiXfYPW4/Js5Q=",
+        "transport_hint": null
+      },
+      "description": "v3 `agent` code carrying the PQC commitment and no nodes (node_count = 0): the commitment applies to any kind (CC 2.6.8 PQC rule (b)); constraint 2 restricts only embedded nodes.",
+      "encoder_input": {
+        "alias_hint": null,
+        "group_key_id": null,
+        "key_id": "helper-agent-ni4ahvpqlg",
+        "kind": "agent",
+        "ml_dsa_65_pubkey_sha256": "2ec25edcc223dd788787659cd835a224d6362a53c57d7f3f62c81773cd0d97c1",
+        "owned_nodes": [],
+        "pubkey_ed25519_base64": "gTl3Dqh9F19Wo1Rmw0x+zMuNipG07jeiXfYPW4/Js5Q=",
+        "transport_hint": null
+      },
+      "id": "v3_agent_commitment_only",
+      "owner": {
+        "ed25519_pubkey_base64": "gTl3Dqh9F19Wo1Rmw0x+zMuNipG07jeiXfYPW4/Js5Q=",
+        "ed25519_pubkey_hex": "8139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b394",
+        "ed25519_seed_hex": "0202020202020202020202020202020202020202020202020202020202020202",
+        "key_id": "helper-agent-ni4ahvpqlg",
+        "key_id_hash_sha256_hex": "64551a864af7fbc4c87cbd51e03f9b655ced7c83b61b34e74fb4e50a005a5acb",
+        "label": "helper-agent"
+      },
+      "payload_hex": "030264551a864af7fbc4c87cbd51e03f9b655ced7c83b61b34e74fb4e50a005a5acb8139770ea87d175f56a35466c34c7ecccb8d8a91b4ee37a25df60f5b8fc9b3941768656c7065722d6167656e742d6e693461687670716c6700000000012ec25edcc223dd788787659cd835a224d6362a53c57d7f3f62c81773cd0d97c1",
+      "payload_len": 127,
+      "prefix": "CIRIS-V3-",
+      "version_byte_hex": "03"
+    },
+    {
+      "code": "CIRIS-V3-AMBS-YDW5-RGRN-PRST-AFSH-BIJP-RWRU-HPDQ-FMMQ-THKP-A337-JU55-IRUD-HB7N-JEUM-MKGR-YLDO-V2ID-HCIF-TFLB-FFMS-OOS4-MP4T-MNWB-IYKK-ZBZX-2EJW-YYLC-FVXG-6ZDF-FV3X-S6DJ-NU3T-KYZW-NUAA-AAAA-AEXM-EXW4-YIR5-26EH-Q5SZ-ZWBV-UISN-MNRK-KPCX-27Z7-MLEB-O46N-BWL4-CSU7",
+      "code_qr": "CIRIS-V3-AMBSYDW5RGRNPRSTAFSHBIJPRWRUHPDQFMMQTHKPA337JU55IRUDHB7NJEUMMKGRYLDOV2IDHCIFTFLBFFMSOOS4MP4TMNWBIYKKZBZX2EJWYYLCFVXG6ZDFFV3XS6DJNU3TKYZWNUAAAAAAAEXMEXW4YIR526EHQ5SZZWBVUISNMNRKKPCX27Z7MLEBO46NBWL4CSU7",
+      "crc16_ccitt_hex": "4a9f",
+      "decoded": {
+        "alias_hint": null,
+        "group_key_id": null,
+        "key_id": "lab-node-wyxim75c6m",
+        "kind": "node",
+        "ml_dsa_65_pubkey_sha256": "2ec25edcc223dd788787659cd835a224d6362a53c57d7f3f62c81773cd0d97c1",
+        "owned_nodes": [],
+        "pubkey_ed25519_base64": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY/k2NsFGFKyHN9E=",
+        "transport_hint": null
+      },
+      "description": "v3 `node` code carrying the PQC commitment and no nodes (node_count = 0): the commitment applies to any kind (CC 2.6.8 PQC rule (b)); constraint 2 restricts only embedded nodes.",
+      "encoder_input": {
+        "alias_hint": null,
+        "group_key_id": null,
+        "key_id": "lab-node-wyxim75c6m",
+        "kind": "node",
+        "ml_dsa_65_pubkey_sha256": "2ec25edcc223dd788787659cd835a224d6362a53c57d7f3f62c81773cd0d97c1",
+        "owned_nodes": [],
+        "pubkey_ed25519_base64": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY/k2NsFGFKyHN9E=",
+        "transport_hint": null
+      },
+      "id": "v3_node_commitment_only",
+      "owner": {
+        "ed25519_pubkey_base64": "7UkoxijRwsbq6QM4kFmVYSlZJzpcY/k2NsFGFKyHN9E=",
+        "ed25519_pubkey_hex": "ed4928c628d1c2c6eae90338905995612959273a5c63f93636c14614ac8737d1",
+        "ed25519_seed_hex": "0303030303030303030303030303030303030303030303030303030303030303",
+        "key_id": "lab-node-wyxim75c6m",
+        "key_id_hash_sha256_hex": "2c0edd89a2d7c653016470a12f8da343bc702b19099d4f06f7f4d3bd44683387",
+        "label": "lab-node"
+      },
+      "payload_hex": "03032c0edd89a2d7c653016470a12f8da343bc702b19099d4f06f7f4d3bd44683387ed4928c628d1c2c6eae90338905995612959273a5c63f93636c14614ac8737d1136c61622d6e6f64652d777978696d373563366d00000000012ec25edcc223dd788787659cd835a224d6362a53c57d7f3f62c81773cd0d97c1",
+      "payload_len": 123,
+      "prefix": "CIRIS-V3-",
+      "version_byte_hex": "03"
+    },
+    {
+      "code": "CIRIS-V3-AMCA-NMCA-BN2U-WYPQ-KL7P-LMGC-66D5-B2QC-NY5C-IBXB-DJ4E-JX3Y-BRBT-KLWK-SOWB-OBIY-OBY5-M64D-Y77Q-57UB-BDUO-YRJQ-K5OX-OJUH-SMZ5-XWV6-PQLW-233P-OJSS-2ZTB-NVUW-Y6JN-PF3T-I5LC-GNVD-O3LY-AAAB-WZTB-NVUW-Y6JN-M5ZG-65LQ-FVVW-K6JN-N5WW-C3LC-NRYX-KZTI-AAAS-5QS6-3TBC-HXLY-Q6DW-LHGY-GWRC-JVRW-FJJ4-K7L7-H5RM-QF3T-ZUGZ-PQI3-TA",
+      "code_qr": "CIRIS-V3-AMCANMCABN2UWYPQKL7PLMGC66D5B2QCNY5CIBXBDJ4EJX3YBRBTKLWKSOWBOBIYOBY5M64DY77Q57UBBDUOYRJQK5OXOJUHSMZ5XWV6PQLW233POJSS2ZTBNVUWY6JNPF3TI5LCGNVDO3LYAAABWZTBNVUWY6JNM5ZG65LQFVVWK6JNN5WWC3LCNRYXKZTIAAAS5QS63TBCHXLYQ6DWLHGYGWRCJVRWFJJ4K7L7H5RMQF3TZUGZPQI3TA",
+      "crc16_ccitt_hex": "1b98",
+      "decoded": {
+        "alias_hint": null,
+        "group_key_id": "family-group-key-omamblqufh",
+        "key_id": "moore-family-yw4ub3j7mx",
+        "kind": "family",
+        "ml_dsa_65_pubkey_sha256": "2ec25edcc223dd788787659cd835a224d6362a53c57d7f3f62c81773cd0d97c1",
+        "owned_nodes": [],
+        "pubkey_ed25519_base64": "ypOsFwUYcHHWe4PH/w7+gQjo7EUwV113JoeTM9vavnw=",
+        "transport_hint": null
+      },
+      "description": "v3 `family` code carrying the PQC commitment and no nodes (node_count = 0): the commitment applies to any kind (CC 2.6.8 PQC rule (b)); constraint 2 restricts only embedded nodes; carries the group's key_id.",
+      "encoder_input": {
+        "alias_hint": null,
+        "group_key_id": "family-group-key-omamblqufh",
+        "key_id": "moore-family-yw4ub3j7mx",
+        "kind": "family",
+        "ml_dsa_65_pubkey_sha256": "2ec25edcc223dd788787659cd835a224d6362a53c57d7f3f62c81773cd0d97c1",
+        "owned_nodes": [],
+        "pubkey_ed25519_base64": "ypOsFwUYcHHWe4PH/w7+gQjo7EUwV113JoeTM9vavnw=",
+        "transport_hint": null
+      },
+      "id": "v3_family_commitment_only",
+      "owner": {
+        "ed25519_pubkey_base64": "ypOsFwUYcHHWe4PH/w7+gQjo7EUwV113JoeTM9vavnw=",
+        "ed25519_pubkey_hex": "ca93ac1705187071d67b83c7ff0efe8108e8ec4530575d7726879333dbdabe7c",
+        "ed25519_seed_hex": "0404040404040404040404040404040404040404040404040404040404040404",
+        "key_id": "moore-family-yw4ub3j7mx",
+        "key_id_hash_sha256_hex": "06b0400b754b61f052fef5b0c2f787d0ea026e3a2406e11a7844df780c43352e",
+        "label": "moore-family"
+      },
+      "payload_hex": "030406b0400b754b61f052fef5b0c2f787d0ea026e3a2406e11a7844df780c43352eca93ac1705187071d67b83c7ff0efe8108e8ec4530575d7726879333dbdabe7c176d6f6f72652d66616d696c792d7977347562336a376d7800001b66616d696c792d67726f75702d6b65792d6f6d616d626c7175666800012ec25edcc223dd788787659cd835a224d6362a53c57d7f3f62c81773cd0d97c1",
+      "payload_len": 154,
+      "prefix": "CIRIS-V3-",
+      "version_byte_hex": "03"
+    },
+    {
+      "code": "CIRIS-V3-AMCU-KPTF-YNJJ-YNCV-5OQJ-KHI3-T5WA-UMVW-AQQJ-CK5A-J4WE-OPW2-UPEI-NZ3O-PION-2KNQ-W6H5-COXU-YVMY-737U-54VJ-OFTO-HSTP-FZH3-7TGY-AUC3-6EMH-E33T-MVWG-YZJN-ONQW-Y33O-FVXX-O3LY-N4ZW-E4LR-PAAA-AHTD-N5WW-25LO-NF2H-SLLH-OJXX-K4BN-NNSX-SLJS-G5YT-MYTC-MY3G-KZIA-AEXM-EXW4-YIR5-26EH-Q5SZ-ZWBV-UISN-MNRK-KPCX-27Z7-MLEB-O46N-BWL4-DYEL",
+      "code_qr": "CIRIS-V3-AMCUKPTFYNJJYNCV5OQJKHI3T5WAUMVWAQQJCK5AJ4WEOPW2UPEINZ3OPION2KNQW6H5COXUYVMY737U54VJOFTOHSTPFZH37TGYAUC36EMHE33TMVWGYZJNONQWY33OFVXXO3LYN4ZWE4LRPAAAAHTDN5WW25LONF2HSLLHOJXXK4BNNNSXSLJSG5YTMYTCMY3GKZIAAEXMEXW4YIR526EHQ5SZZWBVUISNMNRKKPCX27Z7MLEBO46NBWL4DYEL",
+      "crc16_ccitt_hex": "e08b",
+      "decoded": {
+        "alias_hint": null,
+        "group_key_id": "community-group-key-27q6bbf6ee",
+        "key_id": "roselle-salon-owmxo3bqqx",
+        "kind": "community",
+        "ml_dsa_65_pubkey_sha256": "2ec25edcc223dd788787659cd835a224d6362a53c57d7f3f62c81773cd0d97c1",
+        "owned_nodes": [],
+        "pubkey_ed25519_base64": "bnoc3Smwt4/ROvTFWY/v9O8qlxZuPKby5Pv8zYBQW/E=",
+        "transport_hint": null
+      },
+      "description": "v3 `community` code carrying the PQC commitment and no nodes (node_count = 0): the commitment applies to any kind (CC 2.6.8 PQC rule (b)); constraint 2 restricts only embedded nodes; carries the group's key_id.",
+      "encoder_input": {
+        "alias_hint": null,
+        "group_key_id": "community-group-key-27q6bbf6ee",
+        "key_id": "roselle-salon-owmxo3bqqx",
+        "kind": "community",
+        "ml_dsa_65_pubkey_sha256": "2ec25edcc223dd788787659cd835a224d6362a53c57d7f3f62c81773cd0d97c1",
+        "owned_nodes": [],
+        "pubkey_ed25519_base64": "bnoc3Smwt4/ROvTFWY/v9O8qlxZuPKby5Pv8zYBQW/E=",
+        "transport_hint": null
+      },
+      "id": "v3_community_commitment_only",
+      "owner": {
+        "ed25519_pubkey_base64": "bnoc3Smwt4/ROvTFWY/v9O8qlxZuPKby5Pv8zYBQW/E=",
+        "ed25519_pubkey_hex": "6e7a1cdd29b0b78fd13af4c5598feff4ef2a97166e3ca6f2e4fbfccd80505bf1",
+        "ed25519_seed_hex": "0505050505050505050505050505050505050505050505050505050505050505",
+        "key_id": "roselle-salon-owmxo3bqqx",
+        "key_id_hash_sha256_hex": "453e65c3529c3455eba0951d1b9f6c0a32b60420912ba04f2c473edaa3c886e7",
+        "label": "roselle-salon"
+      },
+      "payload_hex": "0305453e65c3529c3455eba0951d1b9f6c0a32b60420912ba04f2c473edaa3c886e76e7a1cdd29b0b78fd13af4c5598feff4ef2a97166e3ca6f2e4fbfccd80505bf118726f73656c6c652d73616c6f6e2d6f776d786f336271717800001e636f6d6d756e6974792d67726f75702d6b65792d3237713662626636656500012ec25edcc223dd788787659cd835a224d6362a53c57d7f3f62c81773cd0d97c1",
+      "payload_len": 158,
       "prefix": "CIRIS-V3-",
       "version_byte_hex": "03"
     },

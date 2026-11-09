@@ -8,11 +8,10 @@ import kotlin.io.encoding.ExperimentalEncodingApi
  *
  * The client decodes and never mints: a node serves its own code, so there is no
  * encoder here. Pinned to CIRISVerify's golden vectors
- * (`ciris-verify-core/tests/vectors/fedcode/fedcode_vectors.json`, v22.1.0), which
- * the agent and server pin too. Where that file's `known_disagreements` record the
- * Rust decoder departing from CC 2.6.8, this follows the CC: it verifies
- * `sha256(key_id)`, bounds the payload at 1,024 bytes on decode, accepts a
- * commitment on any kind, and refuses a v2 payload missing its group hint byte.
+ * (`ciris-verify-core/tests/vectors/fedcode/fedcode_vectors.json`, v22.2.0), which
+ * the agent and server pin too. Both decoders follow CC 2.6.8: they verify
+ * `sha256(key_id)`, bound the payload at 1,024 bytes on decode, accept a
+ * commitment on any kind, and refuse a v2 payload missing its group hint byte.
  *
  * ```text
  * v1  0x01 | sha256(key_id) | ed25519 | LP(key_id) | LP(transport) | LP(alias)            (kind node)
