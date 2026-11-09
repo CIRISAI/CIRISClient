@@ -22,11 +22,13 @@ class StreamedUploadWireTest {
     private lateinit var server: HttpServer
     private val body = AtomicReference<ByteArray>()
     private val type = AtomicReference<String>()
+    private val length = AtomicReference<String?>()
 
     @BeforeTest fun setUp() {
         server = HttpServer.create(InetSocketAddress("127.0.0.1", 0), 0)
         server.createContext("/v1/files") { ex ->
             type.set(ex.requestHeaders.getFirst("Content-Type"))
+            length.set(ex.requestHeaders.getFirst("Content-Length"))
             body.set(ex.requestBody.readBytes())
             val ok = """{"attestation_id":"att-1","addressed":true,"cohort":"self","room":"self","tier":"Self","crossed":true}""".toByteArray()
             ex.sendResponseHeaders(200, ok.size.toLong())
@@ -64,5 +66,7 @@ class StreamedUploadWireTest {
         val sent = parts.last().substringAfter("\r\n\r\n").removeSuffix("\r\n").toByteArray(Charsets.ISO_8859_1)
         assertTrue(sent.contentEquals(bytes), "the file part is the file, whole")
         assertEquals(bytes.size.toLong(), lastProgress)
+        // The node refuses an oversized upload on this header alone, before any body.
+        assertEquals(body.get().size.toString(), length.get(), "Content-Length is the whole body")
     }
 }

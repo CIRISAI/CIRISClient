@@ -4444,7 +4444,20 @@
     "wa_update_failed": "Tác nhân không chấp nhận thay đổi đó. Hãy thử lại.",
     "trace_consent_unanswered_note": "Bạn có thể không cần trả lời. Không có gì được gửi đi cho đến khi bạn đồng ý, và bạn có thể trả lời sau.",
     "files_uploading_progress": "Đang thêm {name}: {sent} trên {total}",
-    "files_add_cancel": "Dừng"
+    "files_add_cancel": "Dừng",
+    "remote_node_view": "Xem",
+    "remote_node_title": "Nút của bạn",
+    "remote_node_snapshot_at": "Đọc lúc {time}. Đây là ảnh chụp nhanh: hãy làm mới để đọc lại.",
+    "remote_node_metrics": "Mạng",
+    "remote_node_logs": "Nhật ký gần đây",
+    "remote_node_refresh": "Làm mới",
+    "remote_node_unreachable": "Hiện không thể kết nối tới nút đó. Nút có thể đang tắt hoặc ngoài phạm vi.",
+    "remote_node_timeout": "Nút đó không trả lời kịp thời gian. Hãy thử lại sau một lát.",
+    "remote_node_send_failed": "Không thể gửi yêu cầu tới nút đó. Hãy thử lại.",
+    "remote_node_no_transport": "Nút này không thể kết nối tới các nút khác của bạn. Hãy kiểm tra cài đặt mạng của nút.",
+    "remote_node_needs_update": "Nút đó cần được cập nhật trước khi có thể hiển thị nội dung này.",
+    "remote_node_not_owner": "Nút đó không chấp nhận yêu cầu này. Chỉ các thiết bị của chủ sở hữu của nó mới có thể đọc được.",
+    "remote_node_failed": "Không thể đọc được câu trả lời của nút đó."
   },
   "moderation": {
     "ladder": {

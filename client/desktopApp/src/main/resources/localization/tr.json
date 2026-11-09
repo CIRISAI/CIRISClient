@@ -4444,7 +4444,20 @@
     "wa_update_failed": "Ajan bu değişikliği kabul etmedi. Tekrar deneyin.",
     "trace_consent_unanswered_note": "Bunu yanıtsız bırakabilirsiniz. Siz evet demeden hiçbir şey gönderilmez ve daha sonra yanıtlayabilirsiniz.",
     "files_uploading_progress": "{name} ekleniyor: {sent} / {total}",
-    "files_add_cancel": "Durdur"
+    "files_add_cancel": "Durdur",
+    "remote_node_view": "Görüntüle",
+    "remote_node_title": "Düğümünüz",
+    "remote_node_snapshot_at": "{time}'de okundu. Bu bir anlık görüntüdür: tekrar okumak için yenileyin.",
+    "remote_node_metrics": "Ağ",
+    "remote_node_logs": "Son kayıtlar",
+    "remote_node_refresh": "Yenile",
+    "remote_node_unreachable": "O düğüme şu anda erişilemiyor. Kapalı olabilir veya menzil dışında olabilir.",
+    "remote_node_timeout": "O düğüm zamanında yanıt vermedi. Birazdan tekrar deneyin.",
+    "remote_node_send_failed": "İstek o düğüme gönderilemedi. Tekrar deneyin.",
+    "remote_node_no_transport": "Bu düğüm diğer düğümlerinize ulaşamıyor. Ağ ayarlarını kontrol edin.",
+    "remote_node_needs_update": "Bunu gösterebilmesi için o düğümün güncellenmesi gerekir.",
+    "remote_node_not_owner": "O düğüm bu isteği kabul etmedi. Yalnızca sahibinin cihazları bunu okuyabilir.",
+    "remote_node_failed": "O düğümün yanıtı okunamadı."
   },
   "moderation": {
     "ladder": {

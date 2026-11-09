@@ -4444,7 +4444,20 @@
     "wa_update_failed": "L'agente non ha accettato quella modifica. Riprova.",
     "trace_consent_unanswered_note": "Puoi lasciare questo senza risposta. Non verrà inviato nulla finché non dici di sì, e puoi rispondere in seguito.",
     "files_uploading_progress": "Aggiunta di {name}: {sent} di {total}",
-    "files_add_cancel": "Ferma"
+    "files_add_cancel": "Ferma",
+    "remote_node_view": "Visualizza",
+    "remote_node_title": "Il tuo nodo",
+    "remote_node_snapshot_at": "Letto alle {time}. Questa è un'istantanea: aggiorna per leggerla di nuovo.",
+    "remote_node_metrics": "Rete",
+    "remote_node_logs": "Log recenti",
+    "remote_node_refresh": "Aggiorna",
+    "remote_node_unreachable": "Al momento non è possibile raggiungere quel nodo. Potrebbe essere spento o fuori portata.",
+    "remote_node_timeout": "Quel nodo non ha risposto in tempo. Riprova tra poco.",
+    "remote_node_send_failed": "Non è stato possibile inviare la richiesta a quel nodo. Riprova.",
+    "remote_node_no_transport": "Questo nodo non riesce a raggiungere i tuoi altri nodi. Controlla le sue impostazioni di rete.",
+    "remote_node_needs_update": "Quel nodo deve essere aggiornato prima di poter mostrare questo contenuto.",
+    "remote_node_not_owner": "Quel nodo non ha accettato questa richiesta. Solo i dispositivi del suo proprietario possono leggerla.",
+    "remote_node_failed": "Non è stato possibile leggere la risposta di quel nodo."
   },
   "moderation": {
     "ladder": {

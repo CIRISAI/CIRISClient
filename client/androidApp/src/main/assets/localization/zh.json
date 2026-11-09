@@ -4444,7 +4444,20 @@
     "wa_update_failed": "智能体未接受该更改。请重试。",
     "trace_consent_unanswered_note": "您可以暂不回答此问题。在您同意之前，不会发送任何内容，您也可以稍后再回答。",
     "files_uploading_progress": "正在添加 {name}：{sent} / {total}",
-    "files_add_cancel": "停止"
+    "files_add_cancel": "停止",
+    "remote_node_view": "查看",
+    "remote_node_title": "您的节点",
+    "remote_node_snapshot_at": "读取于 {time}。这是一个快照：刷新以再次读取。",
+    "remote_node_metrics": "网络",
+    "remote_node_logs": "最近的日志",
+    "remote_node_refresh": "刷新",
+    "remote_node_unreachable": "目前无法连接到该节点。它可能已关机或不在范围内。",
+    "remote_node_timeout": "该节点未能及时应答。请稍后重试。",
+    "remote_node_send_failed": "请求无法发送到该节点。请重试。",
+    "remote_node_no_transport": "此节点无法连接到您的其他节点。请检查其网络设置。",
+    "remote_node_needs_update": "该节点需要先更新才能显示此内容。",
+    "remote_node_not_owner": "该节点未接受此请求。只有其所有者的设备才能读取该请求。",
+    "remote_node_failed": "该节点的应答无法读取。"
   },
   "moderation": {
     "ladder": {

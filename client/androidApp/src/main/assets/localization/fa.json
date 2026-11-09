@@ -4450,7 +4450,20 @@
     "wa_update_failed": "عامل آن تغییر را نپذیرفت. دوباره تلاش کنید.",
     "trace_consent_unanswered_note": "می‌توانید این را بی‌پاسخ بگذارید. تا زمانی که موافقت نکنید چیزی ارسال نخواهد شد، و می‌توانید بعداً پاسخ دهید.",
     "files_uploading_progress": "در حال افزودن {name}: {sent} از {total}",
-    "files_add_cancel": "توقف"
+    "files_add_cancel": "توقف",
+    "remote_node_view": "مشاهده",
+    "remote_node_title": "گره شما",
+    "remote_node_snapshot_at": "خوانده‌شده در {time}. این یک عکس لحظه‌ای است: برای خواندن دوباره، بازخوانی کنید.",
+    "remote_node_metrics": "شبکه",
+    "remote_node_logs": "گزارش‌های اخیر",
+    "remote_node_refresh": "بازخوانی",
+    "remote_node_unreachable": "در حال حاضر دسترسی به آن گره ممکن نیست. ممکن است خاموش باشد یا خارج از محدوده باشد.",
+    "remote_node_timeout": "آن گره به‌موقع پاسخ نداد. کمی بعد دوباره تلاش کنید.",
+    "remote_node_send_failed": "درخواست به آن گره ارسال نشد. دوباره تلاش کنید.",
+    "remote_node_no_transport": "این گره نمی‌تواند به گره‌های دیگر شما دسترسی داشته باشد. تنظیمات شبکهٔ آن را بررسی کنید.",
+    "remote_node_needs_update": "آن گره پیش از نمایش این مورد باید به‌روزرسانی شود.",
+    "remote_node_not_owner": "آن گره این درخواست را نپذیرفت. تنها دستگاه‌های مالک آن می‌توانند آن را بخوانند.",
+    "remote_node_failed": "پاسخ آن گره خوانده نشد."
   },
   "moderation": {
     "ladder": {

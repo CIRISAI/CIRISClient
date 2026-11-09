@@ -4444,7 +4444,20 @@
     "wa_update_failed": "एजेंट ने वह बदलाव स्वीकार नहीं किया। फिर से प्रयास करें।",
     "trace_consent_unanswered_note": "आप इसे बिना उत्तर दिए छोड़ सकते हैं। जब तक आप हाँ नहीं कहते, कुछ भी नहीं भेजा जाएगा, और आप बाद में उत्तर दे सकते हैं।",
     "files_uploading_progress": "{name} जोड़ा जा रहा है: {total} में से {sent}",
-    "files_add_cancel": "रोकें"
+    "files_add_cancel": "रोकें",
+    "remote_node_view": "देखें",
+    "remote_node_title": "आपका नोड",
+    "remote_node_snapshot_at": "{time} पर पढ़ा गया। यह एक स्नैपशॉट है: इसे फिर से पढ़ने के लिए रीफ्रेश करें।",
+    "remote_node_metrics": "नेटवर्क",
+    "remote_node_logs": "हाल के लॉग",
+    "remote_node_refresh": "रीफ्रेश",
+    "remote_node_unreachable": "उस नोड तक अभी नहीं पहुँचा जा सकता। यह बंद हो सकता है या रेंज से बाहर हो सकता है।",
+    "remote_node_timeout": "उस नोड ने समय पर उत्तर नहीं दिया। कुछ देर में फिर से प्रयास करें।",
+    "remote_node_send_failed": "वह अनुरोध उस नोड को नहीं भेजा जा सका। फिर से प्रयास करें।",
+    "remote_node_no_transport": "यह नोड आपके अन्य नोड्स तक नहीं पहुँच सकता। इसकी नेटवर्क सेटिंग्स जाँचें।",
+    "remote_node_needs_update": "इसे दिखाने से पहले उस नोड को अपडेट की आवश्यकता है।",
+    "remote_node_not_owner": "उस नोड ने इस अनुरोध को स्वीकार नहीं किया। इसे केवल इसके स्वामी के डिवाइस ही पढ़ सकते हैं।",
+    "remote_node_failed": "उस नोड का उत्तर पढ़ा नहीं जा सका।"
   },
   "moderation": {
     "ladder": {

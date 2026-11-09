@@ -4444,7 +4444,20 @@
     "wa_update_failed": "Agen tidak menerima perubahan tersebut. Coba lagi.",
     "trace_consent_unanswered_note": "Anda boleh membiarkan ini tanpa jawaban. Tidak ada yang akan dikirim sampai Anda mengatakan ya, dan Anda dapat menjawabnya nanti.",
     "files_uploading_progress": "Menambahkan {name}: {sent} dari {total}",
-    "files_add_cancel": "Hentikan"
+    "files_add_cancel": "Hentikan",
+    "remote_node_view": "Lihat",
+    "remote_node_title": "Node Anda",
+    "remote_node_snapshot_at": "Dibaca pada {time}. Ini adalah snapshot: segarkan untuk membacanya lagi.",
+    "remote_node_metrics": "Jaringan",
+    "remote_node_logs": "Log terbaru",
+    "remote_node_refresh": "Segarkan",
+    "remote_node_unreachable": "Node tersebut tidak dapat dijangkau saat ini. Node mungkin sedang nonaktif atau di luar jangkauan.",
+    "remote_node_timeout": "Node tersebut tidak menjawab tepat waktu. Coba lagi sesaat lagi.",
+    "remote_node_send_failed": "Permintaan tidak dapat dikirim ke node tersebut. Coba lagi.",
+    "remote_node_no_transport": "Node ini tidak dapat menjangkau node Anda yang lain. Periksa pengaturan jaringannya.",
+    "remote_node_needs_update": "Node tersebut perlu diperbarui sebelum dapat menampilkan ini.",
+    "remote_node_not_owner": "Node tersebut tidak menerima permintaan ini. Hanya perangkat pemiliknya yang dapat membacanya.",
+    "remote_node_failed": "Jawaban node tersebut tidak dapat dibaca."
   },
   "moderation": {
     "ladder": {

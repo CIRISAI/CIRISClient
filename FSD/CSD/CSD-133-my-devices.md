@@ -55,6 +55,18 @@ loading:   {tag: screen_my_devices, renders: "the intro and the two actions; the
 error:     {tag: identity_release_outcome, renders: "a release refusal by id, from the shared outcome block"}
 ```
 
+**Another node you own, from here (Eric, 2026-11-05).** Each row that is not this
+device has View (`btn_identity_view_<key_id>`), shown when this device's node is
+0.5.245 or newer. It opens `RemoteNode`, a SNAPSHOT of that node read through this
+one (`POST /v1/mesh/relay`): its network metrics and its newest 100 log lines,
+with the time it was read (`txt_remote_node_snapshot`) and Refresh
+(`btn_remote_node_refresh`). Event streams cannot cross the relay, so there is no
+live view. Each half can fail alone. The relay's own failures are said in words:
+unreachable, timed out, could not send, no transport, and a target too old to
+relay these reads ("needs an update", 403 "not a relayable control op"). A target
+that refuses the signer reads as "only its owner's devices". The memory graph is
+not relayable and is not offered.
+
 ## 3. Contracts (who)
 
 All at the local node, owner session.
@@ -63,6 +75,7 @@ All at the local node, owner session.
 |---|---|---|---|
 | the owned nodes | `GET /v1/setup/owned-nodes` | CIRISServer | live |
 | release | `POST /v1/self/nodes/{node_key_id}/release` | CIRISServer | live; held for the roster's quorum (CSD-037) |
+| another owned node's metrics and logs | `POST /v1/mesh/relay {target_key_id, method, path}` relaying `GET /v1/federation/metrics` and `GET /v1/telemetry/logs?limit=100` | CIRISServer 0.5.245 `src/mesh_relay.rs` (`RELAYABLE`) | **called** — `meshRelay`; both nodes need 0.5.245 |
 | shared reads of the view model it shares with My keys (CSD-037) | `GET /v1/federation/self-key-record`, `GET /v1/self/occurrences`, `GET /v1/system/health` | CIRISServer | live — read on entry by `IdentityManagementViewModel.load()`; this screen draws none of them |
 
 ## 4. Flow (how)

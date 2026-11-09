@@ -2046,6 +2046,53 @@ class CIRISApiClient internal constructor(
         }
     }
 
+    /**
+     * `POST /v1/mesh/relay` on THIS device's own node: one read on another node the
+     * person owns, signed by the node and checked by the target against the owner's
+     * self-key roster (CIRISServer 0.5.245 `src/mesh_relay.rs`). The target's status
+     * and body come back verbatim; the relay's own failures are
+     * `{"error": "<token>: …"}` and become a [RelayRefusal].
+     */
+    suspend fun meshRelay(
+        targetKeyId: String,
+        method: String,
+        path: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.viewmodels.RelayAnswer {
+        val method_ = "meshRelay"
+        logInfo(method_, "POST $nodeUrl/v1/mesh/relay $method $path")
+        // The relay waits on the mesh; a slow target is its timeout to name, not ours.
+        val client = federationHttpClient(requestTimeoutMillis = 60_000)
+        return try {
+            val response = client.post("$nodeUrl/v1/mesh/relay") {
+                authHeader()?.let { header("Authorization", it) }
+                contentType(ContentType.Application.Json)
+                setBody(buildJsonObject {
+                    put("target_key_id", targetKeyId)
+                    put("method", method)
+                    put("path", path)
+                }.toString())
+            }
+            val raw = response.bodyAsText()
+            val code = response.status.value
+            val relayError = runCatching {
+                (jsonConfig.parseToJsonElement(raw) as? JsonObject)?.get("error")?.jsonPrimitive?.contentOrNull
+            }.getOrNull()
+            // The relay's own refusals carry {"error": "<token>: …"}; anything else is the target's answer.
+            if (relayError != null && (code == 502 || code == 504 || code == 401 || relayError.contains("relayable"))) {
+                throw ai.ciris.mobile.shared.viewmodels.RelayRefusal(code, relayError.substringBefore(':').trim(), relayError)
+            }
+            ai.ciris.mobile.shared.viewmodels.RelayAnswer(code, raw)
+        } catch (e: ai.ciris.mobile.shared.viewmodels.RelayRefusal) {
+            throw e
+        } catch (e: Exception) {
+            logException(method_, e, "target=$targetKeyId path=$path")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
     /** `GET /v1/notes`: notes to self, newest last. */
     suspend fun readNotes(nodeUrl: String): NoteListing {
         val method = "readNotes"

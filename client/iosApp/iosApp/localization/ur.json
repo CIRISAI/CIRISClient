@@ -4444,7 +4444,20 @@
     "wa_update_failed": "ایجنٹ نے وہ تبدیلی قبول نہیں کی۔ دوبارہ کوشش کریں۔",
     "trace_consent_unanswered_note": "آپ اسے بغیر جواب کے چھوڑ سکتے ہیں۔ جب تک آپ ہاں نہیں کہتے کچھ نہیں بھیجا جاتا، اور آپ بعد میں جواب دے سکتے ہیں۔",
     "files_uploading_progress": "{name} شامل کی جا رہی ہے: {sent} از {total}",
-    "files_add_cancel": "رکیں"
+    "files_add_cancel": "رکیں",
+    "remote_node_view": "دیکھیں",
+    "remote_node_title": "آپ کا نوڈ",
+    "remote_node_snapshot_at": "{time} پر پڑھا گیا۔ یہ ایک سنیپ شاٹ ہے: دوبارہ پڑھنے کے لیے ریفریش کریں۔",
+    "remote_node_metrics": "نیٹ ورک",
+    "remote_node_logs": "حالیہ لاگز",
+    "remote_node_refresh": "ریفریش",
+    "remote_node_unreachable": "اس نوڈ تک ابھی رسائی نہیں ہو سکتی۔ ہو سکتا ہے یہ بند ہو یا رینج سے باہر ہو۔",
+    "remote_node_timeout": "اس نوڈ نے وقت پر جواب نہیں دیا۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔",
+    "remote_node_send_failed": "وہ درخواست اس نوڈ کو نہیں بھیجی جا سکی۔ دوبارہ کوشش کریں۔",
+    "remote_node_no_transport": "یہ نوڈ آپ کے دوسرے نوڈز تک نہیں پہنچ سکتا۔ اس کی نیٹ ورک ترتیبات چیک کریں۔",
+    "remote_node_needs_update": "اس نوڈ کو یہ دکھانے سے پہلے اپ ڈیٹ کی ضرورت ہے۔",
+    "remote_node_not_owner": "اس نوڈ نے یہ درخواست قبول نہیں کی۔ صرف اس کے مالک کے آلات ہی اسے پڑھ سکتے ہیں۔",
+    "remote_node_failed": "اس نوڈ کا جواب پڑھا نہیں جا سکا۔"
   },
   "moderation": {
     "ladder": {

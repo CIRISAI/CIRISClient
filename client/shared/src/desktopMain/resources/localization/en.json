@@ -4538,7 +4538,20 @@
     "wa_update_failed": "The agent did not take that change. Try again.",
     "trace_consent_unanswered_note": "You can leave this unanswered. Nothing is sent until you say yes, and you can answer later.",
     "files_uploading_progress": "Adding {name}: {sent} of {total}",
-    "files_add_cancel": "Stop"
+    "files_add_cancel": "Stop",
+    "remote_node_view": "View",
+    "remote_node_title": "Your node",
+    "remote_node_snapshot_at": "Read at {time}. This is a snapshot: refresh to read it again.",
+    "remote_node_metrics": "Network",
+    "remote_node_logs": "Recent logs",
+    "remote_node_refresh": "Refresh",
+    "remote_node_unreachable": "That node can't be reached right now. It may be off or out of range.",
+    "remote_node_timeout": "That node didn't answer in time. Try again in a moment.",
+    "remote_node_send_failed": "The request couldn't be sent to that node. Try again.",
+    "remote_node_no_transport": "This node can't reach your other nodes. Check its network settings.",
+    "remote_node_needs_update": "That node needs an update before it can show this.",
+    "remote_node_not_owner": "That node didn't accept this request. Only its owner's devices can read it.",
+    "remote_node_failed": "That node's answer couldn't be read."
   },
   "moderation": {
     "ladder": {
