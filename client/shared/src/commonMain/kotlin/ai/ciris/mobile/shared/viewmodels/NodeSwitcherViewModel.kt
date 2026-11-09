@@ -701,9 +701,9 @@ class NodeSwitcherViewModel(
                 // one we decoded. Refuse on any mismatch (defeats a spoof node).
                 val served = apiClient.getNodeCode(baseUrl)
                 val servedDecoded = NodeCodeCodec.decode(served.code)
-                if (servedDecoded.keyId != decoded.keyId ||
-                    servedDecoded.pubkeyEd25519Base64 != decoded.pubkeyEd25519Base64
-                ) {
+                // A v3 code also commits to the node's ML-DSA-65 key: the node must serve
+                // the same commitment, or this is not the node the code names (CC 2.6.8).
+                if (!servedCodeMatches(scanned = decoded, served = servedDecoded)) {
                     PlatformLogger.e(
                         TAG,
                         "[connectByNodeCode] PIN MISMATCH: scanned key=${decoded.keyId} served=${servedDecoded.keyId}",
@@ -999,3 +999,14 @@ fun nodesListBody(read: OwnedNodesRead?, profiles: List<NodeProfile>): NodesList
     profiles.isEmpty() -> NodesListBody.EMPTY
     else -> NodesListBody.LIST
 }
+
+/**
+ * The identity pin: the code a node serves back must name the node the person
+ * scanned. Same key_id and Ed25519 key, and when the scanned code is v3, the same
+ * ML-DSA-65 commitment (CC 2.6.8). A v1 code commits to Ed25519 only, so a served
+ * commitment is not required to match nothing.
+ */
+internal fun servedCodeMatches(scanned: DecodedNodeCode, served: DecodedNodeCode): Boolean =
+    served.keyId == scanned.keyId &&
+        served.pubkeyEd25519Base64 == scanned.pubkeyEd25519Base64 &&
+        (scanned.mlDsa65PubkeySha256 == null || served.mlDsa65PubkeySha256 == scanned.mlDsa65PubkeySha256)
