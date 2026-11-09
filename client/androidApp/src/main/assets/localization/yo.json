@@ -2698,6 +2698,8 @@
     "wa_update_changed": "Ẹnì kan ti pinnu lórí àbá yìí kí o tó ṣe bẹ́ẹ̀, nítorí náà kò sí ohun tí ó yí padà. Àkọsílẹ̀ náà ń fi ipò tí ó wà hàn nísinsìnyí.",
     "wa_update_failed": "Aṣojú kò gba àyípadà náà. Gbìyànjú lẹ́ẹ̀kan síi.",
     "trace_consent_unanswered_note": "O lè fi èyí sílẹ̀ láìdáhùn. A kò níí fi ohunkóhun ránṣẹ́ títí o fi sọ bẹ́ẹ̀ni, o sì lè dáhùn nígbà mìíràn.",
+    "files_uploading_progress": "Ń fi {name} kún: {sent} nínú {total}",
+    "files_add_cancel": "Dúró",
     "yubikey_probe_failed": "A KÒ LÈ KA IPÒ YUBIKEY",
     "yubikey_probe_not_on_this_node": "NÓDÙ YÌÍ KÒ ṢE ÌJÁBỌ̀ NÍPA IPÒ YUBIKEY",
     "yubikey_probe_reason": "Ìdí: {detail}",

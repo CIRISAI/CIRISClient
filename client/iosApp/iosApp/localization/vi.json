@@ -4442,7 +4442,9 @@
     "wa_update_not_allowed": "Chỉ quản trị viên hoặc Cơ Quan Sáng Suốt mới có thể quyết định một đề xuất đang chờ. Tài khoản này không thể.",
     "wa_update_changed": "Ai đó đã quyết định đề xuất này trước bạn, nên không có gì thay đổi. Danh sách hiện đang hiển thị trạng thái hiện tại của nó.",
     "wa_update_failed": "Tác nhân không chấp nhận thay đổi đó. Hãy thử lại.",
-    "trace_consent_unanswered_note": "Bạn có thể không cần trả lời. Không có gì được gửi đi cho đến khi bạn đồng ý, và bạn có thể trả lời sau."
+    "trace_consent_unanswered_note": "Bạn có thể không cần trả lời. Không có gì được gửi đi cho đến khi bạn đồng ý, và bạn có thể trả lời sau.",
+    "files_uploading_progress": "Đang thêm {name}: {sent} trên {total}",
+    "files_add_cancel": "Dừng"
   },
   "moderation": {
     "ladder": {

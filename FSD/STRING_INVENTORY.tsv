@@ -2436,6 +2436,7 @@ mobile.files_act_withdraw	client	client	literal	-	113	differs:15	-
 mobile.files_act_withdrawn	client	client	literal	-	-	-	-
 mobile.files_act_working	client	client	literal	-	-	-	-
 mobile.files_add	client	client	literal	-	-	-	-
+mobile.files_add_cancel	client	client	literal	-	91	differs:13	-
 mobile.files_add_failed	client	client	literal	-	-	-	-
 mobile.files_awaiting_key_body	client	client	literal	-	-	-	-
 mobile.files_awaiting_key_check_again	client	client	literal	-	141	differs:16	-
@@ -2521,6 +2522,7 @@ mobile.files_unreadable_body	client	client	literal	-	-	-	-
 mobile.files_unreadable_title	client	client	literal	-	-	-	-
 mobile.files_untitled	client	client	literal	-	-	-	-
 mobile.files_uploading	client	client	literal	-	-	-	-
+mobile.files_uploading_progress	client	client	literal	-	-	-	-
 mobile.files_withdraw_explain	client	client	literal	-	-	-	-
 mobile.files_withheld	client	client	literal	-	-	-	-
 mobile.files_written	client	client	literal	-	-	-	-

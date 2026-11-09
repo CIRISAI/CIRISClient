@@ -1419,6 +1419,8 @@
     "wa_update_changed": "Quelqu'un a statué sur cette proposition avant vous, rien n'a donc changé. La liste affiche désormais son état.",
     "wa_update_failed": "L'agent n'a pas pris en compte cette modification. Réessayez.",
     "trace_consent_unanswered_note": "Vous pouvez laisser cette question sans réponse. Rien n'est envoyé tant que vous ne dites pas oui, et vous pourrez répondre plus tard.",
+    "files_uploading_progress": "Ajout de {name} : {sent} sur {total}",
+    "files_add_cancel": "Arrêter",
     "add_fedid_confirm": "Ajouter l'ID de fédération",
     "add_fedid_intro": "Vous êtes déjà connecté — ceci ajoute un ID de fédération à votre compte existant sans le recréer. Votre identifiant de connexion est préservé.",
     "add_fedid_label_heading": "Nommez votre ID de fédération",

@@ -4379,6 +4379,8 @@
     "wa_update_changed": "Alguien decidió esta propuesta antes que tú, así que nada cambió. La lista ahora muestra en qué punto se encuentra.",
     "wa_update_failed": "El agente no aceptó ese cambio. Vuelve a intentarlo.",
     "trace_consent_unanswered_note": "Puedes dejar esto sin responder. No se enviará nada hasta que digas que sí, y puedes responder más adelante.",
+    "files_uploading_progress": "Añadiendo {name}: {sent} de {total}",
+    "files_add_cancel": "Detener",
     "data_receipt_uncheckable": "No se puede verificar aquí",
     "data_receipt_key_label": "Clave",
     "data_receipt_key_not_current": "Firmado con una clave que este agente ya no usa. Solo se comprueba contra su clave actual, así que este recibo se interpreta como que no se comprueba aunque sea genuino.",

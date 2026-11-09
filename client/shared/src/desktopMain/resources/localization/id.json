@@ -4442,7 +4442,9 @@
     "wa_update_not_allowed": "Hanya admin atau Otoritas Bijak yang dapat memutuskan proposal yang sedang menunggu. Akun ini tidak bisa.",
     "wa_update_changed": "Seseorang telah memutuskan proposal ini sebelum Anda, sehingga tidak ada yang berubah. Daftar ini sekarang menampilkan statusnya.",
     "wa_update_failed": "Agen tidak menerima perubahan tersebut. Coba lagi.",
-    "trace_consent_unanswered_note": "Anda boleh membiarkan ini tanpa jawaban. Tidak ada yang akan dikirim sampai Anda mengatakan ya, dan Anda dapat menjawabnya nanti."
+    "trace_consent_unanswered_note": "Anda boleh membiarkan ini tanpa jawaban. Tidak ada yang akan dikirim sampai Anda mengatakan ya, dan Anda dapat menjawabnya nanti.",
+    "files_uploading_progress": "Menambahkan {name}: {sent} dari {total}",
+    "files_add_cancel": "Hentikan"
   },
   "moderation": {
     "ladder": {

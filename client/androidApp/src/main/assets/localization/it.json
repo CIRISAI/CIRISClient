@@ -4442,7 +4442,9 @@
     "wa_update_not_allowed": "Solo un amministratore o una Wise Authority può decidere una proposta in attesa. Questo account non può.",
     "wa_update_changed": "Qualcuno ha deciso questa proposta prima di te, quindi nulla è cambiato. L'elenco ora mostra a che punto si trova.",
     "wa_update_failed": "L'agente non ha accettato quella modifica. Riprova.",
-    "trace_consent_unanswered_note": "Puoi lasciare questo senza risposta. Non verrà inviato nulla finché non dici di sì, e puoi rispondere in seguito."
+    "trace_consent_unanswered_note": "Puoi lasciare questo senza risposta. Non verrà inviato nulla finché non dici di sì, e puoi rispondere in seguito.",
+    "files_uploading_progress": "Aggiunta di {name}: {sent} di {total}",
+    "files_add_cancel": "Ferma"
   },
   "moderation": {
     "ladder": {

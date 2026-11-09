@@ -23,6 +23,9 @@ object TestAutomationState {
     private val clickHandlers = MutableStateFlow<Map<String, () -> Unit>>(emptyMap())
 
     var currentScreen: String = "unknown"
+
+    /** The host's blocking overlay, if any (iOS sets it); see [StateResponse.hostOverlay]. */
+    var hostOverlay: (() -> String?)? = null
     var isEnabled: Boolean = false
 
     /**

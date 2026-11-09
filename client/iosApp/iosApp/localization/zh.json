@@ -4442,7 +4442,9 @@
     "wa_update_not_allowed": "只有管理员或智慧权威才能裁定一项等待中的提案。此账户无法执行此操作。",
     "wa_update_changed": "有人在您之前就已经对此提案做出了裁定，因此未发生任何更改。列表现在显示的是其当前状态。",
     "wa_update_failed": "智能体未接受该更改。请重试。",
-    "trace_consent_unanswered_note": "您可以暂不回答此问题。在您同意之前，不会发送任何内容，您也可以稍后再回答。"
+    "trace_consent_unanswered_note": "您可以暂不回答此问题。在您同意之前，不会发送任何内容，您也可以稍后再回答。",
+    "files_uploading_progress": "正在添加 {name}：{sent} / {total}",
+    "files_add_cancel": "停止"
   },
   "moderation": {
     "ladder": {

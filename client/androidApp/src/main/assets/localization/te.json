@@ -2713,6 +2713,8 @@
     "wa_update_changed": "మీకన్నా ముందే ఎవరైనా ఈ ప్రతిపాదనను నిర్ణయించారు, కాబట్టి ఏదీ మారలేదు. జాబితా ఇప్పుడు అది ఎక్కడ ఉందో చూపిస్తుంది.",
     "wa_update_failed": "ఆ మార్పును ఏజెంట్ తీసుకోలేదు. మళ్లీ ప్రయత్నించండి.",
     "trace_consent_unanswered_note": "మీరు దీన్ని సమాధానం ఇవ్వకుండా వదిలేయవచ్చు. మీరు అవును అని చెప్పే వరకు ఏదీ పంపబడదు, మరియు మీరు దీనికి తర్వాత సమాధానం ఇవ్వవచ్చు.",
+    "files_uploading_progress": "{name}ను జోడిస్తోంది: {total}లో {sent}",
+    "files_add_cancel": "ఆపు",
     "yubikey_probe_failed": "YUBIKEY స్థితిని చదవలేకపోయాం",
     "yubikey_probe_not_on_this_node": "ఈ నోడ్ YUBIKEY స్థితిని నివేదించదు",
     "yubikey_probe_reason": "కారణం: {detail}",

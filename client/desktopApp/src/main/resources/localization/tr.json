@@ -4442,7 +4442,9 @@
     "wa_update_not_allowed": "Bekleyen bir öneriye yalnızca bir yönetici veya bir Bilge Otorite karar verebilir. Bu hesap karar veremez.",
     "wa_update_changed": "Biri bu öneriye sizden önce karar verdi, bu yüzden hiçbir şey değişmedi. Liste artık durumunu gösteriyor.",
     "wa_update_failed": "Ajan bu değişikliği kabul etmedi. Tekrar deneyin.",
-    "trace_consent_unanswered_note": "Bunu yanıtsız bırakabilirsiniz. Siz evet demeden hiçbir şey gönderilmez ve daha sonra yanıtlayabilirsiniz."
+    "trace_consent_unanswered_note": "Bunu yanıtsız bırakabilirsiniz. Siz evet demeden hiçbir şey gönderilmez ve daha sonra yanıtlayabilirsiniz.",
+    "files_uploading_progress": "{name} ekleniyor: {sent} / {total}",
+    "files_add_cancel": "Durdur"
   },
   "moderation": {
     "ladder": {

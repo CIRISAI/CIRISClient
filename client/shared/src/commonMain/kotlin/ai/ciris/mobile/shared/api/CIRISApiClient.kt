@@ -95,6 +95,7 @@ import io.ktor.client.call.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
+import io.ktor.client.plugins.onUpload
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -1275,6 +1276,9 @@ class CIRISApiClient internal constructor(
             }
         }
 
+    /** A streamed upload fails only when nothing moves for this long. */
+    private val UPLOAD_STALL_MS = 120_000L
+
     /** How long add-device calls wait: past the node's own 30 s wait for an owner route. */
     private val ADD_DEVICE_TIMEOUT_MS = 45_000L
 
@@ -1970,6 +1974,72 @@ class CIRISApiClient internal constructor(
             }
         } catch (e: Exception) {
             logException(method, e, "cohort=${write.cohort}")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * `POST /v1/files`, streamed (CIRISServer `src/drive.rs` `parse_upload`). Every
+     * field precedes the file, because the node seals the bytes as they arrive
+     * (`drive.field_after_file` otherwise), and `size` is the file's exact length,
+     * which lets it stream up to 2.5 GiB instead of collecting the part whole. No
+     * overall time limit, since a large file over a slow link takes as long as it
+     * takes; a stalled connection still fails after [UPLOAD_STALL_MS]. Refusals are
+     * the node's, by name.
+     */
+    suspend fun writeFileStreamed(
+        cohort: String,
+        roomId: String?,
+        mediaType: String,
+        file: ai.ciris.mobile.shared.platform.PickedFileStream,
+        onProgress: (Long, Long) -> Unit,
+        nodeUrl: String,
+    ): FileWritten {
+        val method = "writeFileStreamed"
+        logInfo(method, "POST $nodeUrl/v1/files (streamed) cohort=$cohort media=$mediaType size=${file.sizeBytes}")
+        val client = agentHttpClient {
+            install(io.ktor.client.plugins.HttpTimeout) {
+                requestTimeoutMillis = io.ktor.client.plugins.HttpTimeoutConfig.INFINITE_TIMEOUT_MS
+                connectTimeoutMillis = 10_000
+                socketTimeoutMillis = UPLOAD_STALL_MS
+            }
+        }
+        return try {
+            val form = io.ktor.client.request.forms.MultiPartFormDataContent(
+                io.ktor.client.request.forms.formData {
+                    append("cohort", cohort)
+                    roomId?.let { append("room_id", it) }
+                    append("media_type", mediaType)
+                    append("filename", file.name)
+                    append("size", file.sizeBytes.toString())
+                    append(
+                        "file",
+                        io.ktor.client.request.forms.ChannelProvider(file.sizeBytes) { file.open() },
+                        io.ktor.http.Headers.build {
+                            append(io.ktor.http.HttpHeaders.ContentType, mediaType)
+                            append(
+                                io.ktor.http.HttpHeaders.ContentDisposition,
+                                "filename=\"${file.name.replace("\"", "")}\"",
+                            )
+                        },
+                    )
+                },
+            )
+            val response = client.post("$nodeUrl/v1/files") {
+                authHeader()?.let { header("Authorization", it) }
+                setBody(form)
+                // Ktor counts the whole form, framing included; the person cares about the file.
+                onUpload { sent, _ -> onProgress(minOf(sent, file.sizeBytes), file.sizeBytes) }
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            jsonConfig.decodeFromString(FileWritten.serializer(), raw).also {
+                logInfo(method, "written ${it.attestationId} crossed=${it.crossed}")
+            }
+        } catch (e: Exception) {
+            logException(method, e, "cohort=$cohort size=${file.sizeBytes}")
             throw e
         } finally {
             client.close()

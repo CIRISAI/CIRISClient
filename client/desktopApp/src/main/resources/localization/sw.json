@@ -2662,6 +2662,8 @@
     "wa_update_changed": "Mtu fulani ameamua pendekezo hili kabla yako, kwa hivyo hakuna kilichobadilika. Orodha sasa inaonyesha hali yake.",
     "wa_update_failed": "Wakala hakukubali mabadiliko hayo. Jaribu tena.",
     "trace_consent_unanswered_note": "Unaweza kuacha hili bila kujibu. Hakuna kitakachotumwa mpaka useme ndiyo, na unaweza kujibu baadaye.",
+    "files_uploading_progress": "Inaongeza {name}: {sent} kati ya {total}",
+    "files_add_cancel": "Simamisha",
     "trust_root_import_not_yet_accepted": "Imeingizwa, bado haijakubaliwa",
     "trust_root_import_not_yet_accepted_why": "Rekodi za mzizi zipo kwenye nodi hii, lakini nodi hii bado haiuamini. Ama bado haina rekodi za mwanzo za mzizi huo, na kukubali kutajaribiwa tena itakapowashwa au kuingizwa tena, ama kukubali kwake hakukuweza kuandikwa.",
     "yubikey_probe_failed": "IMESHINDIKANA KUSOMA HALI YA YUBIKEY",

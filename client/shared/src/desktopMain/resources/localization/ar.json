@@ -2667,6 +2667,8 @@
     "wa_update_changed": "قرر أحدهم بشأن هذا الاقتراح قبلك، فلم يتغيّر شيء. تعرض القائمة الآن وضعه الحالي.",
     "wa_update_failed": "لم يقبل الوكيل ذلك التغيير. حاول مرة أخرى.",
     "trace_consent_unanswered_note": "يمكنك ترك هذا دون إجابة. لن يُرسَل شيء حتى توافق، ويمكنك الإجابة لاحقاً.",
+    "files_uploading_progress": "جارٍ إضافة {name}: {sent} من {total}",
+    "files_add_cancel": "إيقاف",
     "yubikey_probe_failed": "تعذّرت قراءة حالة YubiKey",
     "yubikey_probe_not_on_this_node": "هذه العقدة لا تُبلّغ عن حالة YubiKey",
     "yubikey_probe_reason": "السبب: {detail}",

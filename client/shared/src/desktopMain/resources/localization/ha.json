@@ -2071,6 +2071,8 @@
     "wa_update_changed": "Wani ya riga ya yanke hukunci kan wannan shawarar kafin ku, don haka babu abin da ya canza. Jerin yanzu yana nuna matsayinta.",
     "wa_update_failed": "Wakili bai karɓi wannan canjin ba. Sake gwadawa.",
     "trace_consent_unanswered_note": "Kuna iya barin wannan ba tare da amsa ba. Ba za a aika komai ba sai kun ce eh, kuma kuna iya amsawa daga baya.",
+    "files_uploading_progress": "Ana ƙara {name}: {sent} na {total}",
+    "files_add_cancel": "Tsaya",
     "federation_create_associate": "Danganta Fed ID da ke akwai",
     "federation_create_associate_button": "Danganta",
     "federation_create_associate_hint": "Id na maɓallin tarayya da ke akwai ko fedcode",

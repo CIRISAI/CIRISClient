@@ -6,7 +6,19 @@ import androidx.compose.runtime.remember
 import kotlinx.cinterop.ExperimentalForeignApi
 import kotlinx.cinterop.addressOf
 import kotlinx.cinterop.usePinned
+import io.ktor.utils.io.ByteReadChannel
+import io.ktor.utils.io.writeFully
+import io.ktor.utils.io.writer
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
 import platform.Foundation.NSData
+import platform.Foundation.NSFileHandle
+import platform.Foundation.NSFileManager
+import platform.Foundation.NSFileSize
+import platform.Foundation.NSNumber
+import platform.Foundation.closeFile
+import platform.Foundation.fileHandleForReadingFromURL
+import platform.Foundation.readDataOfLength
 import platform.Foundation.NSURL
 import platform.Foundation.lastPathComponent
 import platform.Foundation.dataWithContentsOfURL
@@ -121,4 +133,70 @@ private fun NSData.toByteArray(): ByteArray {
         memcpy(pinned.addressOf(0), this.bytes, length)
     }
     return bytes
+}
+
+
+/** The drive's picker: a copy in the app's tmp folder, streamed in 64 KiB reads. */
+@OptIn(ExperimentalForeignApi::class)
+@Composable
+actual fun StreamedFilePickerDialog(
+    show: Boolean,
+    onPicked: (PickedFileStream) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val delegate = remember { StreamedPickerDelegate(onPicked, onDismiss) }
+    LaunchedEffect(show) {
+        if (!show) return@LaunchedEffect
+        val any = UTType.typeWithIdentifier("public.item") ?: run { onDismiss(); return@LaunchedEffect }
+        val picker = UIDocumentPickerViewController(forOpeningContentTypes = listOf(any), asCopy = true)
+        picker.delegate = delegate
+        picker.allowsMultipleSelection = false
+        UIApplication.sharedApplication.keyWindow?.rootViewController
+            ?.presentViewController(picker, animated = true, completion = null)
+    }
+}
+
+@OptIn(ExperimentalForeignApi::class)
+private class StreamedPickerDelegate(
+    private val onPicked: (PickedFileStream) -> Unit,
+    private val onDismiss: () -> Unit,
+) : NSObject(), UIDocumentPickerDelegateProtocol {
+    override fun documentPicker(controller: UIDocumentPickerViewController, didPickDocumentsAtURLs: List<*>) {
+        val url = didPickDocumentsAtURLs.firstOrNull() as? NSURL
+        val picked = url?.let { streamFromUrl(it) }
+        if (picked != null) onPicked(picked) else onDismiss()
+    }
+
+    override fun documentPickerWasCancelled(controller: UIDocumentPickerViewController) = onDismiss()
+}
+
+@OptIn(ExperimentalForeignApi::class, kotlinx.coroutines.DelicateCoroutinesApi::class)
+private fun streamFromUrl(url: NSURL): PickedFileStream? {
+    val path = url.path ?: return null
+    val size = (NSFileManager.defaultManager.attributesOfItemAtPath(path, null)?.get(NSFileSize) as? NSNumber)
+        ?.longLongValue ?: return null
+    val name = url.lastPathComponent ?: "file"
+    val head = NSFileHandle.fileHandleForReadingFromURL(url, null)?.let { h ->
+        h.readDataOfLength(PickedFileStream.HEAD_BYTES.toULong()).toByteArray().also { h.closeFile() }
+    } ?: return null
+    return PickedFileStream(
+        name = name,
+        mediaType = AttachmentTypes.mimeTypeForFileName(name),
+        sizeBytes = size,
+        head = head,
+        open = {
+            GlobalScope.writer(Dispatchers.Default) {
+                val handle = NSFileHandle.fileHandleForReadingFromURL(url, null) ?: error("the file is gone")
+                try {
+                    while (true) {
+                        val chunk = handle.readDataOfLength(64uL * 1024uL).toByteArray()
+                        if (chunk.isEmpty()) break
+                        channel.writeFully(chunk)
+                    }
+                } finally {
+                    handle.closeFile()
+                }
+            }.channel
+        },
+    )
 }
