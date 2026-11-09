@@ -151,6 +151,8 @@ fun ChatScreen(
     roomFiles: ((roomId: String) -> ai.ciris.mobile.shared.viewmodels.FilesViewModel)? = null,
     /** Open the Moderation forms for an item's author in this room (CSD-065). Null leaves the items out. */
     onModerateItem: ((communityId: String, authorKeyId: String) -> Unit)? = null,
+    /** Start or join this room's call (CSD-134). Null on a node that does not declare calls. */
+    onCall: (() -> Unit)? = null,
 ) {
     val community by viewModel.community.collectAsState()
     val viewerDuties by viewModel.viewerDuties.collectAsState()
@@ -252,6 +254,12 @@ fun ChatScreen(
                     }
                 },
                 actions = {
+                    if (onCall != null && community != null) {
+                        TextButton(
+                            onClick = onCall,
+                            modifier = Modifier.testableClickable("btn_chat_call") { onCall() },
+                        ) { Text(localizedString("mobile.chat_call")) }
+                    }
                     if (roomFiles != null && community != null) {
                         TextButton(
                             onClick = { filesOpen = true },

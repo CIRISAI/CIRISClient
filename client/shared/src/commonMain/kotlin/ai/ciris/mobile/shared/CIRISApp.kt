@@ -568,6 +568,7 @@ fun CIRISApp(
             // A chat goes back to where it was opened from: the contact list, or
             // a circle's Chats tab (CSD-091). Never hard-coded to Contacts.
             is Screen.UserChat -> (currentScreen as Screen.UserChat).from ?: Screen.Contacts
+            is Screen.Call -> (currentScreen as Screen.Call).room
 
             // Everything the tree places answers for itself, so the button and
             // the shell's arrow cannot drift apart when a card moves.
@@ -4516,6 +4517,18 @@ fun CIRISApp(
                         safetyViewModel.prefillFromItem(room, author)
                         currentScreen = Screen.Moderation
                     },
+                    // Calls (CSD-134): only on a node that declares them.
+                    onCall = if (nodeCapabilities.has(ai.ciris.mobile.shared.models.capability.Capability.CHAT_CALL)) {
+                        { currentScreen = Screen.Call(route) }
+                    } else null,
+                )
+            }
+
+            is Screen.Call -> {
+                val call = currentScreen as Screen.Call
+                CallScreen(
+                    roomLabel = call.room.contactLabel,
+                    onBack = { currentScreen = call.room },
                 )
             }
 
@@ -5445,6 +5458,7 @@ fun CIRISApp(
                     Screen.NetworkDiagnostics, Screen.NetworkContent -> Screen.LayerGlobalCommons
                     is Screen.NetworkPeerDetail -> Screen.NetworkPeers
                     is Screen.UserChat -> (currentScreen as Screen.UserChat).from ?: Screen.Contacts
+                    is Screen.Call -> (currentScreen as Screen.Call).room
                     // EnvironmentInfo and Constitutional USED to hang off a
                     // layer hub; the spine placed them in Decisions and Safety,
                     // and this map wins before the placement rule — so leaving
@@ -6409,6 +6423,11 @@ internal sealed class Screen {
          */
         val from: Screen? = null,
     ) : Screen()
+
+    /** A call in one room (CSD-134). Back returns to that room. */
+    data class Call(
+        val room: UserChat,
+    ) : Screen()
     // Delegations (device-auth grants — authorize an agent to act on-behalf).
     object Delegations : Screen()
     // Identity Management (my self fed-ID + device roster / occurrences — add /
@@ -6593,6 +6612,8 @@ internal fun screenToSurface(s: Screen):ai.ciris.mobile.shared.ui.nav.NavSurface
     // Chats tab — it is a leaf of that surface, not a sidebar destination of
     // its own.
     is Screen.UserChat -> s.from?.let { screenToSurface(it) } ?: ai.ciris.mobile.shared.ui.nav.NavSurface.Contacts
+    // A call is a leaf of its room, so the room's surface stays lit.
+    is Screen.Call -> screenToSurface(s.room)
     Screen.Delegations -> ai.ciris.mobile.shared.ui.nav.NavSurface.Delegations
     Screen.IdentityManagement -> ai.ciris.mobile.shared.ui.nav.NavSurface.IdentityManagement
     Screen.MyDevices -> ai.ciris.mobile.shared.ui.nav.NavSurface.MyDevices

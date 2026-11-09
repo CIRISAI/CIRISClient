@@ -8950,6 +8950,18 @@ class CIRISApiClient internal constructor(
                 },
                 // v0.8.5: Registry sources agreement
                 sourcesAgreeing = (data["sources_agreeing"] as? JsonPrimitive)?.content?.toIntOrNull(),
+                sources = (data["sources"] as? kotlinx.serialization.json.JsonArray)?.mapNotNull { el ->
+                    val o = el as? JsonObject ?: return@mapNotNull null
+                    val endpoint = (o["endpoint"] as? JsonPrimitive)?.content ?: return@mapNotNull null
+                    ai.ciris.mobile.shared.viewmodels.VerifySource(
+                        endpoint = endpoint,
+                        reachable = (o["reachable"] as? JsonPrimitive)?.content?.toBooleanStrictOrNull() ?: false,
+                        verified = (o["verified"] as? JsonPrimitive)?.content?.toBooleanStrictOrNull() ?: false,
+                        bundleFingerprint = (o["bundle_fingerprint"] as? JsonPrimitive)?.takeIf { it.isString }?.content,
+                        error = (o["error"] as? JsonPrimitive)?.takeIf { it.isString }?.content,
+                    )
+                } ?: emptyList(),
+                sourceValidationStatus = (data["source_validation_status"] as? JsonPrimitive)?.takeIf { it.isString }?.content,
                 // Attestation proof hardware type (nested in attestation_proof object)
                 attestationProofHardwareType = (data["attestation_proof"] as? JsonObject)?.let {
                     (it["hardware_type"] as? JsonPrimitive)?.content

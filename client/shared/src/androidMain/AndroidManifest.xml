@@ -10,6 +10,15 @@
       loses the scan shortcut, never the flow; the paste field is always there.
     -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <!--
+      RECORD_AUDIO: calls (CSD-134). Asked only when the person starts a call.
+      The camera above also serves video calls. required="false" keeps the app
+      installable on a device with no microphone; it loses calls, nothing else.
+    -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-feature
+        android:name="android.hardware.microphone"
+        android:required="false" />
     <uses-feature
         android:name="android.hardware.camera.any"
         android:required="false" />

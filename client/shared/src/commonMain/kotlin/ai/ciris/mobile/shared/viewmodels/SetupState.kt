@@ -1566,6 +1566,18 @@ data class VerifyStatusResponse(
     @SerialName("sources_agreeing")
     val sourcesAgreeing: Int? = null,
 
+    /**
+     * Each trust-root host verify checked (verify 21+, agent with the v44 pin).
+     * Empty from an older agent, and then the old flags apply. Non-empty, the
+     * DNS flags are always false and the HTTPS flags mean "any host verified", so
+     * this list is the truth. Read by [VerifySources]; never key copy on a
+     * version.
+     */
+    val sources: List<VerifySource> = emptyList(),
+    /** Verify's own summary; not used for copy until its assignment is confirmed in verify v22. */
+    @SerialName("source_validation_status")
+    val sourceValidationStatus: String? = null,
+
     // v0.8.5: Attestation proof hardware type (SoftwareOnly, TEE, StrongBox, etc.)
     // This is the actual hardware security level from attestation_proof.hardware_type
     @SerialName("attestation_proof_hardware_type")
@@ -1655,8 +1667,9 @@ data class VerifyStatusResponse(
         // Use UI's device attestation result if provided, otherwise fall back to API field
         val playOk = deviceAttestationPassed ?: playIntegrityOk
         val l2Passed = l1Passed && envOk && playOk
-        // L3: Registry cross-validation (need majority agreement - 2+ sources)
-        val sourcesOk = (sourcesAgreeing ?: 0) >= 2
+        // L3: Registry cross-validation. Verify 21+ needs one verified host and
+        // no two disagreeing; an older agent needs 2 of 3 sources.
+        val sourcesOk = VerifySources.of(this).rootAgreed
         val l3Passed = l2Passed && sourcesOk
         // L4: Module integrity check (excludes server-only files correctly)
         val l4Passed = l3Passed && moduleIntegrityOk
@@ -1748,3 +1761,63 @@ data class SecurityAdvisoryData(
     @SerialName("min_patch_level")
     val minPatchLevel: String? = null
 )
+
+
+/** One trust-root host from `GET /v1/setup/verify-status` `sources[]` (verify 21+). */
+@kotlinx.serialization.Serializable
+data class VerifySource(
+    val endpoint: String,
+    val reachable: Boolean = false,
+    val verified: Boolean = false,
+    @SerialName("bundle_fingerprint")
+    val bundleFingerprint: String? = null,
+    val error: String? = null,
+)
+
+/**
+ * What the trust page says about where the trust root came from, for both shapes
+ * the agent serves. Eric, 2026-11-06: show how many hosts verified, call an
+ * unreachable host unreachable and not failed, and never say "fully trusted".
+ */
+data class VerifySources(
+    /** Hosts checked; null on an older agent, which reports no list. */
+    val checked: Int?,
+    val verified: Int,
+    val unreachable: Int,
+    /**
+     * Two verified hosts with different bundles: equivocation. Verify selects no
+     * root and the node goes RESTRICTED, so this reads as serious, always.
+     */
+    val disagree: Boolean,
+    /** Level 3 passes: a trust root was agreed. */
+    val rootAgreed: Boolean,
+    /** Any trust-root host answered, for the network badge. */
+    val anyReachable: Boolean,
+) {
+    companion object {
+        fun of(status: VerifyStatusResponse): VerifySources {
+            val list = status.sources
+            if (list.isEmpty()) {
+                val agreeing = status.sourcesAgreeing ?: 0
+                return VerifySources(
+                    checked = null,
+                    verified = agreeing,
+                    unreachable = 0,
+                    disagree = false,
+                    rootAgreed = agreeing >= 2,
+                    anyReachable = status.dnsUsOk || status.dnsEuOk || status.httpsUsOk || status.httpsEuOk,
+                )
+            }
+            val verified = list.filter { it.verified }
+            val disagree = verified.mapNotNull { it.bundleFingerprint }.toSet().size > 1
+            return VerifySources(
+                checked = list.size,
+                verified = verified.size,
+                unreachable = list.count { !it.reachable },
+                disagree = disagree,
+                rootAgreed = verified.isNotEmpty() && !disagree,
+                anyReachable = list.any { it.reachable },
+            )
+        }
+    }
+}

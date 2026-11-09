@@ -8,6 +8,7 @@ import ai.ciris.mobile.shared.DeviceAttestationCallback
 import ai.ciris.mobile.shared.DeviceAttestationResult
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.viewmodels.VerifyStatusResponse
+import ai.ciris.mobile.shared.viewmodels.VerifySources
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -398,7 +399,7 @@ private fun TrustSummaryCard(
     val level = status.calculateActualLevel(deviceAttestationPassed)
 
     // Check if current level has partial passes (for yellow state)
-    val sourcesOk = (status.sourcesAgreeing ?: 0) >= 2
+    val sourcesOk = VerifySources.of(status).rootAgreed
     val portalKeyOk = status.registryKeyStatus?.contains("active", ignoreCase = true) == true
     val isPartial = when (level) {
         1 -> status.envOk || status.playIntegrityOk  // Some L2 checks pass
@@ -577,14 +578,25 @@ private fun LevelDebugExpansion(status: VerifyStatusResponse, textColor: Color) 
                     LevelDebugRow("L2", l2Pass, "hw=${status.hardwareBacked}, type=${status.hardwareType?.take(10)}")
 
                     // L3 checks - network key agreement (3 sources)
-                    val dnsOk = status.dnsUsOk || status.dnsEuOk
-                    val httpsOk = status.httpsUsOk || status.httpsEuOk
-                    val l3Sources = listOf(status.registryOk, dnsOk, httpsOk).count { it }
-                    val l3Pass = l3Sources >= 2
-                    val regIcon = if (status.registryOk) "✓" else "✗"
-                    val dnsIcon = if (dnsOk) "✓" else "✗"
-                    val httpsIcon = if (httpsOk) "✓" else "✗"
-                    LevelDebugRow("L3", l3Pass, "$l3Sources/3: Reg$regIcon DNS$dnsIcon HTTPS$httpsIcon")
+                    val l3Hosts = VerifySources.of(status)
+                    val l3Pass = if (l3Hosts.checked != null) l3Hosts.rootAgreed else listOf(
+                        status.registryOk, status.dnsUsOk || status.dnsEuOk, status.httpsUsOk || status.httpsEuOk,
+                    ).count { it } >= 2
+                    if (l3Hosts.checked != null) {
+                        LevelDebugRow(
+                            "L3", l3Pass,
+                            "${l3Hosts.verified}/${l3Hosts.checked} hosts verified, ${l3Hosts.unreachable} unreachable" +
+                                if (l3Hosts.disagree) ", DISAGREE" else "",
+                        )
+                    } else {
+                        val dnsOk = status.dnsUsOk || status.dnsEuOk
+                        val httpsOk = status.httpsUsOk || status.httpsEuOk
+                        val l3Sources = listOf(status.registryOk, dnsOk, httpsOk).count { it }
+                        val regIcon = if (status.registryOk) "✓" else "✗"
+                        val dnsIcon = if (dnsOk) "✓" else "✗"
+                        val httpsIcon = if (httpsOk) "✓" else "✗"
+                        LevelDebugRow("L3", l3Pass, "$l3Sources/3: Reg$regIcon DNS$dnsIcon HTTPS$httpsIcon")
+                    }
 
                     // L4 checks
                     val l4Pass = status.moduleIntegrityOk
@@ -698,24 +710,31 @@ private fun AttestationLevelsCard(status: VerifyStatusResponse) {
             )
 
             // Level 3: Network
+            // Verify 21+ lists each trust-root host; an older agent reports DNS and HTTPS flags.
+            val hosts = VerifySources.of(status)
             val networkPassed = listOf(status.dnsUsOk, status.dnsEuOk, status.httpsUsOk || status.httpsEuOk).count { it }
+            val l3Passed = if (hosts.checked != null) hosts.rootAgreed else networkPassed >= 2
             AttestationLevel(
                 level = 3,
-                title = "Registry Cross-Validation ($networkPassed/3)",
-                description = "HTTPS authoritative, DNS advisory (need 2/3 agreement)",
-                passed = networkPassed >= 2,
+                title = if (hosts.checked != null) "Registry Cross-Validation" else "Registry Cross-Validation ($networkPassed/3)",
+                description = if (hosts.checked != null) trustHostsLine(hosts) else "HTTPS authoritative, DNS advisory (need 2/3 agreement)",
+                passed = l3Passed,
                 previousFailed = !status.binaryOk || !status.envOk,
                 extraContent = {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        NetworkBadge("US", status.dnsUsOk)
-                        NetworkBadge("EU", status.dnsEuOk)
-                        NetworkBadge("HTTPS", status.httpsUsOk || status.httpsEuOk)
+                    if (hosts.checked != null) {
+                        TrustHostsNotes(hosts)
+                    } else {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            NetworkBadge("US", status.dnsUsOk)
+                            NetworkBadge("EU", status.dnsEuOk)
+                            NetworkBadge("HTTPS", status.httpsUsOk || status.httpsEuOk)
+                        }
                     }
                 }
             )
 
             // Level 4: File Integrity
-            val anyLowerFailed = !status.binaryOk || !status.envOk || networkPassed < 2
+            val anyLowerFailed = !status.binaryOk || !status.envOk || !l3Passed
             AttestationLevel(
                 level = 4,
                 title = "File Integrity",
@@ -1201,11 +1220,10 @@ private fun TierCardsSection(
         }
 
         // L3: Registry Cross-Validation - requires at least 2/3 sources to agree
-        val l3SourcesAgreeing = status.sourcesAgreeing ?: 0
         ExpandableTierCard(
             level = 3,
             title = "Registry Network",
-            passed = l3SourcesAgreeing >= 2,
+            passed = VerifySources.of(status).rootAgreed,
             checksInfo = buildL3ChecksInfo(status),
             expanded = expandedTier == 3,
             onToggle = { expandedTier = if (expandedTier == 3) null else 3 }
@@ -1369,6 +1387,10 @@ private fun buildL2ChecksInfo(status: VerifyStatusResponse, deviceResult: Device
 }
 
 private fun buildL3ChecksInfo(status: VerifyStatusResponse): String {
+    val hosts = VerifySources.of(status)
+    if (hosts.checked != null) {
+        return "${hosts.verified}/${hosts.checked} hosts -${if (hosts.rootAgreed) "✓" else "✗"}"
+    }
     // Registry cross-validation uses 3 sources (DNS US, DNS EU, HTTPS)
     val sources = 3
     val agreement = status.sourcesAgreeing ?: 0
@@ -1690,6 +1712,29 @@ private fun L3Content(status: VerifyStatusResponse) {
     )
 
     Spacer(modifier = Modifier.height(8.dp))
+
+    val hosts = VerifySources.of(status)
+    if (hosts.checked != null) {
+        // Verify 21+: one row per trust-root host, as verify reports it.
+        DetailRow(label = "Cross-Validation", value = trustHostsLine(hosts), ok = hosts.rootAgreed)
+        status.sources.forEach { host ->
+            DetailRow(
+                label = host.endpoint.substringAfter("://").substringBefore('/'),
+                value = localizedString(
+                    when {
+                        host.verified -> "mobile.trust_host_verified"
+                        !host.reachable -> "mobile.trust_host_unreachable"
+                        else -> "mobile.trust_host_not_verified"
+                    }
+                ),
+                ok = host.verified,
+                // Unreachable is not a failure (Eric, 2026-11-06).
+                pending = !host.reachable,
+            )
+        }
+        TrustHostsNotes(hosts)
+        return
+    }
 
     // Registry uses 3 sources: DNS US, DNS EU, HTTPS
     val sources = 3
@@ -2970,5 +3015,34 @@ private fun buildRawDetailsText(status: VerifyStatusResponse): String {
         appendLine()
         appendLine("Files: ${status.filesChecked ?: 0}/${status.totalFiles ?: 0}")
         status.integrityFailureReason?.let { appendLine("Failure: $it") }
+    }
+}
+
+
+/** "1 of 3 trust-root hosts verified": the count, never "fully trusted" (Eric, 2026-11-06). */
+@Composable
+private fun trustHostsLine(hosts: VerifySources): String = localizedString(
+    "mobile.trust_hosts_verified",
+    mapOf("verified" to hosts.verified.toString(), "checked" to (hosts.checked ?: 0).toString()),
+)
+
+/** The unreachable count, and equivocation, which always reads as serious. */
+@Composable
+private fun TrustHostsNotes(hosts: VerifySources) {
+    if (hosts.unreachable > 0) {
+        Text(
+            localizedString("mobile.trust_hosts_unreachable", "count", hosts.unreachable.toString()),
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testable("txt_trust_hosts_unreachable", hosts.unreachable.toString()),
+        )
+    }
+    if (hosts.disagree) {
+        Text(
+            localizedString("mobile.trust_hosts_disagree"),
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.testable("txt_trust_hosts_disagree"),
+        )
     }
 }
