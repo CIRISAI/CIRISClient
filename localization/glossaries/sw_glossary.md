@@ -220,6 +220,34 @@ This glossary defines the canonical translations for key CIRIS terms in Swahili.
 | Peer | Mwenza | Per existing network glossary |
 | Witness | Shahidi | Behavior witness |
 
+
+## Mesh, Keys and Review Terms
+
+Decided for client 0.5.239 so these terms stop being left in English. "corpus" means the rendering the shipped strings already use; "coined" means the corpus had none; "by hand" means the reviewer rejected both model drafts and the row was decided from the corpus and the reviewer's reasons. Machine-drafted and reviewed by a judge of a different model family; not native-reviewed.
+
+| English | Translation | Transliteration | Notes |
+|---------|-------------|-----------------|-------|
+| trust root | mzizi wa uaminifu | - | corpus: the key or authority a node accepts as the origin of trust for a mesh; a node 'subscribes to' or 'adopts' one |
+| owner binding | kiunganisho cha umiliki | - | corpus: the signed record that ties a node to the person who owns it |
+| kill switch | swichi ya kuzima | - | corpus: the accord's power to halt a node remotely in an emergency |
+| audit log | kumbukumbu ya ukaguzi | - | corpus: the tamper-evident record of what a node or agent did |
+| export job | kazi ya kuhamisha data | - | by hand: a queued task that packages a person's data for download |
+| signing key | ufunguo wa kusaini | - | corpus: the private key a node or person signs with |
+| private key | ufunguo wa siri | - | coined: the secret half of a key pair |
+| session token | tokeni ya kikao | - | by hand: the credential a signed-in app sends with each request |
+| secure hardware | maunzi salama | - | corpus: the device's protected key store: TPM, Secure Enclave, StrongBox |
+| safety witness | shahidi wa usalama | - | corpus: a party that watches and attests to an agent's safety behaviour |
+| rubric review | mapitio ya rubric | - | corpus: a review of an agent's behaviour against a scoring rubric |
+| delegation scope | wigo wa mgawo wa mamlaka | - | by hand: the set of actions a delegate is allowed to perform |
+| canonical node | nodi rasmi | - | corpus: a node chosen as the reference copy a family's other nodes follow |
+| serve node | nodi ya kuhudumia | - | corpus: a node that serves others on the mesh (always on, reachable) |
+| genesis seed | mbegu ya mwanzo | - | corpus: the starting material from which a family's first records are created |
+| circuit breaker | kizuizi cha mzunguko | - | corpus: a safeguard that stops a failing service from being called until it recovers |
+| attestation level | kiwango cha uthibitishaji | - | corpus: how strongly a device has proven its identity and integrity (a numbered level) |
+| memory consolidation | uthabiti wa kumbukumbu | - | corpus: the agent's periodic pass that summarises and reorganises what it remembers |
+| setup wizard | mchawi wa usanidi | - | corpus: the step-by-step screens that set up the app the first time |
+| Secure Enclave | Secure Enclave | Secure Enclave | Apple's product name; keep in English as Apple writes it |
+
 ## Version History
 
 | Version | Date | Changes |

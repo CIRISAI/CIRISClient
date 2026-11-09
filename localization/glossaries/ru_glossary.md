@@ -204,6 +204,34 @@ This glossary defines the canonical translations for key CIRIS terms in Russian.
 | Trust policies | Политики доверия | Politiki doveriya | Правила автоматического доверия в данном охвате |
 | Coming Soon | Скоро | Skoro | Заглушка для непоставленных функций |
 
+
+## Mesh, Keys and Review Terms
+
+Decided for client 0.5.239 so these terms stop being left in English. "corpus" means the rendering the shipped strings already use; "coined" means the corpus had none; "by hand" means the reviewer rejected both model drafts and the row was decided from the corpus and the reviewer's reasons. Machine-drafted and reviewed by a judge of a different model family; not native-reviewed.
+
+| English | Translation | Transliteration | Notes |
+|---------|-------------|-----------------|-------|
+| trust root | корень доверия | koren' doveriya | corpus: the key or authority a node accepts as the origin of trust for a mesh; a node 'subscribes to' or 'adopts' one |
+| owner binding | привязка владельца | privyazka vladel'tsa | corpus: the signed record that ties a node to the person who owns it |
+| kill switch | аварийный выключатель | avariynyy vyklyuchatel' | corpus: the accord's power to halt a node remotely in an emergency |
+| audit log | журнал аудита | zhurnal audita | corpus: the tamper-evident record of what a node or agent did |
+| export job | задание экспорта | zadanie eksporta | corpus: a queued task that packages a person's data for download |
+| signing key | ключ подписи | klyuch podpisi | corpus: the private key a node or person signs with |
+| private key | закрытый ключ | zakrytyy klyuch | corpus: the secret half of a key pair |
+| session token | токен сессии | token sessii | corpus: the credential a signed-in app sends with each request |
+| secure hardware | защищённое оборудование | zashchishchyonnoe oborudovanie | corpus: the device's protected key store: TPM, Secure Enclave, StrongBox |
+| safety witness | свидетель безопасности | svidetel' bezopasnosti | corpus: a party that watches and attests to an agent's safety behaviour |
+| rubric review | оценка по критериям | - | by hand: a review of an agent's behaviour against a scoring rubric |
+| delegation scope | область делегирования | oblast' delegirovaniya | corpus: the set of actions a delegate is allowed to perform |
+| canonical node | канонический узел | kanonicheskiy uzel | corpus: a node chosen as the reference copy a family's other nodes follow |
+| serve node | обслуживающий узел | obsluzhivayushchiy uzel | corpus: a node that serves others on the mesh (always on, reachable) |
+| genesis seed | генезис-сид | genezis-sid | corpus: the starting material from which a family's first records are created |
+| circuit breaker | автоматический выключатель | avtomaticheskiy vyklyuchatel' | corpus: a safeguard that stops a failing service from being called until it recovers |
+| attestation level | уровень аттестации | uroven' attestatsii | corpus: how strongly a device has proven its identity and integrity (a numbered level) |
+| memory consolidation | консолидация памяти | konsolidatsiya pamyati | corpus: the agent's periodic pass that summarises and reorganises what it remembers |
+| setup wizard | мастер настройки | master nastroyki | corpus: the step-by-step screens that set up the app the first time |
+| Secure Enclave | Secure Enclave | Secure Enclave | Apple's product name; keep in English as Apple writes it |
+
 ## Version History
 
 | Version | Date | Changes |

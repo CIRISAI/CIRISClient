@@ -184,6 +184,34 @@ This glossary defines the canonical translations for key CIRIS terms in Arabic. 
 | Trust policies | سياسات الثقة | Siyāsāt ath-Thiqah | Policies governing automatic trust at a scope |
 | Coming Soon | قريباً | Qarīban | Placeholder for unshipped features |
 
+
+## Mesh, Keys and Review Terms
+
+Decided for client 0.5.239 so these terms stop being left in English. "corpus" means the rendering the shipped strings already use; "coined" means the corpus had none; "by hand" means the reviewer rejected both model drafts and the row was decided from the corpus and the reviewer's reasons. Machine-drafted and reviewed by a judge of a different model family; not native-reviewed.
+
+| English | Translation | Transliteration | Notes |
+|---------|-------------|-----------------|-------|
+| trust root | جذر الثقة | jadhr al-thiqa | corpus: the key or authority a node accepts as the origin of trust for a mesh; a node 'subscribes to' or 'adopts' one |
+| owner binding | ربط المالك | rabt al-malik | corpus: the signed record that ties a node to the person who owns it |
+| kill switch | مفتاح الإيقاف | miftah al-iqaf | corpus: the accord's power to halt a node remotely in an emergency |
+| audit log | سجل المراجعة | sijill al-murāja'ah | corpus: the tamper-evident record of what a node or agent did |
+| export job | مهمة التصدير | mahammat al-tasdir | corpus: a queued task that packages a person's data for download |
+| signing key | مفتاح التوقيع | miftah al-tawqi' | corpus: the private key a node or person signs with |
+| private key | المفتاح الخاص | al-miftah al-khass | corpus: the secret half of a key pair |
+| session token | رمز الجلسة | ramz al-jalsa | corpus: the credential a signed-in app sends with each request |
+| secure hardware | العتاد الآمن | al-'atad al-amin | corpus: the device's protected key store: TPM, Secure Enclave, StrongBox |
+| safety witness | مراقب سلامة | - | by hand: a party that watches and attests to an agent's safety behaviour |
+| rubric review | مراجعة رُبريك | muraja'at rubrik | corpus: a review of an agent's behaviour against a scoring rubric |
+| delegation scope | نطاق التفويض | nitaq al-tafwid | corpus: the set of actions a delegate is allowed to perform |
+| canonical node | العقدة المرجعية | al-'uqda al-marji'iyya | corpus: a node chosen as the reference copy a family's other nodes follow |
+| serve node | عقدة خدمة | 'uqdat khidmah | corpus: a node that serves others on the mesh (always on, reachable) |
+| genesis seed | بذرة التأسيس | badhrat al-ta'sis | corpus: the starting material from which a family's first records are created |
+| circuit breaker | قاطع الدائرة | qati' al-da'ira | corpus: a safeguard that stops a failing service from being called until it recovers |
+| attestation level | مستوى التصديق | mustawā al-taṣdīq | corpus: how strongly a device has proven its identity and integrity (a numbered level) |
+| memory consolidation | دمج الذاكرة | damj al-dhakira | corpus: the agent's periodic pass that summarises and reorganises what it remembers |
+| setup wizard | معالج الإعداد | mu'alij al-i'dad | corpus: the step-by-step screens that set up the app the first time |
+| Secure Enclave | Secure Enclave | Secure Enclave | Apple's product name; keep in English as Apple writes it |
+
 ## Version History
 
 | Version | Date | Changes |

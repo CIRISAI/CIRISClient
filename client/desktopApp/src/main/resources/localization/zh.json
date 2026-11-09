@@ -332,7 +332,9 @@
   "auth": {
     "browser_signin": {
       "timed_out": "未在浏览器中完成登录，因此未做任何更改。请重试，或改用本地账户。",
-      "waiting": "请在浏览器中完成 Google 登录，然后返回此处。"
+      "waiting": "请在浏览器中完成 Google 登录，然后返回此处。",
+      "no_browser": "无法打开浏览器。要登录，请在浏览器中打开以下地址：{url}",
+      "never_arrived": "您的浏览器未能打开登录页面，因此未做任何更改。请检查是否已打开浏览器窗口，然后重试。"
     },
     "claim": {
       "not_armed": "此节点未进入首次运行认领状态（没有一次性 PIN）——所有权可能已被认领",
@@ -371,7 +373,8 @@
       "provider_unavailable": "此节点无法通过该提供方为你登录——当前版本未配置这种登录方式。请改用用户名和密码登录。",
       "state_invalid": "OAuth state 无效或已过期",
       "store_unavailable": "节点无法读取其身份存储，因此无法完成登录。这是节点的问题，与您的账户无关。",
-      "unsafe_redirect": "不安全的 redirect_uri"
+      "unsafe_redirect": "不安全的 redirect_uri",
+      "flow_unknown": "您的浏览器未能打开登录页面，因此未做任何更改。请重试。"
     },
     "oauth_link": {
       "already_has_identity": "该账号已关联登录身份。如需替换，请先移除现有身份。",
@@ -684,7 +687,7 @@
     "depth_label": "委派深度",
     "depth_leaf": "末端 — 可以行使，但不能再向下委派",
     "depth_unbounded": "不限（全局上限：5）",
-    "holder_desc": "以其密钥为本次授予签名的协约持有人。应用不保存任何密钥 — 由本地节点调用硬件完成签名。",
+    "holder_desc": "其密钥为此项授予签名的协约持有者。应用不持有任何密钥 — 此设备使用其安全硬件进行签名。",
     "holder_label": "持有人 key_id",
     "holder_placeholder": "A1",
     "ladder_label": "由此解锁的能力",
@@ -892,7 +895,8 @@
     "voting": {
       "description": "完整的投票平面：M-of-N 一致性阈值在链上验证，法定人数超时排序在基层。Commons 的异议投票已提供 — 这是作为一级、可验证原语的投票。",
       "title": "投票"
-    }
+    },
+    "announce_costs": "如果您不进行通告，在当前版本中将没有人能够通过网格联系到您：您的联系码可以标识您，但尚未携带联系您设备的方式。您无法参与公开群组。私密房间要求双方都已完成通告。"
   },
   "mesh_config": {
     "consumption": {
@@ -1501,7 +1505,7 @@
     "add_fedid_label_heading": "为您的联邦 ID 命名",
     "add_fedid_title": "添加联邦 ID",
     "age_range_adult": "18 岁或以上",
-    "age_range_card_body": "您的年龄段为自行申报，由此设备的本地节点记录 — 应用绝不持有密钥。此设置由您自己掌控；答错绝不会受到惩罚，只会被复核。敏感空间之后可能要求经过验证的等级，仅凭自行申报无法满足。",
+    "age_range_card_body": "您的年龄段由您自行声明，并由此设备记录 — 应用本身从不持有任何密钥。您可以自行控制该设置；填写错误不会受到惩罚，只会被复核。敏感场景之后可能会要求经过验证的级别，仅凭自我声明无法满足该要求。",
     "age_range_card_title": "我们为什么询问",
     "age_range_decline": "不愿透露",
     "age_range_decline_note": "我们将采用与未满 18 岁用户相同的保护措施。您之后可以更改。",
@@ -1689,7 +1693,7 @@
     "final_genesis_clock_fact_stamped_value": "创世中的每一个时刻都在您进行规划时，从此时钟一次性获取。",
     "final_genesis_clock_fact_window": "为何重要",
     "final_genesis_clock_fact_window_value": "如果创世时间超前节点自身时钟 300 秒以上，节点会拒绝该创世，而此创世永不重复。",
-    "final_genesis_clock_note": "请先在此主机上检查（例如 `timedatectl` 显示 “System clock synchronized: yes”）。应用无法代您检查。",
+    "final_genesis_clock_note": "请先在此主机上检查（例如 `timedatectl` 显示 \"System clock synchronized: yes\"）。应用无法替您检查。",
     "final_genesis_clock_title": "确认此主机的时钟",
     "final_genesis_close": "关闭",
     "final_genesis_desc": "一次仪式，由三位协约持有者共同签署，在一个包中铸造协约与 ciris-canonical 社区。这是最终创世：它不会重复。每位持有者签署两次——先是记录与行，待三方都签署章程后再签署创世记录。",
@@ -2118,8 +2122,8 @@
     "federation_create_card_title": "硬件根植的联邦 ID",
     "federation_create_copied": "已复制 ✓",
     "federation_create_copy": "复制",
-    "federation_create_exists": "此设备的本地节点已持有联邦身份 ✓",
-    "federation_create_explainer": "您的联邦 ID 是一个长期身份，根植于您的安全密钥或此设备的安全硬件。密钥由此设备的本地节点铸造并托管 — 应用绝不持有密钥，也绝不自行签名。",
+    "federation_create_exists": "此设备已持有联邦身份 ✓",
+    "federation_create_explainer": "您的联邦 ID 是一个长期身份，根植于您的安全密钥或此设备的安全硬件。此设备负责生成并保管密钥 — 应用本身从不持有任何密钥，也不进行任何签名。",
     "federation_create_fedcode_label": "您的联邦码（可分享）",
     "federation_create_hardware": "根植于：{hardware}",
     "federation_create_keyid": "密钥 ID：{key_id}",
@@ -2127,7 +2131,7 @@
     "federation_create_minted": "您的联邦 ID 已在此设备上创建 ✓",
     "federation_create_minting": "正在创建…",
     "federation_create_optional": "此步骤为可选 — 您可以跳过并继续。",
-    "federation_create_prompt": "在此设备的本地节点上创建您的联邦 ID。节点在其安全存储中铸造硬件根植的身份；应用只是驱动它。",
+    "federation_create_prompt": "在此设备上创建您的联邦 ID。它会在其安全存储中生成一个基于硬件的身份；应用只是请求它这样做。",
     "federation_create_secure_note": "由您的设备保护 — 安全密钥或此设备的安全硬件（TPM / Secure Enclave）。无需选择；将自动使用最安全的选项。",
     "federation_create_title": "创建您的联邦 ID",
     "federation_import_usb": "从 USB 导入现有联邦 ID",
@@ -2541,7 +2545,7 @@
     "manage_consent_replication_title": "复制对等（consent:replication）",
     "manage_consent_resetup": "重新运行设置",
     "manage_consent_revoke": "撤销",
-    "manage_consent_revoke_todo": "无法撤销 — 节点尚无 consent:replication 撤回端点。",
+    "manage_consent_revoke_todo": "撤销操作尚不可用：此节点无法撤回 consent:replication 授权。",
     "manage_consent_setup": "设置对等",
     "manage_consent_subtitle": "查看和管理此设备持有的同意对象。",
     "manage_consent_title": "管理同意",
@@ -2554,7 +2558,7 @@
     "manage_nodes_add_by_url_note": "仅通过地址添加节点 — 不做身份固定。若有节点代码，请优先使用。",
     "manage_nodes_authed": "有会话",
     "manage_nodes_claim": "认领节点所有权",
-    "manage_nodes_claim_note": "输入节点代码 + 一次性认领 PIN 即可成为其所有者。认领由您的本地节点执行 — 应用不做任何加密操作。",
+    "manage_nodes_claim_note": "输入节点的代码加一次性认领 PIN，即可成为其所有者。由此设备发起认领 — 应用本身不执行任何加密操作。",
     "manage_nodes_connect_pin": "连接并固定",
     "manage_nodes_empty": "尚无节点。请在下方通过节点代码或 URL 添加。",
     "manage_nodes_name": "显示名称",
@@ -3578,7 +3582,7 @@
     "wallet_transfer_success": "转账成功！TX: {tx}",
     "wallet_trust_degraded": "硬件信任降级",
     "wallet_warning": "警告",
-    "trace_consent_decline_note": "选择退出意味着您的智能体无法建立 capacity 分数，也无法获得公共积分（commons credits）。您可以稍后更改此设置。",
+    "trace_consent_decline_note": "选择退出意味着您的智能体无法建立能力评分，也无法获得公共积分。您之后可以更改此设置。",
     "people_title": "人物",
     "verify_title": "验证构建版本",
     "verify_hash_label": "构建哈希",
@@ -3977,7 +3981,7 @@
     "viz_settings_title": "可视化",
     "viz_settings_locality_note": "这些设置仅保存在此设备上。这里的内容不会被发送到任何地方，也不会被他人看到。",
     "viz_settings_save_error": "部分更改未能保存到此设备（{what}）。下次应用启动时，它们将恢复为之前的值。",
-    "settings_location_needs_agent": "您的位置信息由 AI 智能体存储，而此设备运行的节点没有智能体，因此目前无法在此设置。",
+    "settings_location_needs_agent": "您的所在位置由 AI 智能体存储，而此设备尚无智能体，因此目前无法在此设置。",
     "llm_settings_enable_ciris_services": "重新开启 CIRIS 服务",
     "llm_settings_disable_ciris_reversible": "您可以稍后在此重新开启 CIRIS 服务；此更改将在智能体重启后生效。",
     "llm_settings_reenable_after_restart": "重新开启此项将在智能体重启后生效",
@@ -4184,7 +4188,7 @@
     "add_device_cancel_fact_other": "在您的其他设备上",
     "add_device_cancel_other": "无法从此处撤回。您的其他设备将继续显示此请求，直到其在 15 分钟后过期，因此请勿在该设备上批准它。",
     "add_device_cancel_fact_next": "已收到的批准",
-    "add_device_cancel_next": "将保留在此设备的节点上但未被使用。除非您再次发送请求并完成设置，否则不会有任何设备加入。",
+    "add_device_cancel_next": "将保留在此设备上，但不会被使用。除非您再次发送请求并完成设置，否则不会加入任何内容。",
     "add_device_cancel_confirm": "取消请求",
     "accord_ceremony_family_line": "家族 {family} — 已固化，quorum:2/3",
     "accord_ceremony_genesis_copy": "复制",
@@ -6321,7 +6325,8 @@
     "rng": "没有可用于该质询的随机数",
     "unexpected": "您的另一台设备返回了意外的应答",
     "unknown_identity": "找不到该身份",
-    "unreachable": "无法连接到您的另一台设备"
+    "unreachable": "无法连接到您的另一台设备",
+    "node_proof": "此设备无法证明自己是哪个节点"
   },
   "sign_owner_binding": {
     "bad_request": "该所有者绑定请求无法被读取。",

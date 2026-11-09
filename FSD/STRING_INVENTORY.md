@@ -7,16 +7,16 @@ Stage 1 of [`TEXT_REFERENCES.md`](TEXT_REFERENCES.md). Every key is a row in
 searching source, so they are evidence, not proof: `unclaimed` means a key to read,
 not a key to delete.
 
-Agent usage recorded at CIRISAgent `5743471e6`. CI carries it forward.
+Agent usage recorded at CIRISAgent `b16071a99`. CI carries it forward.
 
-**5878 keys in 29 languages.**
+**5883 keys in 29 languages.**
 
 | Owner | Keys |
 |---|---|
-| client | 4704 |
-| server | 551 |
+| client | 4707 |
+| server | 552 |
 | agent | 216 |
-| unclaimed | 407 |
+| unclaimed | 408 |
 
 ## Held in the app
 
@@ -65,7 +65,7 @@ back to them, so they are unreachable and still translated. Marked `dead_root`.
 | `errors` | 20 |
 | `agent` | 11 |
 | `conscience` | 7 |
-| `mesh` | 6 |
+| `mesh` | 7 |
 | `startup` | 6 |
 | `mesh_config` | 4 |
 | `system` | 3 |

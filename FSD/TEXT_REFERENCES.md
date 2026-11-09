@@ -179,7 +179,7 @@ marks the rest.
 | One shared wrong string | §4 |
 | A node with a stale locale set | `lang` marks it; the client's step 2 still applies until stage 6 |
 | The agent's own copy of these strings, `ciris_engine/data/localized/` | A third copy outside this table. Stage 2 asks whether it can read the same package |
-| Half-English strings pass every structural check | About 50 strings in 8 languages still hold English fragments. Needs a check of its own |
+| Half-English strings pass every structural check | `packaging/check_english_fragments.py` fails the build on a clause copied from the key's English. The first run found about 1,600 such values in 20 languages, not the 50 estimated from the inventory; 0.5.239 re-translated them after 19 recurring terms were added to every glossary. What is right as it stands is listed with a reason in `localization/english_fragments_allow.tsv` |
 
 ## 8. Open questions
 

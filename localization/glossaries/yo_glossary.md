@@ -155,6 +155,34 @@ This glossary defines the canonical translations for key CIRIS terms in Yoruba. 
 | Peer | Ẹlẹ́gbẹ́ | Per existing network glossary |
 | Witness | Ẹlẹ́rìí | Behavior witness |
 
+
+## Mesh, Keys and Review Terms
+
+Decided for client 0.5.239 so these terms stop being left in English. "corpus" means the rendering the shipped strings already use; "coined" means the corpus had none; "by hand" means the reviewer rejected both model drafts and the row was decided from the corpus and the reviewer's reasons. Machine-drafted and reviewed by a judge of a different model family; not native-reviewed.
+
+| English | Translation | Transliteration | Notes |
+|---------|-------------|-----------------|-------|
+| trust root | gbòngbò ìgbẹ́kẹ̀lé | - | corpus: the key or authority a node accepts as the origin of trust for a mesh; a node 'subscribes to' or 'adopts' one |
+| owner binding | ìdè-ìní | - | corpus: the signed record that ties a node to the person who owns it |
+| kill switch | bọ́tìnnì-ìdáwọ́ | - | corpus: the accord's power to halt a node remotely in an emergency |
+| audit log | àkọsílẹ̀ àyẹ̀wò | - | corpus: the tamper-evident record of what a node or agent did |
+| export job | iṣẹ́ ìjáde | - | corpus: a queued task that packages a person's data for download |
+| signing key | kọ́kọ́rọ́ ìfọwọ́sí | - | corpus: the private key a node or person signs with |
+| private key | kọ́kọ́rọ́ ìkọ̀kọ̀ | - | corpus: the secret half of a key pair |
+| session token | àmì-ìgbà ìwọlé | - | coined: the credential a signed-in app sends with each request |
+| secure hardware | ohun-èlò ààbò | - | corpus: the device's protected key store: TPM, Secure Enclave, StrongBox |
+| safety witness | ẹlẹ́rìí ààbò | - | corpus: a party that watches and attests to an agent's safety behaviour |
+| rubric review | àyẹ̀wò rubric | - | corpus: a review of an agent's behaviour against a scoring rubric |
+| delegation scope | àgbègbè ìfilélẹ̀-àṣẹ | - | corpus: the set of actions a delegate is allowed to perform |
+| canonical node | nódù pàtàkì | - | corpus: a node chosen as the reference copy a family's other nodes follow |
+| serve node | nódù ìránṣẹ́ | - | corpus: a node that serves others on the mesh (always on, reachable) |
+| genesis seed | irúgbìn ìpilẹ̀ṣẹ̀ | - | corpus: the starting material from which a family's first records are created |
+| circuit breaker | àpamọ́ circuit | - | corpus: a safeguard that stops a failing service from being called until it recovers |
+| attestation level | ìwọ̀n ẹ̀rí | - | corpus: how strongly a device has proven its identity and integrity (a numbered level) |
+| memory consolidation | ìdàpọ̀ ìrántí | - | coined: the agent's periodic pass that summarises and reorganises what it remembers |
+| setup wizard | olùtọ́nisọ́nà ìṣètò | - | corpus: the step-by-step screens that set up the app the first time |
+| Secure Enclave | Secure Enclave | Secure Enclave | Apple's product name; keep in English as Apple writes it |
+
 ## Version History
 
 | Version | Date | Changes |

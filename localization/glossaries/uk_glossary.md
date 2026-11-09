@@ -151,3 +151,30 @@ This glossary defines the canonical translations for key CIRIS terms in Ukrainia
 | Trust | Довіра | Dovira | Стан довіри по кожній ідентичності |
 | Trust policies | Політики довіри | Polityky doviry | Правила автоматичної довіри в даному охопленні |
 | Coming Soon | Незабаром | Nezabarom | Заглушка для непоставлених функцій |
+
+## Mesh, Keys and Review Terms
+
+Decided for client 0.5.239 so these terms stop being left in English. "corpus" means the rendering the shipped strings already use; "coined" means the corpus had none; "by hand" means the reviewer rejected both model drafts and the row was decided from the corpus and the reviewer's reasons. Machine-drafted and reviewed by a judge of a different model family; not native-reviewed.
+
+| English | Translation | Transliteration | Notes |
+|---------|-------------|-----------------|-------|
+| trust root | корінь довіри | korin doviry | corpus: the key or authority a node accepts as the origin of trust for a mesh; a node 'subscribes to' or 'adopts' one |
+| owner binding | прив'язка власника | pryv'iazka vlasnyka | corpus: the signed record that ties a node to the person who owns it |
+| kill switch | аварійний вимикач | avariynyi vymykach | corpus: the accord's power to halt a node remotely in an emergency |
+| audit log | журнал аудиту | zhurnal audytu | corpus: the tamper-evident record of what a node or agent did |
+| export job | завдання експорту | zavdannia eksportu | corpus: a queued task that packages a person's data for download |
+| signing key | ключ підпису | kliuch pidpysu | corpus: the private key a node or person signs with |
+| private key | приватний ключ | pryvatnyi kliuch | corpus: the secret half of a key pair |
+| session token | токен сесії | token sesii | corpus: the credential a signed-in app sends with each request |
+| secure hardware | захищене обладнання | zakhyshchene obladnannia | corpus: the device's protected key store: TPM, Secure Enclave, StrongBox |
+| safety witness | свідок безпеки | svidok bezpeky | corpus: a party that watches and attests to an agent's safety behaviour |
+| rubric review | оцінювання за критеріями | - | by hand: a review of an agent's behaviour against a scoring rubric |
+| delegation scope | охоплення делегування | okhoplennia delehuvannia | corpus: the set of actions a delegate is allowed to perform |
+| canonical node | канонічний вузол | kanonichnyi vuzol | corpus: a node chosen as the reference copy a family's other nodes follow |
+| serve node | вузол обслуговування | vuzol obsluhovuvannia | corpus: a node that serves others on the mesh (always on, reachable) |
+| genesis seed | генезис-сід | henezys-sid | corpus: the starting material from which a family's first records are created |
+| circuit breaker | автоматичний вимикач | avtomatychnyi vymykach | corpus: a safeguard that stops a failing service from being called until it recovers |
+| attestation level | рівень атестації | riven atestatsii | corpus: how strongly a device has proven its identity and integrity (a numbered level) |
+| memory consolidation | консолідація пам'яті | konsolidatsiia pam'yati | corpus: the agent's periodic pass that summarises and reorganises what it remembers |
+| setup wizard | майстер налаштування | maister nalashtuvannia | corpus: the step-by-step screens that set up the app the first time |
+| Secure Enclave | Secure Enclave | Secure Enclave | Apple's product name; keep in English as Apple writes it |

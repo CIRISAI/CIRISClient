@@ -74,11 +74,11 @@
       "request_dma": "支払いリクエストは提供された正当なサービスのためであるべきです",
       "request_fiat_note": "Chapa：Telebirr/CBE Birr/Bank用のcheckout_urlを返します。支払者がChapaのページで支払いを完了します。完了時のコールバックwebhook。",
       "request_gotcha": "チェックアウトURLはプロバイダー固有です。x402はチェックアウトURLを使用しません。フィアットプロバイダーはURLを返します。",
-      "request_quick_start": "支払いリクエスト：request_money amount=0.10 currency='USDC' description='APIタスク'",
+      "request_quick_start": "支払いをリクエスト: request_money amount=0.10 currency='USDC' description='API task'",
       "request_returns": "次を含むPaymentRequestを返します：request_id、checkout_url、status（pending/paid/expired）、expires_at。",
       "request_use_cases": "APIエンドポイント支払い（402 Payment Required）。サービス料金。貢献者請求書。寄付リクエスト。",
       "send_detail": "適切な支払いプロバイダーを使用して任意の受取人に送金します。",
-      "send_quick_start": "送金：send_money recipient='0x1234...' amount=10 currency='USDC'",
+      "send_quick_start": "送金: send_money recipient='0x1234...' amount=10 currency='USDC'",
       "spending_attestation": "認証レベルが制限に影響します（x402のみ）",
       "spending_daily": "日次：$1000（設定可能）",
       "spending_per_tx": "取引あたり：$100（設定可能）",
@@ -89,7 +89,7 @@
       "statement_history": "履歴：最近の取引（送信、受信）、取引ID、タイムスタンプとステータス",
       "statement_privacy": "アカウント詳細には機密情報が含まれる場合があります。必要な場合にのみ詳細をリクエストしてください。",
       "statement_provider_select": "provider_paramsを省略：すべてをクエリ。provider='x402'：暗号通貨のみ。provider='chapa'：エチオピアのみ。provider='all'：明示的にすべて。",
-      "statement_quick_start": "明細取得：get_statement include_balance=true include_history=true",
+      "statement_quick_start": "明細を取得: get_statement include_balance=true include_history=true",
       "tool_request_desc": "他の人が支払うことができる支払いリクエスト/請求書を作成します",
       "tool_send_desc": "暗号通貨（USDC）またはフィアット（モバイルマネー）プロバイダー経由で受取人に送金します",
       "tool_statement_desc": "アカウント残高、取引履歴、アカウント詳細を取得します",
@@ -332,7 +332,9 @@
   "auth": {
     "browser_signin": {
       "timed_out": "ブラウザでサインインが完了しなかったため、変更は行われませんでした。もう一度お試しいただくか、ローカルアカウントをご利用ください。",
-      "waiting": "ブラウザで Google へのサインインを完了してから、この画面に戻ってください。"
+      "waiting": "ブラウザで Google へのサインインを完了してから、この画面に戻ってください。",
+      "no_browser": "ブラウザを開けませんでした。サインインするには、ブラウザで次のアドレスを開いてください：{url}",
+      "never_arrived": "ブラウザがサインインページに到達しなかったため、変更は行われませんでした。ブラウザのウィンドウが開いているか確認してから、もう一度お試しください。"
     },
     "claim": {
       "not_armed": "このノードは初回起動時の所有権取得を受け付ける状態ではありません（ワンタイム PIN がありません）— 既に所有権が取得されている可能性があります",
@@ -369,9 +371,10 @@
       "native_token_invalid": "プロバイダーはそのサインイントークンを検証できませんでした。もう一度サインインして、新しいトークンを取得してください。",
       "no_local_identity": "そのアカウントでのサインインには成功しましたが、このノードにはそれに紐づくアイデンティティがありません。このアカウントでノードを取得（クレーム）するか、ノードの所有者に紐付けを依頼してください。",
       "provider_unavailable": "このノードではそのプロバイダーでサインインできません。このビルドには該当するサインイン方法が構成されていません。代わりにユーザー名とパスワードでサインインしてください。",
-      "state_invalid": "oauth state が無効か、有効期限が切れています",
+      "state_invalid": "OAuthのstateが無効または期限切れです",
       "store_unavailable": "ノードがアイデンティティストアを読み取れなかったため、サインインを完了できませんでした。これはノード側の問題であり、お使いのアカウントの問題ではありません。",
-      "unsafe_redirect": "安全でない redirect_uri です"
+      "unsafe_redirect": "安全でない redirect_uri です",
+      "flow_unknown": "ブラウザがサインインページに到達しなかったため、変更は行われませんでした。もう一度お試しください。"
     },
     "oauth_link": {
       "already_has_identity": "そのアカウントには既にサインインIDが連携されています。置き換える場合は、先に解除してください。",
@@ -684,7 +687,7 @@
     "depth_label": "委任の深さ",
     "depth_leaf": "リーフ — 実行は可、これ以上の委任は不可",
     "depth_unbounded": "無制限（グローバル上限: 5）",
-    "holder_desc": "この付与に署名する鍵を持つアコード保持者。アプリは鍵を保持しません — ローカルノードがハードウェアを開いて署名します。",
+    "holder_desc": "この付与に署名する鍵を持つアコードホルダー。アプリは鍵を保持しません — このデバイスがセキュアハードウェアを用いて署名します。",
     "holder_label": "保持者 key_id",
     "holder_placeholder": "A1",
     "ladder_label": "これで解放される操作",
@@ -892,7 +895,8 @@
     "voting": {
       "description": "完全な投票プレーン: M-of-N アコード閾値をワイヤで検証し、基盤に時間上のクォーラム順序付け。コモンズの異議投票はすでに配信されており、これは一級の検証可能なプリミティブとしての投票です。",
       "title": "投票"
-    }
+    },
+    "announce_costs": "アナウンスを行わない場合、このバージョンではメッシュを通じて誰もあなたに到達できません：連絡先コードはあなたを識別しますが、まだデバイスへの到達手段を伴いません。公開グループには参加できません。プライベートルームには双方がアナウンス済みである必要があります。"
   },
   "mesh_config": {
     "consumption": {
@@ -1527,7 +1531,7 @@
     "add_fedid_label_heading": "フェデレーションIDに名前を付ける",
     "add_fedid_title": "フェデレーションIDを追加",
     "age_range_adult": "18歳以上",
-    "age_range_card_body": "年齢層は自己申告制で、このデバイスのローカルノードに記録されます — アプリが鍵を保持することはありません。設定は自分で管理でき、誤った回答が罰せられることはなく、確認の対象になるだけです。センシティブなスペースでは後で検証済みレベルが求められることがあり、自己申告だけでは満たせません。",
+    "age_range_card_body": "年齢層は自己申告であり、このデバイスによって記録されます — アプリ自体は鍵を保持しません。設定はあなた自身が管理し、誤った回答が罰せられることはなく、確認されるのみです。センシティブな空間では後に検証済みレベルを求められる場合がありますが、自己申告だけではそれを満たせません。",
     "age_range_card_title": "お聞きする理由",
     "age_range_decline": "回答しない",
     "age_range_decline_note": "18 歳未満の方と同じ保護を適用します。後から変更できます。",
@@ -1878,8 +1882,8 @@
     "federation_create_card_title": "ハードウェアに根ざしたフェデレーションID",
     "federation_create_copied": "コピーしました ✓",
     "federation_create_copy": "コピー",
-    "federation_create_exists": "このデバイスのローカルノードはすでにフェデレーションIDを保持しています ✓",
-    "federation_create_explainer": "フェデレーションIDは、セキュリティキーまたはこのデバイスのセキュアハードウェアに根ざした長期的なIDです。鍵の発行と保管はこのデバイスのローカルノードが行います — アプリが鍵を保持したり、自ら署名したりすることはありません。",
+    "federation_create_exists": "このデバイスは既にフェデレーションIDを保持しています ✓",
+    "federation_create_explainer": "フェデレーションIDは、セキュリティキーまたはこのデバイスのセキュアハードウェアに根ざした長期的なIDです。このデバイスが鍵を生成・保持します — アプリ自体は鍵を保持せず、署名も行いません。",
     "federation_create_fedcode_label": "あなたのフェデレーションコード（共有用）",
     "federation_create_hardware": "ルート：{hardware}",
     "federation_create_keyid": "キーID：{key_id}",
@@ -1887,7 +1891,7 @@
     "federation_create_minted": "フェデレーションIDがこのデバイス上で作成されました ✓",
     "federation_create_minting": "作成中…",
     "federation_create_optional": "このステップは任意です — スキップして続行できます。",
-    "federation_create_prompt": "このデバイスのローカルノード上にフェデレーションIDを作成します。ノードがセキュアストレージ内にハードウェアに根ざしたIDを発行し、アプリはそれを操作するだけです。",
+    "federation_create_prompt": "このデバイスでフェデレーションIDを作成します。デバイスはセキュアストレージ内にハードウェアに根ざしたIDを生成します。アプリはそれを依頼するだけです。",
     "federation_create_secure_note": "デバイスによって保護されます — セキュリティキーまたはこのデバイスのセキュアハードウェア（TPM / Secure Enclave）。選択は不要で、最も安全なオプションが自動的に使用されます。",
     "federation_create_title": "フェデレーションIDを作成",
     "federation_import_usb": "USBから既存のフェデレーションIDをインポート",
@@ -1935,7 +1939,7 @@
     "final_genesis_clock_fact_stamped_value": "ジェネシス内のすべての時刻は、計画時に一度だけ、このクロックから取得されます。",
     "final_genesis_clock_fact_window": "重要な理由",
     "final_genesis_clock_fact_window_value": "ノードは、自身のクロックより300秒以上先行するジェネシスを拒否します。このジェネシスは二度と繰り返されません。",
-    "final_genesis_clock_note": "まず、このホストで確認してください（例：`timedatectl` が「System clock synchronized: yes」と表示される）。アプリはこれを代わりに確認できません。",
+    "final_genesis_clock_note": "まず、このホストで確認してください（例: `timedatectl` が「System clock synchronized: yes」と表示されます）。アプリは代わりに確認することはできません。",
     "final_genesis_clock_title": "このホストのクロックを確認",
     "final_genesis_close": "閉じる",
     "final_genesis_desc": "3名のアコードホルダー全員が署名する一つの儀式が、アコードとCIRISカノニカルコミュニティを一つのバンドルとして発行します。これは最終ジェネシスであり、繰り返されません。各ホルダーは2回署名します — まずレコードと行に、そして3名全員が憲章に署名した後にジェネシスレコードに署名します。",
@@ -2476,7 +2480,7 @@
     "manage_consent_replication_title": "レプリケーションピアリング（consent:replication）",
     "manage_consent_resetup": "セットアップを再実行",
     "manage_consent_revoke": "取り消す",
-    "manage_consent_revoke_todo": "取り消しは利用できません — ノードにconsent:replicationの取り下げエンドポイントがまだありません。",
+    "manage_consent_revoke_todo": "取り消しはまだ利用できません：このノードは consent:replication の付与を取り消すことができません。",
     "manage_consent_setup": "ピアリングを設定",
     "manage_consent_subtitle": "このデバイスが保持する同意オブジェクトを表示・管理します。",
     "manage_consent_title": "同意の管理",
@@ -2489,7 +2493,7 @@
     "manage_nodes_add_by_url_note": "アドレスのみでノードを追加します — IDのピン留めはありません。ノードコードがある場合はそちらを推奨します。",
     "manage_nodes_authed": "セッション",
     "manage_nodes_claim": "ノードの所有権を取得",
-    "manage_nodes_claim_note": "ノードのコードとワンタイムのクレームPINを入力して所有者になります。所有権の取得はローカルノードが実行します — アプリは暗号処理を行いません。",
+    "manage_nodes_claim_note": "ノードのコードとワンタイムのクレームPINを入力すると、その所有者になれます。このデバイスがクレームを行います — アプリ自体は暗号処理を行いません。",
     "manage_nodes_connect_pin": "接続してピン留め",
     "manage_nodes_empty": "ノードはまだありません。下からノードコードまたはURLで追加してください。",
     "manage_nodes_name": "表示名",
@@ -4158,7 +4162,7 @@
     "viz_settings_title": "可視化",
     "viz_settings_locality_note": "これらの設定はこのデバイスにのみ保存されます。ここでの内容はどこにも送信されず、他の誰にも見られません。",
     "viz_settings_save_error": "一部の変更はこのデバイスに保存されませんでした（{what}）。次回アプリを起動すると、以前の値に戻ります。",
-    "settings_location_needs_agent": "現在位置はAIエージェントによって保存されますが、このデバイスはエージェントを持たないノードとして動作しているため、ここではまだ設定できません。",
+    "settings_location_needs_agent": "現在地はAIエージェントによって保存されますが、このデバイスにはエージェントがないため、ここではまだ設定できません。",
     "llm_settings_enable_ciris_services": "CIRISサービスを再度オンにする",
     "llm_settings_disable_ciris_reversible": "CIRISサービスは後でここから再度オンにできます。有効になるのはエージェントの再起動後です。",
     "llm_settings_reenable_after_restart": "これを再度オンにすると、エージェントの再起動後に有効になります",
@@ -4347,7 +4351,7 @@
     "add_device_cancel_fact_other": "他のデバイスでは",
     "add_device_cancel_other": "ここから取り消すことはできません。他のデバイスでは、15分後に期限切れになるまで表示され続けるため、そちらでは承認しないでください。",
     "add_device_cancel_fact_next": "承認はすでに受信済み",
-    "add_device_cancel_next": "このデバイスのノードに未使用のまま残ります。再度リクエストを送信してセットアップを完了しない限り、何も参加しません。",
+    "add_device_cancel_next": "このデバイスに残ったまま、使用されません。もう一度リクエストを送信してセットアップを完了しない限り、何も参加しません。",
     "add_device_cancel_confirm": "リクエストをキャンセル",
     "add_device_unreachable_retrying": "まだ他のデバイスに到達できません — 再試行中です。起動後、数分かかる場合があります。",
     "add_device_cancelling": "キャンセル中…",
@@ -6321,7 +6325,8 @@
     "rng": "チャレンジ用の乱数を生成できませんでした",
     "unexpected": "他のデバイスから予期しない応答がありました",
     "unknown_identity": "そのアイデンティティが見つかりませんでした",
-    "unreachable": "他のデバイスに到達できませんでした"
+    "unreachable": "他のデバイスに到達できませんでした",
+    "node_proof": "このデバイスがどのノードであるかを証明できませんでした"
   },
   "sign_owner_binding": {
     "bad_request": "その所有者バインディングリクエストを読み取れませんでした。",

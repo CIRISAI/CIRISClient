@@ -135,6 +135,7 @@ add_device.approve_failed	server	server	-	-	-	-	-
 add_device.mint_failed	server	server	-	-	-	-	-
 add_device.no_device	server	server	-	-	-	-	-
 add_device.no_transport	server	server	-	-	-	-	-
+add_device.node_proof	server	server	-	-	-	-	-
 add_device.not_accepting	server	server	-	-	-	-	-
 add_device.not_approved	server	client,server	literal	-	-	-	-
 add_device.owner_route_pending	server	client,server	literal	-	-	-	-
@@ -284,6 +285,8 @@ audit_showing	client	client	literal	-	23	differs:16	-
 audit_signature	client	client	literal	-	24	differs:3	-
 audit_tool_execution	client	client	literal	-	25	differs:4	-
 audit_try_filters	client	client	literal	-	-	-	-
+auth.browser_signin.never_arrived	client	client	literal	-	-	-	-
+auth.browser_signin.no_browser	client	client	literal	-	-	-	-
 auth.browser_signin.timed_out	client	client	literal	-	-	-	-
 auth.browser_signin.waiting	client	client	literal	-	-	-	-
 auth.claim.already_claimed	server	client,server	literal	-	-	-	-
@@ -310,6 +313,7 @@ auth.not_signed_in	server	server	-	-	-	-	-
 auth.not_the_owner	server	server	-	-	-	-	-
 auth.oauth.exchange_failed	server	server	-	-	-	-	-
 auth.oauth.flow_expired	server	client,server	literal	-	-	-	-
+auth.oauth.flow_unknown	client	client	literal	-	-	-	-
 auth.oauth.malformed_body	server	server	-	-	27	same	-
 auth.oauth.native_token_invalid	server	server	-	-	-	-	-
 auth.oauth.no_local_identity	server	server	-	-	-	-	-
@@ -1047,7 +1051,8 @@ memory_tap_details	client	client	literal	-	-	-	-
 memory_time_range	client	client	literal	-	76	differs:9	-
 memory_total_nodes	client	client	literal	-	101	differs:8	-
 memory_try_graph	client	client	literal	-	-	-	-
-mesh.announce_requirement	server	server	-	-	-	-	-
+mesh.announce_costs	server	server	-	-	-	-	-
+mesh.announce_requirement	unclaimed	-	-	-	-	-	-
 mesh.private_groups.description	unclaimed	-	-	-	-	-	-
 mesh.private_groups.title	unclaimed	-	-	-	-	-	-
 mesh.video.description	unclaimed	-	-	-	-	-	-
@@ -3808,7 +3813,7 @@ mobile.setup_code	client	client	dynamic	-	-	-	-
 mobile.setup_complete_desc	client	client	literal	-	-	-	-
 mobile.setup_complete_title	client	client	literal	-	-	-	-
 mobile.setup_configured	client	client	literal	-	301	differs:7	-
-mobile.setup_connecting_node	client	client	dynamic	-	308	differs:5	-
+mobile.setup_connecting_node	client	client	dynamic	-	308	differs:4	-
 mobile.setup_consent_error	client	client	literal	-	-	-	-
 mobile.setup_consent_no_trace_grant	client	client	literal	-	-	-	-
 mobile.setup_consent_retry	client	client	literal	-	143	differs:13	-
@@ -3843,7 +3848,7 @@ mobile.setup_free_ready	client	client	literal	-	-	-	-
 mobile.setup_google_desc	client	client	dynamic	-	-	-	-
 mobile.setup_google_ready	client	client	dynamic	-	-	-	-
 mobile.setup_how_desc	client	client	dynamic	-	-	-	-
-mobile.setup_how_title	client	client	dynamic	-	309	differs:13	-
+mobile.setup_how_title	client	client	dynamic	-	309	differs:14	-
 mobile.setup_include_location	client	client	dynamic	-	-	-	-
 mobile.setup_location_note	client	client	dynamic	-	-	-	-
 mobile.setup_minor_explainer	client	client	literal	-	-	-	-
@@ -3940,15 +3945,15 @@ mobile.setup_using_own	client	client	literal	-	-	-	-
 mobile.setup_validation_api_key_required	client	client	dynamic	-	313	same	-
 mobile.setup_validation_device_failed	client	client	dynamic	-	-	-	-
 mobile.setup_validation_google_required	client	client	dynamic	-	-	-	-
-mobile.setup_validation_node_connecting	client	client	dynamic	-	308	differs:5	-
+mobile.setup_validation_node_connecting	client	client	dynamic	-	308	differs:4	-
 mobile.setup_validation_node_url	client	client	dynamic	-	-	-	-
 mobile.setup_validation_node_waiting	client	client	dynamic	-	314	same	-
 mobile.setup_validation_password_length	client	client	dynamic	-	311	same	-
 mobile.setup_validation_password_mismatch	client	client	dynamic	-	312	same	-
-mobile.setup_validation_password_required	client	client	dynamic	-	315	differs:11	-
+mobile.setup_validation_password_required	client	client	dynamic	-	315	differs:10	-
 mobile.setup_validation_select_mode	client	client	dynamic	-	-	-	-
 mobile.setup_validation_select_provider	client	client	dynamic	-	-	-	-
-mobile.setup_validation_username_required	client	client	dynamic	-	316	differs:11	-
+mobile.setup_validation_username_required	client	client	dynamic	-	316	differs:10	-
 mobile.setup_waiting_browser	client	client	dynamic	-	314	same	-
 mobile.setup_welcome_desc_node	client	client	literal	-	-	-	-
 mobile.setup_what_ciris	client	client	dynamic	-	-	-	-
@@ -3981,7 +3986,7 @@ mobile.skill_card_identity	client	client	literal	-	-	-	-
 mobile.skill_card_identity_hint	client	client	literal	-	-	-	-
 mobile.skill_card_install	client	client	dynamic	-	-	-	-
 mobile.skill_card_install_hint	client	client	dynamic	-	-	-	-
-mobile.skill_card_instruct	client	client	literal	-	309	differs:13	-
+mobile.skill_card_instruct	client	client	literal	-	309	differs:14	-
 mobile.skill_card_instruct_hint	client	client	literal	-	-	-	-
 mobile.skill_card_requires	client	client	literal	-	-	-	-
 mobile.skill_card_requires_hint	client	client	literal	-	-	-	-
@@ -5628,11 +5633,11 @@ setup_validation_google_required	client	client	literal	-	-	-	-
 setup_validation_minor_steward_required	client	client	literal	-	-	-	-
 setup_validation_password_length	client	client	literal	-	311	same	-
 setup_validation_password_mismatch	client	client	literal	-	312	same	-
-setup_validation_password_required	client	client	literal	-	315	differs:11	-
+setup_validation_password_required	client	client	literal	-	315	differs:10	-
 setup_validation_proxy_needs_token	client	client	literal	-	-	-	-
 setup_validation_select_provider	client	client	literal	-	-	-	-
 setup_validation_trace_consent_required	unclaimed	-	-	-	-	-	-
-setup_validation_username_required	client	client	literal	-	316	differs:11	-
+setup_validation_username_required	client	client	literal	-	316	differs:10	-
 setup_validation_username_reserved	client	client	literal	-	-	-	-
 sign_owner_binding.bad_request	server	server	-	-	-	-	-
 sign_owner_binding.build_failed	server	server	-	-	-	-	-

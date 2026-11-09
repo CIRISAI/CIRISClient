@@ -148,6 +148,34 @@ CEG 0.6 cohort-scope vocabulary used by the new Commons hub.
 | Trust policies | বিশ্বাস নীতি | Automatic-trust policies |
 | Coming Soon | শীঘ্রই আসছে | Placeholder for unshipped features |
 
+
+## Mesh, Keys and Review Terms
+
+Decided for client 0.5.239 so these terms stop being left in English. "corpus" means the rendering the shipped strings already use; "coined" means the corpus had none; "by hand" means the reviewer rejected both model drafts and the row was decided from the corpus and the reviewer's reasons. Machine-drafted and reviewed by a judge of a different model family; not native-reviewed.
+
+| English | Translation | Transliteration | Notes |
+|---------|-------------|-----------------|-------|
+| trust root | ট্রাস্ট রুট | trast rut | corpus: the key or authority a node accepts as the origin of trust for a mesh; a node 'subscribes to' or 'adopts' one |
+| owner binding | মালিকানা বন্ধন রেকর্ড | - | by hand: the signed record that ties a node to the person who owns it |
+| kill switch | কিল সুইচ | kil suich | corpus: the accord's power to halt a node remotely in an emergency |
+| audit log | অডিট লগ | odit log | corpus: the tamper-evident record of what a node or agent did |
+| export job | এক্সপোর্ট জব | eksport job | corpus: a queued task that packages a person's data for download |
+| signing key | স্বাক্ষর কী | swakkhor key | corpus: the private key a node or person signs with |
+| private key | প্রাইভেট কী | praibhet key | corpus: the secret half of a key pair |
+| session token | সেশন টোকেন | seshon token | corpus: the credential a signed-in app sends with each request |
+| secure hardware | সুরক্ষিত হার্ডওয়্যার | surokkhito hardwyar | corpus: the device's protected key store: TPM, Secure Enclave, StrongBox |
+| safety witness | নিরাপত্তা সাক্ষী | nirapotta sakkhi | corpus: a party that watches and attests to an agent's safety behaviour |
+| rubric review | রুব্রিক পর্যালোচনা | rubrik porjalochona | corpus: a review of an agent's behaviour against a scoring rubric |
+| delegation scope | ডেলিগেশন পরিসর | deligeshon porishor | corpus: the set of actions a delegate is allowed to perform |
+| canonical node | ক্যানোনিকাল নোড | kyanonikal nod | corpus: a node chosen as the reference copy a family's other nodes follow |
+| serve node | সার্ভ নোড | sarbh nod | corpus: a node that serves others on the mesh (always on, reachable) |
+| genesis seed | জেনেসিস সীড | jenesis sid | corpus: the starting material from which a family's first records are created |
+| circuit breaker | সার্কিট ব্রেকার | sarkit brekar | corpus: a safeguard that stops a failing service from being called until it recovers |
+| attestation level | অ্যাটেস্টেশন স্তর | aţesţeshan stor | corpus: how strongly a device has proven its identity and integrity (a numbered level) |
+| memory consolidation | স্মৃতি সংহতকরণ | smriti songhotokoron | corpus: the agent's periodic pass that summarises and reorganises what it remembers |
+| setup wizard | সেটআপ উইজার্ড | setap uijard | corpus: the step-by-step screens that set up the app the first time |
+| Secure Enclave | Secure Enclave | Secure Enclave | Apple's product name; keep in English as Apple writes it |
+
 ## Version History
 
 | Version | Date | Changes |

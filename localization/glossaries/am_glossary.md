@@ -226,6 +226,34 @@ Amharic plurals typically add -ዎች (-očč) or -ች (-čč):
 | Trust policies | የመተማመን ፖሊሲዎች | Ye-Metemamen Policiwočč | Policies governing automatic trust at a scope |
 | Coming Soon | በቅርቡ ይመጣል | Be-Ḳirbu Yimeṭal | Placeholder for unshipped features |
 
+
+## Mesh, Keys and Review Terms
+
+Decided for client 0.5.239 so these terms stop being left in English. "corpus" means the rendering the shipped strings already use; "coined" means the corpus had none; "by hand" means the reviewer rejected both model drafts and the row was decided from the corpus and the reviewer's reasons. Machine-drafted and reviewed by a judge of a different model family; not native-reviewed.
+
+| English | Translation | Transliteration | Notes |
+|---------|-------------|-----------------|-------|
+| trust root | የመተማመኛ ሥር | ye-metemamenya sir | corpus: the key or authority a node accepts as the origin of trust for a mesh; a node 'subscribes to' or 'adopts' one |
+| owner binding | የባለቤት ማሰሪያ | ye-balebet maseriya | corpus: the signed record that ties a node to the person who owns it |
+| kill switch | የማጥፊያ ማብሪያ | yemaṭfiya mabriya | corpus: the accord's power to halt a node remotely in an emergency |
+| audit log | የኦዲት መዝገብ | ye-odit mezgeb | corpus: the tamper-evident record of what a node or agent did |
+| export job | የመረጃ ማውጣት ሥራ | - | by hand: a queued task that packages a person's data for download |
+| signing key | የፊርማ ቁልፍ | ye-firma qulf | corpus: the private key a node or person signs with |
+| private key | የግል ቁልፍ | ye-gil qulf | corpus: the secret half of a key pair |
+| session token | የክፍለ ጊዜ ቶከን | ye-kifle gize token | corpus: the credential a signed-in app sends with each request |
+| secure hardware | ደህንነቱ የተጠበቀ ሃርድዌር | dehninetu yetetebeqe hardwer | corpus: the device's protected key store: TPM, Secure Enclave, StrongBox |
+| safety witness | የደህንነት ምስክር | ye-dehninet miskir | corpus: a party that watches and attests to an agent's safety behaviour |
+| rubric review | የሩብሪክ ግምገማ | ye-rubrik gimgema | corpus: a review of an agent's behaviour against a scoring rubric |
+| delegation scope | የውክልና ሽፋን | ye-wikilina shifan | corpus: the set of actions a delegate is allowed to perform |
+| canonical node | ቀኖናዊ ኖድ | qenonawi nod | corpus: a node chosen as the reference copy a family's other nodes follow |
+| serve node | አገልጋይ ኖድ | agelgay nod | corpus: a node that serves others on the mesh (always on, reachable) |
+| genesis seed | የመነሻ ዘር | ye-menesha zer | corpus: the starting material from which a family's first records are created |
+| circuit breaker | የአገልግሎት መከላከያ መቋረጫ | - | by hand: a safeguard that stops a failing service from being called until it recovers |
+| attestation level | የማረጋገጫ ደረጃ | ye-maregagecha dereja | corpus: how strongly a device has proven its identity and integrity (a numbered level) |
+| memory consolidation | የማስታወስ ውህደት | ye-mastawes wihdet | corpus: the agent's periodic pass that summarises and reorganises what it remembers |
+| setup wizard | የማዋቀሪያ መመሪያ | yemawaqeriya memeriya | coined: the step-by-step screens that set up the app the first time |
+| Secure Enclave | Secure Enclave | Secure Enclave | Apple's product name; keep in English as Apple writes it |
+
 ## Version History
 
 | Version | Date | Changes |
