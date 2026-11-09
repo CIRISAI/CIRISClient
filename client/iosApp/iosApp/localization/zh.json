@@ -4413,7 +4413,8 @@
     "server_local_desc": "管理在此设备上运行的节点。",
     "server_remote_desc": "连接到在其他地方运行的节点。",
     "server_url_label": "节点地址",
-    "server_current": "当前"
+    "server_current": "当前",
+    "add_device_no_session": "此设备已加入您的 CIRIS ID，但未能完成登录。请重新设置此设备，然后在您的另一台设备上批准它。"
   },
   "moderation": {
     "ladder": {

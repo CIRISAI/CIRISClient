@@ -22,8 +22,13 @@ interface AddDeviceSetupApi {
     /** `GET /v1/setup/add-device`. */
     suspend fun status(): AddDeviceProgress
 
-    /** `POST /v1/setup/add-device/complete`. */
-    suspend fun complete(): AddDeviceProgress
+    /**
+     * `POST /v1/setup/add-device/complete`. An agent install's local account goes
+     * with it: the agent mints no user for a node-claimed owner, so without these
+     * the device reaches Login with no password on record. A node without an
+     * agent sends neither, and older nodes ignore the body.
+     */
+    suspend fun complete(ownerUsername: String? = null, ownerPassword: String? = null): AddDeviceProgress
 
     /** `POST /v1/setup/claimed-session {claim_pin}` — the owner session, once `complete` applied the claim. */
     suspend fun collectSession(claimPin: String): ClaimedSessionGrant
@@ -42,7 +47,8 @@ class ClientAddDeviceSetup(private val client: CIRISApiClient) : AddDeviceSetupA
     override suspend fun start(contact: String, label: String?) =
         client.addDeviceStart(contact, label, CIRISApiClient.LOCAL_NODE_URL)
     override suspend fun status() = client.addDeviceStatus(CIRISApiClient.LOCAL_NODE_URL)
-    override suspend fun complete() = client.addDeviceComplete(CIRISApiClient.LOCAL_NODE_URL)
+    override suspend fun complete(ownerUsername: String?, ownerPassword: String?) =
+        client.addDeviceComplete(CIRISApiClient.LOCAL_NODE_URL, ownerUsername, ownerPassword)
     override suspend fun collectSession(claimPin: String) =
         client.collectClaimedSession(claimPin, CIRISApiClient.LOCAL_NODE_URL)
     override suspend fun cancel() = client.addDeviceCancel(CIRISApiClient.LOCAL_NODE_URL)

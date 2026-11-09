@@ -4234,6 +4234,7 @@
     "server_remote_desc": "অন্য কোথাও চলমান একটি নোডে সংযোগ করুন।",
     "server_url_label": "নোড ঠিকানা",
     "server_current": "বর্তমান",
+    "add_device_no_session": "এই ডিভাইসটি আপনার CIRIS ID-তে যুক্ত হয়েছে, কিন্তু এটি সাইন ইন সম্পূর্ণ করতে পারেনি। এই ডিভাইসটি আবার সেটআপ করুন, তারপর আপনার অন্য ডিভাইস থেকে এটি অনুমোদন করুন।",
     "accord_ceremony_phase_intro": "শুরু করার আগে",
     "accord_ceremony_phase_provision": "ছয়টি কী প্রস্তুত করা হচ্ছে",
     "accord_ceremony_phase_cosign": "পরিবারের এনভেলাপ সহ-স্বাক্ষর করা হচ্ছে",

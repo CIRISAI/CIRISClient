@@ -4413,7 +4413,8 @@
     "server_local_desc": "Kelola node yang berjalan di perangkat ini.",
     "server_remote_desc": "Hubungkan ke node yang berjalan di tempat lain.",
     "server_url_label": "Alamat node",
-    "server_current": "Saat Ini"
+    "server_current": "Saat Ini",
+    "add_device_no_session": "Perangkat ini telah bergabung dengan CIRIS ID Anda, tetapi tidak dapat menyelesaikan proses masuk. Siapkan perangkat ini lagi, lalu setujui dari perangkat lain Anda."
   },
   "moderation": {
     "ladder": {

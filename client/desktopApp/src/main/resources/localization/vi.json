@@ -4413,7 +4413,8 @@
     "server_local_desc": "Quản lý nút đang chạy trên thiết bị này.",
     "server_remote_desc": "Kết nối tới một nút đang chạy ở nơi khác.",
     "server_url_label": "Địa chỉ nút",
-    "server_current": "Hiện tại"
+    "server_current": "Hiện tại",
+    "add_device_no_session": "Thiết bị này đã tham gia CIRIS ID của bạn, nhưng không thể hoàn tất đăng nhập. Hãy thiết lập lại thiết bị này, sau đó chấp thuận nó từ thiết bị khác của bạn."
   },
   "moderation": {
     "ladder": {

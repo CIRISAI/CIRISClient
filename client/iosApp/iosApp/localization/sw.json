@@ -4395,6 +4395,7 @@
     "server_remote_desc": "Unganisha na nodi inayoendesha mahali pengine.",
     "server_url_label": "Anwani ya nodi",
     "server_current": "Ya sasa",
+    "add_device_no_session": "Kifaa hiki kimejiunga na CIRIS ID yako, lakini hakikuweza kumaliza kuingia. Sanidi kifaa hiki tena, kisha ukiidhinishe kutoka kifaa chako kingine.",
     "data_erase_title": "Futa nyayo za wakala kwenye nodi hii",
     "data_erase_desc": "Nodi hii huhifadhi nyayo ambazo wakala hutuma kwake. Unaweza kufuta kila nyayo ambayo wakala mmoja aliwasilisha hapa. Huu ni ufutaji pekee ambao nodi hii inaweza kufanya leo, hivyo soma kile kinachofikiwa na ufutaji huu na kile kisichofikiwa.",
     "data_erase_reaches_label": "Inafikia",

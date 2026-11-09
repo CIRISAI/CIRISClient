@@ -1316,6 +1316,7 @@
     "server_remote_desc": "다른 곳에서 실행 중인 노드에 연결합니다.",
     "server_url_label": "노드 주소",
     "server_current": "현재",
+    "add_device_no_session": "이 기기가 사용자의 CIRIS ID에 합류했지만, 로그인을 완료할 수 없었습니다. 이 기기를 다시 설정한 다음, 다른 기기에서 승인하세요.",
     "startup_services_timeout": "서비스 시작을 기다리는 동안 시간이 초과되었습니다 ({total}개 중 {online}개가 온라인 상태입니다).",
     "startup_fatal_disk_space": "이 기기의 저장 공간이 부족합니다: 여유 공간 {free} MB, CIRIS 시작에 필요한 공간 {required} MB. CIRIS 자체는 {ciris} MB를 사용하고 있습니다.",
     "startup_fatal_disk_space_short": "이 기기의 저장 공간이 부족합니다: 여유 공간 {free} MB, CIRIS 시작에 필요한 공간 {required} MB.",

@@ -1164,6 +1164,7 @@
     "server_remote_desc": "इतरत्र चालणाऱ्या नोडशी कनेक्ट करा.",
     "server_url_label": "नोड पत्ता",
     "server_current": "सध्याचे",
+    "add_device_no_session": "हे डिव्हाइस तुमच्या CIRIS ID मध्ये सामील झाले, पण ते साइन इन पूर्ण करू शकले नाही. हे डिव्हाइस पुन्हा सेट करा, मग ते तुमच्या दुसऱ्या डिव्हाइसवरून मंजूर करा.",
     "contact_requests_heading": "जोडू इच्छित आहे",
     "contact_requests_title_named": "{label} (त्यांनी स्वतःला हे नाव दिले आहे) जोडू इच्छित आहे",
     "contact_requests_title_someone": "कोणीतरी जोडू इच्छित आहे",

@@ -669,10 +669,11 @@ data class AddDeviceSetupState(
     val refusalStatus: Int? = null,
     /**
      * Does the add-device path still ask for a local account? Only with an
-     * agent: the agent's own `/v1/setup/complete` creates its local user from
-     * it. The node's claim on this path is the other device's binding, applied
-     * through `setup/root` with no owner password (`src/add_device.rs:883-893`),
-     * so on a node without an agent a password here would be stored nowhere.
+     * agent, and it goes to the node: `add-device/complete` passes it to
+     * `setup/root`, because the agent mints no user for a node-claimed owner.
+     * Without it the device reaches Login with no password on record. On a node
+     * without an agent the owner session is collected instead, so a password
+     * here would be stored nowhere.
      */
     val accountNeeded: Boolean = false,
     /** The "Cancel this request" confirm is up. */

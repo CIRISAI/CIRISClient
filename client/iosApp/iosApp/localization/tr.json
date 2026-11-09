@@ -4413,7 +4413,8 @@
     "server_local_desc": "Bu cihazda çalışan düğümü yönetin.",
     "server_remote_desc": "Başka bir yerde çalışan bir düğüme bağlanın.",
     "server_url_label": "Düğüm adresi",
-    "server_current": "Mevcut"
+    "server_current": "Mevcut",
+    "add_device_no_session": "Bu cihaz CIRIS ID'nize katıldı, ancak oturum açma işlemini tamamlayamadı. Bu cihazı yeniden kurun, ardından diğer cihazınızdan onaylayın."
   },
   "moderation": {
     "ladder": {

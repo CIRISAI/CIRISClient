@@ -1390,6 +1390,7 @@
     "server_remote_desc": "Connectez-vous à un nœud en cours d'exécution ailleurs.",
     "server_url_label": "Adresse du nœud",
     "server_current": "Actuel",
+    "add_device_no_session": "Cet appareil a rejoint votre CIRIS ID, mais il n'a pas pu terminer la connexion. Reconfigurez cet appareil, puis approuvez-le depuis votre autre appareil.",
     "add_fedid_confirm": "Ajouter l'ID de fédération",
     "add_fedid_intro": "Vous êtes déjà connecté — ceci ajoute un ID de fédération à votre compte existant sans le recréer. Votre identifiant de connexion est préservé.",
     "add_fedid_label_heading": "Nommez votre ID de fédération",

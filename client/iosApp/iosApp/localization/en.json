@@ -4507,7 +4507,8 @@
     "server_local_desc": "Manage the node running on this device.",
     "server_remote_desc": "Connect to a node running somewhere else.",
     "server_url_label": "Node address",
-    "server_current": "Current"
+    "server_current": "Current",
+    "add_device_no_session": "This device joined your CIRIS ID, but it could not finish signing in. Set this device up again, then approve it from your other device."
   },
   "moderation": {
     "ladder": {

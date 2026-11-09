@@ -1268,6 +1268,7 @@
     "server_remote_desc": "Sopọ̀ mọ́ nódù tí ń ṣiṣẹ́ ní ibòmíràn.",
     "server_url_label": "Àdírẹ́sì nódù",
     "server_current": "Lọ́wọ́lọ́wọ́",
+    "add_device_no_session": "Ẹ̀rọ yìí ti darapọ̀ mọ́ CIRIS ID rẹ, ṣùgbọ́n kò lè parí ìwọlé. Ṣètò ẹ̀rọ yìí lẹ́ẹ̀kan síi, lẹ́yìn náà fọwọ́sí i láti orí ẹ̀rọ rẹ mìíràn.",
     "moderation_flag_section": "Ṣàmì sí ohun kan",
     "moderation_flag_explain": "Ṣàkọsílẹ̀ pé a ti ròyìn àkóónú ẹnì kan tàbí pé ó jẹ́ ewu-ìmọ̀ nínú àdúgbò yìí, tàbí pa àmì tẹ́lẹ̀ rẹ́. Olùmójútó nìkan ló lè ṣe é. A ṣàkọsílẹ̀ àmì kan, ṣùgbọ́n kò tíì fi ohunkóhun pamọ́.",
     "moderation_flag_subject": "Àkóónú ẹni wo (kọ́kọ́rọ́)",

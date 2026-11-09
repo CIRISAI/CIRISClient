@@ -1502,6 +1502,7 @@ mobile.add_device_joining	client	client	literal	-	-	-	-
 mobile.add_device_match_title	client	client	literal	-	-	-	-
 mobile.add_device_name_hint	client	client	literal	-	-	-	-
 mobile.add_device_name_label	client	client	literal	-	142	same	-
+mobile.add_device_no_session	client	client	literal	-	-	-	-
 mobile.add_device_node_too_old	client	client	literal	-	-	-	-
 mobile.add_device_refused	client	client	literal	-	-	-	-
 mobile.add_device_requested	client	client	literal	-	-	-	-

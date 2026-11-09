@@ -61,10 +61,17 @@ never sends), the long form or the short form (`input_add_device_contact`; the
 node resolves all three, `ciris_edge::contact::resolve_contact`). It does NOT
 ask a fedID name (`input_fedid_label` is absent on this path), nor an age band
 (the age is the identity's, already recorded where it was minted), and on a
-node without an agent nor a local account (the claim on this path is applied
-through `setup/root` with no owner password, `src/add_device.rs:883-893`, so a
-password here would be stored nowhere). With an agent the account fields stay:
-the agent's own setup-complete creates its local user from them.
+node without an agent nor a local account (the owner session is collected
+instead, so a password here would be stored nowhere). With an agent the account
+fields stay, and they go to the node: `add-device/complete` takes optional
+`{owner_username, owner_password}` and passes them to `setup/root`, because the
+agent mints no user for a node-claimed owner. Without them the device reaches
+Login with no password on record.
+
+**The claim PIN is read before `add-device/complete`.** A node older than 0.5.245
+deletes the file when the claim lands. Without an agent a missing session is
+said in words (`mobile.add_device_no_session`), because there is no password to
+fall back on and the wizard would otherwise end at a sign-in nobody can pass.
 
 **The rest of the wizard runs as usual** (consent, and with an agent the AI
 step) while the person approves on the other device. Next on YOU opens as soon

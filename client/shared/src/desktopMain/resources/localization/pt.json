@@ -4392,6 +4392,7 @@
     "server_remote_desc": "Conecte-se a um nó executando em outro lugar.",
     "server_url_label": "Endereço do nó",
     "server_current": "Atual",
+    "add_device_no_session": "Este dispositivo entrou na sua CIRIS ID, mas não conseguiu concluir o início de sessão. Configure este dispositivo novamente e depois aprove-o a partir do seu outro dispositivo.",
     "data_erase_self_label": "Apagar você",
     "data_erase_self_blocked": "Ainda não é possível a partir deste aplicativo. O nó só apaga uma pessoa mediante uma solicitação que essa pessoa assina, e este aplicativo não assina (CIRISServer#677). Apagar traços não apaga você.",
     "data_erase_agent_id_label": "ID do agente",

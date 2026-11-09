@@ -4350,6 +4350,7 @@
     "server_remote_desc": "Conéctate a un nodo que se ejecuta en otro lugar.",
     "server_url_label": "Dirección del nodo",
     "server_current": "Actual",
+    "add_device_no_session": "Este dispositivo se unió a tu CIRIS ID, pero no pudo terminar de iniciar sesión. Configura este dispositivo otra vez y luego apruébalo desde tu otro dispositivo.",
     "data_receipt_uncheckable": "No se puede verificar aquí",
     "data_receipt_key_label": "Clave",
     "data_receipt_key_not_current": "Firmado con una clave que este agente ya no usa. Solo se comprueba contra su clave actual, así que este recibo se interpreta como que no se comprueba aunque sea genuino.",

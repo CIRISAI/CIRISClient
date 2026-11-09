@@ -4413,7 +4413,8 @@
     "data_receipt_valid": "Verificata: firmata dalla chiave di questo agente",
     "data_receipt_invalid": "Non verificata: la firma non corrisponde",
     "data_receipt_records_verified": "Record eliminati",
-    "approve_device_desc": "Sul nuovo dispositivo, scegli Aggiungi questo dispositivo a un CIRIS ID esistente. Mostrerà un numero: approvalo qui solo se i numeri corrispondono."
+    "approve_device_desc": "Sul nuovo dispositivo, scegli Aggiungi questo dispositivo a un CIRIS ID esistente. Mostrerà un numero: approvalo qui solo se i numeri corrispondono.",
+    "add_device_no_session": "Questo dispositivo si è unito al tuo CIRIS ID, ma non è riuscito a completare l'accesso. Configura di nuovo questo dispositivo, poi approvalo dall'altro dispositivo."
   },
   "moderation": {
     "ladder": {

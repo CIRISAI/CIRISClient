@@ -1275,6 +1275,9 @@ class CIRISApiClient internal constructor(
             }
         }
 
+    /** How long add-device calls wait: past the node's own 30 s wait for an owner route. */
+    private val ADD_DEVICE_TIMEOUT_MS = 45_000L
+
     /** Timeout for touch-gated YubiKey ceremony calls (3 touches × human latency). */
     private val ceremonyTimeoutMillis: Long = 180_000
 
@@ -3522,7 +3525,10 @@ class CIRISApiClient internal constructor(
         withSession: Boolean,
     ): String {
         logInfo(method, "${verb.value} $nodeUrl$path")
-        val client = federationHttpClient()
+        // The node waits up to 30 s for the other device's address before it can
+        // answer 503 with Retry-After, so at 30 s the client gave up first and the
+        // person saw a raw timeout. 0.5.245 waits 25 s.
+        val client = federationHttpClient(requestTimeoutMillis = ADD_DEVICE_TIMEOUT_MS)
         return try {
             val response = client.request("$nodeUrl$path") {
                 this.method = verb
@@ -3584,8 +3590,19 @@ class CIRISApiClient internal constructor(
      */
     suspend fun addDeviceComplete(
         nodeUrl: String = LOCAL_NODE_URL,
+        ownerUsername: String? = null,
+        ownerPassword: String? = null,
     ): ai.ciris.mobile.shared.models.federation.AddDeviceProgress {
-        val raw = addDeviceCall("addDeviceComplete", HttpMethod.Post, nodeUrl, "/v1/setup/add-device/complete", "{}", withSession = false)
+        val body = if (ownerUsername.isNullOrBlank() || ownerPassword.isNullOrEmpty()) "{}" else {
+            jsonConfig.encodeToString(
+                ai.ciris.mobile.shared.models.federation.AddDeviceCompleteRequest.serializer(),
+                ai.ciris.mobile.shared.models.federation.AddDeviceCompleteRequest(
+                    ownerUsername = ownerUsername.trim(),
+                    ownerPassword = ownerPassword,
+                ),
+            )
+        }
+        val raw = addDeviceCall("addDeviceComplete", HttpMethod.Post, nodeUrl, "/v1/setup/add-device/complete", body, withSession = false)
         return decodeFederationEnvelope(raw, ai.ciris.mobile.shared.models.federation.AddDeviceProgress.serializer())
     }
 

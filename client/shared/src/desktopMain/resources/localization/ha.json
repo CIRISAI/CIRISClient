@@ -2042,6 +2042,7 @@
     "server_remote_desc": "Haɗa da kumburin da ke gudana a wani wuri.",
     "server_url_label": "Adireshin kumburi",
     "server_current": "Na yanzu",
+    "add_device_no_session": "Wannan na'ura ta shiga CIRIS ID naku, amma ba ta iya kammala shiga ba. Ku sake kafa wannan na'ura, sannan ku amince da ita daga wata na'urarku.",
     "federation_create_associate": "Danganta Fed ID da ke akwai",
     "federation_create_associate_button": "Danganta",
     "federation_create_associate_hint": "Id na maɓallin tarayya da ke akwai ko fedcode",
