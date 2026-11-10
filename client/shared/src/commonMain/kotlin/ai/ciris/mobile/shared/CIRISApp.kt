@@ -460,12 +460,18 @@ fun CIRISApp(
      */
     var brainPresent by remember { mutableStateOf<Boolean?>(null) }
     var nodeVersion by remember { mutableStateOf<String?>(null) }
-    val isAgentMode = clientMode?.isAgent ?: true  // default to agent wording until probed
+    // Functions, not vals: a val is the value at the render that read it, and the
+    // startup coroutine (LaunchedEffect(phase)) outlives that render. It cleared
+    // and re-probed clientMode itself, then still read the copies from before:
+    // "No agent to wait for (clientMode=AGENT)" and a landing on Contacts with the
+    // agent up (CIRISAgent 2.20 five-platform run 42746576678). Reading the state
+    // at the moment of the decision is the only answer that cannot be stale.
+    fun isAgentMode(): Boolean = clientMode?.isAgent ?: true  // default to agent wording until probed
     // The landing surface, from the PROBE (CIRISServer#479). Deliberately NOT
     // `isAgentMode`: that one defaults to agent so copy reads naturally before
     // the probe lands, while the LANDING must default to the node surface —
     // opening on a chat with no brain behind it is the worse wrong guess.
-    val homeTarget = homeScreen(hasAgent = clientMode?.isAgent ?: false)
+    fun homeTarget(): Screen = homeScreen(hasAgent = clientMode?.isAgent ?: false)
     /**
      * Should the WORK-STATE WAIT run — the three 150 × 200 ms polls for a
      * cognitive state (CIRISClient#48).
@@ -486,7 +492,7 @@ fun CIRISApp(
      * brain** — if the gate later says AGENT the surfaces light up then, which
      * is what `clientMode == null` has always meant.
      */
-    val shouldWaitForAgent = ai.ciris.mobile.shared.models.shouldWaitForAgent(clientMode)
+    fun shouldWaitForAgent(): Boolean = ai.ciris.mobile.shared.models.shouldWaitForAgent(clientMode)
 
     // Navigation state
     var currentScreen by remember { mutableStateOf<Screen>(Screen.Startup) }
@@ -529,7 +535,7 @@ fun CIRISApp(
     // homeTarget (the probed landing), not Screen.Interact: on the node client the landing surface is
     // Contacts, and a back press there must fall through to the platform (leave
     // the app) rather than navigating to a screen that is not in the sidebar.
-    PlatformBackHandler(enabled = currentScreen !is Screen.Startup && currentScreen != homeTarget) {
+    PlatformBackHandler(enabled = currentScreen !is Screen.Startup && currentScreen != homeTarget()) {
         currentScreen = when (currentScreen) {
             // Login/Setup flow - don't go back, let user complete the flow
             is Screen.Login, is Screen.Setup -> currentScreen
@@ -562,7 +568,7 @@ fun CIRISApp(
             is Screen.Contacts -> {
                 val src = contactsPickerSourceScreen
                 contactsPickerSourceScreen = null
-                src ?: homeTarget
+                src ?: homeTarget()
             }
 
             // A chat goes back to where it was opened from: the contact list, or
@@ -573,7 +579,7 @@ fun CIRISApp(
 
             // Everything the tree places answers for itself, so the button and
             // the shell's arrow cannot drift apart when a card moves.
-            else -> placedBackTarget(currentScreen, clientMode?.isAgent ?: false) ?: homeTarget
+            else -> placedBackTarget(currentScreen, clientMode?.isAgent ?: false) ?: homeTarget()
         }
     }
 
@@ -1108,7 +1114,7 @@ fun CIRISApp(
     // HA legacy owners the guided Add Federation ID flow this effect exists
     // to provide.
     LaunchedEffect(currentScreen, currentAccessToken, isHAAddonMode) {
-        if (currentScreen != homeTarget) return@LaunchedEffect
+        if (currentScreen != homeTarget()) return@LaunchedEffect
         val authenticated = currentAccessToken != null || isHAAddonMode
         if (!authenticated || fedIdCatchupPrompted) return@LaunchedEffect
         try {
@@ -1118,7 +1124,7 @@ fun CIRISApp(
         }
         if (nodeSwitcherViewModel.ownerHasFedId.value == false) {
             fedIdCatchupPrompted = true
-            addFederationIdReturnScreen = homeTarget
+            addFederationIdReturnScreen = homeTarget()
             PlatformLogger.i(TAG, "[fed-id-catchup] legacy owner has no fed-ID — auto-presenting Add Federation ID")
             currentScreen = Screen.AddFederationId
         }
@@ -1815,7 +1821,7 @@ fun CIRISApp(
                 platformLog(TAG, "[INFO] Not first run in HA Addon mode - using ingress auth directly")
                 startupViewModel.setStatus(LocalizationHelper.getString("mobile.status_ready"))
                 interactViewModel.startPolling()
-                currentScreen = homeTarget
+                currentScreen = homeTarget()
             } else {
                 // Not first run, normal mode - try to load stored token and check if valid/refresh if needed
                 platformLog(TAG, "[INFO] Not first run, attempting to load and validate stored token")
@@ -1942,7 +1948,7 @@ fun CIRISApp(
                                 // Keep timer running during backend polling
                                 startupViewModel.setKeepTimerAlive(true)
                                 startupViewModel.setStatus(
-                                    if (shouldWaitForAgent) LocalizationHelper.getString("mobile.status_waiting_agent")
+                                    if (shouldWaitForAgent()) LocalizationHelper.getString("mobile.status_waiting_agent")
                                     else "Connecting to node..."
                                 )
 
@@ -1953,7 +1959,7 @@ fun CIRISApp(
                                 val maxPollAttempts = 150 // 30 seconds (150 * 200ms)
                                 var lastState = "UNKNOWN"
 
-                                if (!shouldWaitForAgent) {
+                                if (!shouldWaitForAgent()) {
                                     // NODE mode, or a gate that has not answered yet — either
                                     // way there is no cognitive brain / WORK state to wait for.
                                     PlatformLogger.i(TAG, " No agent to wait for (clientMode=${clientMode ?: "unprobed"}) — skipping WORK-state wait")
@@ -1962,7 +1968,7 @@ fun CIRISApp(
                                 }
 
                                 // Quick check for degraded mode via health endpoint (agent only)
-                                if (shouldWaitForAgent) {
+                                if (shouldWaitForAgent()) {
                                     try {
                                         val health = apiClient.getSystemHealth()
                                         if (health.degradedMode) {
@@ -2012,7 +2018,7 @@ fun CIRISApp(
                                     // reports the OUTCOME of the wait above, and on an
                                     // unprobed gate that wait was skipped after setting
                                     // "Node ready" — the agent default contradicted it.
-                                    startupViewModel.setStatus(if (shouldWaitForAgent) "Agent ready!" else "Node ready!")
+                                    startupViewModel.setStatus(if (shouldWaitForAgent()) "Agent ready!" else "Node ready!")
                                 }
 
                                 // Brief pause to show ready state
@@ -2040,7 +2046,7 @@ fun CIRISApp(
                                 }
 
                                 // A session the node refused, with no silent path, is a sign-in.
-                                currentScreen = if (tokenManager.needsInteractiveLogin.value) Screen.Login else homeTarget
+                                currentScreen = if (tokenManager.needsInteractiveLogin.value) Screen.Login else homeTarget()
                             } else {
                                 // Token invalid and couldn't refresh - need interactive login
                                 PlatformLogger.i(TAG, " Token invalid/expired and silent refresh failed - redirecting to login")
@@ -2268,19 +2274,19 @@ fun CIRISApp(
 
                                                     // Check for degraded mode first - skip WORK state wait if no LLM
                                                     loginStatusMessage =
-                                                        if (shouldWaitForAgent) "Waiting for agent..." else "Connecting to node..."
+                                                        if (shouldWaitForAgent()) "Waiting for agent..." else "Connecting to node..."
                                                     var agentReady = false
                                                     var inDegradedMode = false
                                                     var pollAttempts = 0
 
-                                                    if (!shouldWaitForAgent) {
+                                                    if (!shouldWaitForAgent()) {
                                                         // NODE mode, or an unprobed gate — nothing to wait for.
                                                         PlatformLogger.i(TAG, " No agent to wait for (clientMode=${clientMode ?: "unprobed"}) — skipping WORK-state wait")
                                                         agentReady = true
                                                     }
 
                                                     // Quick check for degraded mode via health endpoint (agent only)
-                                                    if (shouldWaitForAgent) {
+                                                    if (shouldWaitForAgent()) {
                                                         try {
                                                             val health = apiClient.getSystemHealth()
                                                             if (health.degradedMode) {
@@ -2322,7 +2328,7 @@ fun CIRISApp(
                                                     isLoginLoading = false
                                                     loginStatusMessage = null
                                                     platformLog(TAG, "[INFO] Navigating to home (node) screen")
-                                                    currentScreen = homeTarget
+                                                    currentScreen = homeTarget()
                                                 } catch (e: Exception) {
                                                     platformLog(TAG, "[ERROR] Token exchange failed: ${e::class.simpleName}: ${e.message}")
                                                     isLoginLoading = false
@@ -2515,7 +2521,7 @@ fun CIRISApp(
                                         platformLog(TAG, "[WARN][onGoogleSignIn] hand-off carried no id_token (node predates ciris-server 0.5.177) — billing token not refreshed")
                                     }
                                     handOffToInteract(interactViewModel, billing = null, adapters = null)
-                                    currentScreen = homeTarget
+                                    currentScreen = homeTarget()
                                 }
                             }
                         }
@@ -2575,14 +2581,14 @@ fun CIRISApp(
                                 // below then spent, and that is how the 34-40 s was found.
                                 // It now names the gate rather than a default, so the next
                                 // reader gets the fact instead of the guess.
-                                PlatformLogger.i(TAG, " Local login successful, waiting for ${if (shouldWaitForAgent) "agent" else "node"} (clientMode=${clientMode ?: "unprobed"})...")
+                                PlatformLogger.i(TAG, " Local login successful, waiting for ${if (shouldWaitForAgent()) "agent" else "node"} (clientMode=${clientMode ?: "unprobed"})...")
                                 loginStatusMessage =
-                                    if (shouldWaitForAgent) "Waiting for agent..." else "Connecting to node..."
+                                    if (shouldWaitForAgent()) "Waiting for agent..." else "Connecting to node..."
                                 var agentReady = false
                                 var inDegradedMode = false
                                 var pollAttempts = 0
 
-                                if (!shouldWaitForAgent) {
+                                if (!shouldWaitForAgent()) {
                                     // NODE mode, or an unprobed gate — nothing to wait for.
                                     // THIS IS THE 34-40 SECONDS (CIRISClient#48). The gate is
                                     // routinely still null here: login is reached BEFORE the
@@ -2593,7 +2599,7 @@ fun CIRISApp(
                                 }
 
                                 // Quick check for degraded mode via health endpoint (agent only)
-                                if (shouldWaitForAgent) {
+                                if (shouldWaitForAgent()) {
                                     try {
                                         val health = apiClient.getSystemHealth()
                                         if (health.degradedMode) {
@@ -2633,7 +2639,7 @@ fun CIRISApp(
 
                                 isLoginLoading = false
                                 loginStatusMessage = null
-                                currentScreen = homeTarget
+                                currentScreen = homeTarget()
                             } catch (e: Exception) {
                                 platformLog(TAG, "[ERROR] Local login failed: ${e::class.simpleName}: ${e.message}")
                                 isLoginLoading = false
@@ -2909,7 +2915,7 @@ fun CIRISApp(
                             currentScreen = Screen.Setup
                         } else {
                             platformLog(TAG, "[INFO][onCreateFederationIdentity] configured node — fed-ID catch-up")
-                            addFederationIdReturnScreen = homeTarget
+                            addFederationIdReturnScreen = homeTarget()
                             currentScreen = Screen.AddFederationId
                         }
                     },
@@ -3326,7 +3332,7 @@ fun CIRISApp(
                         platformLog(TAG, "[INFO] user chose to set up the agent from node mode → Screen.Setup")
                         currentScreen = Screen.Setup
                     },
-                    onNavigateBack = { currentScreen = homeTarget },
+                    onNavigateBack = { currentScreen = homeTarget() },
                     onLogout = {
                         PlatformLogger.i("CIRISApp", "[onLogout] User initiated logout")
                         signOut.now()
@@ -3984,7 +3990,7 @@ fun CIRISApp(
                         PlatformLogger.i("CIRISApp", "[Screen.Audit] Filter changed: $filter")
                         auditViewModel.updateFilter(filter)
                     },
-                    onNavigateBack = { currentScreen = placedBackTarget(Screen.Audit, clientMode?.isAgent ?: false) ?: homeTarget }
+                    onNavigateBack = { currentScreen = placedBackTarget(Screen.Audit, clientMode?.isAgent ?: false) ?: homeTarget() }
                 )
             }
 
@@ -4035,10 +4041,10 @@ fun CIRISApp(
                         PlatformLogger.i("CIRISApp", "[Screen.Logs] Toggle auto-scroll")
                         logsViewModel.toggleAutoScroll()
                     },
-                    onNavigateBack = { currentScreen = placedBackTarget(Screen.Logs, clientMode?.isAgent ?: false) ?: homeTarget },
+                    onNavigateBack = { currentScreen = placedBackTarget(Screen.Logs, clientMode?.isAgent ?: false) ?: homeTarget() },
                     // Reflect the existing backend mode: in node mode the "Agent"
                     // log source is disabled/grayed in the source dropdown.
-                    isNodeMode = !isAgentMode
+                    isNodeMode = !isAgentMode()
                 )
             }
 
@@ -4071,7 +4077,7 @@ fun CIRISApp(
                     onCodingRateChange = { transportViewModel.updateCodingRate(it) },
                     onTxPowerChange = { transportViewModel.updateTxPowerDbm(it) },
                     onApply = { transportViewModel.applyRadioConfig() },
-                    isNodeMode = !isAgentMode,
+                    isNodeMode = !isAgentMode(),
                 )
             }
 
@@ -4120,7 +4126,7 @@ fun CIRISApp(
                         PlatformLogger.i("CIRISApp", "[Screen.Memory] Clear selection")
                         memoryViewModel.clearSelection()
                     },
-                    onNavigateBack = { currentScreen = placedBackTarget(Screen.Memory, clientMode?.isAgent ?: false) ?: homeTarget },
+                    onNavigateBack = { currentScreen = placedBackTarget(Screen.Memory, clientMode?.isAgent ?: false) ?: homeTarget() },
                     onSwitchToGraph = {
                         PlatformLogger.i("CIRISApp", "[Screen.Memory] Switching to graph view")
                         currentScreen = Screen.GraphMemory
@@ -4248,7 +4254,7 @@ fun CIRISApp(
                         PlatformLogger.i("CIRISApp", "[Screen.Config] User triggered refresh")
                         configViewModel.refresh()
                     },
-                    onNavigateBack = { currentScreen = placedBackTarget(Screen.Config, clientMode?.isAgent ?: false) ?: homeTarget },
+                    onNavigateBack = { currentScreen = placedBackTarget(Screen.Config, clientMode?.isAgent ?: false) ?: homeTarget() },
                     meshConfigViewModel = meshConfigViewModel,
                 )
             }
@@ -4353,7 +4359,7 @@ fun CIRISApp(
                         PlatformLogger.i("CIRISApp", "[Screen.System] User triggered refresh")
                         systemViewModel.refresh()
                     },
-                    onNavigateBack = { currentScreen = placedBackTarget(Screen.System, clientMode?.isAgent ?: false) ?: homeTarget },
+                    onNavigateBack = { currentScreen = placedBackTarget(Screen.System, clientMode?.isAgent ?: false) ?: homeTarget() },
                     nodeState = nodeStateReadout
                 )
             }
@@ -4366,7 +4372,7 @@ fun CIRISApp(
                     // a session that is Login (the chip that opened this);
                     // with one it is home, which is Contacts on a node-only
                     // install, never the agent's Interact.
-                    onBack = { currentScreen = if (currentAccessToken != null) homeTarget else Screen.Login }
+                    onBack = { currentScreen = if (currentAccessToken != null) homeTarget() else Screen.Login }
                 )
             }
 
@@ -4494,7 +4500,7 @@ fun CIRISApp(
                     onBack = {
                         val src = contactsPickerSourceScreen
                         contactsPickerSourceScreen = null
-                        currentScreen = src ?: homeTarget
+                        currentScreen = src ?: homeTarget()
                     },
                     onOpenChat = { contact ->
                         currentScreen = Screen.UserChat(
@@ -4565,7 +4571,7 @@ fun CIRISApp(
                     viewModel = delegationsViewModel,
                     // Placed under Rules in every circle: its placement answers
                     // back. Interact is agent-only and not in a node's tree.
-                    onBack = { currentScreen = placedBackTarget(Screen.Delegations, clientMode?.isAgent ?: false) ?: homeTarget },
+                    onBack = { currentScreen = placedBackTarget(Screen.Delegations, clientMode?.isAgent ?: false) ?: homeTarget() },
                     onOpenContacts = {
                         contactsPickerSourceScreen = Screen.Delegations
                         contactsViewModel.selectPeer(null) // clear any prior selection
@@ -4776,7 +4782,7 @@ fun CIRISApp(
                         PlatformLogger.i("CIRISApp", "[Screen.Runtime] User triggered refresh")
                         runtimeViewModel.refresh()
                     },
-                    onNavigateBack = { currentScreen = placedBackTarget(Screen.Runtime, clientMode?.isAgent ?: false) ?: homeTarget }
+                    onNavigateBack = { currentScreen = placedBackTarget(Screen.Runtime, clientMode?.isAgent ?: false) ?: homeTarget() }
                 )
             }
 
@@ -4896,7 +4902,7 @@ fun CIRISApp(
                         PlatformLogger.i("CIRISApp", "[Screen.Scheduler] User triggered refresh")
                         schedulerViewModel.refresh()
                     },
-                    onNavigateBack = { currentScreen = placedBackTarget(Screen.Scheduler, clientMode?.isAgent ?: false) ?: homeTarget },
+                    onNavigateBack = { currentScreen = placedBackTarget(Screen.Scheduler, clientMode?.isAgent ?: false) ?: homeTarget() },
                     onShowCreateDialog = {
                         PlatformLogger.i("CIRISApp", "[Screen.Scheduler] Show create dialog")
                         schedulerViewModel.showCreateTaskDialog()
