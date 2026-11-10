@@ -27,7 +27,9 @@ class DesktopAudioLoopbackTest {
         val sink = DesktopSpeakerSink()
         val mic = DesktopMicrophoneSource()
         val heard = java.util.concurrent.ConcurrentLinkedQueue<Short>()
-        mic.start { pcm -> pcm.forEach { heard += it } }
+        val t0mic = System.nanoTime()
+        val arrivals = java.util.concurrent.ConcurrentLinkedQueue<Long>() // ms since start, per frame
+        mic.start { pcm -> arrivals += (System.nanoTime() - t0mic) / 1_000_000; pcm.forEach { heard += it } }
         try {
             // Two seconds of tone through Opus both ways, paced by an absolute clock so
             // the loop does not drift slower than real time and starve the line.
@@ -44,7 +46,9 @@ class DesktopAudioLoopbackTest {
             sink.stop()
         }
         val samples = heard.toShortArray()
-        assertTrue(samples.size > CallAudioFormat.SAMPLE_RATE, "heard ${samples.size} samples")
+        // Where capture stopped, if it did: frames that arrived in each half second.
+        val perHalfSecond = arrivals.groupingBy { it / 500 }.eachCount().toSortedMap()
+        assertTrue(samples.size > CallAudioFormat.SAMPLE_RATE, "heard ${samples.size} samples; frames per 500 ms: $perHalfSecond")
         // Pitch per loud 20 ms block, median of them: a drained line plays silence,
         // and counting crossings across silence would understate the pitch.
         val n = CallAudioFormat.FRAME_SAMPLES

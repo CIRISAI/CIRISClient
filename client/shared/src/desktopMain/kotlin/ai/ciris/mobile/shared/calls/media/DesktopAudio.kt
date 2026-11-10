@@ -35,7 +35,9 @@ class DesktopMicrophoneSource : AudioSource {
     override fun start(onFrame: (ShortArray) -> Unit) {
         if (line != null) return
         val l = AudioSystem.getTargetDataLine(FORMAT)
-        l.open(FORMAT, FRAME_BYTES * 4)
+        // 320 ms of buffer: the ALSA pulse plugin's periods are larger than a 20 ms
+        // frame, and a smaller line buffer stalls read() (seen on a CI runner).
+        l.open(FORMAT, FRAME_BYTES * 16)
         l.start()
         line = l
         thread = Thread({
