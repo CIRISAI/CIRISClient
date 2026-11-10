@@ -4464,7 +4464,25 @@
     "add_device_contact_hint_2": "Trên thiết bị khác của bạn, hãy mở Chia sẻ ID của tôi. Quét mã QR của nó, hoặc dán mã dạng dài hoặc dạng ngắn vào đây. Chỉ riêng ID liên bang của bạn cũng hoạt động khi thiết bị khác của bạn được công bố.",
     "contacts_reach_sent": "Đã gửi: đang chờ họ trả lời",
     "contacts_reach_waiting": "Đang chờ liên hệ được với họ",
-    "contacts_stale_since": "Không nghe tin gì từ {date}"
+    "contacts_stale_since": "Không nghe tin gì từ {date}",
+    "call_joining": "Đang tham gia cuộc gọi…",
+    "call_audio_unavailable_here": "Âm thanh cuộc gọi chưa được hỗ trợ trên thiết bị này, nên bạn sẽ không nghe hoặc được nghe thấy ở đây.",
+    "call_alone": "Đang chờ người khác tham gia.",
+    "call_someone": "Một người trong phòng này",
+    "call_tile_video": "camera đang bật",
+    "call_tile_audio": "đang nói",
+    "call_tile_quiet": "im lặng",
+    "call_you_left": "Bạn đã rời cuộc gọi.",
+    "call_you_backgrounded": "Cuộc gọi đã kết thúc vì ứng dụng rời khỏi màn hình. Mở lại ứng dụng để tham gia lại.",
+    "call_you_removed": "Bạn đã bị xóa khỏi phòng này, nên bạn không còn ở trong cuộc gọi của phòng nữa.",
+    "call_you_lost": "Cuộc gọi đã bị rớt. Hãy kiểm tra kết nối của bạn, rồi thử lại.",
+    "call_member_left": "Một người đã rời cuộc gọi.",
+    "call_member_backgrounded": "Ứng dụng của một người đã rời khỏi màn hình, nên họ đã rời cuộc gọi.",
+    "call_member_removed": "Một người đã bị xóa khỏi phòng này.",
+    "call_member_lost": "Kết nối của một người đã bị gián đoạn.",
+    "call_mute": "Tắt tiếng",
+    "call_unmute": "Bật tiếng",
+    "call_leave": "Rời khỏi"
   },
   "moderation": {
     "ladder": {

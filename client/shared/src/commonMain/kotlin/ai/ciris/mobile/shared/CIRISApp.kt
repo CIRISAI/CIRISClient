@@ -4557,9 +4557,29 @@ fun CIRISApp(
 
             is Screen.Call -> {
                 val call = currentScreen as Screen.Call
+                // The call itself, only where the node serves the call routes (CSD-134).
+                // Test mode captures a tone and a test pattern: the runner has no devices.
+                val roomId = call.room.communityId
+                val callVm = if (nodeCapabilities.hasFeature(ai.ciris.mobile.shared.models.capability.Capability.CHAT_CALL)) {
+                    remember(roomId, effectiveNodeUrl) {
+                        val real = ai.ciris.mobile.shared.calls.media.platformCallMediaDevices()
+                        ai.ciris.mobile.shared.viewmodels.CallViewModel(
+                            room = roomId,
+                            transport = { scope -> apiClient.callTransport(effectiveNodeUrl, scope) },
+                            devices = if (ai.ciris.mobile.shared.platform.TestAutomation.isEnabled()) {
+                                ai.ciris.mobile.shared.calls.media.TestModeDevices(real, kotlinx.coroutines.GlobalScope)
+                            } else real,
+                        )
+                    }
+                } else null
+                // Leaving the screen leaves the call: it never runs on unseen.
+                DisposableEffect(callVm) { onDispose { callVm?.close() } }
+                val contacts by contactsViewModel.contacts.collectAsState()
                 CallScreen(
                     roomLabel = call.room.contactLabel,
                     onBack = { currentScreen = call.room },
+                    call = callVm,
+                    nameOf = { person -> contacts.firstOrNull { it.keyId == person }?.aliasOverride },
                 )
             }
 

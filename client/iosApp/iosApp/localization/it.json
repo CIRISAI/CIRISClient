@@ -4464,7 +4464,25 @@
     "add_device_contact_hint_2": "Sul tuo altro dispositivo, apri Condividi il mio ID. Scansiona il suo codice QR, oppure incolla qui la forma estesa o breve. Anche il solo ID di federazione funziona quando il tuo altro dispositivo è annunciato.",
     "contacts_reach_sent": "Inviato: in attesa che rispondano",
     "contacts_reach_waiting": "In attesa di raggiungerli",
-    "contacts_stale_since": "Nessuna notizia da {date}"
+    "contacts_stale_since": "Nessuna notizia da {date}",
+    "call_joining": "Accesso alla chiamata…",
+    "call_audio_unavailable_here": "L'audio delle chiamate non è ancora disponibile per questo dispositivo, quindi qui non potrai sentire né essere sentito.",
+    "call_alone": "In attesa che altri si uniscano.",
+    "call_someone": "Qualcuno in questa stanza",
+    "call_tile_video": "videocamera attiva",
+    "call_tile_audio": "parla",
+    "call_tile_quiet": "silenzio",
+    "call_you_left": "Hai abbandonato la chiamata.",
+    "call_you_backgrounded": "La chiamata è terminata perché l'app ha lasciato lo schermo. Aprila di nuovo per rientrare.",
+    "call_you_removed": "Sei stato rimosso da questa stanza, quindi non sei più nella sua chiamata.",
+    "call_you_lost": "La chiamata è caduta. Controlla la connessione, poi riprova.",
+    "call_member_left": "Qualcuno ha abbandonato la chiamata.",
+    "call_member_backgrounded": "L'app di qualcuno ha lasciato lo schermo, quindi quella persona ha abbandonato la chiamata.",
+    "call_member_removed": "Qualcuno è stato rimosso da questa stanza.",
+    "call_member_lost": "La connessione di qualcuno è caduta.",
+    "call_mute": "Silenzia",
+    "call_unmute": "Riattiva audio",
+    "call_leave": "Esci"
   },
   "moderation": {
     "ladder": {

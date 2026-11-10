@@ -4464,7 +4464,25 @@
     "add_device_contact_hint_2": "Diğer cihazınızda Kimliğimi paylaş'ı açın. QR kodunu tarayın veya uzun ya da kısa biçimini buraya yapıştırın. Diğer cihazınız duyurulmuşsa, federasyon kimliğiniz tek başına da işe yarar.",
     "contacts_reach_sent": "Gönderildi: yanıt vermeleri bekleniyor",
     "contacts_reach_waiting": "Onlara ulaşılması bekleniyor",
-    "contacts_stale_since": "{date} tarihinden bu yana onlardan haber alınamadı"
+    "contacts_stale_since": "{date} tarihinden bu yana onlardan haber alınamadı",
+    "call_joining": "Aramaya katılıyor…",
+    "call_audio_unavailable_here": "Arama sesi bu cihaz için henüz oluşturulmadı, bu yüzden burada duyamaz veya duyulamazsınız.",
+    "call_alone": "Diğerlerinin katılması bekleniyor.",
+    "call_someone": "Bu odadaki biri",
+    "call_tile_video": "kamera açık",
+    "call_tile_audio": "konuşuyor",
+    "call_tile_quiet": "sessiz",
+    "call_you_left": "Aramadan ayrıldınız.",
+    "call_you_backgrounded": "Uygulama ekrandan ayrıldığı için arama sona erdi. Yeniden katılmak için uygulamayı tekrar açın.",
+    "call_you_removed": "Bu odadan çıkarıldınız, bu yüzden artık aramasında değilsiniz.",
+    "call_you_lost": "Arama koptu. Bağlantınızı kontrol edin, ardından tekrar deneyin.",
+    "call_member_left": "Biri aramadan ayrıldı.",
+    "call_member_backgrounded": "Birinin uygulaması ekrandan çıktı, bu nedenle o kişi aramadan ayrıldı.",
+    "call_member_removed": "Biri bu odadan çıkarıldı.",
+    "call_member_lost": "Birinin bağlantısı koptu.",
+    "call_mute": "Sessize al",
+    "call_unmute": "Sesi aç",
+    "call_leave": "Ayrıl"
   },
   "moderation": {
     "ladder": {

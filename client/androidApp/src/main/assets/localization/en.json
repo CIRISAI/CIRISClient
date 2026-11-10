@@ -4559,7 +4559,25 @@
     "add_device_contact_hint_2": "On your other device, open Share my ID. Scan its QR code, or paste the long or short form here. Your federation ID on its own also works when your other device is announced.",
     "contacts_reach_sent": "Sent: waiting for them to answer",
     "contacts_reach_waiting": "Waiting to reach them",
-    "contacts_stale_since": "Not heard from since {date}"
+    "contacts_stale_since": "Not heard from since {date}",
+    "call_joining": "Joining the call…",
+    "call_audio_unavailable_here": "Call audio isn't built for this device yet, so you won't hear or be heard here.",
+    "call_alone": "Waiting for others to join.",
+    "call_someone": "Someone in this room",
+    "call_tile_video": "camera on",
+    "call_tile_audio": "talking",
+    "call_tile_quiet": "quiet",
+    "call_you_left": "You left the call.",
+    "call_you_backgrounded": "The call ended because the app left the screen. Open it again to rejoin.",
+    "call_you_removed": "You were removed from this room, so you're no longer in its call.",
+    "call_you_lost": "The call dropped. Check your connection, then try again.",
+    "call_member_left": "Someone left the call.",
+    "call_member_backgrounded": "Someone's app left the screen, so they left the call.",
+    "call_member_removed": "Someone was removed from this room.",
+    "call_member_lost": "Someone's connection dropped.",
+    "call_mute": "Mute",
+    "call_unmute": "Unmute",
+    "call_leave": "Leave"
   },
   "moderation": {
     "ladder": {

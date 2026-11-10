@@ -4464,7 +4464,25 @@
     "add_device_contact_hint_2": "Pada perangkat lain Anda, buka Bagikan ID Saya. Pindai kode QR-nya, atau tempel bentuk panjang atau pendeknya di sini. ID federasi Anda saja juga berfungsi ketika perangkat lain Anda telah diumumkan.",
     "contacts_reach_sent": "Terkirim: menunggu mereka merespons",
     "contacts_reach_waiting": "Menunggu untuk menjangkau mereka",
-    "contacts_stale_since": "Tidak ada kabar sejak {date}"
+    "contacts_stale_since": "Tidak ada kabar sejak {date}",
+    "call_joining": "Bergabung dengan panggilan…",
+    "call_audio_unavailable_here": "Audio panggilan belum tersedia untuk perangkat ini, sehingga Anda tidak akan dapat mendengar atau didengar di sini.",
+    "call_alone": "Menunggu orang lain bergabung.",
+    "call_someone": "Seseorang di ruang ini",
+    "call_tile_video": "kamera menyala",
+    "call_tile_audio": "berbicara",
+    "call_tile_quiet": "senyap",
+    "call_you_left": "Anda keluar dari panggilan.",
+    "call_you_backgrounded": "Panggilan berakhir karena aplikasi keluar dari layar. Buka kembali untuk bergabung lagi.",
+    "call_you_removed": "Anda dikeluarkan dari ruang ini, sehingga Anda tidak lagi berada dalam panggilannya.",
+    "call_you_lost": "Panggilan terputus. Periksa koneksi Anda, lalu coba lagi.",
+    "call_member_left": "Seseorang keluar dari panggilan.",
+    "call_member_backgrounded": "Aplikasi seseorang keluar dari layar, sehingga mereka keluar dari panggilan.",
+    "call_member_removed": "Seseorang dikeluarkan dari ruang ini.",
+    "call_member_lost": "Koneksi seseorang terputus.",
+    "call_mute": "Bisukan",
+    "call_unmute": "Aktifkan Suara",
+    "call_leave": "Keluar"
   },
   "moderation": {
     "ladder": {

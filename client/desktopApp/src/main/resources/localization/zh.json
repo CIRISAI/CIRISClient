@@ -4464,7 +4464,25 @@
     "add_device_contact_hint_2": "在您的其他设备上，打开“分享我的 ID”。扫描其二维码，或在此处粘贴长格式或短格式。当您的其他设备已被公告时，仅凭您的联邦 ID 也同样有效。",
     "contacts_reach_sent": "已发送：正在等待对方应答",
     "contacts_reach_waiting": "正在等待联系到对方",
-    "contacts_stale_since": "自 {date} 起未收到对方消息"
+    "contacts_stale_since": "自 {date} 起未收到对方消息",
+    "call_joining": "正在加入通话……",
+    "call_audio_unavailable_here": "此设备尚未支持通话音频，因此您在这里无法听到或被听到。",
+    "call_alone": "正在等待其他人加入。",
+    "call_someone": "此房间中的某人",
+    "call_tile_video": "摄像头已开启",
+    "call_tile_audio": "正在讲话",
+    "call_tile_quiet": "安静",
+    "call_you_left": "您已离开通话。",
+    "call_you_backgrounded": "通话已结束，因为应用离开了屏幕。请重新打开应用以重新加入。",
+    "call_you_removed": "您已被移出此房间，因此您不再处于其通话中。",
+    "call_you_lost": "通话已断开。请检查您的网络连接，然后重试。",
+    "call_member_left": "有人离开了通话。",
+    "call_member_backgrounded": "有人的应用离开了屏幕，因此对方已离开通话。",
+    "call_member_removed": "有人已被移出此房间。",
+    "call_member_lost": "有人的连接已断开。",
+    "call_mute": "静音",
+    "call_unmute": "取消静音",
+    "call_leave": "离开"
   },
   "moderation": {
     "ladder": {

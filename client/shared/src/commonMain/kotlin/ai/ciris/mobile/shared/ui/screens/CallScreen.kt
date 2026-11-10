@@ -27,6 +27,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,6 +52,10 @@ import androidx.compose.ui.unit.dp
 fun CallScreen(
     roomLabel: String,
     onBack: () -> Unit,
+    /** The call itself. Null on a node without the call routes: the screen then says it cannot connect. */
+    call: ai.ciris.mobile.shared.viewmodels.CallViewModel? = null,
+    /** Names a person key from this device's contacts; null when they are not a contact. */
+    nameOf: (String) -> String? = { null },
 ) {
     val media = rememberCallMediaPlatform()
     var state by remember { mutableStateOf<CallPermissionState?>(null) }
@@ -129,11 +134,16 @@ fun CallScreen(
                             modifier = Modifier.testable("call_audio_only"),
                         )
                     }
-                    Text(
-                        localizedString("mobile.call_not_connecting"),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.testable("call_not_connecting"),
-                    )
+                    if (call == null) {
+                        Text(
+                            localizedString("mobile.call_not_connecting"),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.testable("call_not_connecting"),
+                        )
+                    } else {
+                        androidx.compose.runtime.LaunchedEffect(call) { call.join(video) }
+                        LiveCall(call, nameOf, onBack)
+                    }
                 }
             }
             CallSaveState()
@@ -171,4 +181,103 @@ private fun CallSaveState() {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.testable("txt_call_save_unavailable"),
     )
+}
+
+/** The call once joined: who is here, what they send, and the controls. */
+@Composable
+private fun LiveCall(
+    call: ai.ciris.mobile.shared.viewmodels.CallViewModel,
+    nameOf: (String) -> String?,
+    onBack: () -> Unit,
+) {
+    val state by call.state.collectAsState()
+    val muted by call.muted.collectAsState()
+    when (val s = state) {
+        ai.ciris.mobile.shared.calls.CallState.Idle,
+        ai.ciris.mobile.shared.calls.CallState.Joining -> Text(
+            localizedString("mobile.call_joining"),
+            modifier = Modifier.testable("call_connecting"),
+        )
+        is ai.ciris.mobile.shared.calls.CallState.Refused -> Text(
+            localizedString(s.reasonId),
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.testable("call_refused", s.reasonId),
+        )
+        is ai.ciris.mobile.shared.calls.CallState.Left -> Text(
+            localizedString(youLeftKey(s.reason)),
+            modifier = Modifier.testable("call_left", s.reason.wire),
+        )
+        is ai.ciris.mobile.shared.calls.CallState.InCall -> {
+            if (call.audioUnavailable) {
+                Text(
+                    localizedString("mobile.call_audio_unavailable_here"),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testable("call_audio_unavailable"),
+                )
+            }
+            if (s.attendees.isEmpty()) {
+                Text(localizedString("mobile.call_alone"), modifier = Modifier.testable("call_alone"))
+            }
+            // Re-read the measurements twice a second, so the tiles (and the runner) see sound arrive.
+            var tick by remember { mutableStateOf(0) }
+            androidx.compose.runtime.LaunchedEffect(Unit) {
+                while (true) { kotlinx.coroutines.delay(500); tick++ }
+            }
+            Column(modifier = Modifier.testable("call_screen_tiles", s.attendees.size.toString())) {
+                s.attendees.values.sortedBy { it.member }.forEach { a ->
+                    val heard = call.heard(a.member).also { tick }
+                    val who = a.person?.let { nameOf(it) ?: localizedString("mobile.call_someone") }
+                        ?: localizedString("mobile.call_someone")
+                    val tag = "call_tile_" + a.member
+                    Text(
+                        who + " · " + localizedString(
+                            when {
+                                a.sendingVideo -> "mobile.call_tile_video"
+                                a.sendingAudio || (heard?.frames ?: 0) > 0 -> "mobile.call_tile_audio"
+                                else -> "mobile.call_tile_quiet"
+                            }
+                        ),
+                        modifier = Modifier.testable(
+                            tag,
+                            "frames=${heard?.frames ?: 0} hz=${heard?.hz?.let { kotlin.math.round(it).toInt() } ?: 0} " +
+                                "audio=${a.sendingAudio} video=${a.sendingVideo}",
+                        ),
+                    )
+                }
+            }
+            s.departed.forEach { (member, reason) ->
+                Text(
+                    localizedString(memberLeftKey(reason)),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testable("call_departed_$member", reason.wire),
+                )
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
+                    onClick = { call.setMuted(!muted) },
+                    modifier = Modifier.weight(1f).testableClickable("btn_call_mute") { call.setMuted(!muted) },
+                ) { Text(localizedString(if (muted) "mobile.call_unmute" else "mobile.call_mute")) }
+                Button(
+                    onClick = { call.leave(); onBack() },
+                    modifier = Modifier.weight(1f).testableClickable("btn_call_leave") { call.leave(); onBack() },
+                ) { Text(localizedString("mobile.call_leave")) }
+            }
+        }
+    }
+}
+
+/** Why this device left, as a literal key each, so every one is checked and translated. */
+private fun youLeftKey(r: ai.ciris.mobile.shared.calls.LeaveReason) = when (r) {
+    ai.ciris.mobile.shared.calls.LeaveReason.LEFT -> "mobile.call_you_left"
+    ai.ciris.mobile.shared.calls.LeaveReason.BACKGROUNDED -> "mobile.call_you_backgrounded"
+    ai.ciris.mobile.shared.calls.LeaveReason.REMOVED -> "mobile.call_you_removed"
+    ai.ciris.mobile.shared.calls.LeaveReason.LOST -> "mobile.call_you_lost"
+}
+
+/** Why someone else left. */
+private fun memberLeftKey(r: ai.ciris.mobile.shared.calls.LeaveReason) = when (r) {
+    ai.ciris.mobile.shared.calls.LeaveReason.LEFT -> "mobile.call_member_left"
+    ai.ciris.mobile.shared.calls.LeaveReason.BACKGROUNDED -> "mobile.call_member_backgrounded"
+    ai.ciris.mobile.shared.calls.LeaveReason.REMOVED -> "mobile.call_member_removed"
+    ai.ciris.mobile.shared.calls.LeaveReason.LOST -> "mobile.call_member_lost"
 }
