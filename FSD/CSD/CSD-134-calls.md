@@ -1,8 +1,9 @@
 # CSD-134 — Calls (a room's live streams, and whether this one is saved)
 
 **CSD**: CSD-134 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: Eric's direction, 2026-11-04, via CIRISEdge
-**Reads with**: CSD-091 (the room a call starts from), CSD-103 (Chats), CSD-088 (the first-run rung that says what a watcher sees of a call)
+**Reads with**: CSD-091 (the room a call starts from), CSD-103 (Chats), CSD-106 (seating a new member: the quorum item), CSD-088 (the first-run rung that says what a watcher sees of a call)
 **Design**: CIRISEdge `FSD/AV_CALL_API.md`; CC 5.3.3.2 (group calls), CC 4.5.13 (the choice as data)
+**Scope (Eric, 2026-11-10)**: calls with N participants, audio and video, with every option the routes expose. The routes in §3 are CIRISServer's proposal for 0.5.246 (CIRISServer#859), adopted here with the changes in §6
 **Flow**: unwritten — no capture, no route and no screen exist yet
 
 > **SCOPE.** A card, not a section of CSD-091: a call belongs to a room of any
@@ -48,9 +49,12 @@ exit: "back to the room the call was started from"
 
 | Control | What it does | Note |
 |---|---|---|
-| Start or join | Publishes this device's stream in the room's call | Asks for microphone, and camera for video, at first use |
+| Start or join | Publishes this device's stream in the room's call (`POST /v1/chat/{room}/call`) | Asks for microphone, and camera for video, at first use. The Call action reads Join while a call is live |
+| Tiles | One per publisher, keyed by the publisher's key, never by arrival order: an active-speaker view and a grid | Each tile says video paused or audio only in words, so a frozen face is never the only sign |
+| Participants | Everyone attending, and who is publishing audio, video or neither | From the call's attendee list and its join and leave events |
 | Mute, camera off | Stops sending that source | Local and immediate; nothing is recorded about it |
-| Leave | Ends this device's stream | The call goes on for the others |
+| Receive quality, per member | Asks for less of one member's video (`POST …/call/layers`) | Changes only what this device receives, never what others get |
+| Leave | Ends this device's stream (`DELETE /v1/chat/{room}/call`) | The call goes on for the others. Rejoining starts a new stream |
 | Save my stream | A `choice` item, this person's own stream only; absent where the room forbids keeping | **Listed, not available** until CIRISPersist#1067 |
 | Ask others to save | Optional: a request item to each publisher, each answering for their own stream | With saving |
 
@@ -92,7 +96,7 @@ fields:
 ```
 
 ```yaml csd:states
-loading:   {tag: "proposed:call_connecting", renders: "'Connecting…' with the room's name"}
+loading:   {tag: "proposed:call_connecting", renders: "'Connecting…' with the room's name, and before publishing the two facts a joiner must see: whether streams here may be kept, and whether a watcher can see this call"}
 empty:     {tag: "proposed:call_alone", renders: "'Waiting for others to join.' Joining alone is valid; others in the room see the call on their Call action"}
 error:     {tag: call_microphone_denied, renders: "the named refusal in words: no microphone permission, not a member, or this device's privacy setting has no calls"}
 populated: {tag: "proposed:call_screen", renders: "the tiles, participants, controls and the save state"}
@@ -105,6 +109,10 @@ populated: {tag: "proposed:call_screen", renders: "the tiles, participants, cont
 | Traffic limit, or the service ladder shedding | Video drops before audio. The tile says video paused, so a frozen face is never the only sign |
 | A receiver asks for less | `set_layer_policy` per member; never changes what others receive |
 | Member removed mid-call | The room's Remove rolls every stream's key: that person's tiles stop, and they are told |
+| Late joiner | Joins a call already live and sees every current publisher's tile; earlier frames are not replayed |
+| Member added mid-call | The room seats them (CSD-106; in a room of three or more, a majority of current members must approve), the epoch rolls, and nobody sees a gap |
+| A leaver rejoins | A new stream: a new tile, never the old one resumed |
+| Service tier changes | The tier is shown; video drops before audio, tile by tile |
 | Remote client (the node is elsewhere) | Works over the same route, on that connection's bandwidth; labelled if it is the limit |
 | No camera or denied | Audio-only, stated; the call is not refused |
 
@@ -136,10 +144,15 @@ host (`apps/ios`) needs the same two Info.plist keys.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| join, publish, frames, layer policy, leave | `Edge::join_call` and its PyO3 twins | CIRISEdge | **live** at the v44 candidate; live and unkept only |
-| the call as routes | proposed `POST /v1/chat/{room}/call`, `DELETE`, and a frames socket | CIRISServer | **missing**: no call routes on `adopt/edge-v44` |
-| an encoded frame in and out | proposed `WS /v1/chat/{room}/call/frames`: `codec_id`, `ChunkLayer`, bytes | CIRISServer | **missing** |
-| who is here | the reachable set | CIRISServer | **missing** as a route |
+| join, publish, frames, layer policy, leave | `Edge::join_call` and its PyO3 twins | CIRISEdge | **live** at the v44 candidate; live and unkept only. 2-person calls verified (300/300 frames each way, p50 8–13 ms, direct legs) |
+| is a call live, before joining | `GET /v1/chat/{room}/call` → `{live, attendees[], my_state, frame_budget_bytes, service_tier, save_state, room_may_keep, visible_to_watcher}` | CIRISServer | **proposed for 0.5.246** (CIRISServer#859). `live` = a `chat:call:v1` row seen within 60 s, re-issued while attending. The last two fields are this card's ask (§6) |
+| join | `POST /v1/chat/{room}/call {video, relay?, default_layer?}` → `{call_id, stream_id, epoch, frame_budget_bytes, service_tier, attendees[], legs[]}`; refusals `call.not_a_member`, `call.anonymous_mode`, `call.privacy_rung`, `call.room_locked`, `call.keep_refused` (the call goes on unkept), `call.plumbing` | CIRISServer | **proposed for 0.5.246**; the person's signer goes to `join_call_as` |
+| leave | `DELETE /v1/chat/{room}/call` | CIRISServer | **proposed for 0.5.246** |
+| an encoded frame in and out | `WS /v1/chat/{room}/call/frames`, binary: out `{codec_id u8, layer {spatial, temporal, quality}, bytes}` → `publish`; in `ReceivedFrame {publisher, stream_id, epoch, chunk_seq, codec_id, layer, bytes}`; call events on the same socket as text frames (attendee joined or left, epoch roll, tier change, video paused, keep refused) | CIRISServer | **proposed for 0.5.246**. The byte layout is this card's ask (§6) |
+| what this device receives from one member | `POST /v1/chat/{room}/call/layers {member, policy}` → `set_layer_policy` | CIRISServer | **proposed for 0.5.246** |
+| the Call action exists at all | capability `chat:call` on the node's served capabilities, once the routes exist | CIRISServer | **proposed for 0.5.246**; the client already gates on it |
+| who is here | the attendee list and its events, above | CIRISServer | **proposed for 0.5.246** |
+| seating a third member | `GET /v1/self/decisions?circle=`, `POST /v1/self/decisions/{id}/answer`, kind `quorum_cosign` first | CIRISServer | **proposed for 0.5.246**. Without it a third invitee accepts and is never seated; the item belongs to CSD-106 and the served queue (CC 4.5.13) |
 | a call is live in this room, N in it | `join_call` writes this attendee's `chat:call:v1` row at room scope, and the server folds those rows | CIRISEdge **live**; CIRISServer **missing** | the Call action becomes Join. A leaver's row stands and no row marks the end, so "live" needs a server rule (§6) |
 | waking a closed app | push-to-wake on that row, content-free | CIRISServer#859 | **missing**: until then a person with the app closed sees nothing |
 | keeping a stream | `CallOptions::keep = Kept` | CIRISEdge · CIRISPersist#1067 | **refused by name** today; #1068, #1069 also wait |
@@ -164,7 +177,7 @@ counts against the wheel limit and PyPI's project limit, which has about three r
 
 ## 4. Flow (how)
 
-Two members of a room, both online:
+Three members of a room, all online, each with a test source in place of a camera:
 
 ```yaml
 expect:
@@ -172,14 +185,17 @@ expect:
   visible: ["proposed:call_screen", "proposed:call_participants", "proposed:txt_call_save_state"]
 ```
 
-The first says something; the second's frames arrive; the first leaves and the second's call
-goes on. A person who tries to save while it is unavailable sees why, and the state stays
-`Not saved`.
+The first two start; the third joins late and sees both tiles; a fourth is seated mid-call and
+the others see no gap; the first leaves and the call goes on; the first rejoins as a new tile. A
+receiver lowers one member's quality and the others' tiles are unchanged. A person who tries to
+save while it is unavailable sees why, and the state stays `Not saved`.
 
 ## 5. QA plan
 
-**Not drivable yet.** When built: two real nodes with a test source in place of a camera, since
-a CI runner has none. Assert frames arrive decoded, not just connected. Assert the save state is
+**Not drivable yet.** When built: three real nodes, mirroring CIRISServer's `av_room` harness
+scenario (late join, add mid-call, leave and rejoin), with a test source in place of a camera,
+since a CI runner has none. Assert frames arrive decoded, not just connected, and that each tile
+is the publisher it claims. Assert video drops before audio when the tier sheds. Assert the save state is
 in the tree on every call, and that a refused keep leaves `Not saved` with the words on screen.
 
 **Not tested here.** Call quality on a real network, and battery. Hiding is Edge's to prove.
@@ -195,7 +211,11 @@ so Edge's `is_base_or_audio` must agree. Device coverage is unmeasured.
 
 | # | Open question | Whose |
 |---|---|---|
-| 1 | **When is a call over?** A leaver's row stands and no row marks the end, so rows alone can't say "live". Needs a freshness window or a row re-issued while attending | CIRISServer proposes; CC only if a row changes |
+| 1 | **When is a call over?** Proposed: `live` = a `chat:call:v1` row seen within 60 s, re-issued while attending | CIRISServer proposed 2026-11-10; adopted |
+| 6 | **The frames socket's byte layout.** Asked of CIRISServer: a fixed header (codec_id, three layer bytes, publisher as length-prefixed key id, stream_id, epoch, chunk_seq, payload length) stated byte for byte, with golden vectors both sides pin, as for FedCode | CIRISServer |
+| 7 | **The two facts before publishing.** Asked of CIRISServer: `room_may_keep` and `visible_to_watcher` on the GET, so the screen states them before join, never after | CIRISServer |
+| 8 | **Frame budget per call.** 244 B on Edge v44.1.1; about 1,140 B on a punched direct link at v45, only if every member runs v45. Read `frame_budget_bytes` per call, never assume | CIRISEdge |
+| 9 | **Capture on desktop.** The JVM has no camera or microphone API; a native library is needed, and its size counts against PyPI's project limit | CIRISClient |
 | 2 | Does a saved call count against the room's files and quota, and where does it show? | CIRISServer |
 | 3 | Screen sharing is the same wire (CC 5.3.3.2) | Later |
 | 4 | No ad-hoc call outside a room: `Edge::ring` is documented but not in the code | Later |
