@@ -145,13 +145,13 @@ host (`apps/ios`) needs the same two Info.plist keys.
 | value | endpoint | owner | state |
 |---|---|---|---|
 | join, publish, frames, layer policy, leave | `Edge::join_call` and its PyO3 twins | CIRISEdge | **live** at the v44 candidate; live and unkept only. 2-person calls verified (300/300 frames each way, p50 8–13 ms, direct legs) |
-| is a call live, before joining | `GET /v1/chat/{room}/call` → `{live, attendees[], my_state, frame_budget_bytes, service_tier, save_state, room_may_keep, visible_to_watcher}` | CIRISServer | **proposed for 0.5.246** (CIRISServer#859). `live` = a `chat:call:v1` row seen within 60 s, re-issued while attending. The last two fields are this card's ask (§6) |
-| join | `POST /v1/chat/{room}/call {video, relay?, default_layer?}` → `{call_id, stream_id, epoch, frame_budget_bytes, service_tier, attendees[], legs[]}`; refusals `call.not_a_member`, `call.anonymous_mode`, `call.privacy_rung`, `call.room_locked`, `call.keep_refused` (the call goes on unkept), `call.plumbing` | CIRISServer | **proposed for 0.5.246**; the person's signer goes to `join_call_as` |
-| leave | `DELETE /v1/chat/{room}/call` | CIRISServer | **proposed for 0.5.246** |
-| an encoded frame in and out | `WS /v1/chat/{room}/call/frames`, binary: out `{codec_id u8, layer {spatial, temporal, quality}, bytes}` → `publish`; in `ReceivedFrame {publisher, stream_id, epoch, chunk_seq, codec_id, layer, bytes}`; call events on the same socket as text frames (attendee joined or left, epoch roll, tier change, video paused, keep refused) | CIRISServer | **proposed for 0.5.246**. The byte layout is this card's ask (§6) |
-| what this device receives from one member | `POST /v1/chat/{room}/call/layers {member, policy}` → `set_layer_policy` | CIRISServer | **proposed for 0.5.246** |
-| the Call action exists at all | capability `chat:call` on the node's served capabilities, once the routes exist | CIRISServer | **proposed for 0.5.246**; the client already gates on it |
-| who is here | the attendee list and its events, above | CIRISServer | **proposed for 0.5.246** |
+| is a call live, before joining | `GET /v1/chat/{room}/call` → `{live, attendees[], my_state, frame_budget_bytes, service_tier, save_state, room_may_keep: {allowed, says}, visible_to_watcher: {visible, says}}` | CIRISServer | **agreed for 0.5.246** (CIRISServer#859). `live` = a `chat:call:v1` row seen within 60 s, re-issued while attending. Both facts are present before join; each `says` is a `call.*` id with English, localized like the refusals |
+| join | `POST /v1/chat/{room}/call {video, relay?, default_layer?}` → `{call_id, stream_id, epoch, frame_budget_bytes, service_tier, attendees[], legs[]}`; refusals `call.not_a_member`, `call.anonymous_mode`, `call.privacy_rung`, `call.room_locked`, `call.keep_refused` (the call goes on unkept), `call.plumbing` | CIRISServer | **agreed for 0.5.246**; the person's signer goes to `join_call_as` |
+| leave | `DELETE /v1/chat/{room}/call` | CIRISServer | **agreed for 0.5.246** |
+| an encoded frame in and out | `WS /v1/chat/{room}/call/frames` v1. One binary message is one frame, integers big-endian. Out: `ver u8 (=1) \| codec_id u8 \| spatial u8 \| temporal u8 \| quality u8 \| payload`. In: `ver u8 (=1) \| codec_id u8 \| spatial u8 \| temporal u8 \| quality u8 \| pub_len u16 \| publisher (UTF-8 key_id) \| stream_id [32] \| epoch u64 \| chunk_seq u64 \| payload`. A payload over `frame_budget_bytes` is refused by event, never cut. Text events, one JSON object each, members as key ids only (never display names): `attendee_joined {member, stream_id}`, `attendee_left {member, stream_id}`, `epoch_rolled {epoch}`, `tier_changed {tier}`, `video_paused {member, reason}`, `keep_refused {reason_id}`, `publish_refused {reason, budget?}` | CIRISServer | **agreed for 0.5.246**. Golden vectors at CIRISServer `tests/vectors/call_frames_v1.json`, pinned on both sides; a `ver` other than 1 is refused by name |
+| what this device receives from one member | `POST /v1/chat/{room}/call/layers {member: key_id, policy: {max_spatial, max_temporal, max_quality} \| "audio_only"}` → Edge's `ReceiverLayerPolicy` | CIRISServer | **agreed for 0.5.246**. Applied on this node's leg only; nothing goes to the member or anyone else |
+| the Call action exists at all | capability `chat:call` on the node's served capabilities, once the routes exist | CIRISServer | **agreed for 0.5.246**; the client already gates on it |
+| who is here | the attendee list and its events, above | CIRISServer | **agreed for 0.5.246** |
 | seating a third member | `GET /v1/self/decisions?circle=`, `POST /v1/self/decisions/{id}/answer`, kind `quorum_cosign` first | CIRISServer | **proposed for 0.5.246**. Without it a third invitee accepts and is never seated; the item belongs to CSD-106 and the served queue (CC 4.5.13) |
 | a call is live in this room, N in it | `join_call` writes this attendee's `chat:call:v1` row at room scope, and the server folds those rows | CIRISEdge **live**; CIRISServer **missing** | the Call action becomes Join. A leaver's row stands and no row marks the end, so "live" needs a server rule (§6) |
 | waking a closed app | push-to-wake on that row, content-free | CIRISServer#859 | **missing**: until then a person with the app closed sees nothing |
@@ -212,14 +212,16 @@ so Edge's `is_base_or_audio` must agree. Device coverage is unmeasured.
 | # | Open question | Whose |
 |---|---|---|
 | 1 | **When is a call over?** Proposed: `live` = a `chat:call:v1` row seen within 60 s, re-issued while attending | CIRISServer proposed 2026-11-10; adopted |
-| 6 | **The frames socket's byte layout.** Asked of CIRISServer: a fixed header (codec_id, three layer bytes, publisher as length-prefixed key id, stream_id, epoch, chunk_seq, payload length) stated byte for byte, with golden vectors both sides pin, as for FedCode | CIRISServer |
-| 7 | **The two facts before publishing.** Asked of CIRISServer: `room_may_keep` and `visible_to_watcher` on the GET, so the screen states them before join, never after | CIRISServer |
+| 6 | **The frames socket's byte layout.** Agreed 2026-11-10 (§3), with a leading version byte and golden vectors at CIRISServer `tests/vectors/call_frames_v1.json` | Closed; pin the vectors when they ship |
+| 7 | **The two facts before publishing.** Agreed 2026-11-10: on the GET, each as a flag and words | Closed |
 | 8 | **Frame budget per call.** 244 B on Edge v44.1.1; about 1,140 B on a punched direct link at v45, only if every member runs v45. Read `frame_budget_bytes` per call, never assume | CIRISEdge |
 | 9 | **Capture on desktop.** The JVM has no camera or microphone API; a native library is needed, and its size counts against PyPI's project limit | CIRISClient |
 | 2 | Does a saved call count against the room's files and quota, and where does it show? | CIRISServer |
 | 3 | Screen sharing is the same wire (CC 5.3.3.2) | Later |
 | 4 | No ad-hoc call outside a room: `Edge::ring` is documented but not in the code | Later |
 | 5 | The row travels the room's normal path, so at Hide when I talk it waits for the gap. Don't promise "rings instantly" until measured | Measure |
+
+**Measured (CIRISServer native harness, 2026-11-10, edge v44.1.1, three standalone nodes, no retries).** Per publisher, delay p50 7–14 ms, p95 18–24 ms; every phase-2 frame received bar about three, 0 forged, 0 unbound; a late joiner's first frame in 2.1 s. The frames socket adds a loopback hop, which the route's own test measures with audio.
 
 **Proposed order.** (1) Measure the frames route with audio. (2) Audio calls on desktop and
 phones, unsaved, with the state shown; these can ship even if video lags. (3) Video. (4) Saving, after CIRISPersist#1067.
