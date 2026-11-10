@@ -113,7 +113,10 @@ populated: {tag: "proposed:call_screen", renders: "the tiles, participants, cont
 | Member added mid-call | The room seats them (CSD-106; in a room of three or more, a majority of current members must approve), the epoch rolls, and nobody sees a gap |
 | A leaver rejoins | A new stream: a new tile, never the old one resumed |
 | Service tier changes | The tier is shown; video drops before audio, tile by tile |
-| The app goes to the background | The node leaves the call (`enter_background`) and the others see `attendee_left` with `left: backgrounded` (agreed by CIRISServer and CIRISEdge, 2026-11-10). Before joining, the screen says a call ends when the app leaves the screen; coming back offers Rejoin, which is a new stream. Nothing keeps a call running in the background in v1 |
+| The app goes to the background | The host app calls the node's `ciris_server.enter_background(deadline)` from its lifecycle callback (Android `onStop`; iOS `sceneDidEnterBackground` inside `beginBackgroundTask`), and the call leave runs in that path; the others see `attendee_left` with `left: backgrounded` (agreed by CIRISServer and CIRISEdge, 2026-11-10). Before joining, the screen says a call ends when the app leaves the screen; coming back offers Rejoin, which is a new stream. Nothing keeps a call running in the background in v1. **Not built: neither host app calls `enter_background` today** |
+| Why someone left | `attendee_left.left` is `left` (chose to), `backgrounded`, `removed` (taken out of the room: the epoch rolls, their tiles stop) or `lost` (links died with no leave seen, about 160–240 ms on real links). Each is said in words on their tile. This device's own leave carries the same value as the socket's close reason, so "you were removed" is never shown as "you left" |
+| App killed before its callback | Nobody says anything; the others see `lost` once the links close. `backgrounded` is the polite path, `lost` the floor |
+| Remote client (the node is elsewhere) | Not backgrounded by its app: its node sees the socket close and reports `left` for a clean close, otherwise `lost` |
 | Remote client (the node is elsewhere) | Works over the same route, on that connection's bandwidth; labelled if it is the limit |
 | No camera or denied | Audio-only, stated; the call is not refused |
 
