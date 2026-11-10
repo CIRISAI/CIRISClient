@@ -208,7 +208,8 @@ private fun LiveCall(
             modifier = Modifier.testable("call_left", s.reason.wire),
         )
         is ai.ciris.mobile.shared.calls.CallState.InCall -> {
-            if (call.audioUnavailable) {
+            val audioUnavailable by call.audioUnavailable.collectAsState()
+            if (audioUnavailable) {
                 Text(
                     localizedString("mobile.call_audio_unavailable_here"),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

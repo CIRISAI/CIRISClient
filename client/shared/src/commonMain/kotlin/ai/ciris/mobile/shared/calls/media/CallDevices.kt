@@ -7,9 +7,10 @@ import kotlin.math.abs
  * where it is not built yet; the screen then says which, never pretends.
  */
 interface CallMediaDevices {
-    fun microphone(): AudioSource?
+    /** Suspends where getting the device is asking for it (the browser's permission prompt). */
+    suspend fun microphone(): AudioSource?
     fun speaker(): AudioSink?
-    fun camera(): VideoSource?
+    suspend fun camera(): VideoSource?
 }
 
 /** The platform's devices: javax.sound on desktop, AudioRecord/AudioTrack on Android. */
@@ -22,9 +23,9 @@ expect fun platformCallMediaDevices(): CallMediaDevices
  * on Linux it goes to the runner's virtual device.
  */
 class TestModeDevices(private val real: CallMediaDevices, private val scope: kotlinx.coroutines.CoroutineScope) : CallMediaDevices {
-    override fun microphone(): AudioSource = ToneSource(scope)
+    override suspend fun microphone(): AudioSource = ToneSource(scope)
     override fun speaker(): AudioSink? = real.speaker()
-    override fun camera(): VideoSource = TestPatternSource(scope)
+    override suspend fun camera(): VideoSource = TestPatternSource(scope)
 }
 
 /**

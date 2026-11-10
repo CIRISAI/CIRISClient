@@ -35,18 +35,25 @@ class CallViewModel(
     val state: StateFlow<CallState> = session.state
 
     private var audio: CallAudio? = null
+    private var starting = false
     private var sink: MeasuringSink? = null
 
     private val _muted = MutableStateFlow(false)
     val muted: StateFlow<Boolean> = _muted.asStateFlow()
 
-    /** True when this platform cannot capture or play call audio yet: said on screen, never silent. */
-    val audioUnavailable: Boolean = !opusAvailable || devices.speaker() == null
+    private val _audioUnavailable = MutableStateFlow(!opusAvailable)
+
+    /**
+     * True when this device cannot capture or play call audio: no Opus on this
+     * platform yet, or no microphone or speaker when the call started. Said on
+     * screen, never silent. Found out when audio starts, not by opening devices early.
+     */
+    val audioUnavailable: StateFlow<Boolean> = _audioUnavailable.asStateFlow()
 
     init {
         // Audio follows the node's ready; a member's departure releases their slot.
         state.onEach { s ->
-            if (s is CallState.InCall && s.ready && audio == null) startAudio()
+            if (s is CallState.InCall && s.ready && audio == null && !starting) { starting = true; startAudio() }
             if (s is CallState.InCall) s.departed.keys.forEach { audio?.forget(it) }
             if (s is CallState.Left || s is CallState.Refused) stopAudio()
         }.launchIn(scope)
@@ -62,10 +69,13 @@ class CallViewModel(
     /** What has been heard from [member]: frames and pitch, for the screen's test tags. */
     fun heard(member: String): MeasuringSink.Heard? = sink?.heard(member)
 
-    private fun startAudio() {
+    private suspend fun startAudio() {
         if (!opusAvailable) return
-        val mic = devices.microphone() ?: return
-        val s = MeasuringSink(devices.speaker())
+        val mic = devices.microphone()
+        val speaker = devices.speaker()
+        if (mic == null || speaker == null) _audioUnavailable.value = true
+        if (mic == null) return
+        val s = MeasuringSink(speaker)
         sink = s
         audio = CallAudio(session, mic, s, scope).also { it.muted = _muted.value; it.start() }
     }
