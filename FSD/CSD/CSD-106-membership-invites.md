@@ -110,7 +110,7 @@ fields:
     use: display-only
     type: "enum[pending,accepted,declined,expired]"
     example: "pending"
-    renders: "on the inviter's roster (CSD-101 / CSD-103), one row per invitation under the members: 'Invited: waiting for them to accept', 'Accepted: waiting to be seated' (founder_only) or 'Accepted: waiting for the members to sign' (a quorum), 'Declined', 'Expired'. `joined` is already a member row and `withdrawn` is gone, so neither is drawn; none is counted as a member"
+    renders: "on the inviter's roster (CSD-101 / CSD-103), one row per invitation under the members: 'Invited: waiting for them to accept', 'Accepted: waiting to be seated' (founder_only) or 'Accepted: waiting for the members to sign' (a quorum, and every room at persist v61, where `majority` is the default: the acceptance is the second voice only in a room of one), 'Declined', 'Expired'. `joined` is already a member row and `withdrawn` is gone, so neither is drawn; none is counted as a member"
     tag: "invitation_pending_*"
   - ceg: x_private:membership_invitation_expires_at
     use: display-only
