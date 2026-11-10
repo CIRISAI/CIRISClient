@@ -15,8 +15,8 @@ class CallAudioTest {
     }
 
     private class MarkingDecoder(val closed: MutableList<Int>, val id: Int) : OpusDecoder {
-        override fun decode(packet: ByteArray?) =
-            ShortArray(CallAudioFormat.FRAME_SAMPLES) { if (packet == null) CONCEALED else 1 }
+        override fun decode(packet: ByteArray?, onPcm: (ShortArray) -> Unit) =
+            onPcm(ShortArray(CallAudioFormat.FRAME_SAMPLES) { if (packet == null) CONCEALED else 1 })
         override fun close() { closed += id }
     }
 

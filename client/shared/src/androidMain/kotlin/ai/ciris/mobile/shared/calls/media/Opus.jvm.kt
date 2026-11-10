@@ -28,9 +28,9 @@ private class ConcentusEncoder : OpusEncoder {
     }
     private val out = ByteArray(CallAudioFormat.MAX_PACKET_BYTES)
 
-    override fun encode(pcm: ShortArray): ByteArray {
+    override fun encode(pcm: ShortArray, onPacket: (ByteArray) -> Unit) {
         val n = enc.encode(pcm, 0, CallAudioFormat.FRAME_SAMPLES, out, 0, out.size)
-        return out.copyOf(n)
+        onPacket(out.copyOf(n))
     }
 
     override fun close() = Unit
@@ -39,11 +39,11 @@ private class ConcentusEncoder : OpusEncoder {
 private class ConcentusDecoder : OpusDecoder {
     private val dec = io.github.jaredmdobson.concentus.OpusDecoder(CallAudioFormat.SAMPLE_RATE, 1)
 
-    override fun decode(packet: ByteArray?): ShortArray {
+    override fun decode(packet: ByteArray?, onPcm: (ShortArray) -> Unit) {
         val pcm = ShortArray(CallAudioFormat.FRAME_SAMPLES)
         // A null packet asks the decoder for packet-loss concealment.
         val n = dec.decode(packet, 0, packet?.size ?: 0, pcm, 0, CallAudioFormat.FRAME_SAMPLES, false)
-        return if (n == pcm.size) pcm else pcm.copyOf(CallAudioFormat.FRAME_SAMPLES)
+        onPcm(if (n == pcm.size) pcm else pcm.copyOf(CallAudioFormat.FRAME_SAMPLES))
     }
 
     override fun close() = Unit

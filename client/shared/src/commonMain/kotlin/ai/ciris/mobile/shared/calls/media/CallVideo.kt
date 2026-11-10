@@ -18,6 +18,14 @@ import kotlinx.coroutines.launch
  * goes to the node and Edge fragments it; until then a frame over the budget is
  * refused, so video is not usable on v44 budgets.
  */
+/**
+ * What a video payload IS, the same on every platform's encoder and decoder:
+ *
+ * - `0x04` H.264: one access unit in Annex B form (start codes), with SPS and PPS
+ *   prepended to every keyframe, so a receiver that joins late starts at any keyframe.
+ * - `0x01` AV1: one temporal unit's OBUs for that layer, in the low-overhead form
+ *   (`obu_has_size_field = 1`), with the sequence header OBU before every keyframe.
+ */
 object CallVideoCodec {
     const val AV1_SVC = CallFrames.CODEC_AV1_SVC
     /** CC 5.3.3.2.1: temporal-layered, one spatial layer (H.264, VP8, VP9). */
@@ -73,18 +81,20 @@ interface VideoSource {
 /** One encoded chunk: one layer's data for one frame (CSD-134 §6). */
 class EncodedChunk(val layer: Layer, val bytes: ByteArray, val keyframe: Boolean)
 
+/** Push-style, like [OpusEncoder]: hardware encoders hand output back asynchronously. */
 interface VideoEncoder {
     /** [CallVideoCodec.AV1_SVC] or [CallVideoCodec.TEMPORAL_LAYERED]. */
     val codecId: Int
     /** The binding's codec token for this stream: `av1`, `h264`, `vp8` or `vp9`. */
     val codecName: String
-    fun encode(frame: VideoFrame, forceKeyframe: Boolean = false): List<EncodedChunk>
+    /** Each chunk for this frame arrives on [onChunk], in order, possibly later. */
+    fun encode(frame: VideoFrame, forceKeyframe: Boolean, onChunk: (EncodedChunk) -> Unit)
     fun close()
 }
 
 interface VideoDecoder {
-    /** One chunk in; a picture out when one is complete, else null. Null input asks for concealment. */
-    fun decode(layer: Layer, bytes: ByteArray?): VideoFrame?
+    /** One chunk in; each completed picture arrives on [onFrame], possibly later. */
+    fun decode(layer: Layer, bytes: ByteArray, onFrame: (VideoFrame) -> Unit)
     fun close()
 }
 
@@ -178,7 +188,7 @@ class CallVideo(
                 if (cameraOff) return@start
                 val force = keyframeDue
                 keyframeDue = false
-                for (chunk in encoder.encode(frame, force)) {
+                encoder.encode(frame, force) { chunk ->
                     session.publish(OutgoingFrame(encoder.codecId, chunk.layer, chunk.bytes))
                 }
             }
@@ -204,7 +214,7 @@ class CallVideo(
             entry = codecId to dec
             decoders[key] = entry
         }
-        entry.second.decode(layer, bytes)?.let { render(publisher, streamId, it) }
+        entry.second.decode(layer, bytes) { render(publisher, streamId, it) }
     }
 
     fun stop() {

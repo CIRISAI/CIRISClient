@@ -26,9 +26,9 @@ class CallVideoTest {
     }
 
     private class CountingDecoder(val codec: Int, val log: MutableList<String>) : VideoDecoder {
-        override fun decode(layer: Layer, bytes: ByteArray?): VideoFrame? {
+        override fun decode(layer: Layer, bytes: ByteArray, onFrame: (VideoFrame) -> Unit) {
             log += "decode $codec"
-            return VideoFrame(2, 2, ByteArray(4), ByteArray(1), ByteArray(1), 0)
+            onFrame(VideoFrame(2, 2, ByteArray(4), ByteArray(1), ByteArray(1), 0))
         }
         override fun close() { log += "close $codec" }
     }

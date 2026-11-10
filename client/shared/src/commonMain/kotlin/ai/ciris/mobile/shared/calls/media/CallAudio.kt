@@ -42,14 +42,23 @@ interface AudioSink {
     fun stop()
 }
 
+/**
+ * Push-style, because the platform codecs are asynchronous (WebCodecs, AudioToolbox
+ * converters, MediaCodec): input goes in, output arrives on [onPacket] when it is
+ * ready, possibly later and on another thread. A synchronous codec (Concentus) calls
+ * it before [encode] returns. Outputs come in input order.
+ */
 interface OpusEncoder {
-    fun encode(pcm: ShortArray): ByteArray
+    fun encode(pcm: ShortArray, onPacket: (ByteArray) -> Unit)
     fun close()
 }
 
 interface OpusDecoder {
-    /** Decode one packet, or conceal a lost one when [packet] is null. Always [CallAudioFormat.FRAME_SAMPLES] samples. */
-    fun decode(packet: ByteArray?): ShortArray
+    /**
+     * Decode one packet, or conceal a lost one when [packet] is null, and hand
+     * [CallAudioFormat.FRAME_SAMPLES] samples to [onPcm]. Outputs come in input order.
+     */
+    fun decode(packet: ByteArray?, onPcm: (ShortArray) -> Unit)
     fun close()
 }
 
@@ -128,7 +137,7 @@ class CallAudio(
         if (encoder != null) return
         val enc = newEncoder().also { encoder = it }
         source.start { pcm ->
-            if (!muted) session.publish(OutgoingFrame(CallFrames.CODEC_OPAQUE, Layer.BASE, enc.encode(pcm)))
+            if (!muted) enc.encode(pcm) { packet -> session.publish(OutgoingFrame(CallFrames.CODEC_OPAQUE, Layer.BASE, packet)) }
         }
         listener = scope.launch {
             session.frames.collect { f ->
@@ -147,8 +156,9 @@ class CallAudio(
         }
         if (seq <= inbound.lastSeq) return // a duplicate or a late one: already concealed
         val missing = (seq - inbound.lastSeq - 1uL).coerceAtMost(MAX_CONCEALED.toULong()).toInt()
-        repeat(missing) { sink.play(publisher, inbound.decoder.decode(null)) }
-        sink.play(publisher, inbound.decoder.decode(packet))
+        val play: (ShortArray) -> Unit = { sink.play(publisher, it) }
+        repeat(missing) { inbound.decoder.decode(null, play) }
+        inbound.decoder.decode(packet, play)
         inbound.lastSeq = seq
     }
 

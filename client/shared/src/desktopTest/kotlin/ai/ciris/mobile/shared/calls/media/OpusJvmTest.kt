@@ -24,9 +24,10 @@ class OpusJvmTest {
         val sizes = mutableListOf<Int>()
         val out = ArrayList<Short>()
         repeat(50) { // one second
-            val packet = enc.encode(tone.nextFrame())
-            sizes += packet.size
-            if (it >= 10) out.addAll(dec.decode(packet).toList()) // after the codec settles
+            enc.encode(tone.nextFrame()) { packet ->
+                sizes += packet.size
+                if (it >= 10) dec.decode(packet) { pcm -> out.addAll(pcm.toList()) } // after the codec settles
+            }
         }
         val hz = dominantHz(out.toShortArray())
         assertTrue(abs(hz - 440) < 15, "decoded pitch $hz Hz, sent 440 Hz")
@@ -38,15 +39,18 @@ class OpusJvmTest {
         val dec = createOpusDecoder()
         val enc = createOpusEncoder()
         val tone = ToneSource(kotlinx.coroutines.GlobalScope)
-        repeat(5) { dec.decode(enc.encode(tone.nextFrame())) }
-        assertEquals(CallAudioFormat.FRAME_SAMPLES, dec.decode(null).size)
+        repeat(5) { enc.encode(tone.nextFrame()) { p -> dec.decode(p) {} } }
+        var concealed = 0
+        dec.decode(null) { concealed = it.size }
+        assertEquals(CallAudioFormat.FRAME_SAMPLES, concealed)
     }
 
     /** The server's vector payload is a real libopus packet: Concentus decodes it. */
     @Test fun theServersOpusVectorDecodes() {
         val hex = "789f6701e7ff835eee7a0ad259100cc21ed655634006963a32e5f4145666d96820f5a499408b4b1edf9be926314772adadfde69703d8f04f41f789bd"
         val packet = ByteArray(hex.length / 2) { hex.substring(2 * it, 2 * it + 2).toInt(16).toByte() }
-        val pcm = createOpusDecoder().decode(packet)
+        var pcm = ShortArray(0)
+        createOpusDecoder().decode(packet) { pcm = it }
         assertEquals(CallAudioFormat.FRAME_SAMPLES, pcm.size)
         assertTrue(pcm.any { it.toInt() != 0 }, "the 440 Hz tone decodes to sound")
     }
