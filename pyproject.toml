@@ -43,4 +43,4 @@ version = { file = "VERSION" }
 # Everything staged by packaging/stage_artifacts.py. The bundles are
 # .jar/.aar/.klib; naming them individually would mean editing this file every
 # time the build graph grows a target.
-ciris_client = ["py.typed", "_artifacts/*", "_artifacts/**/*"]
+ciris_client = ["py.typed", "THIRD_PARTY_NOTICES.txt", "_artifacts/*", "_artifacts/**/*"]

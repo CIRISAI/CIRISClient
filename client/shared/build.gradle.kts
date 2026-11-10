@@ -257,6 +257,9 @@ kotlin {
 
         val androidMain by getting {
             dependencies {
+                // Call audio's Opus (CSD-134): Concentus, a pure-Java libopus port
+                // (BSD-3-Clause, as libopus), ~0.4 MB, no native library.
+                implementation("io.github.jaredmdobson:concentus:1.0.2")
                 // Ktor Android engine
                 implementation("io.ktor:ktor-client-okhttp:3.0.3")
 
@@ -330,6 +333,9 @@ kotlin {
 
         val desktopMain by getting {
             dependencies {
+                // Call audio's Opus (CSD-134): Concentus, a pure-Java libopus port
+                // (BSD-3-Clause, as libopus), ~0.4 MB, no native library.
+                implementation("io.github.jaredmdobson:concentus:1.0.2")
                 implementation(compose.desktop.currentOs)
                 implementation("io.ktor:ktor-client-cio:3.0.3")
                 // NOTE: federation crypto (JCS canonicalization + hybrid signing)
@@ -413,8 +419,22 @@ android {
  * lazy `from {}` forms resolve at configuration time and cannot see an AAR that
  * does not exist yet. This is longer and it is deterministic.
  */
+/**
+ * Third-party jars the AAR must CARRY, for the same reason as :generated-api: it
+ * is consumed as a bare file through flatDir, so a dependency it does not carry
+ * is a NoClassDefFoundError on the device. Concentus is call audio's Opus
+ * (CSD-134); without it the first call crashes. Its BSD notice ships in the
+ * wheel's THIRD_PARTY_NOTICES.txt and the AAR's META-INF.
+ */
+val aarEmbedded by configurations.creating {
+    isTransitive = false
+}
+dependencies { add("aarEmbedded", "io.github.jaredmdobson:concentus:1.0.2") }
+
 val fatReleaseAar by tasks.registering {
     dependsOn("bundleReleaseAar", ":generated-api:bundleReleaseAar")
+    val embeddedJars = aarEmbedded
+    inputs.files(embeddedJars)
 
     val sharedAar = layout.buildDirectory.file("outputs/aar/shared-release.aar")
     val genAar = project(":generated-api").layout.buildDirectory
@@ -462,9 +482,21 @@ val fatReleaseAar by tasks.registering {
         for ((name, bytes) in classesOf(gen)) {
             if (merged.putIfAbsent(name, bytes) != null) collisions++
         }
+        for (jar in embeddedJars.files) {
+            ZipFile(jar).use { j ->
+                for (e in j.entries()) {
+                    if (e.isDirectory || e.name.startsWith("META-INF/")) continue
+                    if (merged.putIfAbsent(e.name, j.getInputStream(e).readBytes()) != null) collisions++
+                }
+            }
+        }
         if (collisions > 0) {
             logger.lifecycle("[fat-aar] $collisions duplicate entry(ies); :shared kept")
         }
+        if (!merged.containsKey("io/github/jaredmdobson/concentus/OpusDecoder.class")) error(
+            "fat AAR carries no Concentus — the first call on Android would die with NoClassDefFoundError"
+        )
+        merged["META-INF/THIRD_PARTY_NOTICES.txt"] = rootProject.file("../THIRD_PARTY_NOTICES.txt").readBytes()
 
         val mobile = merged.keys.count { it.startsWith("ai/ciris/mobile/") && it.endsWith(".class") }
         val api = merged.keys.count { it.startsWith("ai/ciris/api/") && it.endsWith(".class") }

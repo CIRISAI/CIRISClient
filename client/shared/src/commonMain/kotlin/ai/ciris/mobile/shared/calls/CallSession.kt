@@ -36,6 +36,18 @@ class CallSession(
     private val _state = MutableStateFlow<CallState>(CallState.Idle)
     val state: StateFlow<CallState> = _state.asStateFlow()
 
+    private val _frames = kotlinx.coroutines.flow.MutableSharedFlow<ReceivedFrame>(
+        extraBufferCapacity = 256,
+        onBufferOverflow = kotlinx.coroutines.channels.BufferOverflow.DROP_OLDEST,
+    )
+
+    /**
+     * Every decoded frame from another member, in arrival order, for the media
+     * engine. Live media is never late-delivered: a slow collector loses the
+     * oldest frames, which the decoder then conceals as gaps.
+     */
+    val frames: kotlinx.coroutines.flow.SharedFlow<ReceivedFrame> = _frames
+
     private var socket: CallSocket? = null
     private var reader: Job? = null
 
@@ -106,6 +118,7 @@ class CallSession(
 
     private fun onFrame(bytes: ByteArray) {
         val frame = try { CallFrames.decodeReceived(bytes) } catch (e: CallFrameException) { return }
+        _frames.tryEmit(frame)
         updateCall { call ->
             val prior = call.attendees[frame.publisher] ?: Attendee(frame.publisher)
             // A frame on a new stream from a known member is a rejoin: a new tile.

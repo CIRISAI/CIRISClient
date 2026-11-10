@@ -37,6 +37,8 @@ import zipfile
 #: The class NoClassDefFoundError actually named. Present iff the merge worked.
 REQUIREMENTS = "META-INF/ciris-client-requirements.json"
 CANARY = "ai/ciris/api/apis/AgentApi.class"
+#: Call audio's Opus (CSD-134), carried for the same reason: flatDir resolves nothing.
+OPUS_CANARY = "io/github/jaredmdobson/concentus/OpusDecoder.class"
 
 
 def main(argv: list[str]) -> int:
@@ -80,6 +82,9 @@ def main(argv: list[str]) -> int:
             "::error::the AAR carries no ai/ciris/api classes; every APK built "
             "against it dies in onCreate (CIRISClient#25)"
         )
+        return 1
+    if OPUS_CANARY not in names:
+        print(f"::error::{OPUS_CANARY} is absent — the first call on Android would die with NoClassDefFoundError")
         return 1
     if CANARY not in names:
         print(f"::error::{CANARY} is absent — the exact class the crash named")
