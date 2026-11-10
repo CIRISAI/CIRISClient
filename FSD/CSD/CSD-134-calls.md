@@ -229,6 +229,7 @@ so Edge's `is_base_or_audio` must agree. Device coverage is unmeasured.
 | 6 | **The frames socket's byte layout.** Agreed 2026-11-10 (§3), with a leading version byte and golden vectors at CIRISServer `tests/vectors/call_frames_v1.json` | Closed; pin the vectors when they ship |
 | 7 | **The two facts before publishing.** Agreed 2026-11-10: on the GET, each as a flag and words | Closed |
 | 8 | **Frame budget per call.** 244 B on Edge v44.1.1; about 1,140 B on a punched direct link at v45, only if every member runs v45. Read `frame_budget_bytes` per call, never assume | CIRISEdge |
+| 11 | **A codec change mid-call.** CC is writing "one codec per stream" (Edge 45.1's v2 binding names a codec per class: `opus` under `0xFF`; `av1`; `h264`, `vp8`, `vp9`). One stream per publisher carries audio and video. Proposed by CIRISEdge: a codec change is an in-call stream replacement (make-before-break, `Call::replace_stream`), with `stream_replaced {member, old_stream_id, new_stream_id}` on the frames socket, so the tile swaps in place and nobody sees "left" | CC, CIRISEdge 45.1, CIRISServer |
 | 10 | **The video codec.** Edge has no `0x04`, H.264 or VP8 id; the CC names `0x04`. Which ids, and their layer rule | Eric, CC, CIRISEdge |
 | 9 | **Capture on desktop.** The JVM has no camera or microphone API; a native library is needed, and its size counts against PyPI's project limit | CIRISClient |
 | 2 | Does a saved call count against the room's files and quota, and where does it show? | CIRISServer |
