@@ -236,6 +236,8 @@ class CallVideo(
     private val decoders = mutableMapOf<String, Pair<Int, VideoDecoder>>()
     /** Streams whose decoder has seen its first keyframe; before it, chunks are skipped. */
     private val started = mutableSetOf<String>()
+    /** The last `frame_seq` decoded per stream, where the node sends one. */
+    private val lastFrameSeq = mutableMapOf<String, UInt>()
     private var keyframeDue = true
     private var lastKeyframeUs = Long.MIN_VALUE
 
@@ -261,17 +263,26 @@ class CallVideo(
         listener = scope.launch {
             session.frames.collect { f ->
                 if (f.codecId == CallFrames.CODEC_OPAQUE) return@collect
-                receive(f.publisher, f.streamId, f.codecId, f.layer, f.payload)
+                receive(f.publisher, f.streamId, f.codecId, f.layer, f.payload, f.frameSeq)
             }
         }
     }
 
-    internal fun receive(publisher: String, streamId: ByteArray, codecId: Int, layer: Layer, bytes: ByteArray) {
+    /**
+     * [frameSeq] is the publisher's frame counter for this stream (null from a node
+     * that does not send one). Every layer's chunk of one picture carries the same
+     * count, and the next picture the next. Anything else is a picture that never
+     * arrived, and the ones after it are built on it: decoding them smears the
+     * tile. So the tile holds its last picture until the next keyframe, which
+     * needs nothing before it.
+     */
+    internal fun receive(publisher: String, streamId: ByteArray, codecId: Int, layer: Layer, bytes: ByteArray, frameSeq: UInt? = null) {
         val key = streamKey(streamId)
         var entry = decoders[key]
         if (entry == null || entry.first != codecId) {
             entry?.second?.close()
             started -= key
+            lastFrameSeq -= key
             val dec = newDecoder(codecId)
             if (dec == null) {
                 undecodable(publisher, codecId)
@@ -282,10 +293,15 @@ class CallVideo(
         }
         // A late joiner, or a codec change, starts at the first keyframe it receives:
         // anything before it references pictures this decoder never had.
+        val keyframe = Keyframes.isKeyframe(codecId, bytes)
+        val last = lastFrameSeq[key]
+        // Unsigned, so the counter wrapping from its largest value to 0 is still "the next".
+        if (!keyframe && frameSeq != null && last != null && frameSeq - last > 1u) started -= key
         if (key !in started) {
-            if (!Keyframes.isKeyframe(codecId, bytes)) return
+            if (!keyframe) return
             started += key
         }
+        if (frameSeq != null) lastFrameSeq[key] = frameSeq else lastFrameSeq -= key
         entry.second.decode(layer, bytes) { render(publisher, streamId, it) }
     }
 
@@ -296,6 +312,8 @@ class CallVideo(
         encoder?.close()
         decoders.values.forEach { it.second.close() }
         decoders.clear()
+        started.clear()
+        lastFrameSeq.clear()
     }
 
     companion object {

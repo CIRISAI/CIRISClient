@@ -91,6 +91,69 @@ class CallVideoTest {
         assertEquals(listOf("decode 4", "decode 4"), log)
     }
 
+    /**
+     * A picture that never arrived: the ones after it are built on it, so the tile
+     * holds what it has until a keyframe, instead of decoding a smear.
+     */
+    @Test fun aLostPictureHoldsTheTileUntilTheNextKeyframe() {
+        val log = mutableListOf<String>(); val rendered = mutableListOf<String>()
+        val v = video(log, rendered)
+        val s = ByteArray(32) { 9 }
+        v.receive("ada", s, 0x04, Layer.BASE, KEY, 0u)
+        v.receive("ada", s, 0x04, Layer.BASE, P_FRAME, 1u)
+        assertEquals(2, log.size)
+        v.receive("ada", s, 0x04, Layer.BASE, P_FRAME, 3u) // 2 was lost
+        v.receive("ada", s, 0x04, Layer.BASE, P_FRAME, 4u)
+        assertEquals(2, log.size, "nothing is decoded on top of a missing picture")
+        v.receive("ada", s, 0x04, Layer.BASE, KEY, 5u)
+        v.receive("ada", s, 0x04, Layer.BASE, P_FRAME, 6u)
+        assertEquals(4, log.size, "the next keyframe starts the picture again")
+    }
+
+    /** One picture's layers carry one count; that is not a repeat and not a gap. */
+    @Test fun theLayersOfOnePictureShareItsCount() {
+        val log = mutableListOf<String>(); val rendered = mutableListOf<String>()
+        val v = video(log, rendered)
+        val s = ByteArray(32) { 9 }
+        v.receive("ada", s, 0x04, Layer.BASE, KEY, 7u)
+        v.receive("ada", s, 0x04, Layer(0, 1, 0), P_FRAME, 7u)
+        v.receive("ada", s, 0x04, Layer.BASE, P_FRAME, 8u)
+        assertEquals(3, log.size)
+    }
+
+    /** The counter is 32 bits and wraps; the picture after the largest count is 0. */
+    @Test fun theCountWrappingIsNotALostPicture() {
+        val log = mutableListOf<String>(); val rendered = mutableListOf<String>()
+        val v = video(log, rendered)
+        val s = ByteArray(32) { 9 }
+        v.receive("ada", s, 0x04, Layer.BASE, KEY, UInt.MAX_VALUE)
+        v.receive("ada", s, 0x04, Layer.BASE, P_FRAME, 0u)
+        v.receive("ada", s, 0x04, Layer.BASE, P_FRAME, 1u)
+        assertEquals(3, log.size)
+    }
+
+    /** A node on Edge before v45 sends no count: nothing to judge by, so nothing is held. */
+    @Test fun aStreamWithNoCountIsNeverHeld() {
+        val log = mutableListOf<String>(); val rendered = mutableListOf<String>()
+        val v = video(log, rendered)
+        val s = ByteArray(32) { 9 }
+        v.receive("ada", s, 0x04, Layer.BASE, KEY)
+        repeat(3) { v.receive("ada", s, 0x04, Layer.BASE, P_FRAME) }
+        assertEquals(4, log.size)
+    }
+
+    /** One stream's lost picture is that tile's alone. */
+    @Test fun aLostPictureOnOneStreamLeavesTheOthersPlaying() {
+        val log = mutableListOf<String>(); val rendered = mutableListOf<String>()
+        val v = video(log, rendered)
+        val cam = ByteArray(32) { 1 }; val share = ByteArray(32) { 2 }
+        v.receive("ada", cam, 0x04, Layer.BASE, KEY, 0u)
+        v.receive("ada", share, 0x04, Layer.BASE, KEY, 0u)
+        v.receive("ada", cam, 0x04, Layer.BASE, P_FRAME, 5u) // the camera lost pictures
+        v.receive("ada", share, 0x04, Layer.BASE, P_FRAME, 1u)
+        assertEquals(3, log.size)
+    }
+
     @Test fun keyframesAreReadFromTheBytes() {
         assertTrue(Keyframes.isKeyframe(0x04, KEY))
         assertTrue(!Keyframes.isKeyframe(0x04, P_FRAME))

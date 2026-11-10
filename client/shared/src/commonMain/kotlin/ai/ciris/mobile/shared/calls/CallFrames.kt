@@ -9,11 +9,24 @@ package ai.ciris.mobile.shared.calls
  * client → node  ver u8 (=1) | codec_id u8 | spatial u8 | temporal u8 | quality u8 | payload…
  * node → client  ver u8 (=1) | codec_id u8 | spatial u8 | temporal u8 | quality u8
  *                | pub_len u16 | publisher[pub_len] (UTF-8 key_id) | stream_id[32]
- *                | epoch u64 | chunk_seq u64 | payload…
+ *                | epoch u64 | chunk_seq u64 | source_ts_ms u64
+ *                | flags u8 | frame_seq u32 | payload…
  * ```
  *
+ * `chunk_seq` counts every chunk of a stream whatever its codec, so a jump in it
+ * says nothing about one medium. The two fields after it do (Edge v45):
+ *
+ * - `source_ts_ms` is the publisher's signed capture time, milliseconds since the
+ *   Unix epoch: what sound and picture are lined up by.
+ * - `frame_seq` is the publisher's frame counter for this stream's video, present
+ *   when `flags` bit 0 is set and absent on audio (the field is then 0, and null
+ *   here, so a counter that wraps never meets a sentinel). A jump in it is a lost
+ *   picture. The other `flags` bits are reserved and ignored.
+ *
+ * A node on Edge before v45 writes `source_ts_ms` 0 and no `frame_seq`.
+ *
  * Pinned to CIRISServer's golden vectors (`tests/vectors/call_frames_v1.json`,
- * release/0.5.246 at 92d5d864), written by an independent generator. Each
+ * release/0.5.246 at 099cf247), written by an independent generator. Each
  * refusal carries the vectors' token, so both ends say the same thing.
  *
  * Audio is [CODEC_OPAQUE] at layer (0,0,0), and its payload is exactly one Opus
@@ -32,6 +45,8 @@ object CallFrames {
     const val MAX_PUBLISHER_BYTES = 256
     const val STREAM_ID_BYTES = 32
     private const val HEADER = 5
+    /** `flags` bit 0: `frame_seq` is present. */
+    private const val FLAG_FRAME_SEQ = 0x01
 
     fun encode(frame: OutgoingFrame): ByteArray {
         checkLayer(frame.codecId, frame.layer)
@@ -53,7 +68,9 @@ object CallFrames {
         require(frame.streamId.size == STREAM_ID_BYTES) { "stream_id is $STREAM_ID_BYTES bytes" }
         return header(frame.codecId, frame.layer) +
             u16(publisher.size) + publisher + frame.streamId +
-            u64(frame.epoch) + u64(frame.chunkSeq) + frame.payload
+            u64(frame.epoch) + u64(frame.chunkSeq) + u64(frame.sourceTsMs) +
+            byteArrayOf(if (frame.frameSeq != null) FLAG_FRAME_SEQ.toByte() else 0) +
+            u32(frame.frameSeq ?: 0u) + frame.payload
     }
 
     fun decodeReceived(bytes: ByteArray): ReceivedFrame {
@@ -69,7 +86,11 @@ object CallFrames {
         val streamId = r.bytes(STREAM_ID_BYTES)
         val epoch = r.u64()
         val chunkSeq = r.u64()
-        return ReceivedFrame(codec, layer, publisher, streamId, epoch, chunkSeq, r.rest())
+        val sourceTsMs = r.u64()
+        val flags = r.u8()
+        val seq = r.u32()
+        val frameSeq = if (flags and FLAG_FRAME_SEQ != 0) seq else null
+        return ReceivedFrame(codec, layer, publisher, streamId, epoch, chunkSeq, r.rest(), sourceTsMs, frameSeq)
     }
 
     private fun readHeader(r: Reader): Pair<Int, Layer> {
@@ -92,6 +113,7 @@ object CallFrames {
     }
 
     private fun u16(v: Int) = byteArrayOf((v ushr 8).toByte(), v.toByte())
+    private fun u32(v: UInt) = ByteArray(4) { i -> (v shr (24 - 8 * i)).toByte() }
     private fun u64(v: ULong) = ByteArray(8) { i -> (v shr (56 - 8 * i)).toByte() }
 
     private class Reader(private val buf: ByteArray) {
@@ -102,6 +124,11 @@ object CallFrames {
             return buf[at++].toInt() and 0xFF
         }
         fun u16(): Int = (u8() shl 8) or u8()
+        fun u32(): UInt {
+            var v = 0u
+            repeat(4) { v = (v shl 8) or u8().toUInt() }
+            return v
+        }
         fun u64(): ULong {
             var v = 0uL
             repeat(8) { v = (v shl 8) or u8().toULong() }
@@ -137,11 +164,16 @@ class ReceivedFrame(
     val epoch: ULong,
     val chunkSeq: ULong,
     val payload: ByteArray,
+    /** The publisher's capture time, ms since the Unix epoch; 0 from a node on Edge before v45. */
+    val sourceTsMs: ULong = 0uL,
+    /** The publisher's video frame counter; null on audio, and from a node on Edge before v45. */
+    val frameSeq: UInt? = null,
 ) {
     override fun equals(other: Any?) = other is ReceivedFrame && codecId == other.codecId &&
         layer == other.layer && publisher == other.publisher && streamId.contentEquals(other.streamId) &&
-        epoch == other.epoch && chunkSeq == other.chunkSeq && payload.contentEquals(other.payload)
-    override fun hashCode() = listOf(codecId, layer, publisher, streamId.contentHashCode(), epoch, chunkSeq, payload.contentHashCode()).hashCode()
+        epoch == other.epoch && chunkSeq == other.chunkSeq && payload.contentEquals(other.payload) &&
+        sourceTsMs == other.sourceTsMs && frameSeq == other.frameSeq
+    override fun hashCode() = listOf(codecId, layer, publisher, streamId.contentHashCode(), epoch, chunkSeq, payload.contentHashCode(), sourceTsMs, frameSeq).hashCode()
 }
 
 /** The vectors' refusal tokens. */

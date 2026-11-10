@@ -2,6 +2,7 @@ package ai.ciris.mobile.shared.calls
 
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
@@ -13,7 +14,7 @@ import kotlin.test.fail
 
 /**
  * The call frames codec against CIRISServer's golden vectors
- * (`tests/vectors/call_frames_v1.json`, release/0.5.246 at 92d5d864), copied
+ * (`tests/vectors/call_frames_v1.json`, release/0.5.246 at 099cf247), copied
  * byte for byte. Every valid frame decodes to its fields and re-encodes to the
  * same bytes, in both directions; every refusal carries its token.
  */
@@ -32,9 +33,9 @@ class CallFramesVectorsTest {
     @Test fun theFileIsThere() {
         // A parser that finds nothing must fail loudly.
         assertTrue(cases("client_to_node").size >= 3)
-        assertTrue(cases("node_to_client").size >= 2)
+        assertTrue(cases("node_to_client").size >= 3)
         assertTrue(cases("client_to_node_invalid").size >= 3)
-        assertTrue(cases("node_to_client_invalid").size >= 2)
+        assertTrue(cases("node_to_client_invalid").size >= 3)
         assertEquals("opus/48000/1/20ms", file.s("audio_payload"))
     }
 
@@ -60,8 +61,19 @@ class CallFramesVectorsTest {
             assertEquals(c.s("epoch").toULong(), got.epoch, name)
             assertEquals(c.s("chunk_seq").toULong(), got.chunkSeq, name)
             assertEquals(c.s("payload_hex"), got.payload.hex(), name)
+            assertEquals(c.s("source_ts_ms").toULong(), got.sourceTsMs, name)
+            assertEquals(c["frame_seq"]!!.jsonPrimitive.contentOrNull?.toUInt(), got.frameSeq, name)
             assertEquals(c.s("hex"), CallFrames.encode(got).hex(), "$name re-encodes")
         }
+    }
+
+    /** Sound carries no frame counter and video does: the vectors hold one of each, and the counter's largest value. */
+    @Test fun theFrameCounterIsOnVideoAndNotOnSound() {
+        val byName = cases("node_to_client").associate { it.s("name") to CallFrames.decodeReceived(hex(it.s("hex"))) }
+        assertEquals(null, byName.getValue("audio_from_alice").frameSeq)
+        assertEquals(0u, byName.getValue("video_h264_keyframe_from_bob").frameSeq, "0 is a count, not 'absent'")
+        assertEquals(UInt.MAX_VALUE, byName.getValue("max_publisher_empty_payload").frameSeq)
+        assertEquals(1794168000033uL, byName.getValue("video_h264_keyframe_from_bob").sourceTsMs)
     }
 
     @Test fun everyRefusalCarriesItsToken() {
