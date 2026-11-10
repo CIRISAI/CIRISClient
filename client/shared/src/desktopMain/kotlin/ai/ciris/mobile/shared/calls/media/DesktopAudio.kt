@@ -65,8 +65,13 @@ class DesktopMicrophoneSource : AudioSource {
 
 /**
  * The speaker: one line per publisher, and the system mixer mixes them. Lines are
- * opened on first sound and closed when the member leaves. The buffer is small
- * (about 100 ms), so a late burst is dropped by the line rather than heard late.
+ * opened on first sound and closed when the member leaves.
+ *
+ * Frames come from the call's playout clock, which is a timer and so a few
+ * milliseconds early or late each time. A line that has run dry is given
+ * [CUSHION_FRAMES] of silence first, so that wobble is absorbed instead of heard
+ * as a click on every frame. The line holds 200 ms; a frame that does not fit is
+ * late, and dropped.
  */
 class DesktopSpeakerSink : AudioSink {
     private val lines = mutableMapOf<String, SourceDataLine>()
@@ -74,11 +79,17 @@ class DesktopSpeakerSink : AudioSink {
     @Synchronized
     override fun play(publisher: String, pcm: ShortArray) {
         val line = lines.getOrPut(publisher) {
-            AudioSystem.getSourceDataLine(FORMAT).apply { open(FORMAT, FRAME_BYTES * 5); start() }
+            AudioSystem.getSourceDataLine(FORMAT).apply { open(FORMAT, FRAME_BYTES * LINE_FRAMES); start() }
         }
+        if (line.available() >= line.bufferSize) line.write(ByteArray(FRAME_BYTES * CUSHION_FRAMES), 0, FRAME_BYTES * CUSHION_FRAMES)
         val bytes = bytesOf(pcm)
         // Never block the decoder: if the line is full, this frame is late, so drop it.
         if (line.available() >= bytes.size) line.write(bytes, 0, bytes.size)
+    }
+
+    private companion object {
+        const val LINE_FRAMES = 10
+        const val CUSHION_FRAMES = 2
     }
 
     @Synchronized

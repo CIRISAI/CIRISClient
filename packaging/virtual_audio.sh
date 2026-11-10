@@ -1,8 +1,15 @@
 #!/usr/bin/env bash
 # A virtual microphone and speaker for call tests on Linux (CSD-134).
 #
-#     eval "$(bash packaging/virtual_audio.sh up)"     # exports PULSE_SINK / PULSE_SOURCE
+#     bash packaging/virtual_audio.sh run -- <command…>   # up, the command, then down — always
+#     eval "$(bash packaging/virtual_audio.sh up)"         # exports PULSE_SINK / PULSE_SOURCE
 #     bash packaging/virtual_audio.sh down
+#
+# ON A DESKTOP USE `run`. It puts the devices back when the command ends, however
+# it ends, the way `xvfb-run` does for a display. `up` without its `down` leaves
+# this machine's sound going nowhere, and a `down` run from another directory does
+# not find this script (that happened, 2026-11-10). `up`/`down` are for a CI
+# runner, which is thrown away.
 #
 # A PulseAudio (or PipeWire-Pulse) null sink is the speaker, and its monitor is the
 # microphone: whatever the call plays comes back in as what it hears. CI runners
@@ -49,8 +56,17 @@ case "${1:-}" in
       pactl unload-module "$id" || true
     done
     ;;
+  run)
+    shift
+    [ "${1:-}" = "--" ] && shift
+    [ $# -gt 0 ] || { echo "usage: $0 run -- <command…>" >&2; exit 2; }
+    SELF="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+    trap 'bash "$SELF" down' EXIT INT TERM
+    eval "$(bash "$SELF" up)"
+    "$@"
+    ;;
   *)
-    echo "usage: $0 up|down" >&2
+    echo "usage: $0 up|down|run -- <command…>" >&2
     exit 2
     ;;
 esac
