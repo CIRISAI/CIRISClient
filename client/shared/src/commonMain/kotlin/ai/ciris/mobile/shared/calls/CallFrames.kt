@@ -18,15 +18,19 @@ package ai.ciris.mobile.shared.calls
  *
  * - `source_ts_ms` is the publisher's signed capture time, milliseconds since the
  *   Unix epoch: what sound and picture are lined up by.
- * - `frame_seq` is the publisher's frame counter for this stream's video, present
+ * - `frame_seq` is the publisher's frame counter for this stream's video, counted
+ *   per layer (the whole spatial, temporal, quality triple): the base layer once
+ *   per picture, a higher layer only on the pictures that carry it. It is present
  *   when `flags` bit 0 is set and absent on audio (the field is then 0, and null
- *   here, so a counter that wraps never meets a sentinel). A jump in it is a lost
- *   picture. The other `flags` bits are reserved and ignored.
+ *   here, so a counter that wraps never meets a sentinel). A jump within one layer
+ *   is a lost frame of that layer; counts of different layers are never compared.
+ *   It runs for the stream's life, and a replaced stream starts again at 0. The
+ *   other `flags` bits are reserved and ignored.
  *
  * A node on Edge before v45 writes `source_ts_ms` 0 and no `frame_seq`.
  *
  * Pinned to CIRISServer's golden vectors (`tests/vectors/call_frames_v1.json`,
- * release/0.5.246 at 099cf247), written by an independent generator. Each
+ * release/0.5.246 at b08f3eca), written by an independent generator. Each
  * refusal carries the vectors' token, so both ends say the same thing.
  *
  * Audio is [CODEC_OPAQUE] at layer (0,0,0), and its payload is exactly one Opus
@@ -166,7 +170,7 @@ class ReceivedFrame(
     val payload: ByteArray,
     /** The publisher's capture time, ms since the Unix epoch; 0 from a node on Edge before v45. */
     val sourceTsMs: ULong = 0uL,
-    /** The publisher's video frame counter; null on audio, and from a node on Edge before v45. */
+    /** The publisher's video frame counter for this [layer]; null on audio, and from a node on Edge before v45. */
     val frameSeq: UInt? = null,
 ) {
     override fun equals(other: Any?) = other is ReceivedFrame && codecId == other.codecId &&

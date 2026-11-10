@@ -110,15 +110,84 @@ class CallVideoTest {
         assertEquals(4, log.size, "the next keyframe starts the picture again")
     }
 
-    /** One picture's layers carry one count; that is not a repeat and not a gap. */
-    @Test fun theLayersOfOnePictureShareItsCount() {
+    private val T1 = Layer(0, 1, 0)
+    private val T2 = Layer(0, 2, 0)
+
+    /**
+     * Each layer counts its own frames, so the base at 41 beside the layer above at
+     * 3 is two healthy layers, not a loss. (Edge and the CC, 2026-11-10.)
+     */
+    @Test fun eachLayerCountsItsOwnFrames() {
         val log = mutableListOf<String>(); val rendered = mutableListOf<String>()
         val v = video(log, rendered)
         val s = ByteArray(32) { 9 }
+        v.receive("ada", s, 0x04, Layer.BASE, KEY, 40u)
+        v.receive("ada", s, 0x04, T1, P_FRAME, 2u)
+        v.receive("ada", s, 0x04, Layer.BASE, P_FRAME, 41u)
+        v.receive("ada", s, 0x04, T1, P_FRAME, 3u)
+        v.receive("ada", s, 0x04, Layer.BASE, P_FRAME, 42u)
+        assertEquals(5, log.size)
+    }
+
+    /**
+     * A frame lost on a higher layer leaves that layer out, and the ones above it,
+     * until the next keyframe. The layers below carry the picture on: no freeze.
+     */
+    @Test fun aLostFrameOnAHigherLayerDropsToTheLayersBelow() {
+        val decoded = mutableListOf<Layer>()
+        val v = CallVideo(
+            session = ai.ciris.mobile.shared.calls.CallSession("r", NoTransport, kotlinx.coroutines.GlobalScope),
+            source = null, encoder = null, scope = kotlinx.coroutines.GlobalScope,
+            render = { _, _, _ -> },
+            newDecoder = { _ ->
+                object : VideoDecoder {
+                    override fun decode(layer: Layer, bytes: ByteArray, onFrame: (VideoFrame) -> Unit) { decoded += layer }
+                    override fun close() {}
+                }
+            },
+        )
+        val s = ByteArray(32) { 9 }
+        v.receive("ada", s, 0x04, Layer.BASE, KEY, 0u)
+        v.receive("ada", s, 0x04, T1, P_FRAME, 0u)
+        v.receive("ada", s, 0x04, T2, P_FRAME, 0u)
+        decoded.clear()
+        v.receive("ada", s, 0x04, T1, P_FRAME, 2u) // T1's frame 1 was lost
+        v.receive("ada", s, 0x04, T2, P_FRAME, 1u) // whole itself, but may be built on T1
+        v.receive("ada", s, 0x04, Layer.BASE, P_FRAME, 1u)
+        v.receive("ada", s, 0x04, T1, P_FRAME, 3u)
+        assertEquals(listOf(Layer.BASE), decoded, "the base layer plays on; T1 and T2 wait")
+        decoded.clear()
+        v.receive("ada", s, 0x04, Layer.BASE, KEY, 2u)
+        v.receive("ada", s, 0x04, T1, P_FRAME, 4u)
+        v.receive("ada", s, 0x04, T2, P_FRAME, 2u)
+        assertEquals(listOf(Layer.BASE, T1, T2), decoded, "a keyframe brings every layer back")
+    }
+
+    /** A layer that was not being sent (a cap, or the node shedding) comes back with a jump: it waits for a keyframe, and nothing freezes. */
+    @Test fun aLayerThatComesBackWaitsForAKeyframe() {
+        val log = mutableListOf<String>(); val rendered = mutableListOf<String>()
+        val v = video(log, rendered)
+        val s = ByteArray(32) { 9 }
+        v.receive("ada", s, 0x04, Layer.BASE, KEY, 0u)
+        v.receive("ada", s, 0x04, T1, P_FRAME, 0u)
+        repeat(5) { v.receive("ada", s, 0x04, Layer.BASE, P_FRAME, (it + 1).toUInt()) } // T1 shed: no gap anywhere
+        assertEquals(7, log.size)
+        v.receive("ada", s, 0x04, T1, P_FRAME, 6u) // back, five frames on
+        assertEquals(7, log.size, "not decoded on top of frames this device never had")
+        v.receive("ada", s, 0x04, Layer.BASE, P_FRAME, 6u)
+        assertEquals(8, log.size, "the base layer never stopped")
         v.receive("ada", s, 0x04, Layer.BASE, KEY, 7u)
-        v.receive("ada", s, 0x04, Layer(0, 1, 0), P_FRAME, 7u)
-        v.receive("ada", s, 0x04, Layer.BASE, P_FRAME, 8u)
-        assertEquals(3, log.size)
+        v.receive("ada", s, 0x04, T1, P_FRAME, 7u)
+        assertEquals(10, log.size)
+    }
+
+    /** A picture starts at the base layer: keyframe bytes on a higher layer start nothing. */
+    @Test fun aKeyframeOnAHigherLayerDoesNotRestartThePicture() {
+        val log = mutableListOf<String>(); val rendered = mutableListOf<String>()
+        val v = video(log, rendered)
+        val s = ByteArray(32) { 9 }
+        v.receive("ada", s, 0x04, T1, KEY, 0u)
+        assertEquals(emptyList(), log, "a picture starts at the base layer")
     }
 
     /** The counter is 32 bits and wraps; the picture after the largest count is 0. */

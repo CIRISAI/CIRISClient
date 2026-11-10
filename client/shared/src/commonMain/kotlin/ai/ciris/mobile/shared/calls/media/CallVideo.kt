@@ -233,11 +233,17 @@ class CallVideo(
     private val receive: Boolean = true,
 ) {
     private var listener: Job? = null
-    private val decoders = mutableMapOf<String, Pair<Int, VideoDecoder>>()
-    /** Streams whose decoder has seen its first keyframe; before it, chunks are skipped. */
-    private val started = mutableSetOf<String>()
-    /** The last `frame_seq` decoded per stream, where the node sends one. */
-    private val lastFrameSeq = mutableMapOf<String, UInt>()
+    private val streams = mutableMapOf<String, Inbound>()
+
+    /** One stream being received: its decoder, and what has arrived on each of its layers. */
+    private class Inbound(val codecId: Int, val decoder: VideoDecoder) {
+        /** True once the decoder has had a keyframe; before it, chunks are skipped. */
+        var started = false
+        /** The last `frame_seq` seen on each layer, where the node sends one. */
+        val lastSeq = mutableMapOf<Layer, UInt>()
+        /** Layers that lost a frame since the last keyframe. */
+        val broken = mutableSetOf<Layer>()
+    }
     private var keyframeDue = true
     private var lastKeyframeUs = Long.MIN_VALUE
 
@@ -269,51 +275,65 @@ class CallVideo(
     }
 
     /**
-     * [frameSeq] is the publisher's frame counter for this stream (null from a node
-     * that does not send one). Every layer's chunk of one picture carries the same
-     * count, and the next picture the next. Anything else is a picture that never
-     * arrived, and the ones after it are built on it: decoding them smears the
-     * tile. So the tile holds its last picture until the next keyframe, which
-     * needs nothing before it.
+     * [frameSeq] is the publisher's frame counter for this stream AND this [layer]
+     * (null from a node that does not send one). Each layer counts its own frames:
+     * the base layer once per picture, a higher layer only on the pictures that
+     * carry it. So it is compared within a layer and never across layers.
+     *
+     * A count that skips is a frame that never arrived, and later frames are built
+     * on it: decoding them smears the tile. A frame may be built on its own layer
+     * and on any layer below it, so the layer that lost a frame is left out, and
+     * every layer above it, until the next keyframe, which needs nothing before it.
+     * When the base layer is the one, that is every layer: the tile holds its last
+     * picture. When a higher layer is, the picture carries on from the layers below.
+     *
+     * A layer this device is not sent (its cap, or the node shedding) has no gap to
+     * find. When it comes back its count has jumped, and it waits for the keyframe
+     * like any other layer that lost frames.
      */
     internal fun receive(publisher: String, streamId: ByteArray, codecId: Int, layer: Layer, bytes: ByteArray, frameSeq: UInt? = null) {
         val key = streamKey(streamId)
-        var entry = decoders[key]
-        if (entry == null || entry.first != codecId) {
-            entry?.second?.close()
-            started -= key
-            lastFrameSeq -= key
+        var s = streams[key]
+        if (s == null || s.codecId != codecId) {
+            s?.decoder?.close()
+            streams -= key
             val dec = newDecoder(codecId)
             if (dec == null) {
                 undecodable(publisher, codecId)
                 return
             }
-            entry = codecId to dec
-            decoders[key] = entry
+            s = Inbound(codecId, dec)
+            streams[key] = s
         }
-        // A late joiner, or a codec change, starts at the first keyframe it receives:
-        // anything before it references pictures this decoder never had.
-        val keyframe = Keyframes.isKeyframe(codecId, bytes)
-        val last = lastFrameSeq[key]
-        // Unsigned, so the counter wrapping from its largest value to 0 is still "the next".
-        if (!keyframe && frameSeq != null && last != null && frameSeq - last > 1u) started -= key
-        if (key !in started) {
-            if (!keyframe) return
-            started += key
+        // A picture restarts at a keyframe on the base layer. A late joiner, or a
+        // codec change, starts there too: anything before it references pictures
+        // this decoder never had.
+        val keyframe = layer == Layer.BASE && Keyframes.isKeyframe(codecId, bytes)
+        val last = s.lastSeq[layer]
+        // Unsigned, so the counter wrapping from its largest value to 0 is still "the
+        // next". The same count again is a repeat, not a loss.
+        if (frameSeq != null && last != null && frameSeq - last > 1u) s.broken += layer
+        if (frameSeq != null) s.lastSeq[layer] = frameSeq else s.lastSeq -= layer
+        if (keyframe) {
+            s.broken.clear()
+            s.started = true
         }
-        if (frameSeq != null) lastFrameSeq[key] = frameSeq else lastFrameSeq -= key
-        entry.second.decode(layer, bytes) { render(publisher, streamId, it) }
+        if (!s.started) return
+        if (s.broken.any { it.isAtOrBelow(layer) }) return
+        s.decoder.decode(layer, bytes) { render(publisher, streamId, it) }
     }
+
+    /** True when a frame on [other] may be built on this layer: no part of this one is higher. */
+    private fun Layer.isAtOrBelow(other: Layer) =
+        spatial <= other.spatial && temporal <= other.temporal && quality <= other.quality
 
     fun stop() {
         source?.stop()
         listener?.cancel()
         listener = null
         encoder?.close()
-        decoders.values.forEach { it.second.close() }
-        decoders.clear()
-        started.clear()
-        lastFrameSeq.clear()
+        streams.values.forEach { it.decoder.close() }
+        streams.clear()
     }
 
     companion object {
