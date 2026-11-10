@@ -5,6 +5,7 @@ package ai.ciris.mobile.shared.calls.media
 import kotlinx.cinterop.*
 import platform.CoreFoundation.*
 import platform.CoreVideo.*
+import platform.Foundation.CFBridgingRetain
 import platform.Foundation.NSNumber
 import platform.Foundation.NSProcessInfo
 

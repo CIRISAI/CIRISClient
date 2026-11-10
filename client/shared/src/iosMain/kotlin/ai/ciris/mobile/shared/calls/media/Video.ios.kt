@@ -7,6 +7,7 @@ import kotlinx.cinterop.*
 import platform.CoreFoundation.*
 import platform.CoreMedia.*
 import platform.CoreVideo.*
+import platform.Foundation.CFBridgingRetain
 import platform.Foundation.NSData
 import platform.Foundation.NSLock
 import platform.Foundation.create
