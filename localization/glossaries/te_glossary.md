@@ -173,6 +173,34 @@ This glossary defines the canonical translations for key CIRIS terms in Telugu. 
 | Trust policies | నమ్మక విధానాలు | Auto-trust policies at scope |
 | Coming Soon | త్వరలో వస్తుంది | Placeholder for unshipped features |
 
+
+## Mesh, Keys and Review Terms
+
+Decided for client 0.5.239 so these terms stop being left in English. "corpus" means the rendering the shipped strings already use; "coined" means the corpus had none; "by hand" means the reviewer rejected both model drafts and the row was decided from the corpus and the reviewer's reasons. Machine-drafted and reviewed by a judge of a different model family; not native-reviewed.
+
+| English | Translation | Transliteration | Notes |
+|---------|-------------|-----------------|-------|
+| trust root | ట్రస్ట్ రూట్ | traṣṭ rūṭ | corpus: the key or authority a node accepts as the origin of trust for a mesh; a node 'subscribes to' or 'adopts' one |
+| owner binding | యజమాని బైండింగ్ | yajamāni bāinḍiṅg | corpus: the signed record that ties a node to the person who owns it |
+| kill switch | కిల్ స్విచ్ | kil sviच్ → kil svich | corpus: the accord's power to halt a node remotely in an emergency |
+| audit log | ఆడిట్ లాగ్ | āḍiṭ lāg | corpus: the tamper-evident record of what a node or agent did |
+| export job | ఎగుమతి జాబ్ | egumati jāb | corpus: a queued task that packages a person's data for download |
+| signing key | సంతకం కీ | santakaṁ kī | corpus: the private key a node or person signs with |
+| private key | ప్రైవేట్ కీ | praiveṭ kī | corpus: the secret half of a key pair |
+| session token | సెషన్ టోకెన్ | seṣan ṭōken | corpus: the credential a signed-in app sends with each request |
+| secure hardware | సురక్షిత హార్డ్‌వేర్ | surakṣita hārḍvēr | corpus: the device's protected key store: TPM, Secure Enclave, StrongBox |
+| safety witness | భద్రతా సాక్షి | bhadratā sākṣi | coined: a party that watches and attests to an agent's safety behaviour |
+| rubric review | ప్రమాణాల ఆధారిత సమీక్ష | pramāṇāla ādhārita samīkṣa | coined: a review of an agent's behaviour against a scoring rubric |
+| delegation scope | అప్పగింత పరిధి | appagiṁta paridhi | corpus: the set of actions a delegate is allowed to perform |
+| canonical node | కానానికల్ నోడ్ | kānānikal nōḍ | corpus: a node chosen as the reference copy a family's other nodes follow |
+| serve node | సర్వ్ నోడ్ | sarv nōḍ | corpus: a node that serves others on the mesh (always on, reachable) |
+| genesis seed | జెనెసిస్ సీడ్ | jenesis sīḍ | corpus: the starting material from which a family's first records are created |
+| circuit breaker | సర్క్యూట్ బ్రేకర్ | sarkyūṭ brēkar | corpus: a safeguard that stops a failing service from being called until it recovers |
+| attestation level | ధృవీకరణ స్థాయి | dhr̥vīkaraṇa sthāyi | corpus: how strongly a device has proven its identity and integrity (a numbered level) |
+| memory consolidation | మెమరీ సమేకన | memarī samēkana | corpus: the agent's periodic pass that summarises and reorganises what it remembers |
+| setup wizard | సెటప్ విజార్డ్ | seṭap vijārḍ | corpus: the step-by-step screens that set up the app the first time |
+| Secure Enclave | Secure Enclave | Secure Enclave | Apple's product name; keep in English as Apple writes it |
+
 ## Version History
 
 | Version | Date | Changes |

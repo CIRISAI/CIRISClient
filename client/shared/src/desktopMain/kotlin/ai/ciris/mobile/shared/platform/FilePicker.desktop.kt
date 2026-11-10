@@ -8,6 +8,7 @@ import java.io.File
 import javax.swing.JFileChooser
 import javax.swing.SwingUtilities
 import javax.swing.filechooser.FileNameExtensionFilter
+import io.ktor.utils.io.jvm.javaio.toByteReadChannel
 import kotlin.io.encoding.Base64
 import kotlin.io.encoding.ExperimentalEncodingApi
 
@@ -126,4 +127,39 @@ private fun readDesktopFile(file: File): Any? {
         println("[FilePicker] Failed to read file: ${e.message}")
         null
     }
+}
+
+
+/** The drive's picker: the file is streamed from disk, never read whole. */
+@Composable
+actual fun StreamedFilePickerDialog(
+    show: Boolean,
+    onPicked: (PickedFileStream) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    LaunchedEffect(show) {
+        if (!show) return@LaunchedEffect
+        val chosen = chooseFileOnEdt(listOf("*/*"))
+        val picked = chosen?.let { withContext(Dispatchers.IO) { streamFromFile(it) } }
+        if (picked != null) onPicked(picked) else onDismiss()
+    }
+}
+
+private fun streamFromFile(file: File): PickedFileStream? = try {
+    val head = file.inputStream().use { input ->
+        val buf = ByteArray(PickedFileStream.HEAD_BYTES)
+        var read = 0
+        while (read < buf.size) { val n = input.read(buf, read, buf.size - read); if (n < 0) break; read += n }
+        buf.copyOf(read)
+    }
+    PickedFileStream(
+        name = file.name,
+        mediaType = AttachmentTypes.mimeTypeForFileName(file.name),
+        sizeBytes = file.length(),
+        head = head,
+        open = { file.inputStream().toByteReadChannel() },
+    )
+} catch (e: Exception) {
+    PlatformLogger.w("FilePicker", "Could not open the file: ${e.message}")
+    null
 }

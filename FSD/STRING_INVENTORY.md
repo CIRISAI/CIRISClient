@@ -7,16 +7,16 @@ Stage 1 of [`TEXT_REFERENCES.md`](TEXT_REFERENCES.md). Every key is a row in
 searching source, so they are evidence, not proof: `unclaimed` means a key to read,
 not a key to delete.
 
-Agent usage recorded at CIRISAgent `5743471e6`. CI carries it forward.
+Agent usage recorded at CIRISAgent `b16071a99`. CI carries it forward.
 
-**5834 keys in 29 languages.**
+**5886 keys in 29 languages.**
 
 | Owner | Keys |
 |---|---|
-| client | 4661 |
-| server | 551 |
+| client | 4710 |
+| server | 552 |
 | agent | 216 |
-| unclaimed | 406 |
+| unclaimed | 408 |
 
 ## Held in the app
 
@@ -30,11 +30,11 @@ bound: the node serves that screen once it answers.
 
 ## Duplicates
 
-373 English strings sit under 1013 keys.
+374 English strings sit under 1020 keys.
 
 - **Same in every language:** 93 groups, 199 keys.
   Candidates to share a key, for a person to confirm.
-- **Short, and differ in at least one language:** 280 groups, 814 keys. Context can explain these: read before merging.
+- **Short, and differ in at least one language:** 281 groups, 821 keys. Context can explain these: read before merging.
 - **Sentences that differ:** 0 groups, 0 keys.
   Identical English, translated differently: drift until read.
 - **Confirmation facts:** 129 keys, 43 of them duplicates.
@@ -65,7 +65,7 @@ back to them, so they are unreachable and still translated. Marked `dead_root`.
 | `errors` | 20 |
 | `agent` | 11 |
 | `conscience` | 7 |
-| `mesh` | 6 |
+| `mesh` | 7 |
 | `startup` | 6 |
 | `mesh_config` | 4 |
 | `system` | 3 |
@@ -73,3 +73,4 @@ back to them, so they are unreachable and still translated. Marked `dead_root`.
 | `custody` | 1 |
 | `family` | 1 |
 | `network_ops` | 1 |
+| `setup_validation_trace_consent_required` | 1 |

@@ -95,6 +95,10 @@ suspend fun refreshBillingCredentialFromBrowser(
             log("no hand-off after ${result.waitedSeconds}s")
             BillingCredentialRefreshOutcome.TimedOut(result.waitedSeconds)
         }
+        is BrowserSignInResult.BrowserNeverArrived -> {
+            log("the node never saw the browser in ${result.waitedSeconds}s (CIRISClient#284)")
+            BillingCredentialRefreshOutcome.TimedOut(result.waitedSeconds)
+        }
         is BrowserSignInResult.Collected -> {
             val idToken = result.handoff.idToken
             if (idToken.isNullOrBlank()) {

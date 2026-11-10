@@ -207,6 +207,34 @@ This glossary defines the canonical translations for key CIRIS terms in Japanese
 | Trust policies | 信頼ポリシー | Shinrai Porishī | Section: policies governing automatic trust at a scope |
 | Coming Soon | 近日公開 | Kinjitsu Kōkai | Placeholder for unshipped features |
 
+
+## Mesh, Keys and Review Terms
+
+Decided for client 0.5.239 so these terms stop being left in English. "corpus" means the rendering the shipped strings already use; "coined" means the corpus had none; "by hand" means the reviewer rejected both model drafts and the row was decided from the corpus and the reviewer's reasons. Machine-drafted and reviewed by a judge of a different model family; not native-reviewed.
+
+| English | Translation | Transliteration | Notes |
+|---------|-------------|-----------------|-------|
+| trust root | 信頼ルート | shinrai rūto | corpus: the key or authority a node accepts as the origin of trust for a mesh; a node 'subscribes to' or 'adopts' one |
+| owner binding | 所有者バインディング | shoyūsha baindingu | corpus: the signed record that ties a node to the person who owns it |
+| kill switch | キルスイッチ | kiru suitchi | corpus: the accord's power to halt a node remotely in an emergency |
+| audit log | 監査ログ | kansa rogu | corpus: the tamper-evident record of what a node or agent did |
+| export job | エクスポートジョブ | ekusupōto jobu | corpus: a queued task that packages a person's data for download |
+| signing key | 署名鍵 | shomei kagi | corpus: the private key a node or person signs with |
+| private key | 秘密鍵 | himitsu kagi | corpus: the secret half of a key pair |
+| session token | セッショントークン | sesshon tōkun | corpus: the credential a signed-in app sends with each request |
+| secure hardware | セキュアハードウェア | sekyua hādowea | corpus: the device's protected key store: TPM, Secure Enclave, StrongBox |
+| safety witness | 安全性証人 | anzensei shōnin | coined: a party that watches and attests to an agent's safety behaviour |
+| rubric review | ルーブリックレビュー | rūburikku rebyū | corpus: a review of an agent's behaviour against a scoring rubric |
+| delegation scope | 委任スコープ | inin sukōpu | corpus: the set of actions a delegate is allowed to perform |
+| canonical node | カノニカルノード | kanonikaru nōdo | corpus: a node chosen as the reference copy a family's other nodes follow |
+| serve node | サーブノード | sābu nōdo | corpus: a node that serves others on the mesh (always on, reachable) |
+| genesis seed | ジェネシスシード | jeneshisu shīdo | corpus: the starting material from which a family's first records are created |
+| circuit breaker | サーキットブレーカー | sākitto burēkā | corpus: a safeguard that stops a failing service from being called until it recovers |
+| attestation level | アテステーションレベル | - | by hand: how strongly a device has proven its identity and integrity (a numbered level) |
+| memory consolidation | メモリ統合 | memori tōgō | corpus: the agent's periodic pass that summarises and reorganises what it remembers |
+| setup wizard | セットアップウィザード | settoappu wizādo | corpus: the step-by-step screens that set up the app the first time |
+| Secure Enclave | Secure Enclave | Secure Enclave | Apple's product name; keep in English as Apple writes it |
+
 ## Version History
 
 | Version | Date | Changes |

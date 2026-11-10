@@ -181,6 +181,34 @@ CEG 0.6 cohort-scope vocabulary used by the new Commons hub.
 | Trust policies | سیاست‌های اعتماد | Automatic-trust policies |
 | Coming Soon | به‌زودی | Placeholder for unshipped features |
 
+
+## Mesh, Keys and Review Terms
+
+Decided for client 0.5.239 so these terms stop being left in English. "corpus" means the rendering the shipped strings already use; "coined" means the corpus had none; "by hand" means the reviewer rejected both model drafts and the row was decided from the corpus and the reviewer's reasons. Machine-drafted and reviewed by a judge of a different model family; not native-reviewed.
+
+| English | Translation | Transliteration | Notes |
+|---------|-------------|-----------------|-------|
+| trust root | ریشهٔ اعتماد | rishe-ye e'temād | corpus: the key or authority a node accepts as the origin of trust for a mesh; a node 'subscribes to' or 'adopts' one |
+| owner binding | پیوند مالکیت | peyvand-e mālekiyyat | corpus: the signed record that ties a node to the person who owns it |
+| kill switch | کلید توقف اضطراری | kelid-e tavaqqof-e ezterāri | corpus: the accord's power to halt a node remotely in an emergency |
+| audit log | گزارش ممیزی | gozāresh-e momayyezi | corpus: the tamper-evident record of what a node or agent did |
+| export job | کار خروجی داده | - | by hand: a queued task that packages a person's data for download |
+| signing key | کلید امضا | kelid-e emzā | corpus: the private key a node or person signs with |
+| private key | کلید خصوصی | kelid-e khosusi | corpus: the secret half of a key pair |
+| session token | توکن نشست | token-e neshast | corpus: the credential a signed-in app sends with each request |
+| secure hardware | سخت‌افزار امن | sakht-afzār-e amn | corpus: the device's protected key store: TPM, Secure Enclave, StrongBox |
+| safety witness | شاهد ایمنی | shāhed-e imeni | corpus: a party that watches and attests to an agent's safety behaviour |
+| rubric review | بازبینی معیار | bāzbini-ye me'yār | corpus: a review of an agent's behaviour against a scoring rubric |
+| delegation scope | دامنهٔ تفویض اختیار | dāmane-ye tafviz-e ekhtiyār | corpus: the set of actions a delegate is allowed to perform |
+| canonical node | گره متعارف | gereh-e mote'āref | corpus: a node chosen as the reference copy a family's other nodes follow |
+| serve node | گره سرویس‌دهنده | gereh-e servis-dahande | corpus: a node that serves others on the mesh (always on, reachable) |
+| genesis seed | بذر پیدایش | bazr-e peydāyesh | corpus: the starting material from which a family's first records are created |
+| circuit breaker | مدارشکن | madār-shekan | corpus: a safeguard that stops a failing service from being called until it recovers |
+| attestation level | سطح گواهی | sath-e govāhī | corpus: how strongly a device has proven its identity and integrity (a numbered level) |
+| memory consolidation | تثبیت حافظه | tasbit-e hāfeze | corpus: the agent's periodic pass that summarises and reorganises what it remembers |
+| setup wizard | دستیار راه‌اندازی | dastyār-e rāh-andāzi | corpus: the step-by-step screens that set up the app the first time |
+| Secure Enclave | Secure Enclave | Secure Enclave | Apple's product name; keep in English as Apple writes it |
+
 ## Version History
 
 | Version | Date | Changes |

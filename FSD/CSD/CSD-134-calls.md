@@ -40,7 +40,7 @@ Two rules shape it:
 ```yaml csd:surface
 surface: null
 flow_only: true
-screen: UserChat                  # the entry that exists today; the call screen itself is proposed
+screen: Call                      # ui/screens/CallScreen.kt; entered from UserChat's btn_chat_call
 scopes: [agent, family, local_community, global_communities, global_commons]
 entry: "the Call action in a room's header (CSD-091, and the room view of CSD-103)"
 exit: "back to the room the call was started from"
@@ -68,14 +68,14 @@ fields:
     type: unconfirmed
     example: "not saved"
     renders: "always on screen while in a call: whether MY stream is saved, and which others' are. Never absent, so silence never reads as either"
-    tag: "proposed:txt_call_save_state"
+    tag: txt_call_save_state
     blocked_by: "CIRISPersist#1067"
   - ceg: x_private:call_save_choice
     use: emit
     type: unconfirmed
     example: "dont_save"
     renders: "a choice item with benefit and downside on each option. While unavailable: disabled, with 'Saving calls isn't ready yet.' A refused keep (`keep_deferred_cirispersist_1067`) is said in words, and the call goes on unsaved"
-    tag: "proposed:opt_call_save_*"
+    tag: opt_call_save_mine
     blocked_by: "CIRISPersist#1067"
   - ceg: x_private:call_room_may_keep
     use: display-only
@@ -94,7 +94,7 @@ fields:
 ```yaml csd:states
 loading:   {tag: "proposed:call_connecting", renders: "'Connecting…' with the room's name"}
 empty:     {tag: "proposed:call_alone", renders: "'Waiting for others to join.' Joining alone is valid; others in the room see the call on their Call action"}
-error:     {tag: "proposed:call_error", renders: "the named refusal in words: no microphone permission, not a member, or this device's privacy setting has no calls"}
+error:     {tag: call_microphone_denied, renders: "the named refusal in words: no microphone permission, not a member, or this device's privacy setting has no calls"}
 populated: {tag: "proposed:call_screen", renders: "the tiles, participants, controls and the save state"}
 ```
 
@@ -107,6 +107,30 @@ populated: {tag: "proposed:call_screen", renders: "the tiles, participants, cont
 | Member removed mid-call | The room's Remove rolls every stream's key: that person's tiles stop, and they are told |
 | Remote client (the node is elsewhere) | Works over the same route, on that connection's bandwidth; labelled if it is the limit |
 | No camera or denied | Audio-only, stated; the call is not refused |
+
+**Built (client 0.5.239).** The Call action in a room's header (`btn_chat_call`), shown
+only when the node declares `chat:call` (`Capability.CHAT_CALL`); no node does yet,
+so it is hidden everywhere today. The screen offers a voice or a video call
+(`btn_call_voice`, `btn_call_video`) and asks for what that call needs at that
+moment, never at launch (`platform/CallMedia.kt`, `callPermissionStep`):
+
+| Call | Asks for | If refused |
+|---|---|---|
+| Voice | Microphone | No call: `call_microphone_denied`, with how to turn it on and `btn_call_try_again` |
+| Video | Microphone, then camera | Microphone refused: no call. Camera refused or missing: a voice call, said (`call_audio_only`) |
+
+| Platform | Microphone | Camera |
+|---|---|---|
+| Android | `RECORD_AUDIO`, in the library manifest, `android.hardware.microphone` not required | `CAMERA`, already declared for QR |
+| iOS | `NSMicrophoneUsageDescription` | `NSCameraUsageDescription`, now naming video calls |
+| Desktop, web | No capture yet: `call_unavailable` (`platform`) | Same |
+
+A second refusal in one attempt counts as a refusal, because Android reports a
+once-refused permission as still askable. A ready call says it cannot connect yet
+(`call_not_connecting`): capture, encoding and the connection to the node are not
+built, and the node has no call routes (CIRISServer#859). Saving shows as not ready
+(`opt_call_save_mine` disabled, `txt_call_save_unavailable`). An agent build's own iOS
+host (`apps/ios`) needs the same two Info.plist keys.
 
 ## 3. Contracts (who)
 

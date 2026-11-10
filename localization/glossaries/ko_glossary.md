@@ -161,6 +161,34 @@ This glossary defines the canonical translations for key CIRIS terms in Korean. 
 | Trust policies | 신뢰 정책 | sinloe jeongchaek | Section: policies governing automatic trust at a scope |
 | Coming Soon | 곧 출시 | got chulsi | Placeholder for unshipped features |
 
+
+## Mesh, Keys and Review Terms
+
+Decided for client 0.5.239 so these terms stop being left in English. "corpus" means the rendering the shipped strings already use; "coined" means the corpus had none; "by hand" means the reviewer rejected both model drafts and the row was decided from the corpus and the reviewer's reasons. Machine-drafted and reviewed by a judge of a different model family; not native-reviewed.
+
+| English | Translation | Transliteration | Notes |
+|---------|-------------|-----------------|-------|
+| trust root | 신뢰 루트 | sinroe ruteu | corpus: the key or authority a node accepts as the origin of trust for a mesh; a node 'subscribes to' or 'adopts' one |
+| owner binding | 소유자 바인딩 | soyuja bainding | corpus: the signed record that ties a node to the person who owns it |
+| kill switch | 킬 스위치 | kil seuwichi | corpus: the accord's power to halt a node remotely in an emergency |
+| audit log | 감사 로그 | gamsa rogeu | corpus: the tamper-evident record of what a node or agent did |
+| export job | 내보내기 작업 | naeboneagi jageop | coined: a queued task that packages a person's data for download |
+| signing key | 서명 키 | seomyeong ki | corpus: the private key a node or person signs with |
+| private key | 개인 키 | gaein ki | corpus: the secret half of a key pair |
+| session token | 세션 토큰 | sesyeon tokeun | corpus: the credential a signed-in app sends with each request |
+| secure hardware | 보안 하드웨어 | boan hadeuwe-eo | corpus: the device's protected key store: TPM, Secure Enclave, StrongBox |
+| safety witness | 안전성 증인 | anjeonseong jeungin | coined: a party that watches and attests to an agent's safety behaviour |
+| rubric review | 루브릭 검토 | rubeurik geomto | corpus: a review of an agent's behaviour against a scoring rubric |
+| delegation scope | 위임 범위 | wiim beomwi | corpus: the set of actions a delegate is allowed to perform |
+| canonical node | 캐노니컬 노드 | kaenonikeol nodeu | corpus: a node chosen as the reference copy a family's other nodes follow |
+| serve node | 서비스 노드 | seobiseu nodeu | corpus: a node that serves others on the mesh (always on, reachable) |
+| genesis seed | 제네시스 시드 | jenesiseu sideu | corpus: the starting material from which a family's first records are created |
+| circuit breaker | 회로 차단기 | hoero chadangi | corpus: a safeguard that stops a failing service from being called until it recovers |
+| attestation level | 증명 수준 | jeungmyeong sujun | corpus: how strongly a device has proven its identity and integrity (a numbered level) |
+| memory consolidation | 메모리 통합 | memori tonghap | corpus: the agent's periodic pass that summarises and reorganises what it remembers |
+| setup wizard | 설정 마법사 | seoljeong mabeopsa | corpus: the step-by-step screens that set up the app the first time |
+| Secure Enclave | Secure Enclave | Secure Enclave | Apple's product name; keep in English as Apple writes it |
+
 ## Version History
 
 | Version | Date | Changes |

@@ -208,6 +208,10 @@ object IosBackendBridge {
             kotlinx.coroutines.Dispatchers.Default + kotlinx.coroutines.SupervisorJob()
         )
         job = supervisor.run(scope)
+        // Tell the test server what Compose cannot see: an overlay over the app.
+        ai.ciris.mobile.shared.testing.TestAutomationState.hostOverlay = {
+            overlay.takeIf { it != HostOverlay.NONE }?.name?.lowercase()
+        }
         BackendStatus.install(supervisor, scope)
         NSLog("[IosBackendBridge] supervisor started")
     }

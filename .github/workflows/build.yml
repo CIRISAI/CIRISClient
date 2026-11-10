@@ -82,6 +82,14 @@ jobs:
           python3 client/tools/check_localization_sync.py --self-test --server-src .emitters
           python3 client/tools/check_localization_sync.py --server-src .emitters --strict
 
+      - name: No English left in a translation
+        # A clause copied from the key's English passes every structural check and
+        # the judge's batch; this is the one place that sees it. Excuses live in
+        # localization/english_fragments_allow.tsv with a reason, and go stale loudly.
+        run: |
+          python3 packaging/check_english_fragments.py --self-test
+          python3 packaging/check_english_fragments.py
+
       - name: The string inventory is current
         # FSD/TEXT_REFERENCES.md stage 1: every key has a row, regenerated from the
         # bundle, the app and the server at the pin. --self-test plants each defect.

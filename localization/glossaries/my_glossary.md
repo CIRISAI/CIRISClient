@@ -148,3 +148,30 @@ This glossary defines the canonical translations for key CIRIS terms in Burmese.
 | Trust | ယုံကြည်မှု | Yone-kyi-hmu | Trust state per identity |
 | Trust policies | ယုံကြည်မှု မူဝါဒများ | Yone-kyi-hmu mu-wa-da-mya | Policies governing automatic trust |
 | Coming Soon | မကြာမီ ရောက်ရှိမည် | Ma-kya-mi yauk-shi-mi | Placeholder for unshipped features |
+
+## Mesh, Keys and Review Terms
+
+Decided for client 0.5.239 so these terms stop being left in English. "corpus" means the rendering the shipped strings already use; "coined" means the corpus had none; "by hand" means the reviewer rejected both model drafts and the row was decided from the corpus and the reviewer's reasons. Machine-drafted and reviewed by a judge of a different model family; not native-reviewed.
+
+| English | Translation | Transliteration | Notes |
+|---------|-------------|-----------------|-------|
+| trust root | ယုံကြည်မှုအမြစ် | yonkyi-hmu amyit | corpus: the key or authority a node accepts as the origin of trust for a mesh; a node 'subscribes to' or 'adopts' one |
+| owner binding | ပိုင်ရှင်ချည်နှောင်မှု | paing-shin chi-hnaung-hmu | corpus: the signed record that ties a node to the person who owns it |
+| kill switch | အရေးပေါ် ရပ်တန့်ခလုတ် | a-yay-baw yat-tant kha-lok | coined: the accord's power to halt a node remotely in an emergency |
+| audit log | စာရင်းစစ်မှတ်တမ်း | sa-yin-sit hmat-tan | corpus: the tamper-evident record of what a node or agent did |
+| export job | ဒေတာ ထုတ်ယူရေး အလုပ်အမိန့် | - | by hand: a queued task that packages a person's data for download |
+| signing key | လက်မှတ်ရေးထိုးသည့် သော့ | let-hmat yay-htoe thi thaw | corpus: the private key a node or person signs with |
+| private key | သီးသန့်သော့ | thi-thant thaw | corpus: the secret half of a key pair |
+| session token | စက်ရှင်တိုကင် | sek-shin toe-kin | corpus: the credential a signed-in app sends with each request |
+| secure hardware | လုံခြုံသော hardware | lon-chon thaw hardware | corpus: the device's protected key store: TPM, Secure Enclave, StrongBox |
+| safety witness | ဘေးကင်းရေး သက်သေ | bay-kin-yay thet-thay | corpus: a party that watches and attests to an agent's safety behaviour |
+| rubric review | စံနှုန်း သုံးသပ်ချက် | san-hnon thone-that-chet | corpus: a review of an agent's behaviour against a scoring rubric |
+| delegation scope | ကိုယ်စားလွှဲအပ်မှု နယ်ပယ် | koe-sa-hlwe-ut-hmu nae-pae | corpus: the set of actions a delegate is allowed to perform |
+| canonical node | ကိုးကားစံ node | ko-kar san node | coined: a node chosen as the reference copy a family's other nodes follow |
+| serve node | ဝန်ဆောင်မှုပေးသည့် node | wun-saung-hmu-pay-thi node | corpus: a node that serves others on the mesh (always on, reachable) |
+| genesis seed | မူလ မျိုးစေ့ | mula myo-say | coined: the starting material from which a family's first records are created |
+| circuit breaker | အလိုအလျောက် ဖြတ်တောက်ကာကွယ်စနစ် | alo-alyauk hpyat-tauk ka-kwe sa-nit | coined: a safeguard that stops a failing service from being called until it recovers |
+| attestation level | အတည်ပြုချက် အဆင့် | a-ti-pyu-chet a-sint | corpus: how strongly a device has proven its identity and integrity (a numbered level) |
+| memory consolidation | မှတ်ဉာဏ် ပေါင်းစည်းခြင်း | hmat-nyan paung-si-chin | corpus: the agent's periodic pass that summarises and reorganises what it remembers |
+| setup wizard | တပ်ဆင်ရေး လမ်းညွှန် | tat-sin-yay lan-hnyun | corpus: the step-by-step screens that set up the app the first time |
+| Secure Enclave | Secure Enclave | Secure Enclave | Apple's product name; keep in English as Apple writes it |

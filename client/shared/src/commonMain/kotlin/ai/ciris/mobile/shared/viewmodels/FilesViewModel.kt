@@ -101,7 +101,8 @@ sealed interface OpenState {
 /** Adding a file. [Written] keeps the server's three facts apart: reached the audience, fetchable, fully granted. */
 sealed interface AddState {
     data object Idle : AddState
-    data class Uploading(val name: String) : AddState
+    /** [sent] and [total] in bytes; 0 total for an upload that reports none. */
+    data class Uploading(val name: String, val sent: Long = 0, val total: Long = 0) : AddState
 
     /** Refused BEFORE upload: the node's inline cap, said in words rather than learnt from a 413. */
     data class TooLarge(val name: String, val sizeBytes: Long, val limitBytes: Long) : AddState
@@ -355,6 +356,57 @@ class FilesViewModel(
                 AddState.Failed(picked.name, e.message ?: "error")
             }
         }
+    }
+
+    /** The streamed upload in flight, so the person can stop it. */
+    private var addJob: kotlinx.coroutines.Job? = null
+
+    /**
+     * Add [file] to this circle as a streamed upload, any size. The client checks
+     * no size: the node refuses what it will not take (`drive.too_large`), and
+     * its words are what the screen says.
+     */
+    fun addStream(file: ai.ciris.mobile.shared.platform.PickedFileStream, roomId: String? = null) {
+        _add.value = AddState.Uploading(file.name, 0, file.sizeBytes)
+        addJob = viewModelScope.launch {
+            var lastPercent = -1L
+            _add.value = try {
+                val sniffed = RenderTier.typeToDeclare(file.head)
+                val result = api.writeFileStreamed(
+                    cohort = cohort.wire,
+                    roomId = when (cohort) {
+                        FilesCohort.SELF -> null
+                        FilesCohort.FAMILY -> roomId ?: familyRoom
+                        FilesCohort.COMMUNITY -> roomId ?: room
+                    },
+                    mediaType = if (sniffed != OCTET) sniffed else file.mediaType.ifBlank { OCTET },
+                    file = file,
+                    onProgress = { sent, total ->
+                        // One state per percent, not one per buffer.
+                        val percent = if (total > 0) sent * 100 / total else 0
+                        if (percent != lastPercent) {
+                            lastPercent = percent
+                            _add.value = AddState.Uploading(file.name, sent, total)
+                        }
+                    },
+                )
+                refresh(familyRoom)
+                AddState.Written(file.name, result)
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: NodeRefusal) {
+                AddState.Refused(file.name, e)
+            } catch (e: Exception) {
+                AddState.Failed(file.name, e.message ?: "error")
+            }
+        }
+    }
+
+    /** Stop a streamed upload. The node seals nothing it did not receive whole. */
+    fun cancelAdd() {
+        addJob?.cancel()
+        addJob = null
+        _add.value = AddState.Idle
     }
 
     fun dismissAdd() {

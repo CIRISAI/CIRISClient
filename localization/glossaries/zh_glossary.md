@@ -237,6 +237,34 @@ This glossary defines the canonical translations for key CIRIS terms in Simplifi
 | Trust policies | 信任策略 | xìnrèn cèlüè | Section: policies governing automatic trust at a scope |
 | Coming Soon | 即将推出 | jíjiāng tuīchū | Placeholder for unshipped features |
 
+
+## Mesh, Keys and Review Terms
+
+Decided for client 0.5.239 so these terms stop being left in English. "corpus" means the rendering the shipped strings already use; "coined" means the corpus had none; "by hand" means the reviewer rejected both model drafts and the row was decided from the corpus and the reviewer's reasons. Machine-drafted and reviewed by a judge of a different model family; not native-reviewed.
+
+| English | Translation | Transliteration | Notes |
+|---------|-------------|-----------------|-------|
+| trust root | 信任根 | xinren gen | corpus: the key or authority a node accepts as the origin of trust for a mesh; a node 'subscribes to' or 'adopts' one |
+| owner binding | 所有者绑定 | suoyouzhe bangding | corpus: the signed record that ties a node to the person who owns it |
+| kill switch | 终止开关 | zhongzhi kaiguan | corpus: the accord's power to halt a node remotely in an emergency |
+| audit log | 审计日志 | shenji rizhi | corpus: the tamper-evident record of what a node or agent did |
+| export job | 导出作业 | daochu zuoye | corpus: a queued task that packages a person's data for download |
+| signing key | 签名密钥 | qianming miyao | corpus: the private key a node or person signs with |
+| private key | 私钥 | siyao | corpus: the secret half of a key pair |
+| session token | 会话令牌 | huihua lingpai | corpus: the credential a signed-in app sends with each request |
+| secure hardware | 安全硬件 | anquan yingjian | corpus: the device's protected key store: TPM, Secure Enclave, StrongBox |
+| safety witness | 安全见证 | anquan jianzheng | corpus: a party that watches and attests to an agent's safety behaviour |
+| rubric review | 评分准则审查 | pingfen zhunze shencha | corpus: a review of an agent's behaviour against a scoring rubric |
+| delegation scope | 委派范围 | weipai fanwei | corpus: the set of actions a delegate is allowed to perform |
+| canonical node | 规范节点 | guifan jiedian | corpus: a node chosen as the reference copy a family's other nodes follow |
+| serve node | 服务节点 | fuwu jiedian | corpus: a node that serves others on the mesh (always on, reachable) |
+| genesis seed | 创世种子 | chuangshi zhongzi | corpus: the starting material from which a family's first records are created |
+| circuit breaker | 断路器 | duanluqi | corpus: a safeguard that stops a failing service from being called until it recovers |
+| attestation level | 证明级别 | zhengming jibie | corpus: how strongly a device has proven its identity and integrity (a numbered level) |
+| memory consolidation | 记忆整合 | jiyi zhenghe | corpus: the agent's periodic pass that summarises and reorganises what it remembers |
+| setup wizard | 设置向导 | shezhi xiangdao | corpus: the step-by-step screens that set up the app the first time |
+| Secure Enclave | Secure Enclave | Secure Enclave | Apple's product name; keep in English as Apple writes it |
+
 ## Version History
 
 | Version | Date | Changes |

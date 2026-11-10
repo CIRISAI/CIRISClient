@@ -1865,6 +1865,25 @@ class SetupViewModel(
                         }
                         false
                     }
+                } catch (e: io.ktor.client.plugins.HttpRequestTimeoutException) {
+                    // A node older than 0.5.245 can hold this past the client's wait,
+                    // so a timeout means still looking, not refused.
+                    if (waited < addDeviceRetryWindowMs) {
+                        updateAddDevice {
+                            it.copy(
+                                phase = AddDevicePhase.RETRYING,
+                                refusalReasonId = ADD_DEVICE_OWNER_ROUTE_PENDING,
+                                availability = AddDeviceAvailability.AVAILABLE,
+                            )
+                        }
+                        true
+                    } else {
+                        PlatformLogger.w(TAG, "[addDevice] timed out after ${waited}ms")
+                        updateAddDevice {
+                            it.copy(phase = AddDevicePhase.REFUSED, refusalReasonId = ADD_DEVICE_OWNER_ROUTE_PENDING)
+                        }
+                        false
+                    }
                 } catch (e: Exception) {
                     PlatformLogger.w(TAG, "[addDevice] request failed: ${e.message}")
                     updateAddDevice {
@@ -1982,10 +2001,21 @@ class SetupViewModel(
             )
         )
         viewModelScope.launch {
+            // Before `complete`: a node older than 0.5.245 deletes the PIN file
+            // when the claim lands, and nothing can collect the session after.
+            // Held across a retry for the same reason.
+            val pin = heldClaimPin
+                ?: try { claimPinProvider()?.trim()?.ifEmpty { null } } catch (e: Exception) { null }
+            heldClaimPin = pin
             if (_state.value.addDevice.phase != AddDevicePhase.APPLIED) {
                 try {
                     PlatformLogger.i(TAG, "[ORDER] add_device_complete begin")
-                    val p = api.complete()
+                    val form = _state.value
+                    val account = form.addDevice.accountNeeded
+                    val p = api.complete(
+                        ownerUsername = form.username.takeIf { account },
+                        ownerPassword = form.userPassword.takeIf { account },
+                    )
                     applyProgress(p, AddDevicePhase.APPLIED)
                     PlatformLogger.i(TAG, "[ORDER] add_device_applied owner=${p.ownerKeyId ?: "<none>"}")
                 } catch (e: ai.ciris.mobile.shared.api.NodeRefusal) {
@@ -2023,10 +2053,9 @@ class SetupViewModel(
 
             // The claim is applied: this node is owned. Collect the session the
             // node holds for this wizard, with the PIN it printed (never logged).
-            val pin = try { claimPinProvider()?.trim() } catch (e: Exception) { null }
             var ownerLoginOk = false
             var role: String? = null
-            if (pin.isNullOrEmpty()) {
+            if (pin == null) {
                 PlatformLogger.w(TAG, "[ORDER] claimed_session SKIPPED (no claim PIN on this device) — sign in to finish")
                 _claimedSession.value = ClaimedSessionState.NoPin
             } else {
@@ -2054,8 +2083,17 @@ class SetupViewModel(
                 )
             )
             (apiClient as? CIRISApiClient)?.let { applyNodeOptionsAfterClaim(it, if (ownerLoginOk) "owner" else "none", ownerLoginOk) }
+            // With an agent the person signs in with the account just sent. Without
+            // one there is no password, so a missing session must be SAID, or the
+            // wizard ends at a sign-in nobody can pass.
+            val noWayIn = !ownerLoginOk && !_state.value.addDevice.accountNeeded
             _state.value = _state.value.copy(
-                ownershipClaim = _state.value.ownershipClaim.copy(inProgress = false)
+                ownershipClaim = _state.value.ownershipClaim.copy(
+                    inProgress = false,
+                    error = if (noWayIn) ai.ciris.mobile.shared.localization.LocalizationHelper.getString("mobile.add_device_no_session") else null,
+                    errorReasonId = if (noWayIn) "mobile.add_device_no_session" else null,
+                    errorRecoverable = false,
+                )
             )
             PlatformLogger.i(TAG, "[ORDER] claim_settled claimed=true path=add_device login=$ownerLoginOk — safe to complete")
         }
@@ -2165,6 +2203,9 @@ class SetupViewModel(
      */
     fun takeCollectedSession(): ai.ciris.mobile.shared.models.federation.ClaimedSessionGrant? =
         collectedGrant.also { collectedGrant = null }
+
+    /** The claim PIN, read before `complete`. Never logged. */
+    private var heldClaimPin: String? = null
 
     private val _claimedSession = MutableStateFlow<ClaimedSessionState>(ClaimedSessionState.Idle)
 
@@ -2305,6 +2346,8 @@ class SetupViewModel(
         _state.value = _state.value.copy(
             accordMetricsConsent = consent,
             traceConsentAnswered = _state.value.traceConsentAnswered || answered,
+            // The question only renders inside the loaded disclosure.
+            consentDisclosureShown = _state.value.consentDisclosureShown || answered,
         )
     }
 
@@ -2314,9 +2357,19 @@ class SetupViewModel(
      * author — and screen 2 may be left; the step states why instead of
      * holding a disabled Next with nothing on screen (CSD-082 §2 `empty`).
      */
+    /** Screen 2's disclosure is on screen, so its stated costs are too. */
+    fun noteConsentDisclosureShown() {
+        _state.value = _state.value.copy(consentDisclosureShown = true)
+    }
+
     fun noteTraceQuestionAbsent() {
         PlatformLogger.w(TAG, "[consent] disclosure carries no replication grant — no trace question, nothing sent")
-        _state.value = _state.value.copy(traceQuestionOffered = false, accordMetricsConsent = false)
+        _state.value = _state.value.copy(
+            traceQuestionOffered = false,
+            accordMetricsConsent = false,
+            // Known only from a disclosure that loaded.
+            consentDisclosureShown = true,
+        )
     }
 
     /**

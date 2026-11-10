@@ -166,6 +166,12 @@ so a lesson learned here reaches the models that would otherwise repeat it.
 - **"Found" in a button is the verb "to establish".** "Found a community" and
   "Found a local room" are imperatives: set one up. A reviewer in two languages
   read them as the past tense of "find" and rejected correct translations.
+- **No English left in the value.** Translate every clause, including technical
+  phrases ("owner binding", "trust root", "not available"); keep in English only
+  names and terms the glossary keeps. An anchor that still carries an English
+  clause is a defect, not a precedent. 0.5.239 found about 1,600 such values in 20
+  languages, whole sentences among them, every one past review;
+  `packaging/check_english_fragments.py` now fails the build on them.
 
 ## 4. Writing them in
 

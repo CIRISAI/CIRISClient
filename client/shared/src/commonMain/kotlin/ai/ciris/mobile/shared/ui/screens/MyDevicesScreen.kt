@@ -46,6 +46,8 @@ fun MyDevicesScreen(
     /** Approving a new device lives on My keys, because it adds a key to that roster. */
     onAddDevice: () -> Unit,
     onClaim: () -> Unit,
+    /** Open another owned node as a relayed snapshot; null where the local node cannot relay. */
+    onViewNode: ((keyId: String, label: String?) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     LaunchedEffect(Unit) { viewModel.load() }
@@ -104,6 +106,14 @@ fun MyDevicesScreen(
                                         fontSize = 11.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
+                                }
+                                if (!node.isSelf && onViewNode != null) {
+                                    OutlinedButton(
+                                        onClick = { onViewNode(node.keyId, node.label) },
+                                        modifier = Modifier.testableClickable("btn_identity_view_${node.keyId}") {
+                                            onViewNode(node.keyId, node.label)
+                                        },
+                                    ) { Text(localizedString("mobile.remote_node_view")) }
                                 }
                                 // A node too old for the device routes has no release to offer.
                                 if (!devicesUnsupported) {

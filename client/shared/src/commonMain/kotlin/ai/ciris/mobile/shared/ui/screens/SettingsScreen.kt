@@ -1207,7 +1207,10 @@ private fun TrustSecurityCard(
                         // Level 3: Network validation - Cross-check with multiple registries
                         val level2Failed = !level2Passed
                         val networkPassed = listOf(status.dnsUsOk, status.dnsEuOk, status.httpsUsOk || status.httpsEuOk).count { it }
-                        val level3Passed = networkPassed >= 2
+                        // Verify 21+ lists hosts; its DNS flags are always false, so the 2-of-3 count
+                        // would fail a healthy node.
+                        val hosts = ai.ciris.mobile.shared.viewmodels.VerifySources.of(status)
+                        val level3Passed = if (hosts.checked != null) hosts.rootAgreed else networkPassed >= 2
                         val level3Unverified = (level1Failed || level2Failed) && level3Passed
                         val level3Color = when {
                             !level3Passed -> semantic.error
@@ -1241,14 +1244,23 @@ private fun TrustSecurityCard(
                                 color = Color.Gray,
                                 modifier = Modifier.padding(start = 16.dp)
                             )
-                            Row(modifier = Modifier.padding(start = 16.dp, top = 2.dp)) {
+                            if (hosts.checked != null) {
+                                Text(
+                                    text = localizedString(
+                                        "mobile.trust_hosts_verified",
+                                        mapOf("verified" to hosts.verified.toString(), "checked" to hosts.checked.toString()),
+                                    ),
+                                    fontSize = 10.sp,
+                                    modifier = Modifier.padding(start = 16.dp, top = 2.dp),
+                                )
+                            } else Row(modifier = Modifier.padding(start = 16.dp, top = 2.dp)) {
                                 NetworkCheck("US", status.dnsUsOk)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 NetworkCheck("EU", status.dnsEuOk)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 NetworkCheck("HTTPS", status.httpsUsOk || status.httpsEuOk)
                             }
-                            if (networkPassed < 2) {
+                            if (!level3Passed) {
                                 Text(
                                     text = localizedString("mobile.settings_level_3_desc"),
                                     fontSize = 10.sp,

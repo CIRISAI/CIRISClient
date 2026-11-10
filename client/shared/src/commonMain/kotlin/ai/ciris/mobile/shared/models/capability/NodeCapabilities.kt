@@ -93,6 +93,12 @@ object Capability {
     /** The two verbs a canonical node holds that registry work rides on. */
     const val INFRA_ATTEST = "infra:attest"
     const val INFRA_SERVE = "infra:serve"
+
+    /**
+     * Calls in rooms (CSD-134). No node declares it yet: the server's call routes
+     * are CIRISServer#859, so the Call action stays hidden until one does.
+     */
+    const val CHAT_CALL = "chat:call"
 }
 
 /**

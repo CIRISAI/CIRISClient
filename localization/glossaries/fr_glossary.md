@@ -286,6 +286,33 @@ This glossary defines the canonical translations for key CIRIS terms in French. 
 | Trust policies | Politiques de confiance | Policies that govern automatic trust at this scope |
 | Coming Soon | Bientôt | Placeholder for unshipped features (matches existing `network.tiles.coming_soon_badge`) |
 
+
+## Mesh, Keys and Review Terms
+
+Decided for client 0.5.239 so these terms stop being left in English. "corpus" means the rendering the shipped strings already use; "coined" means the corpus had none; "by hand" means the reviewer rejected both model drafts and the row was decided from the corpus and the reviewer's reasons. Machine-drafted and reviewed by a judge of a different model family; not native-reviewed.
+
+| English | Translation | Transliteration | Notes |
+|---------|-------------|-----------------|-------|
+| trust root | racine de confiance | - | corpus: the key or authority a node accepts as the origin of trust for a mesh; a node 'subscribes to' or 'adopts' one |
+| owner binding | liaison de propriétaire | - | corpus: the signed record that ties a node to the person who owns it |
+| kill switch | coupe-circuit | - | corpus: the accord's power to halt a node remotely in an emergency |
+| audit log | journal d'audit | - | corpus: the tamper-evident record of what a node or agent did |
+| export job | job d'export | - | corpus: a queued task that packages a person's data for download |
+| signing key | clé de signature | - | corpus: the private key a node or person signs with |
+| private key | clé privée | - | corpus: the secret half of a key pair |
+| session token | jeton de session | - | corpus: the credential a signed-in app sends with each request |
+| secure hardware | matériel sécurisé | - | corpus: the device's protected key store: TPM, Secure Enclave, StrongBox |
+| safety witness | témoin de sécurité | - | corpus: a party that watches and attests to an agent's safety behaviour |
+| rubric review | évaluation par grille | - | by hand: a review of an agent's behaviour against a scoring rubric |
+| delegation scope | portée de délégation | - | corpus: the set of actions a delegate is allowed to perform |
+| canonical node | nœud canonique | - | corpus: a node chosen as the reference copy a family's other nodes follow |
+| serve node | nœud de service | - | corpus: a node that serves others on the mesh (always on, reachable) |
+| genesis seed | graine de genèse | - | corpus: the starting material from which a family's first records are created |
+| circuit breaker | disjoncteur | - | corpus: a safeguard that stops a failing service from being called until it recovers |
+| attestation level | niveau d'attestation | - | corpus: how strongly a device has proven its identity and integrity (a numbered level) |
+| memory consolidation | consolidation de la mémoire | - | corpus: the agent's periodic pass that summarises and reorganises what it remembers |
+| Secure Enclave | Secure Enclave | Secure Enclave | Apple's product name; keep in English as Apple writes it |
+
 ## Version History
 
 | Version | Date | Changes |

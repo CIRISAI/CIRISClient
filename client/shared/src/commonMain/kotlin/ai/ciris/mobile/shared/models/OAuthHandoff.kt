@@ -64,8 +64,15 @@ data class OAuthHandoffError(
  * ~3-minute timeout.
  */
 sealed class OAuthHandoffPoll {
-    /** 204 — not yet; the human is still in the browser. Keep waiting. */
+    /** 204 — not yet; the human is still in the browser. Keep waiting. The node KNOWS this flow. */
     object Pending : OAuthHandoffPoll()
+
+    /**
+     * An answer that could not be read (a boot blip, a 5xx, no connection). Keep
+     * waiting, but it says nothing about whether the node knows the flow, so it
+     * is not [Pending] (CIRISClient#284).
+     */
+    object Unclear : OAuthHandoffPoll()
 
     /** The node handed the session over. */
     data class Ready(val handoff: OAuthHandoff) : OAuthHandoffPoll()
@@ -84,7 +91,7 @@ sealed class OAuthHandoffPoll {
          * `access_token`), the throw read as "not yet", and the next poll got
          * 410 `auth.oauth.flow_expired`: the person saw "expired" instead of the
          * node's actual reason (`no_local_identity`, `exchange_failed`, ...).
-         * Anything else unreadable stays Pending, so a boot blip does not abort
+         * Anything else unreadable is Unclear (keep waiting), so a boot blip does not abort
          * a live sign-in.
          */
         fun classify(statusCode: Int, body: String): OAuthHandoffPoll {
@@ -93,9 +100,9 @@ sealed class OAuthHandoffPoll {
             if (statusCode in 200..299) {
                 if (err?.status == "failed") return Failed(err.reasonId, err.status)
                 return runCatching { Ready(json.decodeFromString(OAuthHandoff.serializer(), body)) }
-                    .getOrDefault(Pending)
+                    .getOrDefault(Unclear)
             }
-            return if (err?.reasonId != null) Failed(err.reasonId, err.status) else Pending
+            return if (err?.reasonId != null) Failed(err.reasonId, err.status) else Unclear
         }
     }
 }

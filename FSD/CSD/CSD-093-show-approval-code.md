@@ -61,10 +61,17 @@ never sends), the long form or the short form (`input_add_device_contact`; the
 node resolves all three, `ciris_edge::contact::resolve_contact`). It does NOT
 ask a fedID name (`input_fedid_label` is absent on this path), nor an age band
 (the age is the identity's, already recorded where it was minted), and on a
-node without an agent nor a local account (the claim on this path is applied
-through `setup/root` with no owner password, `src/add_device.rs:883-893`, so a
-password here would be stored nowhere). With an agent the account fields stay:
-the agent's own setup-complete creates its local user from them.
+node without an agent nor a local account (the owner session is collected
+instead, so a password here would be stored nowhere). With an agent the account
+fields stay, and they go to the node: `add-device/complete` takes optional
+`{owner_username, owner_password}` and passes them to `setup/root`, because the
+agent mints no user for a node-claimed owner. Without them the device reaches
+Login with no password on record.
+
+**The claim PIN is read before `add-device/complete`.** A node older than 0.5.245
+deletes the file when the claim lands. Without an agent a missing session is
+said in words (`mobile.add_device_no_session`), because there is no password to
+fall back on and the wizard would otherwise end at a sign-in nobody can pass.
 
 **The rest of the wizard runs as usual** (consent, and with an agent the AI
 step) while the person approves on the other device. Next on YOU opens as soon
@@ -111,6 +118,8 @@ other device yet — still trying.", `text_add_device_status` = `retrying`),
 with the path locked and Cancel available. Cancelling there needs no confirm
 and asks the node nothing, because no request reached the other device. After
 the bound, the refusal shows by id with Try again.
+
+**Every node, and a bare fed-ID (0.5.245).** The field also takes a fed-ID alone, and its hint says so (`mobile.add_device_contact_hint_2`, client 0.5.239; the field was always free text). The new device asks the canonical which nodes the person announced and asks every one it can reach, not just the first, so a dead node does not end the join. That needs the canonical on 0.5.245; with an older one a bare fed-ID finds no node, so ask for the contact code. A person with an unannounced device still needs the code or the pairing QR. Past two keys the other device's approval may answer 202 `held: true` (CSD-095): this device keeps waiting, and that is not a failure.
 
 **A disabled Next always says why.** With an agent the add-device path still
 asks the local account; once the request is out, a blank or mismatched account

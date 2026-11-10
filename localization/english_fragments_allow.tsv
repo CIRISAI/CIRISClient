@@ -1,0 +1,134 @@
+# English that is right as it stands, or kept on a stated rule. One row per finding; a row
+# that stops matching fails the check, so this list cannot outlive what it excuses.
+# Columns are tab-separated. Written for client 0.5.239 after three translate passes.
+lang	key	fragment	reason
+am	mobile.final_genesis_clock_note	System clock synchronized	literal timedatectl output the person compares against; translating it would make it unmatchable
+ar	mobile.final_genesis_clock_note	System clock synchronized	literal timedatectl output the person compares against; translating it would make it unmatchable
+bn	mobile.final_genesis_clock_note	System clock synchronized	literal timedatectl output the person compares against; translating it would make it unmatchable
+fa	mobile.final_genesis_clock_note	System clock synchronized	literal timedatectl output the person compares against; translating it would make it unmatchable
+hi	mobile.final_genesis_clock_note	System clock synchronized	literal timedatectl output the person compares against; translating it would make it unmatchable
+hi	sign_owner_binding.no_identity	roster key	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+ja	mobile.final_genesis_clock_note	System clock synchronized	literal timedatectl output the person compares against; translating it would make it unmatchable
+ko	mobile.final_genesis_clock_note	System clock synchronized	literal timedatectl output the person compares against; translating it would make it unmatchable
+mr	mobile.final_genesis_clock_note	System clock synchronized	literal timedatectl output the person compares against; translating it would make it unmatchable
+my	admin.deadmit.refused.no_slash_grant	preview hash	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+my	mobile.accord_bless_ci_desc	build pipelines	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+my	mobile.accord_bless_ci_desc	attest node key	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+my	mobile.accord_bless_ci_desc	job artifact	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+my	mobile.accord_ceremony_save_genesis	bake artifact	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+my	mobile.accord_ci_cosign_desc	identical envelope	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+my	mobile.accord_ci_cosign_desc	runner co	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+my	mobile.accord_ci_cosign_desc	scrub partial	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+my	mobile.accord_ci_cosign_paste_hint	runner co	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+my	mobile.accord_ci_cosign_paste_hint	scrub partial JSON	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+my	mobile.accord_ci_cosign_title	runner co	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+my	mobile.accord_new_cosign_ci_key	runner co	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+my	mobile.final_genesis_amend_limits	transit pair	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+my	mobile.age_range_card_body	sensitive space	kept by drafter and a different-family judge in three passes
+my	mobile.federation_create_explainer	security key	kept by drafter and a different-family judge in three passes
+my	mobile.final_genesis_clock_note	System clock synchronized	literal timedatectl output the person compares against; translating it would make it unmatchable
+my	mobile.manage_nodes_add_by_url_note	identity pin	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+my	mobile.manage_nodes_add_by_url_note	node code	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+my	mobile.trust_root_layer_unchecked	vendor root pin	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+my	mobile.trace_consent_decline_note	capacity score	kept by drafter and a different-family judge in three passes
+my	network.content.fetch.content_id_placeholder	hex digest	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+my	operator.drill.no_root_walked	drill subject	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+my	operator.source.node_state.unavailable	key standing	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+my	operator.source.node_state.unavailable	peer quota	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+my	operator.trust_root.valid	trust edge	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+my	transport.radio_desktop_only	serial port	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+my	transport.radio_desktop_only	radio backend	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+my	transport.radio_desktop_only	desktop node	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+my	trust_root.not_a_serve_node	transit row	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+my	drive.device_class_not_personal	desktop launcher	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+my	drive.bad_filename	control   bidi	operator or ceremony term of art kept by drafter and a different-family judge in three passes
+pa	mobile.final_genesis_clock_note	System clock synchronized	literal timedatectl output the person compares against; translating it would make it unmatchable
+ru	mobile.final_genesis_clock_note	System clock synchronized	literal timedatectl output the person compares against; translating it would make it unmatchable
+ta	adapters.wallet.error_no_signing	only mode	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	adapters.wallet.gotcha_irreversible	dispute mechanisms	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	adapters.wallet.request_fiat_note	callback webhook	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	adapters.wallet.request_use_cases	endpoint payment	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	adapters.wallet.send_detail	payment provider	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	adapters.wallet.statement_detail	transaction history	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	adapters.wallet.tool_send_desc	mobile money	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	adapters.wallet.tool_statement_desc	transaction history	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.accord_bless_ci_desc	substrate CI worker keys	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.accord_bless_ci_desc	build pipelines	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.accord_bless_ci_desc	attest node key	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.accord_bless_ci_desc	job artifact	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.accord_ceremony_save_genesis	start recognition	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.accord_ceremony_save_genesis	bake artifact	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.age_range_card_body	sensitive space	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.age_range_card_body	verified level	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.consent_switch_anonymous	statistical contributions	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.credits_no_credits	daily free uses midnight UTC	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.data_accord_desc_full	anonymized reasoning traces	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.data_accord_desc_full	AI safety research	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.data_accord_desc_full	message content	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.data_reset_desc	cached content	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.data_wipe_key_deletes	keystore entry	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.data_wipe_key_deletes	env configuration	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.federation_create_explainer	security key	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.final_genesis_clock_note	System clock synchronized	literal timedatectl output the person compares against; translating it would make it unmatchable
+ta	mobile.help_a_attestation	cryptographic signatures	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.help_a_cognitive_states	cognitive states	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.help_a_cognitive_states	creative mode	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.help_a_cognitive_states	graceful termination	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.help_a_data_stored	CIRIS conversation history	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.help_a_data_stored	cloud features	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.help_a_data_stored	authentication tokens	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.help_a_data_stored	data storage	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.help_a_delete_data	factory reset	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.help_a_delete_data	telemetry traces	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.help_a_delete_data	data export	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.help_a_how_to_chat	input field	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.help_a_how_to_chat	attachment button	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.help_a_memory	knowledge graph	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.help_a_memory	memory graph	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.help_a_no_response	network connection	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.help_a_no_response	credit balance	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.help_a_tools	web search	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.help_a_tools	home automation	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.login_ciris_hosted_info	Bring your own   key	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.scheduler_create_hint	automated actions	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.settings_backup_llm_desc	fall back	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.settings_data_management_desc	in traces	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.settings_level_2_desc	basic attestation	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.settings_level_2_desc	standard verification	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.settings_level_5_desc	full chain verification	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.setup_alignment_desc	AI alignment research	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.setup_alignment_desc	anonymous reasoning traces	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.setup_alignment_desc	alignment patterns	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.setup_free_desc	web search	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.setup_google_desc	protecting providers	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.setup_google_desc	web search	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.setup_location_note	time zones	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.setup_nav_weather_desc	free public APIs	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.setup_nav_weather_desc	based tools	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.setup_nav_weather_desc	usage policies	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.setup_nav_weather_desc	contact email	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.setup_oauth_desc	random password	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.setup_register_desc	custody keys	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.skill_req_env_hint	secret values	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.system_processor_note	cognitive states	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.system_processor_note	main processor	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.trust_level_explain	func manifests	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.trust_level_explain	backed keys	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.trust_level_explain	source key agreement	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.trust_verify_desc	cryptographic attestation	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.trust_verify_disclaimer	defined threat models	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.trust_verify_disclaimer	cryptographic attestation	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.trust_verify_disclaimer	absolute security	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.wallet_experimental_warning	experimental feature	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.wallet_gas_note	transaction fees	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.wallet_gas_note	per transfer	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.wallet_invalid_format	hex characters	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.wallet_limits_note	trust verification	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.files_policy_builtin	render policy	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	mobile.files_policy_builtin	in limits	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+ta	self.associate.hardware_custody_unavailable	software custody	Tamil glossary: spoken Tamil for UI with established English technical loanwords; kept by drafter and judge in three passes; Eric ruled 2026-11-09 to keep it as is
+te	mobile.final_genesis_clock_note	System clock synchronized	literal timedatectl output the person compares against; translating it would make it unmatchable
+th	mobile.final_genesis_clock_note	System clock synchronized	literal timedatectl output the person compares against; translating it would make it unmatchable
+uk	mobile.final_genesis_clock_note	System clock synchronized	literal timedatectl output the person compares against; translating it would make it unmatchable
+ur	mobile.final_genesis_clock_note	System clock synchronized	literal timedatectl output the person compares against; translating it would make it unmatchable
+zh	mobile.final_genesis_clock_note	System clock synchronized	literal timedatectl output the person compares against; translating it would make it unmatchable

@@ -161,9 +161,18 @@ tables allow, at the smaller cap. A node may narrow the recommended set (CC
 5.3.2.6, `FSD/MEDIA_EDGE.md` §3) and nothing it publishes can widen this
 client. Where the node has no such route (404, no id) or the read fails, the
 compiled-in table stands and the sheet says so (`file_policy_builtin`). The
-upload gate is the node's too: a file over `whole_read_max_bytes` — the write
-door's own refusal, `drive.too_large` at `src/drive.rs:728` — is refused
-before upload with the node's number in the sentence.
+upload gate is the node's alone (Eric, 2026-11-09: the node supports large
+files and the refusals come from it). Files › Add streams the file as
+`multipart/form-data`: every field, then `size` (the exact length), then the
+`file` part, read from disk as it goes (`StreamedFilePickerDialog`,
+`PickedFileStream`, `writeFileStreamed`). The node seals it in chunks up to
+2,560 MiB and refuses above that, or a body of another length, by name
+(`drive.too_large`, `drive.declared_length_mismatch`, `drive.field_after_file`);
+the screen shows the node's words. The client checks no size, shows progress
+against the file's own length (`mobile.files_uploading_progress`), and can stop
+an upload (`btn_files_add_cancel`). No overall time limit; a connection that
+moves nothing for two minutes fails. `StreamedUploadWireTest` pins the field
+order and the length on a real socket. Web has no picker yet.
 
 **What is declared downstream is the sniffed type, never the label.** The
 sheet's header and the platform's "Save a copy" get `RenderTier.typeToDeclare`

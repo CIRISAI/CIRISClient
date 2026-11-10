@@ -47,19 +47,21 @@ fun initUrlOpener(context: Context) {
 /**
  * Android implementation: open URL via Intent.ACTION_VIEW.
  */
-actual fun openUrlInBrowser(url: String) {
+actual fun openUrlInBrowser(url: String): Boolean {
     val ctx = urlOpenerContext
     if (ctx == null) {
         Log.e("Platform", "openUrlInBrowser: context not initialized, call initUrlOpener() first")
-        return
+        return false
     }
-    try {
+    return try {
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         ctx.startActivity(intent)
+        true
     } catch (e: Exception) {
         Log.e("Platform", "Failed to open URL: $url", e)
+        false
     }
 }
 

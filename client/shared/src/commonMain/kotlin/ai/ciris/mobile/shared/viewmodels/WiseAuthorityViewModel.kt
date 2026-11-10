@@ -662,7 +662,8 @@ class WiseAuthorityViewModel(
                                 approvalId,
                                 BudgetApprovalSeam.PROMOTED_STATUS,
                                 null,
-                            )
+                                expectedStatus = BudgetApprovalSeam.PROPOSAL_STATUS,
+                            ) == ai.ciris.mobile.shared.approvals.TicketUpdateOutcome.OK
                         } catch (e: Exception) {
                             logWarn(method, "Promotion call failed after grant: ${e.message}")
                             false
@@ -787,14 +788,21 @@ class WiseAuthorityViewModel(
                     fetchDataInternal()
                     return@launch
                 }
-                val ok = api.updateTicketStatus(approvalId, status, note)
-                if (ok) {
-                    _successMessage.value = successText
-                    if (retiresNotification) {
-                        notifier?.forget(approvalId)
+                // expected_status narrows the race the re-read above leaves open: a
+                // decision made elsewhere in between is a 409, not an overwrite.
+                when (api.updateTicketStatus(approvalId, status, note, BudgetApprovalSeam.PROPOSAL_STATUS)) {
+                    ai.ciris.mobile.shared.approvals.TicketUpdateOutcome.OK -> {
+                        _successMessage.value = successText
+                        if (retiresNotification) {
+                            notifier?.forget(approvalId)
+                        }
                     }
-                } else {
-                    _error.value = "Server refused the update"
+                    ai.ciris.mobile.shared.approvals.TicketUpdateOutcome.NOT_ALLOWED ->
+                        _error.value = ai.ciris.mobile.shared.localization.LocalizationHelper.getString("mobile.wa_update_not_allowed")
+                    ai.ciris.mobile.shared.approvals.TicketUpdateOutcome.CHANGED ->
+                        _error.value = ai.ciris.mobile.shared.localization.LocalizationHelper.getString("mobile.wa_update_changed")
+                    ai.ciris.mobile.shared.approvals.TicketUpdateOutcome.FAILED ->
+                        _error.value = ai.ciris.mobile.shared.localization.LocalizationHelper.getString("mobile.wa_update_failed")
                 }
                 fetchDataInternal()
             } catch (e: Exception) {

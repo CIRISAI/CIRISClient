@@ -16,9 +16,7 @@ actual fun getDeviceDebugInfo(): String {
     }
 }
 
-actual fun openUrlInBrowser(url: String) {
-    window.open(url, "_blank")
-}
+actual fun openUrlInBrowser(url: String): Boolean = window.open(url, "_blank") != null
 
 // The other three platforms read the packaged version from the artifact that
 // carries them — JAR manifest, CFBundleShortVersionString, Android versionName.

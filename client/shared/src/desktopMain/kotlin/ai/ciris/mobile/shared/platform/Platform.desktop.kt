@@ -20,13 +20,30 @@ actual fun getDeviceDebugInfo(): String {
     }
 }
 
-actual fun openUrlInBrowser(url: String) {
+actual fun openUrlInBrowser(url: String): Boolean {
     try {
-        if (Desktop.isDesktopSupported()) {
+        if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
             Desktop.getDesktop().browse(URI(url))
+            return true
         }
     } catch (e: Exception) {
-        println("Failed to open URL: $url - ${e.message}")
+        println("Failed to open URL through java.awt.Desktop: $url - ${e.message}")
+    }
+    // Many Linux desktops have no AWT browse support, and the call used to do
+    // nothing there, silently: the sign-in then polled for a browser that was
+    // never asked to open (CIRISClient#284). Ask the OS's own opener instead.
+    val os = System.getProperty("os.name").orEmpty().lowercase()
+    val command = when {
+        "mac" in os -> listOf("open", url)
+        "win" in os -> listOf("rundll32", "url.dll,FileProtocolHandler", url)
+        else -> listOf("xdg-open", url)
+    }
+    return try {
+        ProcessBuilder(command).redirectErrorStream(true).start()
+        true
+    } catch (e: Exception) {
+        println("Failed to open URL with ${command.first()}: $url - ${e.message}")
+        false
     }
 }
 

@@ -179,6 +179,34 @@ This glossary defines the canonical translations for key CIRIS terms in Tamil. A
 | Trust policies | நம்பிக்கை கொள்கைகள் | Auto-trust policies at scope |
 | Coming Soon | விரைவில் வருகிறது | Placeholder for unshipped features |
 
+
+## Mesh, Keys and Review Terms
+
+Decided for client 0.5.239 so these terms stop being left in English. "corpus" means the rendering the shipped strings already use; "coined" means the corpus had none; "by hand" means the reviewer rejected both model drafts and the row was decided from the corpus and the reviewer's reasons. Machine-drafted and reviewed by a judge of a different model family; not native-reviewed.
+
+| English | Translation | Transliteration | Notes |
+|---------|-------------|-----------------|-------|
+| trust root | நம்பிக்கை வேர் | - | by hand: the key or authority a node accepts as the origin of trust for a mesh; a node 'subscribes to' or 'adopts' one |
+| owner binding | உரிமையாளர் பிணைப்பு | urimaiyāḷar piṇaippu | corpus: the signed record that ties a node to the person who owns it |
+| kill switch | நிறுத்தல் சுவிட்ச் | niṟuttal suviṭch | corpus: the accord's power to halt a node remotely in an emergency |
+| audit log | தணிக்கைப் பதிவு | taṇikkaip pativu | corpus: the tamper-evident record of what a node or agent did |
+| export job | ஏற்றுமதிப் பணி | ēṟṟumatip paṇi | coined: a queued task that packages a person's data for download |
+| signing key | கையொப்ப விசை | kaiyoppa visai | corpus: the private key a node or person signs with |
+| private key | தனிப்பட்ட விசை | tanippaṭṭa vicai | corpus: the secret half of a key pair |
+| session token | அமர்வுக் குறியீடு | amarvuk kuṟiyīṭu | corpus: the credential a signed-in app sends with each request |
+| secure hardware | பாதுகாப்பான வன்பொருள் | pātukāppāna vaṉporuḷ | corpus: the device's protected key store: TPM, Secure Enclave, StrongBox |
+| safety witness | பாதுகாப்புச் சாட்சி | pātukāppuc cāṭci | coined: a party that watches and attests to an agent's safety behaviour |
+| rubric review | மதிப்பீட்டு அளவுகோல் ஆய்வு | matippīṭṭu aḷavukōl āyvu | coined: a review of an agent's behaviour against a scoring rubric |
+| delegation scope | ஒப்படைப்புப் பரப்பு | oppaṭaippup parappu | corpus: the set of actions a delegate is allowed to perform |
+| canonical node | நியமமான முனை | niyamamāṉa muṉai | corpus: a node chosen as the reference copy a family's other nodes follow |
+| serve node | சேவை முனை | cēvai muṉai | corpus: a node that serves others on the mesh (always on, reachable) |
+| genesis seed | தொடக்க விதை | toṭakka vitai | corpus: the starting material from which a family's first records are created |
+| circuit breaker | சர்க்யூட் பிரேக்கர் | sarkyūṭ pirēkkar | corpus: a safeguard that stops a failing service from being called until it recovers |
+| attestation level | சான்றளிப்பு நிலை | saandralippu nilai | coined: how strongly a device has proven its identity and integrity (a numbered level) |
+| memory consolidation | நினைவு ஒருங்கிணைப்பு | niṉaivu oruṅkiṇaippu | coined: the agent's periodic pass that summarises and reorganises what it remembers |
+| setup wizard | அமைவு வழிகாட்டி | amaivu vaḻikāṭṭi | corpus: the step-by-step screens that set up the app the first time |
+| Secure Enclave | Secure Enclave | Secure Enclave | Apple's product name; keep in English as Apple writes it |
+
 ## Version History
 
 | Version | Date | Changes |

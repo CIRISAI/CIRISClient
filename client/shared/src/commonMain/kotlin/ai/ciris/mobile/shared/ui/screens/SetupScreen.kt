@@ -885,6 +885,7 @@ private fun JoinFederationStep(
         try {
             val d = apiClient.getConsentDisclosure()
             disclosure = d
+            viewModel.noteConsentDisclosureShown()
             // No replication grant → no question to answer. Say so, and let the
             // step be left; without this Next stayed disabled with no cause shown.
             if (d.grant("replication") == null) viewModel.noteTraceQuestionAbsent()
@@ -1196,6 +1197,16 @@ private fun TraceConsentQuestion(
             lineHeight = 17.sp,
             modifier = Modifier.padding(top = 8.dp)
         )
+        // CC 4.5.13: unanswered is allowed, and says what it means.
+        if (!answered) {
+            Text(
+                text = localizedString("mobile.trace_consent_unanswered_note"),
+                color = SetupColors.TextSecondary,
+                fontSize = 12.sp,
+                lineHeight = 17.sp,
+                modifier = Modifier.padding(top = 4.dp).testable("txt_trace_consent_unanswered"),
+            )
+        }
     }
 }
 

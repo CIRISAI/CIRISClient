@@ -17,6 +17,18 @@ import kotlinx.serialization.Serializable
  * the bundles.
  */
 
+/**
+ * `POST /v1/setup/add-device/complete` body, on an agent install: the local
+ * account the node passes to `setup/root`. Never logged.
+ */
+@Serializable
+data class AddDeviceCompleteRequest(
+    @SerialName("owner_username")
+    val ownerUsername: String,
+    @SerialName("owner_password")
+    val ownerPassword: String,
+)
+
 /** `POST /v1/setup/add-device` body (`StartRequest`, `src/add_device.rs:380-385`). */
 @Serializable
 data class AddDeviceStartRequest(

@@ -16,3 +16,14 @@ actual fun FilePickerDialog(
         onDismiss()
     }
 }
+
+
+/** No web picker yet: dismiss at once, as [FilePickerDialog] does. */
+@Composable
+actual fun StreamedFilePickerDialog(
+    show: Boolean,
+    onPicked: (PickedFileStream) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    if (show) onDismiss()
+}

@@ -55,11 +55,12 @@ actual fun getDeviceDebugInfo(): String {
  * Must dispatch to main queue — UIKit calls require main thread.
  * Uses the modern open(_:options:completionHandler:) API.
  */
-actual fun openUrlInBrowser(url: String) {
-    val nsUrl = NSURL.URLWithString(url) ?: return
+actual fun openUrlInBrowser(url: String): Boolean {
+    val nsUrl = NSURL.URLWithString(url) ?: return false
     dispatch_async(dispatch_get_main_queue()) {
         UIApplication.sharedApplication.openURL(nsUrl, emptyMap<Any?, Any>(), null)
     }
+    return true
 }
 
 /**

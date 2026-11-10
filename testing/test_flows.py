@@ -1085,3 +1085,19 @@ def test_a_fresh_launch_starts_the_backend_supervisor():
     swift = (REPO / "client/iosApp/iosApp/ContentView.swift").read_text()
     after_ready = swift.split("pythonReady = true", 1)[1].split("return", 1)[0]
     assert "IosBackendBridge.shared.start()" in after_ready
+
+
+class _OverlaidHelper(FakeHelper):
+    """iOS with "Resuming…" drawn over a working app: every tag is there, and a
+    click goes straight through, so only `/state` can say a person sees nothing."""
+
+    async def get_state(self):
+        state = await super().get_state()
+        return {**state, "hostOverlay": "resuming"}
+
+
+def test_a_step_cannot_pass_under_a_host_overlay(tmp_path):
+    """Runs 41901714445 and 40951641548 passed with the overlay over every screen."""
+    out = _run(_spec(tmp_path), _OverlaidHelper("Thing", {"thing_list": ""}))
+    assert not run_flows.leg_ok([out])
+    assert "overlay covers the app" in out.detail

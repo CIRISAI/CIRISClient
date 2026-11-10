@@ -568,6 +568,8 @@ fun CIRISApp(
             // A chat goes back to where it was opened from: the contact list, or
             // a circle's Chats tab (CSD-091). Never hard-coded to Contacts.
             is Screen.UserChat -> (currentScreen as Screen.UserChat).from ?: Screen.Contacts
+            is Screen.Call -> (currentScreen as Screen.Call).room
+            is Screen.RemoteNode -> Screen.MyDevices
 
             // Everything the tree places answers for itself, so the button and
             // the shell's arrow cannot drift apart when a card moves.
@@ -914,7 +916,9 @@ fun CIRISApp(
                         val nonce = newAppNonce()
                         val signInUrl = apiClient.oauthBrowserLoginUrl("google", nonce, nodeBaseUrl)
                         platformLog(TAG, "[INFO][billing] opening browser for a fresh billing token: $signInUrl")
-                        openUrlInBrowser(signInUrl)
+                        if (!openUrlInBrowser(signInUrl)) {
+                            platformLog(TAG, "[WARN][billing] no browser accepted the sign-in URL; open it by hand: $signInUrl")
+                        }
                         refreshBillingCredentialFromBrowser(
                             signIn = {
                                 collectBrowserSignIn(
@@ -1134,6 +1138,12 @@ fun CIRISApp(
     // recourse against an admitted-but-hostile peer. Preview -> commit-with-hash.
     val adminLadderViewModel: ai.ciris.mobile.shared.viewmodels.AdminLadderViewModel = viewModel {
         ai.ciris.mobile.shared.viewmodels.AdminLadderViewModel(apiClient)
+    }
+    // Another owned node, read through this one (CSD-133, POST /v1/mesh/relay).
+    val remoteNodeViewModel = viewModel {
+        ai.ciris.mobile.shared.viewmodels.RemoteNodeViewModel { target, method, path ->
+            apiClient.meshRelay(target, method, path)
+        }
     }
     val identityManagementViewModel: ai.ciris.mobile.shared.viewmodels.IdentityManagementViewModel = viewModel {
         // nodeBaseUrl, not the api base: the federation warnings this screen
@@ -2406,7 +2416,15 @@ fun CIRISApp(
                         // a perfectly successful sign-in. Without this line the
                         // two are indistinguishable from the client side.
                         platformLog(TAG, "[INFO][onGoogleSignIn] opening browser: $signInUrl")
-                        openUrlInBrowser(signInUrl)
+                        if (!openUrlInBrowser(signInUrl)) {
+                            // Say so now, with the address, instead of polling for a
+                            // browser nobody asked to open (CIRISClient#284). The poll
+                            // still runs, so opening the address by hand still works.
+                            platformLog(TAG, "[WARN][onGoogleSignIn] no browser accepted the sign-in URL")
+                            loginStatusMessage = LocalizationHelper.getString(
+                                "auth.browser_signin.no_browser", mapOf("url" to signInUrl),
+                            )
+                        }
                         coroutineScope.launch {
                             // ONE LOOP, SHARED WITH THE BILLING REFRESH
                             // (BrowserSignIn.kt): ~3 minutes of polling, 204 is
@@ -2439,6 +2457,14 @@ fun CIRISApp(
                                     loginErrorMessage =
                                         LocalizationHelper.getString("auth.browser_signin.timed_out")
                                     platformLog(TAG, "[WARN][onGoogleSignIn] no hand-off after ${result.waitedSeconds}s. If you signed in successfully, the browser tab was probably an OLD one opened without ?app_nonce= — close stray CIRIS sign-in tabs and use the button again.")
+                                    return@launch
+                                }
+                                is BrowserSignInResult.BrowserNeverArrived -> {
+                                    // Not an expiry: the node never heard from the browser
+                                    // at all, so the fix is the browser, not the account.
+                                    loginErrorMessage =
+                                        LocalizationHelper.getString("auth.browser_signin.never_arrived")
+                                    platformLog(TAG, "[WARN][onGoogleSignIn] the node never saw the browser for this nonce in ${result.waitedSeconds}s — did a browser open at $signInUrl?")
                                     return@launch
                                 }
                                 is BrowserSignInResult.Collected -> result.handoff
@@ -4516,6 +4542,18 @@ fun CIRISApp(
                         safetyViewModel.prefillFromItem(room, author)
                         currentScreen = Screen.Moderation
                     },
+                    // Calls (CSD-134): only on a node that declares them.
+                    onCall = if (nodeCapabilities.has(ai.ciris.mobile.shared.models.capability.Capability.CHAT_CALL)) {
+                        { currentScreen = Screen.Call(route) }
+                    } else null,
+                )
+            }
+
+            is Screen.Call -> {
+                val call = currentScreen as Screen.Call
+                CallScreen(
+                    roomLabel = call.room.contactLabel,
+                    onBack = { currentScreen = call.room },
                 )
             }
 
@@ -4550,6 +4588,19 @@ fun CIRISApp(
                     viewModel = identityManagementViewModel,
                     onAddDevice = { currentScreen = Screen.IdentityManagement },
                     onClaim = { currentScreen = Screen.ClaimNode },
+                    // The relay's reads arrive in server 0.5.245; an older node has none.
+                    onViewNode = if (ai.ciris.mobile.shared.models.compareVersions(nodeVersion ?: "0", "0.5.245") >= 0) {
+                        { keyId, label -> currentScreen = Screen.RemoteNode(keyId, label) }
+                    } else null,
+                )
+            }
+            is Screen.RemoteNode -> {
+                val remote = currentScreen as Screen.RemoteNode
+                ai.ciris.mobile.shared.ui.screens.RemoteNodeScreen(
+                    viewModel = remoteNodeViewModel,
+                    targetKeyId = remote.keyId,
+                    label = remote.label,
+                    onBack = { currentScreen = Screen.MyDevices },
                 )
             }
             Screen.IdentityManagement -> {
@@ -5445,6 +5496,8 @@ fun CIRISApp(
                     Screen.NetworkDiagnostics, Screen.NetworkContent -> Screen.LayerGlobalCommons
                     is Screen.NetworkPeerDetail -> Screen.NetworkPeers
                     is Screen.UserChat -> (currentScreen as Screen.UserChat).from ?: Screen.Contacts
+                    is Screen.Call -> (currentScreen as Screen.Call).room
+                    is Screen.RemoteNode -> Screen.MyDevices
                     // EnvironmentInfo and Constitutional USED to hang off a
                     // layer hub; the spine placed them in Decisions and Safety,
                     // and this map wins before the placement rule — so leaving
@@ -6369,6 +6422,9 @@ internal sealed class Screen {
     object ManageNodes : Screen()
     // My devices (CSD-133): the owned nodes that run no agent, each with its release.
     object MyDevices : Screen()
+
+    /** Another node the person owns, as a relayed snapshot (CSD-133). */
+    data class RemoteNode(val keyId: String, val label: String?) : Screen()
     // Agents you own (CSD-132): the owned nodes that run an agent, with
     // rename, announce, verify and release.
     object OwnedAgents : Screen()
@@ -6408,6 +6464,11 @@ internal sealed class Screen {
          * room is open: a chat is a leaf of the surface it was opened from.
          */
         val from: Screen? = null,
+    ) : Screen()
+
+    /** A call in one room (CSD-134). Back returns to that room. */
+    data class Call(
+        val room: UserChat,
     ) : Screen()
     // Delegations (device-auth grants — authorize an agent to act on-behalf).
     object Delegations : Screen()
@@ -6593,9 +6654,12 @@ internal fun screenToSurface(s: Screen):ai.ciris.mobile.shared.ui.nav.NavSurface
     // Chats tab — it is a leaf of that surface, not a sidebar destination of
     // its own.
     is Screen.UserChat -> s.from?.let { screenToSurface(it) } ?: ai.ciris.mobile.shared.ui.nav.NavSurface.Contacts
+    // A call is a leaf of its room, so the room's surface stays lit.
+    is Screen.Call -> screenToSurface(s.room)
     Screen.Delegations -> ai.ciris.mobile.shared.ui.nav.NavSurface.Delegations
     Screen.IdentityManagement -> ai.ciris.mobile.shared.ui.nav.NavSurface.IdentityManagement
     Screen.MyDevices -> ai.ciris.mobile.shared.ui.nav.NavSurface.MyDevices
+    is Screen.RemoteNode -> ai.ciris.mobile.shared.ui.nav.NavSurface.MyDevices
     Screen.OwnedAgents -> ai.ciris.mobile.shared.ui.nav.NavSurface.OwnedAgents
     Screen.Accord -> ai.ciris.mobile.shared.ui.nav.NavSurface.Accord
         Screen.DutyConferral -> ai.ciris.mobile.shared.ui.nav.NavSurface.Accord

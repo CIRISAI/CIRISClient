@@ -673,6 +673,12 @@ class FlowRunner:
 
     async def _check(self, cond: Condition, label: str) -> Optional[str]:
         """None if the condition holds, else the FIRST failure, named precisely."""
+        # LOCAL DELTA: an overlay the host draws over the app hides it from a
+        # person, and the harness clicks straight through it, so a step cannot
+        # pass under one (runs 41901714445 and 40951641548). Only iOS reports it.
+        overlay = (await self.helper.get_state()).get("hostOverlay") or ""
+        if overlay:
+            return f"{label}: the host's {overlay!r} overlay covers the app"
         if cond.screen:
             actual = await self.helper.get_screen()
             if actual != cond.screen:

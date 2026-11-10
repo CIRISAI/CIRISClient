@@ -86,75 +86,19 @@ object NodeCodeCodec {
      * @throws NodeCodeException.Malformed on any structural problem.
      */
     fun decode(code: String): DecodedNodeCode {
-        // Normalize: drop all whitespace, uppercase.
-        val cleaned = buildString {
-            for (c in code) if (!c.isWhitespace()) append(c)
-        }.uppercase()
-
-        val body = stripDashedPrefix(cleaned)
-            ?: stripUndashedPrefix(cleaned)
-            ?: throw NodeCodeException.Malformed(
-                "NodeCode does not start with \"$PREFIX\" (or its undashed equivalent)"
-            )
-
-        val stripped = body.filter { it != '-' }
-        if (stripped.isEmpty()) {
-            throw NodeCodeException.Malformed("NodeCode has no payload after prefix")
+        // Every prefix decodes through the CC 2.6.8 decoder (pinned to CIRISVerify's
+        // golden vectors). Servers mint v3 node codes once clients read them, and a
+        // v3 code carries the ML-DSA-65 commitment the identity pin checks.
+        val d = FedCodeCodec.decode(code)
+        if (d.kind != FedCodeCodec.Kind.NODE) {
+            throw NodeCodeException.Malformed("this is a ${d.kind.name.lowercase()} code, not a node code")
         }
-
-        val raw = b32NoPadDecode(stripped)
-
-        val minSize = 1 + KEY_ID_HASH_LEN + PUBKEY_RAW_LEN + 1 + 1 + 1 + 2
-        if (raw.size < minSize) {
-            throw NodeCodeException.Malformed(
-                "NodeCode payload too short (${raw.size} bytes; need at least $minSize)"
-            )
-        }
-
-        val payload = raw.copyOfRange(0, raw.size - 2)
-        val declared = ((raw[raw.size - 2].toInt() and 0xFF) shl 8) or (raw[raw.size - 1].toInt() and 0xFF)
-        val computed = crc16Ccitt(payload)
-        if (declared != computed) {
-            throw NodeCodeException.ChecksumMismatch(declared, computed)
-        }
-
-        val version = payload[0].toInt() and 0xFF
-        if (version != VERSION) {
-            throw NodeCodeException.InvalidVersion(
-                "binary version 0x${version.toString(16)}; this build supports 0x${VERSION.toString(16)}"
-            )
-        }
-
-        var offset = 1
-        val keyIdHash = payload.copyOfRange(offset, offset + KEY_ID_HASH_LEN)
-        offset += KEY_ID_HASH_LEN
-
-        val pubkeyRaw = payload.copyOfRange(offset, offset + PUBKEY_RAW_LEN)
-        offset += PUBKEY_RAW_LEN
-
-        val (keyId, o1) = readLengthPrefixed(payload, offset); offset = o1
-        val (transportHint, o2) = readLengthPrefixed(payload, offset); offset = o2
-        val (aliasHint, o3) = readLengthPrefixed(payload, offset); offset = o3
-
-        if (offset != payload.size) {
-            throw NodeCodeException.Malformed(
-                "NodeCode has trailing garbage after parsed fields (${payload.size - offset} extra bytes)"
-            )
-        }
-        if (keyId.isEmpty()) {
-            throw NodeCodeException.Malformed("Decoded key_id is empty — NodeCode is malformed")
-        }
-        if (!sha256(keyId.encodeToByteArray()).contentEquals(keyIdHash)) {
-            throw NodeCodeException.Malformed(
-                "Decoded key_id hash does not match key_id string — NodeCode is corrupt"
-            )
-        }
-
         return DecodedNodeCode(
-            keyId = keyId,
-            pubkeyEd25519Base64 = b64Encode(pubkeyRaw),
-            transportHint = transportHint.ifEmpty { null },
-            aliasHint = aliasHint.ifEmpty { null },
+            keyId = d.keyId,
+            pubkeyEd25519Base64 = d.pubkeyEd25519Base64,
+            transportHint = d.transportHint,
+            aliasHint = d.aliasHint,
+            mlDsa65PubkeySha256 = d.mlDsa65PubkeySha256,
         )
     }
 
@@ -340,6 +284,11 @@ data class DecodedNodeCode(
     val pubkeyEd25519Base64: String,
     val transportHint: String? = null,
     val aliasHint: String? = null,
+    /**
+     * sha256 of the node's raw ML-DSA-65 public key, from a v3 code (CC 2.6.8). Null
+     * for a v1 code, which commits only to Ed25519. Never encoded by this client.
+     */
+    val mlDsa65PubkeySha256: String? = null,
 )
 
 /** NodeCode encode/decode failures — mirrors the agent/Rust exception hierarchy. */

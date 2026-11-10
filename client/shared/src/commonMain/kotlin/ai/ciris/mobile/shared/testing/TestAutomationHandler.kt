@@ -128,6 +128,7 @@ object TestAutomationHandler {
         nodeUrl = TestAutomationState.nodeUrl,
         circle = TestAutomationState.circle,
         tab = TestAutomationState.tab,
+        hostOverlay = TestAutomationState.hostOverlay?.invoke().orEmpty(),
     )
 
     fun handleScreen(): ScreenResponse {

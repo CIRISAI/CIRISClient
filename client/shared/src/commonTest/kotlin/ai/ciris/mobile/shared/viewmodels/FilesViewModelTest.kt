@@ -74,6 +74,24 @@ private class FakeDrive(
         return OpenedFile(attestationId, "text/plain", "a.txt", bytesBase64 = "aGVsbG8=") // "hello"
     }
     override suspend fun writeFile(write: FileWrite): FileWritten { writes += write; return written }
+    /** Sizes and declared types of every streamed upload, in order. */
+    val streamed = mutableListOf<Pair<Long, String>>()
+    var streamError: Exception? = null
+    /** Holds a streamed upload open until completed, so a test can stop it mid-way. */
+    var hold: kotlinx.coroutines.CompletableDeferred<Unit>? = null
+    override suspend fun writeFileStreamed(
+        cohort: String,
+        roomId: String?,
+        mediaType: String,
+        file: ai.ciris.mobile.shared.platform.PickedFileStream,
+        onProgress: (Long, Long) -> Unit,
+    ): FileWritten {
+        streamed += file.sizeBytes to mediaType
+        onProgress(file.sizeBytes / 2, file.sizeBytes)
+        hold?.await()
+        streamError?.let { throw it }
+        return written
+    }
     override suspend fun readNotes(): NoteListing = NoteListing("self", notes.toList())
     override suspend fun readCustody(attestationId: String, cohort: String, roomId: String?): ai.ciris.mobile.shared.models.drive.FileCustody =
         throw NodeRefusal(null, null, 404) // a released node: the route is not mounted
@@ -136,6 +154,52 @@ class FilesViewModelTest {
 
         val onlyNotes = FilesViewModel(FakeDrive(listing = DriveListing(entries = listOf(note))), FilesCohort.SELF).also { made += it }.also { it.refresh() }
         assertEquals(FilesState.Empty, onlyNotes.state.value)
+    }
+
+    private fun stream(size: Long, head: ByteArray = ByteArray(0), name: String = "big.bin") =
+        ai.ciris.mobile.shared.platform.PickedFileStream(name, "application/octet-stream", size, head) {
+            io.ktor.utils.io.ByteReadChannel(ByteArray(0))
+        }
+
+    /** The node takes up to 2.5 GiB and refuses above that itself: the client never pre-refuses. */
+    @Test
+    fun aHugeFileGoesToTheNodeWithNoClientLimit() {
+        val drive = FakeDrive(policy = MediaPolicy(tierA = emptyMap(), wholeReadMaxBytes = 64L * 1024 * 1024))
+        val vm = FilesViewModel(drive, FilesCohort.SELF).also { made += it }
+        val threeGib = 3L * 1024 * 1024 * 1024
+        vm.addStream(stream(threeGib))
+        assertEquals(listOf(threeGib), drive.streamed.map { it.first })
+        assertIs<AddState.Written>(vm.add.value)
+    }
+
+    @Test
+    fun theNodesRefusalIsWhatTheScreenSays() {
+        val drive = FakeDrive().apply { streamError = NodeRefusal("drive.too_large", "over the ceiling", 413) }
+        val vm = FilesViewModel(drive, FilesCohort.SELF).also { made += it }
+        vm.addStream(stream(4L * 1024 * 1024 * 1024))
+        assertEquals("drive.too_large", assertIs<AddState.Refused>(vm.add.value).refusal.reasonId)
+    }
+
+    @Test
+    fun anUploadShowsProgressAndCanBeStopped() {
+        val drive = FakeDrive().apply { hold = kotlinx.coroutines.CompletableDeferred() }
+        val vm = FilesViewModel(drive, FilesCohort.SELF).also { made += it }
+        vm.addStream(stream(1000))
+        val uploading = assertIs<AddState.Uploading>(vm.add.value)
+        assertEquals(500L, uploading.sent)
+        assertEquals(1000L, uploading.total)
+        vm.cancelAdd()
+        drive.hold!!.complete(Unit)
+        assertEquals(AddState.Idle, vm.add.value)
+    }
+
+    /** What the bytes are, not the picker's label: a PNG is declared a PNG. */
+    @Test
+    fun aStreamedFileDeclaresTheTypeItsBytesAre() {
+        val png = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A) + ByteArray(32)
+        val drive = FakeDrive()
+        FilesViewModel(drive, FilesCohort.SELF).also { made += it }.addStream(stream(40, png, "x"))
+        assertEquals("image/png", drive.streamed.single().second)
     }
 
     @Test

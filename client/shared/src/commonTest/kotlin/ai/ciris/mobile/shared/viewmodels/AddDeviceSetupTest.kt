@@ -74,8 +74,11 @@ class AddDeviceSetupTest {
             }
         }
 
-        override suspend fun complete(): AddDeviceProgress {
+        var lastOwner: Pair<String?, String?>? = null
+
+        override suspend fun complete(ownerUsername: String?, ownerPassword: String?): AddDeviceProgress {
             calls += "complete"
+            lastOwner = ownerUsername to ownerPassword
             return completeAnswer()
         }
 
@@ -312,6 +315,70 @@ class AddDeviceSetupTest {
     }
 
     // ── The end of first run ─────────────────────────────────────────────────
+
+    /** A node older than 0.5.245 deletes the PIN when the claim lands (a real Android run). */
+    @Test
+    fun thePinIsReadBeforeTheClaimIsApplied() = runBlocking {
+        val node = ScriptedNode()
+        var readBefore: List<String>? = null
+        val vm = vm(node)
+        vm.asked()
+        vm.until("requested") { it.addDevice.phase == AddDevicePhase.REQUESTED }
+
+        vm.claimLocalNodeOwnership(claimPinProvider = { readBefore = node.calls.toList(); "7F3K-Q9MZ" })
+
+        vm.until("claimed") { it.ownershipClaim.claimed && !it.ownershipClaim.inProgress }
+        assertFalse("complete" in readBefore.orEmpty(), "the PIN must be read before complete")
+        assertEquals("7F3K-Q9MZ", node.lastPin)
+    }
+
+    /** With no agent there is no password, so this is the last thing the person can be told. */
+    @Test
+    fun noPinOnANodeWithoutAnAgentSaysSoInsteadOfEndingAtASignIn() = runBlocking {
+        val node = ScriptedNode()
+        val vm = vm(node)
+        vm.asked()
+        vm.until("requested") { it.addDevice.phase == AddDevicePhase.REQUESTED }
+
+        vm.claimLocalNodeOwnership(claimPinProvider = { null })
+
+        val s = vm.until("settled") { it.ownershipClaim.claimed && !it.ownershipClaim.inProgress }
+        assertEquals("mobile.add_device_no_session", s.ownershipClaim.errorReasonId)
+        assertFalse(s.ownershipClaim.errorRecoverable, "the claim landed, so retrying cannot help")
+        assertEquals(ClaimedSessionState.NoPin, vm.claimedSession.value)
+    }
+
+    /** The agent mints no user for a node-claimed owner, so the account goes to the node. */
+    @Test
+    fun anAgentInstallSendsItsAccountWithTheClaim() = runBlocking {
+        val node = ScriptedNode()
+        val vm = vm(node, hasAgent = true)
+        vm.setUsername("qaadmin")
+        vm.setUserPassword("a-long-test-password")
+        vm.asked()
+        vm.until("requested") { it.addDevice.phase == AddDevicePhase.REQUESTED }
+
+        vm.claimLocalNodeOwnership(claimPinProvider = { null })
+
+        val s = vm.until("settled") { it.ownershipClaim.claimed && !it.ownershipClaim.inProgress }
+        assertEquals("qaadmin" to "a-long-test-password", node.lastOwner)
+        assertNull(s.ownershipClaim.error, "with an account the person can still sign in")
+    }
+
+    /** A node without an agent has no account to send. */
+    @Test
+    fun aNodeWithoutAnAgentSendsNoAccount() = runBlocking {
+        val node = ScriptedNode()
+        val vm = vm(node)
+        vm.setUsername("left-over")
+        vm.asked()
+        vm.until("requested") { it.addDevice.phase == AddDevicePhase.REQUESTED }
+
+        vm.claimLocalNodeOwnership(claimPinProvider = { "7F3K-Q9MZ" })
+
+        vm.until("claimed") { it.ownershipClaim.claimed && !it.ownershipClaim.inProgress }
+        assertEquals(null to null, node.lastOwner)
+    }
 
     @Test
     fun completeBeforeApprovalWaitsInsteadOfFailing() = runBlocking {

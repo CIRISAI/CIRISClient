@@ -184,7 +184,7 @@ fun FilesScreen(
     val add by viewModel.add.collectAsState()
     val policy by viewModel.policy.collectAsState()
     var picking by remember { mutableStateOf(false) }
-    var choosingRoomFor by remember { mutableStateOf<ai.ciris.mobile.shared.platform.PickedFile?>(null) }
+    var choosingRoomFor by remember { mutableStateOf<ai.ciris.mobile.shared.platform.PickedFileStream?>(null) }
     var receiptFor by remember { mutableStateOf<Receipt?>(null) }
     val actState by viewModel.act.collectAsState()
     var renaming by remember { mutableStateOf<DriveEntry?>(null) }
@@ -206,22 +206,21 @@ fun FilesScreen(
         LaunchedEffect(Unit) { viewModel.refresh() }
     }
 
-    FilePickerDialog(
+    // Streamed, any size: the node refuses what it will not take, by name.
+    ai.ciris.mobile.shared.platform.StreamedFilePickerDialog(
         show = picking,
-        mimeTypes = listOf("*/*"),
-        onFilePicked = { picked ->
+        onPicked = { picked ->
             picking = false
             val rooms = viewModel.rooms
             when {
-                viewModel.room != null -> viewModel.addFile(picked, viewModel.room)
-                viewModel.cohort == FilesCohort.SELF -> viewModel.addFile(picked)
-                viewModel.cohort == FilesCohort.FAMILY -> viewModel.addFile(picked, household?.familyId)
-                rooms.size == 1 -> viewModel.addFile(picked, rooms.single())
+                viewModel.room != null -> viewModel.addStream(picked, viewModel.room)
+                viewModel.cohort == FilesCohort.SELF -> viewModel.addStream(picked)
+                viewModel.cohort == FilesCohort.FAMILY -> viewModel.addStream(picked, household?.familyId)
+                rooms.size == 1 -> viewModel.addStream(picked, rooms.single())
                 else -> choosingRoomFor = picked
             }
         },
         onDismiss = { picking = false },
-        onTooLarge = { r -> picking = false; viewModel.refuseTooLarge(r.name, r.sizeBytes, r.limitBytes) },
     )
 
     Scaffold(
@@ -255,7 +254,7 @@ fun FilesScreen(
         containerColor = t.ground,
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            AddStatus(add, onDismiss = { viewModel.dismissAdd() })
+            AddStatus(add, onDismiss = { viewModel.dismissAdd() }, onCancel = { viewModel.cancelAdd() })
             if (onPick != null) {
                 Text(
                     localizedString("mobile.files_pick_hint"),
@@ -410,7 +409,7 @@ fun FilesScreen(
                     CirisButton(
                         label = localizedString("mobile.files_room", "room", shortKey(room)),
                         tag = FilesTags.pickRoom(room),
-                        onClick = { choosingRoomFor = null; viewModel.addFile(picked, room) },
+                        onClick = { choosingRoomFor = null; viewModel.addStream(picked, room) },
                     )
                 }
             }
@@ -435,11 +434,14 @@ internal fun custodyTargetOf(entry: DriveEntry): CustodyTarget =
 
 /** What happened to the last add, in words. The three facts the server keeps apart stay apart here. */
 @Composable
-private fun AddStatus(add: AddState, onDismiss: () -> Unit) {
+private fun AddStatus(add: AddState, onDismiss: () -> Unit, onCancel: () -> Unit) {
     val t = CirisTheme.tokens
     val text: String? = when (add) {
         AddState.Idle -> null
-        is AddState.Uploading -> localizedString("mobile.files_uploading", "name", add.name)
+        is AddState.Uploading -> if (add.total > 0) localizedString(
+            "mobile.files_uploading_progress",
+            mapOf("name" to add.name, "sent" to humanBytes(add.sent), "total" to humanBytes(add.total)),
+        ) else localizedString("mobile.files_uploading", "name", add.name)
         is AddState.TooLarge -> localizedString(
             "mobile.files_too_large",
             mapOf("name" to add.name, "size" to humanBytes(add.sizeBytes), "limit" to humanBytes(add.limitBytes)),
@@ -465,6 +467,9 @@ private fun AddStatus(add: AddState, onDismiss: () -> Unit) {
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         CardShell(tag = FilesTags.ADD_STATUS) {
             Text(text, style = CirisTheme.type.body, color = if (warn) t.danger else t.ink)
+            if (add is AddState.Uploading) {
+                CirisTextButton(label = localizedString("mobile.files_add_cancel"), tag = "btn_files_add_cancel", onClick = onCancel)
+            }
             if (add !is AddState.Uploading) {
                 CirisTextButton(label = localizedString("mobile.files_close"), tag = "btn_files_add_status_close", onClick = onDismiss)
             }

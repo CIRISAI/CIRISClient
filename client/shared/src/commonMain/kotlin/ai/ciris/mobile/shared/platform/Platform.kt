@@ -93,8 +93,13 @@ expect fun getDeviceDebugInfo(): String
 /**
  * Open a URL in the platform's default browser.
  * On iOS calls UIApplication.shared.open, on Android uses Intent.ACTION_VIEW.
+ *
+ * @return false when no browser could be asked to open it (no handler, no
+ *   desktop integration, a malformed URL). True means the request was handed
+ *   over, not that a page loaded: a caller waiting on the browser still needs
+ *   its own patience (CIRISClient#284).
  */
-expect fun openUrlInBrowser(url: String)
+expect fun openUrlInBrowser(url: String): Boolean
 
 /**
  * Get the app version string (e.g., "2.3.1").

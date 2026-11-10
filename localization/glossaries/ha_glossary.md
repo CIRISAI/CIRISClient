@@ -171,6 +171,34 @@ This glossary defines the canonical translations for key CIRIS terms in Hausa. A
 | Trust policies | Manufofin amincewa | Policies governing automatic trust at a scope |
 | Coming Soon | Yana zuwa nan ba da daɗewa ba | Placeholder for unshipped features |
 
+
+## Mesh, Keys and Review Terms
+
+Decided for client 0.5.239 so these terms stop being left in English. "corpus" means the rendering the shipped strings already use; "coined" means the corpus had none; "by hand" means the reviewer rejected both model drafts and the row was decided from the corpus and the reviewer's reasons. Machine-drafted and reviewed by a judge of a different model family; not native-reviewed.
+
+| English | Translation | Transliteration | Notes |
+|---------|-------------|-----------------|-------|
+| trust root | tushen amincewa | - | corpus: the key or authority a node accepts as the origin of trust for a mesh; a node 'subscribes to' or 'adopts' one |
+| owner binding | ɗaurin mai mallaka | - | coined: the signed record that ties a node to the person who owns it |
+| kill switch | maɓallin kashewa | - | corpus: the accord's power to halt a node remotely in an emergency |
+| audit log | rajistar tantancewa | - | corpus: the tamper-evident record of what a node or agent did |
+| export job | aikin fitarwa | - | corpus: a queued task that packages a person's data for download |
+| signing key | maɓallin sa hannu | - | corpus: the private key a node or person signs with |
+| private key | maɓallin sirri | - | corpus: the secret half of a key pair |
+| session token | token na zama | - | corpus: the credential a signed-in app sends with each request |
+| secure hardware | kayan aiki mai tsaro | - | corpus: the device's protected key store: TPM, Secure Enclave, StrongBox |
+| safety witness | shaidar tsaro | - | corpus: a party that watches and attests to an agent's safety behaviour |
+| rubric review | binciken rubric | - | corpus: a review of an agent's behaviour against a scoring rubric |
+| delegation scope | iyakar wakilci | - | corpus: the set of actions a delegate is allowed to perform |
+| canonical node | kumburin misali | - | by hand: a node chosen as the reference copy a family's other nodes follow |
+| serve node | kumburin hidima | - | corpus: a node that serves others on the mesh (always on, reachable) |
+| genesis seed | irin genesis | - | corpus: the starting material from which a family's first records are created |
+| circuit breaker | ketaren kadera | - | corpus: a safeguard that stops a failing service from being called until it recovers |
+| attestation level | matakin shaida | - | by hand: how strongly a device has proven its identity and integrity (a numbered level) |
+| memory consolidation | shirya ƙwaƙwalwa | - | corpus: the agent's periodic pass that summarises and reorganises what it remembers |
+| setup wizard | jagorar saiti | - | by hand: the step-by-step screens that set up the app the first time |
+| Secure Enclave | Secure Enclave | Secure Enclave | Apple's product name; keep in English as Apple writes it |
+
 ## Version History
 
 | Version | Date | Changes |

@@ -95,6 +95,7 @@ import io.ktor.client.call.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
+import io.ktor.client.plugins.onUpload
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -1275,6 +1276,12 @@ class CIRISApiClient internal constructor(
             }
         }
 
+    /** A streamed upload fails only when nothing moves for this long. */
+    private val UPLOAD_STALL_MS = 120_000L
+
+    /** How long add-device calls wait: past the node's own 30 s wait for an owner route. */
+    private val ADD_DEVICE_TIMEOUT_MS = 45_000L
+
     /** Timeout for touch-gated YubiKey ceremony calls (3 touches × human latency). */
     private val ceremonyTimeoutMillis: Long = 180_000
 
@@ -1967,6 +1974,119 @@ class CIRISApiClient internal constructor(
             }
         } catch (e: Exception) {
             logException(method, e, "cohort=${write.cohort}")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * `POST /v1/files`, streamed (CIRISServer `src/drive.rs` `parse_upload`). Every
+     * field precedes the file, because the node seals the bytes as they arrive
+     * (`drive.field_after_file` otherwise), and `size` is the file's exact length,
+     * which lets it stream up to 2.5 GiB instead of collecting the part whole. No
+     * overall time limit, since a large file over a slow link takes as long as it
+     * takes; a stalled connection still fails after [UPLOAD_STALL_MS]. Refusals are
+     * the node's, by name.
+     */
+    suspend fun writeFileStreamed(
+        cohort: String,
+        roomId: String?,
+        mediaType: String,
+        file: ai.ciris.mobile.shared.platform.PickedFileStream,
+        onProgress: (Long, Long) -> Unit,
+        nodeUrl: String,
+    ): FileWritten {
+        val method = "writeFileStreamed"
+        logInfo(method, "POST $nodeUrl/v1/files (streamed) cohort=$cohort media=$mediaType size=${file.sizeBytes}")
+        val client = agentHttpClient {
+            install(io.ktor.client.plugins.HttpTimeout) {
+                requestTimeoutMillis = io.ktor.client.plugins.HttpTimeoutConfig.INFINITE_TIMEOUT_MS
+                connectTimeoutMillis = 10_000
+                socketTimeoutMillis = UPLOAD_STALL_MS
+            }
+        }
+        return try {
+            val form = io.ktor.client.request.forms.MultiPartFormDataContent(
+                io.ktor.client.request.forms.formData {
+                    append("cohort", cohort)
+                    roomId?.let { append("room_id", it) }
+                    append("media_type", mediaType)
+                    append("filename", file.name)
+                    append("size", file.sizeBytes.toString())
+                    append(
+                        "file",
+                        io.ktor.client.request.forms.ChannelProvider(file.sizeBytes) { file.open() },
+                        io.ktor.http.Headers.build {
+                            append(io.ktor.http.HttpHeaders.ContentType, mediaType)
+                            append(
+                                io.ktor.http.HttpHeaders.ContentDisposition,
+                                "filename=\"${file.name.replace("\"", "")}\"",
+                            )
+                        },
+                    )
+                },
+            )
+            val response = client.post("$nodeUrl/v1/files") {
+                authHeader()?.let { header("Authorization", it) }
+                setBody(form)
+                // Ktor counts the whole form, framing included; the person cares about the file.
+                onUpload { sent, _ -> onProgress(minOf(sent, file.sizeBytes), file.sizeBytes) }
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, raw)
+            jsonConfig.decodeFromString(FileWritten.serializer(), raw).also {
+                logInfo(method, "written ${it.attestationId} crossed=${it.crossed}")
+            }
+        } catch (e: Exception) {
+            logException(method, e, "cohort=$cohort size=${file.sizeBytes}")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * `POST /v1/mesh/relay` on THIS device's own node: one read on another node the
+     * person owns, signed by the node and checked by the target against the owner's
+     * self-key roster (CIRISServer 0.5.245 `src/mesh_relay.rs`). The target's status
+     * and body come back verbatim; the relay's own failures are
+     * `{"error": "<token>: …"}` and become a [RelayRefusal].
+     */
+    suspend fun meshRelay(
+        targetKeyId: String,
+        method: String,
+        path: String,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.viewmodels.RelayAnswer {
+        val method_ = "meshRelay"
+        logInfo(method_, "POST $nodeUrl/v1/mesh/relay $method $path")
+        // The relay waits on the mesh; a slow target is its timeout to name, not ours.
+        val client = federationHttpClient(requestTimeoutMillis = 60_000)
+        return try {
+            val response = client.post("$nodeUrl/v1/mesh/relay") {
+                authHeader()?.let { header("Authorization", it) }
+                contentType(ContentType.Application.Json)
+                setBody(buildJsonObject {
+                    put("target_key_id", targetKeyId)
+                    put("method", method)
+                    put("path", path)
+                }.toString())
+            }
+            val raw = response.bodyAsText()
+            val code = response.status.value
+            val relayError = runCatching {
+                (jsonConfig.parseToJsonElement(raw) as? JsonObject)?.get("error")?.jsonPrimitive?.contentOrNull
+            }.getOrNull()
+            // The relay's own refusals carry {"error": "<token>: …"}; anything else is the target's answer.
+            if (relayError != null && (code == 502 || code == 504 || code == 401 || relayError.contains("relayable"))) {
+                throw ai.ciris.mobile.shared.viewmodels.RelayRefusal(code, relayError.substringBefore(':').trim(), relayError)
+            }
+            ai.ciris.mobile.shared.viewmodels.RelayAnswer(code, raw)
+        } catch (e: ai.ciris.mobile.shared.viewmodels.RelayRefusal) {
+            throw e
+        } catch (e: Exception) {
+            logException(method_, e, "target=$targetKeyId path=$path")
             throw e
         } finally {
             client.close()
@@ -2968,7 +3088,7 @@ class CIRISApiClient internal constructor(
                 if (response.status.value == 204) "" else response.bodyAsText(),
             )
         } catch (_: Exception) {
-            OAuthHandoffPoll.Pending
+            OAuthHandoffPoll.Unclear
         } finally {
             client.close()
         }
@@ -3522,7 +3642,10 @@ class CIRISApiClient internal constructor(
         withSession: Boolean,
     ): String {
         logInfo(method, "${verb.value} $nodeUrl$path")
-        val client = federationHttpClient()
+        // The node waits up to 30 s for the other device's address before it can
+        // answer 503 with Retry-After, so at 30 s the client gave up first and the
+        // person saw a raw timeout. 0.5.245 waits 25 s.
+        val client = federationHttpClient(requestTimeoutMillis = ADD_DEVICE_TIMEOUT_MS)
         return try {
             val response = client.request("$nodeUrl$path") {
                 this.method = verb
@@ -3584,8 +3707,19 @@ class CIRISApiClient internal constructor(
      */
     suspend fun addDeviceComplete(
         nodeUrl: String = LOCAL_NODE_URL,
+        ownerUsername: String? = null,
+        ownerPassword: String? = null,
     ): ai.ciris.mobile.shared.models.federation.AddDeviceProgress {
-        val raw = addDeviceCall("addDeviceComplete", HttpMethod.Post, nodeUrl, "/v1/setup/add-device/complete", "{}", withSession = false)
+        val body = if (ownerUsername.isNullOrBlank() || ownerPassword.isNullOrEmpty()) "{}" else {
+            jsonConfig.encodeToString(
+                ai.ciris.mobile.shared.models.federation.AddDeviceCompleteRequest.serializer(),
+                ai.ciris.mobile.shared.models.federation.AddDeviceCompleteRequest(
+                    ownerUsername = ownerUsername.trim(),
+                    ownerPassword = ownerPassword,
+                ),
+            )
+        }
+        val raw = addDeviceCall("addDeviceComplete", HttpMethod.Post, nodeUrl, "/v1/setup/add-device/complete", body, withSession = false)
         return decodeFederationEnvelope(raw, ai.ciris.mobile.shared.models.federation.AddDeviceProgress.serializer())
     }
 
@@ -8933,6 +9067,18 @@ class CIRISApiClient internal constructor(
                 },
                 // v0.8.5: Registry sources agreement
                 sourcesAgreeing = (data["sources_agreeing"] as? JsonPrimitive)?.content?.toIntOrNull(),
+                sources = (data["sources"] as? kotlinx.serialization.json.JsonArray)?.mapNotNull { el ->
+                    val o = el as? JsonObject ?: return@mapNotNull null
+                    val endpoint = (o["endpoint"] as? JsonPrimitive)?.content ?: return@mapNotNull null
+                    ai.ciris.mobile.shared.viewmodels.VerifySource(
+                        endpoint = endpoint,
+                        reachable = (o["reachable"] as? JsonPrimitive)?.content?.toBooleanStrictOrNull() ?: false,
+                        verified = (o["verified"] as? JsonPrimitive)?.content?.toBooleanStrictOrNull() ?: false,
+                        bundleFingerprint = (o["bundle_fingerprint"] as? JsonPrimitive)?.takeIf { it.isString }?.content,
+                        error = (o["error"] as? JsonPrimitive)?.takeIf { it.isString }?.content,
+                    )
+                } ?: emptyList(),
+                sourceValidationStatus = (data["source_validation_status"] as? JsonPrimitive)?.takeIf { it.isString }?.content,
                 // Attestation proof hardware type (nested in attestation_proof object)
                 attestationProofHardwareType = (data["attestation_proof"] as? JsonObject)?.let {
                     (it["hardware_type"] as? JsonPrimitive)?.content
@@ -13478,25 +13624,40 @@ class CIRISApiClient internal constructor(
      * @return true on success; false when the server refused (the caller
      *   surfaces a message rather than throwing into a poll loop).
      */
-    suspend fun updateTicketStatus(ticketId: String, status: String, notes: String? = null): Boolean {
+    suspend fun updateTicketStatus(
+        ticketId: String,
+        status: String,
+        notes: String? = null,
+        expectedStatus: String? = null,
+    ): ai.ciris.mobile.shared.approvals.TicketUpdateOutcome {
         val method = "updateTicketStatus"
-        logInfo(method, "Updating ticket $ticketId -> status=$status")
-
+        logInfo(method, "Updating ticket $ticketId -> status=$status expected=$expectedStatus")
+        // A raw call: the generated UpdateTicketRequest predates `expected_status`.
+        val client = agentHttpClient {}
         return try {
-            val request = ai.ciris.api.models.UpdateTicketRequest(
-                status = status,
-                notes = notes
-            )
-            val response = ticketsApi.updateExistingTicketV1TicketsTicketIdPatch(ticketId, request)
-            logDebug(method, "Response: status=${response.status}")
-            if (!response.success) {
-                logError(method, "API returned non-success status: ${response.status}")
-                return false
+            val body = buildJsonObject {
+                put("status", status)
+                notes?.let { put("notes", it) }
+                expectedStatus?.let { put("expected_status", it) }
+            }.toString()
+            val response = client.patch("$baseUrl/v1/tickets/$ticketId") {
+                header("Authorization", "Bearer $accessToken")
+                contentType(ContentType.Application.Json)
+                setBody(body)
             }
-            true
+            val code = response.status.value
+            logDebug(method, "Response: status=$code")
+            when {
+                code in 200..299 -> ai.ciris.mobile.shared.approvals.TicketUpdateOutcome.OK
+                code == 403 -> ai.ciris.mobile.shared.approvals.TicketUpdateOutcome.NOT_ALLOWED
+                code == 409 -> ai.ciris.mobile.shared.approvals.TicketUpdateOutcome.CHANGED
+                else -> ai.ciris.mobile.shared.approvals.TicketUpdateOutcome.FAILED
+            }
         } catch (e: Exception) {
             logException(method, e, "ticketId=$ticketId status=$status")
-            false
+            ai.ciris.mobile.shared.approvals.TicketUpdateOutcome.FAILED
+        } finally {
+            client.close()
         }
     }
 

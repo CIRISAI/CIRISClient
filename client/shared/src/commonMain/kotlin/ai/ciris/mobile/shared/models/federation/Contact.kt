@@ -68,13 +68,59 @@ data class Contact(
      * receipt says "not sent" rather than filling the facts in by rule.
      */
     val grant: ContactGrant? = null,
+    /**
+     * How far adding this person got (CIRISServer 0.5.245,
+     * `contacts_chat.rs::contact_reach`): `connected`, `sent` or
+     * `waiting_to_reach`. Null on an older node, which then says nothing. Read
+     * as text so a word added later never fails the list: [reachState] maps it.
+     */
+    val reach: String? = null,
+    /**
+     * When this person or one of their devices last signed a row held here
+     * (RFC 3339, 0.5.245). Text, parsed by [lastHeard], so a format surprise
+     * loses one label and never the list. Null when nothing is held.
+     */
+    @SerialName("last_heard_at")
+    val lastHeardAt: String? = null,
+    /** Not heard from in 14 days (0.5.245). A label only: nothing is removed for the person. */
+    val stale: Boolean? = null,
 ) {
+    /** [reach] as a state; a word this client does not know reads as [ContactReach.WAITING_TO_REACH] (CSD-005). */
+    val reachState: ContactReach? get() = reach?.let { ContactReach.of(it) }
+
+    /** [lastHeardAt] parsed, or null when absent or unreadable. */
+    val lastHeard: Instant? get() = lastHeardAt?.let { runCatching { Instant.parse(it) }.getOrNull() }
+
+    /**
+     * The row says "not heard from since" only on `stale: true` WITH a date:
+     * `last_heard_at: null` is not stale (CSD-005), whatever the flag says.
+     */
+    val staleSince: Instant? get() = if (stale == true) lastHeard else null
+
     /**
      * The key material this node can project for the contact is missing — the
      * de-admitted-but-still-consented arm above. Rendered as a warning rather
      * than hidden, because the grant is real and only the human can retract it.
      */
     val projectionMissing: Boolean get() = pubkeyEd25519Base64.isNullOrBlank()
+}
+
+/** CSD-005 `x_private:contact_reach`. */
+enum class ContactReach {
+    /** Mutual: nothing to say. */
+    CONNECTED,
+    /** A node of theirs is known, so the grant can travel. Not that it arrived. */
+    SENT,
+    /** No node of theirs is known here; nothing has left this node. */
+    WAITING_TO_REACH;
+
+    companion object {
+        fun of(wire: String): ContactReach = when (wire) {
+            "connected" -> CONNECTED
+            "sent" -> SENT
+            else -> WAITING_TO_REACH
+        }
+    }
 }
 
 /**

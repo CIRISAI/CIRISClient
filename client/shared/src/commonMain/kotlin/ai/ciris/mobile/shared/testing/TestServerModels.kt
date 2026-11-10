@@ -91,6 +91,13 @@ data class StateResponse(
     /** The circle and tab the shell stands in — see `TestAutomationState.circle`. */
     val circle: String = "",
     val tab: String = "",
+    /**
+     * A blocking overlay the host draws OVER the app, outside Compose, so no tag
+     * shows it: on iOS "resuming" or "restart_required". Empty when none. A
+     * harness clicks straight through one, so it must ask (runs 41901714445 and
+     * 40951641548 passed with "Resuming…" over every screen).
+     */
+    val hostOverlay: String = "",
 )
 
 /**

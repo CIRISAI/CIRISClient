@@ -24,6 +24,19 @@ interface DriveApi {
     /** `GET /v1/files/{id}`: [cohort] is the row's own (`DriveEntry.cohort`), never a default; [roomId] names the family or community room and is dropped for `self`. */
     suspend fun readFile(attestationId: String, cohort: String, roomId: String?): OpenedFile
     suspend fun writeFile(write: FileWrite): FileWritten
+
+    /**
+     * `POST /v1/files` as a streamed multipart upload: the fields, then `size`,
+     * then the file, read from [file] as it goes. Any size the node takes; the
+     * node refuses what it will not, by name. [onProgress] is (sent, total).
+     */
+    suspend fun writeFileStreamed(
+        cohort: String,
+        roomId: String?,
+        mediaType: String,
+        file: ai.ciris.mobile.shared.platform.PickedFileStream,
+        onProgress: (Long, Long) -> Unit = { _, _ -> },
+    ): FileWritten = throw UnsupportedOperationException("streamed upload")
     suspend fun readNotes(): NoteListing
     suspend fun writeNote(body: String)
 
@@ -70,6 +83,13 @@ class ClientDrive(
     override suspend fun readFile(attestationId: String, cohort: String, roomId: String?): OpenedFile =
         client.readFile(attestationId, cohort, roomId, nodeUrl = nodeUrl())
     override suspend fun writeFile(write: FileWrite): FileWritten = client.writeFile(write, nodeUrl = nodeUrl())
+    override suspend fun writeFileStreamed(
+        cohort: String,
+        roomId: String?,
+        mediaType: String,
+        file: ai.ciris.mobile.shared.platform.PickedFileStream,
+        onProgress: (Long, Long) -> Unit,
+    ): FileWritten = client.writeFileStreamed(cohort, roomId, mediaType, file, onProgress, nodeUrl = nodeUrl())
     override suspend fun readNotes(): NoteListing = client.readNotes(nodeUrl = nodeUrl())
     override suspend fun writeNote(body: String) = client.writeNote(body, nodeUrl = nodeUrl())
     override suspend fun readMediaPolicy(): MediaPolicy = client.readMediaPolicy(nodeUrl = nodeUrl())

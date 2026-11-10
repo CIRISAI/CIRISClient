@@ -227,6 +227,34 @@ The following terms are commonly kept in English in Italian technical contexts:
 | Trust policies | Politiche di fiducia | Policies that govern automatic trust at this scope |
 | Coming Soon | In arrivo | Placeholder for unshipped features (matches existing `network.tiles.coming_soon_badge`) |
 
+
+## Mesh, Keys and Review Terms
+
+Decided for client 0.5.239 so these terms stop being left in English. "corpus" means the rendering the shipped strings already use; "coined" means the corpus had none; "by hand" means the reviewer rejected both model drafts and the row was decided from the corpus and the reviewer's reasons. Machine-drafted and reviewed by a judge of a different model family; not native-reviewed.
+
+| English | Translation | Transliteration | Notes |
+|---------|-------------|-----------------|-------|
+| trust root | radice di fiducia | - | corpus: the key or authority a node accepts as the origin of trust for a mesh; a node 'subscribes to' or 'adopts' one |
+| owner binding | associazione di proprietà | - | corpus: the signed record that ties a node to the person who owns it |
+| kill switch | kill-switch | - | corpus: the accord's power to halt a node remotely in an emergency |
+| audit log | log di audit | - | corpus: the tamper-evident record of what a node or agent did |
+| export job | processo di esportazione | - | coined: a queued task that packages a person's data for download |
+| signing key | chiave di firma | - | corpus: the private key a node or person signs with |
+| private key | chiave privata | - | corpus: the secret half of a key pair |
+| session token | token di sessione | - | corpus: the credential a signed-in app sends with each request |
+| secure hardware | hardware sicuro | - | corpus: the device's protected key store: TPM, Secure Enclave, StrongBox |
+| safety witness | testimone di sicurezza | - | corpus: a party that watches and attests to an agent's safety behaviour |
+| rubric review | valutazione con griglia | - | by hand: a review of an agent's behaviour against a scoring rubric |
+| delegation scope | ambito di delega | - | corpus: the set of actions a delegate is allowed to perform |
+| canonical node | nodo canonico | - | corpus: a node chosen as the reference copy a family's other nodes follow |
+| serve node | nodo server | - | corpus: a node that serves others on the mesh (always on, reachable) |
+| genesis seed | seed di genesi | - | corpus: the starting material from which a family's first records are created |
+| circuit breaker | interruttore di sicurezza | - | coined: a safeguard that stops a failing service from being called until it recovers |
+| attestation level | livello di attestazione | - | corpus: how strongly a device has proven its identity and integrity (a numbered level) |
+| memory consolidation | consolidamento memoria | - | corpus: the agent's periodic pass that summarises and reorganises what it remembers |
+| setup wizard | procedura guidata di configurazione | - | corpus: the step-by-step screens that set up the app the first time |
+| Secure Enclave | Secure Enclave | Secure Enclave | Apple's product name; keep in English as Apple writes it |
+
 ## Version History
 
 | Version | Date | Changes |
