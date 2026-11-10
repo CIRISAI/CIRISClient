@@ -359,6 +359,16 @@ kotlin {
             }
         }
 
+        // On-device tests (connectedDebugAndroidTest): MediaCodec exists only on a
+        // device or emulator, so call video's encode/decode round trip runs here.
+        val androidInstrumentedTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
+                implementation("androidx.test:runner:1.6.2")
+                implementation("androidx.test.ext:junit:1.2.1")
+            }
+        }
+
         val desktopTest by getting {
             dependencies {
                 implementation(kotlin("test"))
@@ -381,6 +391,7 @@ android {
 
     defaultConfig {
         minSdk = 24
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     compileOptions {

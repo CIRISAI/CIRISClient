@@ -42,6 +42,8 @@ private var urlOpenerContext: Context? = null
 /** Call from Application.onCreate() or MainActivity.onCreate(). */
 fun initUrlOpener(context: Context) {
     urlOpenerContext = context.applicationContext
+    // Call media (camera, screen share) needs the same context; hosts already call this.
+    ai.ciris.mobile.shared.calls.media.initCallMedia(context)
 }
 
 /**
