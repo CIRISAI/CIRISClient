@@ -137,6 +137,12 @@ class CallSession(
                 } ?: call
                 is CallEvent.KeepRefused -> call.copy(notice = CallNotice.KeepRefused(event.reasonId))
                 is CallEvent.PublishRefused -> call.copy(notice = CallNotice.PublishRefused(event.reason, event.budget))
+                // Same tile, new stream: what it was sending carries on until the new
+                // stream's frames say otherwise, so the picture never reads as "left".
+                is CallEvent.StreamReplaced -> {
+                    val prior = call.attendees[event.member] ?: Attendee(event.member)
+                    call.copy(attendees = call.attendees + (event.member to prior.copy(streamId = streamIdBytes(event.newStreamId))))
+                }
             }
         }
     }
@@ -223,6 +229,11 @@ sealed interface CallEvent {
     data class VideoPaused(val member: String, val reason: String) : CallEvent
     data class KeepRefused(val reasonId: String) : CallEvent
     data class PublishRefused(val reason: String, val budget: Int?) : CallEvent
+    /**
+     * A codec change (CC, 2026-11-10): the member's new stream replaces the old one
+     * in the same membership, make-before-break. The tile swaps in place; nobody left.
+     */
+    data class StreamReplaced(val member: String, val oldStreamId: String?, val newStreamId: String?) : CallEvent
 
     companion object {
         private val json = Json { ignoreUnknownKeys = true }
@@ -239,6 +250,7 @@ sealed interface CallEvent {
                 "video_paused" -> str("member")?.let { VideoPaused(it, str("reason") ?: "") }
                 "keep_refused" -> str("reason_id")?.let { KeepRefused(it) }
                 "publish_refused" -> PublishRefused(str("reason") ?: "", (o["budget"] as? JsonPrimitive)?.contentOrNull?.toIntOrNull())
+                "stream_replaced" -> str("member")?.let { StreamReplaced(it, str("old_stream_id"), str("new_stream_id")) }
                 else -> null
             }
         }

@@ -132,6 +132,23 @@ class CallSessionTest {
         assertEquals(CallNotice.OverBudget(244), assertIs<CallState.InCall>(s.state.value).notice)
     }
 
+    /** A codec change swaps the tile in place: no departure, and the new stream's frames are not a rejoin. */
+    @Test fun aReplacedStreamKeepsTheTile() = runTest {
+        val t = FakeTransport()
+        val s = CallSession("r", t, backgroundScope)
+        s.join(video = true); runCurrent()
+        t.socket.inbox.send(CallSocketMessage.Binary(frame("alice", CallFrames.CODEC_AV1_SVC, 1)))
+        val newHex = stream(2).joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
+        t.socket.inbox.send(CallSocketMessage.Text("""{"type":"stream_replaced","member":"alice","old_stream_id":"x","new_stream_id":"$newHex"}"""))
+        t.socket.inbox.send(CallSocketMessage.Binary(frame("alice", 0x04, 2)))
+        runCurrent()
+        val call = assertIs<CallState.InCall>(s.state.value)
+        val alice = call.attendees.getValue("alice")
+        assertTrue(alice.sendingVideo, "the tile carried on across the swap")
+        assertTrue(alice.streamId!!.contentEquals(stream(2)))
+        assertTrue(call.departed.isEmpty(), "nobody left")
+    }
+
     @Test fun anUnknownEventIsSkipped() {
         assertNull(CallEvent.parse("""{"type":"something_new","member":"x"}"""))
         assertNull(CallEvent.parse("not json"))
