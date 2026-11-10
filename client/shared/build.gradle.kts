@@ -112,6 +112,26 @@ val generateBuildFlavor by tasks.registering {
     }
 }
 
+// The JavaCPP classifier of the machine running this build: the desktop uber-jar
+// carries only this OS's FFmpeg natives (call video, CSD-134), so Linux, Windows
+// and macOS CI each package their own. Fails loudly on a host with no FFmpeg build
+// rather than producing a jar that has no video.
+val bytedecoHostClassifier: String = run {
+    val os = System.getProperty("os.name").lowercase()
+    val arch = System.getProperty("os.arch").lowercase()
+    val a = when (arch) {
+        "amd64", "x86_64" -> "x86_64"
+        "aarch64", "arm64" -> "arm64"
+        else -> throw GradleException("no bytedeco FFmpeg build for arch $arch")
+    }
+    when {
+        os.startsWith("linux") -> "linux-$a"
+        os.startsWith("windows") -> "windows-$a"
+        os.startsWith("mac") -> "macosx-$a"
+        else -> throw GradleException("no bytedeco FFmpeg build for OS $os")
+    }
+}
+
 kotlin {
     // Suppress expect/actual beta warnings - feature is stable enough for production use
     targets.all {
@@ -336,6 +356,15 @@ kotlin {
                 // Call audio's Opus (CSD-134): Concentus, a pure-Java libopus port
                 // (BSD-3-Clause, as libopus), ~0.4 MB, no native library.
                 implementation("io.github.jaredmdobson:concentus:1.0.2")
+                // Call video, camera and screen share (CSD-134): FFmpeg via JavaCPP,
+                // the LGPL build (no -gpl classifier): openh264, libaom (AV1 decode),
+                // SVT-AV1 (AV1 encode), and avdevice for capture. Natives for the
+                // BUILD HOST's OS only, so each OS's uber-jar carries its own and no
+                // other's (~18-24 MiB each); CI builds each OS on that OS.
+                implementation("org.bytedeco:javacpp:1.5.11")
+                implementation("org.bytedeco:ffmpeg:7.1-1.5.11")
+                implementation("org.bytedeco:javacpp:1.5.11:$bytedecoHostClassifier")
+                implementation("org.bytedeco:ffmpeg:7.1-1.5.11:$bytedecoHostClassifier")
                 implementation(compose.desktop.currentOs)
                 implementation("io.ktor:ktor-client-cio:3.0.3")
                 // NOTE: federation crypto (JCS canonicalization + hybrid signing)
