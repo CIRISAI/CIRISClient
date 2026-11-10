@@ -360,6 +360,10 @@ kotlin {
                 // An INDEPENDENT QR decoder, test-only: QrEncoderTest decodes
                 // what platform/util/QrEncoder draws. Apache-2.0, pure Java.
                 implementation("com.google.zxing:core:3.5.4")
+                // A real WebSocket server for CallRoutesWireTest, test-only: the
+                // call frames socket is checked over a socket, not a mock.
+                implementation("io.ktor:ktor-server-cio:3.0.3")
+                implementation("io.ktor:ktor-server-websockets:3.0.3")
             }
         }
     }
