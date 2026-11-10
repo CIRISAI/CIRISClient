@@ -6355,5 +6355,26 @@
     "signer_unavailable": "Ẹ̀rọ yìí kò lè dé kọ́kọ́rọ́ ìfọwọ́sí rẹ, nítorí náà kò sí ohun tí a fọwọ́sí.",
     "unowned": "nóòdù yìí kò tíì ní olówó; kọ́kọ́ gba á ní tìrẹ kí o tó lo ohun tí olówó rẹ̀ fọwọ́sí",
     "wrong_node": "Ohun tí a fọwọ́sí jẹ́ fún nóòdù mìíràn, nítorí náà a kò lò ó níhìn-ín."
+  },
+  "call": {
+    "session_absent": "Wọlé láti darapọ̀ mọ́ ìpè kan.",
+    "not_owner": "Olówó ẹ̀rọ yìí nìkan ló lè darapọ̀ mọ́ àwọn ìpè láti orí rẹ̀.",
+    "plumbing": "Àwọn ìpè kò wà fún lílò lórí ẹ̀rọ yìí lọ́wọ́lọ́wọ́.",
+    "not_a_member": "O kò tíì jẹ́ ọmọ ẹgbẹ́ yàrá yìí, nítorí náà o kò lè darapọ̀ mọ́ ìpè rẹ̀.",
+    "anonymous_mode": "A kò lè ṣe ìpè nígbà tí ẹ̀rọ yìí bá wà ní ipò aláìlórúkọ.",
+    "frame_over_budget": "Férémù yẹn tóbi jù fún ìpè yìí.",
+    "ended": "Ìpè yẹn ti parí tẹ́lẹ̀.",
+    "owner_pen_unavailable": "Ẹ̀rọ yìí kò lè fọwọ́sí fún ọ, nítorí náà kò lè darapọ̀ mọ́ ìpè gẹ́gẹ́ bí ìwọ.",
+    "room_may_keep": {
+      "not_yet": "A kò ń fi ìpè pamọ́. Kò sí ẹnikẹ́ni nínú yàrá yìí tí ó lè pa ìgbasilẹ̀ mọ́ síi."
+    },
+    "visible_to_watcher": {
+      "visible": "Ẹnikẹ́ni tí ó bá ń ṣọ́ nẹ́tíwọ̀ọ̀kì rẹ lè rí i pé o wà lórí ìpè, kì í ṣe ohun tí a sọ."
+    },
+    "not_joined": "Dara pọ̀ mọ́ ìpè náà kọ́kọ́.",
+    "bad_layer_policy": "Ìpele ìdára yẹn kì í ṣe èyí tí ẹ̀rọ yìí yé.",
+    "cross_origin": "A lè ṣí ìpè yìí nìkan láti orí ojú-ìwé ẹ̀rọ yìí fúnra rẹ̀.",
+    "socket_already_open": "Ìpè yìí ti ní ìsopọ̀ férémù kan tí ó ṣí sílẹ̀ tẹ́lẹ̀.",
+    "keep_refused": "Fífi ìpè pamọ́ kò tíì ṣetán, nítorí náà a kò ní pa ìpè yìí mọ́."
   }
 }

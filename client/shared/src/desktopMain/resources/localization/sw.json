@@ -6355,5 +6355,26 @@
     "signer_unavailable": "Kifaa hiki hakikuweza kufikia ufunguo wako wa kutia saini, hivyo hakuna kilichotiwa saini.",
     "unowned": "nodi hii haina mmiliki bado; idai kabla ya kutumia kile ambacho mmiliki wake alitia saini",
     "wrong_node": "Kile kilichotiwa saini ni cha nodi nyingine, hivyo hakikutumika hapa."
+  },
+  "call": {
+    "session_absent": "Ingia ili ujiunge na simu.",
+    "not_owner": "Ni mmiliki wa kifaa hiki pekee anayeweza kujiunga na simu kutoka kwake.",
+    "plumbing": "Simu hazipatikani kwenye kifaa hiki kwa sasa.",
+    "not_a_member": "Bado wewe si mwanachama wa chumba hiki, hivyo huwezi kujiunga na simu yake.",
+    "anonymous_mode": "Simu haziwezi kufanyika wakati kifaa hiki kiko katika hali ya kutojulikana.",
+    "frame_over_budget": "Fremu hiyo ni kubwa mno kwa simu hii.",
+    "ended": "Simu hiyo tayari imeisha.",
+    "owner_pen_unavailable": "Kifaa hiki hakiwezi kutia saini kwa niaba yako, hivyo hakiwezi kujiunga na simu kama wewe.",
+    "room_may_keep": {
+      "not_yet": "Simu hazihifadhiwi. Hakuna mtu yeyote katika chumba hiki anayeweza kuhifadhi rekodi bado."
+    },
+    "visible_to_watcher": {
+      "visible": "Mtu anayetazama mtandao wako anaweza kuona kuwa uko kwenye simu, si yanayosemwa."
+    },
+    "not_joined": "Jiunge na simu kwanza.",
+    "bad_layer_policy": "Mpangilio huo wa ubora si mojawapo ya mipangilio ambayo kifaa hiki kinaelewa.",
+    "cross_origin": "Simu hii inaweza kufunguliwa tu kutoka ukurasa wa kifaa hiki chenyewe.",
+    "socket_already_open": "Simu hii tayari ina muunganisho wa fremu uliofunguliwa.",
+    "keep_refused": "Kuhifadhi simu bado hakujakamilika, hivyo simu hii haihifadhiwi."
   }
 }

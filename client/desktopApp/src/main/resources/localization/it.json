@@ -6355,5 +6355,26 @@
     "signer_unavailable": "Questo dispositivo non è riuscito a raggiungere la tua chiave di firma, quindi nulla è stato firmato.",
     "unowned": "questo nodo non ha ancora un proprietario; rivendicalo prima di applicare ciò che il proprietario ha firmato",
     "wrong_node": "Ciò che è stato firmato è destinato a un altro nodo, quindi non è stato applicato qui."
+  },
+  "call": {
+    "session_absent": "Accedi per partecipare a una chiamata.",
+    "not_owner": "Solo il proprietario di questo dispositivo può partecipare alle chiamate da esso.",
+    "plumbing": "Le chiamate non sono disponibili su questo dispositivo in questo momento.",
+    "not_a_member": "Non sei ancora membro di questa stanza, quindi non puoi partecipare alla sua chiamata.",
+    "anonymous_mode": "Le chiamate non sono disponibili mentre questo dispositivo è anonimo.",
+    "frame_over_budget": "Quel fotogramma è troppo grande per questa chiamata.",
+    "ended": "Quella chiamata è già terminata.",
+    "owner_pen_unavailable": "Questo dispositivo non può firmare per te, quindi non può partecipare a una chiamata come te.",
+    "room_may_keep": {
+      "not_yet": "Le chiamate non vengono salvate. Nessuno in questa stanza può ancora conservare una registrazione."
+    },
+    "visible_to_watcher": {
+      "visible": "Chi osserva la tua rete può vedere che sei in una chiamata, non ciò che viene detto."
+    },
+    "not_joined": "Partecipa prima alla chiamata.",
+    "bad_layer_policy": "Questo dispositivo non comprende questa impostazione di qualità.",
+    "cross_origin": "Questa chiamata può essere aperta solo dalla pagina propria di questo dispositivo.",
+    "socket_already_open": "Questa chiamata ha già una connessione per i frame aperta.",
+    "keep_refused": "Il salvataggio delle chiamate non è ancora pronto, quindi questa chiamata non viene conservata."
   }
 }

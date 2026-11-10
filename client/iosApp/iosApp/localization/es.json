@@ -6355,5 +6355,26 @@
     "signer_unavailable": "Este dispositivo no pudo acceder a tu clave de firma, así que no se firmó nada.",
     "unowned": "este nodo todavía no tiene propietario; reclámalo antes de aplicar lo que su propietario firmó",
     "wrong_node": "Lo que se firmó es para otro nodo, así que no se aplicó aquí."
+  },
+  "call": {
+    "session_absent": "Inicia sesión para unirte a una llamada.",
+    "not_owner": "Solo el propietario de este dispositivo puede unirse a llamadas desde él.",
+    "plumbing": "Las llamadas no están disponibles en este dispositivo en este momento.",
+    "not_a_member": "Todavía no eres miembro de esta sala, así que no puedes unirte a su llamada.",
+    "anonymous_mode": "Las llamadas no están disponibles mientras este dispositivo sea anónimo.",
+    "frame_over_budget": "Ese fotograma es demasiado grande para esta llamada.",
+    "ended": "Esa llamada ya ha terminado.",
+    "owner_pen_unavailable": "Este dispositivo no puede firmar por ti, así que no puede unirse a una llamada como tú.",
+    "room_may_keep": {
+      "not_yet": "Las llamadas no se guardan. Todavía nadie en esta sala puede conservar una grabación."
+    },
+    "visible_to_watcher": {
+      "visible": "Alguien que observe tu red puede ver que estás en una llamada, no lo que se dice."
+    },
+    "not_joined": "Únete a la llamada primero.",
+    "bad_layer_policy": "Ese ajuste de calidad no es uno que este dispositivo entienda.",
+    "cross_origin": "Esta llamada solo se puede abrir desde la propia página de este dispositivo.",
+    "socket_already_open": "Esta llamada ya tiene una conexión de fotogramas abierta.",
+    "keep_refused": "Guardar llamadas todavía no está listo, así que esta llamada no se está guardando."
   }
 }

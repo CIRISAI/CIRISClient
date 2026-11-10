@@ -6355,5 +6355,26 @@
     "signer_unavailable": "此设备无法访问您的签名密钥，因此未签署任何内容。",
     "unowned": "此节点尚无所有者；请先认领它，然后再应用其所有者签署的内容",
     "wrong_node": "所签署的内容是针对另一个节点的，因此未在此处应用。"
+  },
+  "call": {
+    "session_absent": "请登录以加入通话。",
+    "not_owner": "只有此设备的所有者才能通过它加入通话。",
+    "plumbing": "此设备目前无法使用通话功能。",
+    "not_a_member": "您尚不是此房间的成员，因此无法加入其通话。",
+    "anonymous_mode": "此设备处于匿名状态时，无法使用通话功能。",
+    "frame_over_budget": "该帧对此通话而言过大。",
+    "ended": "该通话已结束。",
+    "owner_pen_unavailable": "此设备无法为您签名，因此无法以您的身份加入通话。",
+    "room_may_keep": {
+      "not_yet": "通话不会被保存。此房间中目前没有人可以保留录音。"
+    },
+    "visible_to_watcher": {
+      "visible": "监视您网络的人可以看到您正在通话，但看不到通话中说了什么。"
+    },
+    "not_joined": "请先加入通话。",
+    "bad_layer_policy": "此设备无法识别该画质设置。",
+    "cross_origin": "此通话只能从本设备自己的页面打开。",
+    "socket_already_open": "此通话已打开一个帧连接。",
+    "keep_refused": "保存通话功能尚未就绪，因此此通话不会被保留。"
   }
 }

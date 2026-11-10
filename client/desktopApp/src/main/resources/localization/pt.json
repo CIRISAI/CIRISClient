@@ -6355,5 +6355,26 @@
     "signer_unavailable": "Este dispositivo não conseguiu acessar sua chave de assinatura, portanto nada foi assinado.",
     "unowned": "este nó ainda não tem proprietário; reivindique-o antes de aplicar o que o proprietário dele assinou",
     "wrong_node": "O que foi assinado é para um nó diferente, portanto não foi aplicado aqui."
+  },
+  "call": {
+    "not_owner": "Somente o proprietário deste dispositivo pode entrar em chamadas a partir dele.",
+    "plumbing": "As chamadas não estão disponíveis neste dispositivo no momento.",
+    "not_a_member": "Você ainda não é membro desta sala, por isso não pode entrar na chamada dela.",
+    "anonymous_mode": "As chamadas não estão disponíveis enquanto este dispositivo estiver anônimo.",
+    "frame_over_budget": "Esse quadro é grande demais para esta chamada.",
+    "ended": "Essa chamada já terminou.",
+    "owner_pen_unavailable": "Este dispositivo não pode assinar por você, por isso não pode entrar em uma chamada como você.",
+    "room_may_keep": {
+      "not_yet": "As chamadas não são salvas. Ninguém nesta sala pode manter uma gravação ainda."
+    },
+    "session_absent": "Entre para participar de uma chamada.",
+    "visible_to_watcher": {
+      "visible": "Alguém observando sua rede pode ver que você está em uma chamada, mas não o que é dito."
+    },
+    "not_joined": "Entre na chamada primeiro.",
+    "bad_layer_policy": "Este dispositivo não entende essa configuração de qualidade.",
+    "cross_origin": "Esta chamada só pode ser aberta a partir da própria página deste dispositivo.",
+    "socket_already_open": "Esta chamada já tem uma Conexão de quadros aberta.",
+    "keep_refused": "Salvar chamadas ainda não está pronto, por isso esta chamada não está sendo mantida."
   }
 }

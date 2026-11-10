@@ -6355,5 +6355,26 @@
     "signer_unavailable": "Bu cihaz imzalama anahtarınıza ulaşamadı, bu yüzden hiçbir şey imzalanmadı.",
     "unowned": "bu düğümün henüz bir sahibi yok; sahibinin imzaladığını uygulamadan önce onu sahiplenin",
     "wrong_node": "İmzalanan şey başka bir düğüm için, bu yüzden burada uygulanmadı."
+  },
+  "call": {
+    "keep_refused": "Aramaları kaydetme henüz hazır değil, bu yüzden bu arama tutulmuyor.",
+    "session_absent": "Bir aramaya katılmak için oturum açın.",
+    "not_owner": "Bu cihazdan yalnızca cihazın sahibi aramalara katılabilir.",
+    "plumbing": "Aramalar şu anda bu cihazda kullanılamıyor.",
+    "not_a_member": "Bu odanın henüz bir üyesi değilsiniz, bu yüzden aramasına katılamazsınız.",
+    "anonymous_mode": "Bu cihaz anonimken aramalar kullanılamıyor.",
+    "frame_over_budget": "O kare bu arama için çok büyük.",
+    "ended": "O arama zaten sona erdi.",
+    "owner_pen_unavailable": "Bu cihaz sizin adınıza imzalayamıyor, bu yüzden sizin olarak bir aramaya katılamaz.",
+    "room_may_keep": {
+      "not_yet": "Aramalar kaydedilmiyor. Bu odada henüz kimse bir kayıt tutamaz."
+    },
+    "visible_to_watcher": {
+      "visible": "Ağınızı izleyen biri bir aramada olduğunuzu görebilir, ama konuşulanları duyamaz."
+    },
+    "not_joined": "Önce aramaya katılın.",
+    "bad_layer_policy": "Bu kalite ayarı, bu cihazın anladığı bir ayar değil.",
+    "cross_origin": "Bu arama yalnızca bu cihazın kendi sayfasından açılabilir.",
+    "socket_already_open": "Bu arama için zaten açık bir akış bağlantısı var."
   }
 }

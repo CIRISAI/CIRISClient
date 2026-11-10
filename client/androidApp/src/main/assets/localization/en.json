@@ -6355,5 +6355,26 @@
     "signer_unavailable": "The holder's signer (YubiKey and USB) couldn't be opened.",
     "store_failed": "This node couldn't write the ceremony's state.",
     "store_unavailable": "This node couldn't reach its key store."
+  },
+  "call": {
+    "session_absent": "Sign in to join a call.",
+    "not_owner": "Only this device's owner can join calls from it.",
+    "plumbing": "Calls aren't available on this device right now.",
+    "not_a_member": "You're not a member of this room yet, so you can't join its call.",
+    "anonymous_mode": "Calls aren't available while this device is anonymous.",
+    "frame_over_budget": "That frame is too big for this call.",
+    "ended": "That call has already ended.",
+    "owner_pen_unavailable": "This device can't sign for you, so it can't join a call as you.",
+    "room_may_keep": {
+      "not_yet": "Calls aren't saved. Nobody in this room can keep a recording yet."
+    },
+    "visible_to_watcher": {
+      "visible": "Someone watching your network can see that you're on a call, not what's said."
+    },
+    "not_joined": "Join the call first.",
+    "bad_layer_policy": "That quality setting isn't one this device understands.",
+    "cross_origin": "This call can only be opened from this device's own page.",
+    "socket_already_open": "This call already has a frames connection open.",
+    "keep_refused": "Saving calls isn't ready yet, so this call isn't being kept."
   }
 }

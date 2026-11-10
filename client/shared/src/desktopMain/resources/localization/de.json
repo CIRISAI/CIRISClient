@@ -6355,5 +6355,26 @@
     "signer_unavailable": "Dieses Gerät konnte Ihren Signierschlüssel nicht erreichen, daher wurde nichts signiert.",
     "unowned": "dieser Knoten hat noch keinen Eigentümer; übernehmen Sie ihn, bevor Sie anwenden, was sein Eigentümer signiert hat",
     "wrong_node": "Das Signierte ist für einen anderen Knoten bestimmt, daher wurde es hier nicht angewendet."
+  },
+  "call": {
+    "session_absent": "Melden Sie sich an, um einem Anruf beizutreten.",
+    "not_owner": "Nur der Eigentümer dieses Geräts kann von ihm aus an Anrufen teilnehmen.",
+    "plumbing": "Anrufe sind auf diesem Gerät derzeit nicht verfügbar.",
+    "not_a_member": "Sie sind noch kein Mitglied dieses Raums und können daher nicht an seinem Anruf teilnehmen.",
+    "anonymous_mode": "Anrufe sind nicht verfügbar, solange dieses Gerät anonym ist.",
+    "frame_over_budget": "Dieser Frame ist für diesen Anruf zu groß.",
+    "ended": "Dieser Anruf ist bereits beendet.",
+    "owner_pen_unavailable": "Dieses Gerät kann nicht für Sie signieren und kann daher nicht als Sie an einem Anruf teilnehmen.",
+    "room_may_keep": {
+      "not_yet": "Anrufe werden nicht gespeichert. Niemand in diesem Raum kann derzeit eine Aufzeichnung aufbewahren."
+    },
+    "visible_to_watcher": {
+      "visible": "Jemand, der Ihr Netzwerk beobachtet, kann sehen, dass Sie sich in einem Anruf befinden, aber nicht, was gesagt wird."
+    },
+    "not_joined": "Treten Sie zuerst dem Anruf bei.",
+    "bad_layer_policy": "Diese Qualitätseinstellung versteht dieses Gerät nicht.",
+    "cross_origin": "Dieser Anruf kann nur von der eigenen Seite dieses Geräts aus geöffnet werden.",
+    "socket_already_open": "Für diesen Anruf ist bereits eine Frames-Verbindung geöffnet.",
+    "keep_refused": "Das Speichern von Anrufen ist noch nicht bereit, daher wird dieser Anruf nicht aufbewahrt."
   }
 }

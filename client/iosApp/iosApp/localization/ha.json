@@ -6355,5 +6355,26 @@
     "signer_unavailable": "Wannan na'ura ta kasa isa ga maɓallin sa hannu naku, don haka ba a sa hannu kan komai ba.",
     "unowned": "Wannan kumburi bai da mai shi tukuna; ku karɓe shi kafin yin amfani da abin da mai shi ya sa wa hannu.",
     "wrong_node": "Abin da aka sa wa hannu na wani kumburi ne daban, don haka ba a yi amfani da shi a nan ba."
+  },
+  "call": {
+    "session_absent": "Ku shiga don shiga cikin kira.",
+    "not_owner": "Mai wannan na'urar ne kawai zai iya shiga kira daga gare ta.",
+    "plumbing": "Kira ba ya samuwa a kan wannan na'urar a yanzu.",
+    "not_a_member": "Ba ku cikin mambobin wannan ɗaki ba tukuna, don haka ba za ku iya shiga kiran nasa ba.",
+    "anonymous_mode": "Ba a iya yin kira ba muddin wannan na'urar take mara-suna.",
+    "frame_over_budget": "Wannan firam ɗin ya yi girma sosai don wannan kiran.",
+    "ended": "Wannan kiran ya riga ya ƙare.",
+    "owner_pen_unavailable": "Wannan na'urar ba za ta iya sa hannu a madadinku ba, don haka ba za ta iya shiga kira a matsayinku ba.",
+    "room_may_keep": {
+      "not_yet": "Ba a ajiye kira ba. Babu wanda ke cikin wannan ɗaki da zai iya ajiye rikodi tukuna."
+    },
+    "visible_to_watcher": {
+      "visible": "Wanda yake sa ido a kan hanyar sadarwarku zai iya ganin kuna kira, amma ba abin da ake faɗa ba."
+    },
+    "not_joined": "Ku shiga kiran tukuna.",
+    "bad_layer_policy": "Wannan saitin inganci ba wanda wannan na'urar ta fahimta ba ne.",
+    "cross_origin": "Ana iya buɗe wannan kiran ne kawai daga shafin wannan na'urar kanta.",
+    "socket_already_open": "Wannan kiran yana da haɗin firam-firam a buɗe tuni.",
+    "keep_refused": "Ajiye kira ba a shirya ba tukuna, don haka ba a ajiye wannan kiran ba."
   }
 }

@@ -6355,5 +6355,26 @@
     "signer_unavailable": "Cet appareil n'a pas pu joindre votre clé de signature ; rien n'a donc été signé.",
     "unowned": "ce nœud n'a pas encore de propriétaire ; revendiquez-le avant d'appliquer ce que son propriétaire a signé",
     "wrong_node": "Ce qui a été signé concerne un autre nœud ; cela n'a donc pas été appliqué ici."
+  },
+  "call": {
+    "session_absent": "Connectez-vous pour rejoindre un appel.",
+    "not_owner": "Seul le propriétaire de cet appareil peut rejoindre des appels depuis celui-ci.",
+    "plumbing": "Les appels ne sont pas disponibles sur cet appareil pour le moment.",
+    "not_a_member": "Vous n'êtes pas encore membre de cette salle, vous ne pouvez donc pas rejoindre son appel.",
+    "anonymous_mode": "Les appels ne sont pas disponibles tant que cet appareil est anonyme.",
+    "frame_over_budget": "Cette trame est trop volumineuse pour cet appel.",
+    "ended": "Cet appel est déjà terminé.",
+    "owner_pen_unavailable": "Cet appareil ne peut pas signer en votre nom, il ne peut donc pas rejoindre un appel à votre place.",
+    "room_may_keep": {
+      "not_yet": "Les appels ne sont pas enregistrés. Personne dans cette salle ne peut encore conserver un enregistrement."
+    },
+    "visible_to_watcher": {
+      "visible": "Quelqu'un surveillant votre réseau peut voir que vous êtes en appel, mais pas ce qui s'y dit."
+    },
+    "not_joined": "Rejoignez d'abord l'appel.",
+    "bad_layer_policy": "Ce paramètre de qualité n'est pas reconnu par cet appareil.",
+    "cross_origin": "Cet appel ne peut être ouvert que depuis la page propre à cet appareil.",
+    "socket_already_open": "Cet appel dispose déjà d'une connexion de trames ouverte.",
+    "keep_refused": "L'enregistrement des appels n'est pas encore disponible, cet appel n'est donc pas conservé."
   }
 }
