@@ -97,7 +97,7 @@ class CallSession(
     fun publish(frame: OutgoingFrame): Boolean {
         val call = _state.value as? CallState.InCall ?: return false
         if (!call.ready) return false
-        if (frame.payload.size > call.frameBudgetBytes) {
+        if (!call.fragmenting && frame.payload.size > call.frameBudgetBytes) {
             _state.value = call.copy(notice = CallNotice.OverBudget(call.frameBudgetBytes))
             return false
         }
@@ -137,9 +137,9 @@ class CallSession(
     private fun onEvent(event: CallEvent) {
         updateCall { call ->
             when (event) {
-                is CallEvent.Ready -> call.copy(ready = true, frameBudgetBytes = event.frameBudgetBytes)
+                is CallEvent.Ready -> call.copy(ready = true, frameBudgetBytes = event.frameBudgetBytes, fragmenting = event.fragmenting)
                 is CallEvent.AttendeeJoined ->
-                    call.copy(attendees = call.attendees + (event.member to Attendee(event.member, streamId = streamIdBytes(event.streamId))))
+                    call.copy(attendees = call.attendees + (event.member to Attendee(event.member, streamId = streamIdBytes(event.streamId), person = event.person)))
                 is CallEvent.AttendeeLeft ->
                     call.copy(
                         attendees = call.attendees - event.member,
@@ -199,6 +199,12 @@ sealed interface CallState {
         val lastFrame: ReceivedFrame? = null,
         /** The node said `ready`. Nothing is published before it (CIRISServer d662d99a). */
         val ready: Boolean = false,
+        /**
+         * The node fragments frames itself (Edge 45.1, `ready.fragmenting`): the budget
+         * is then information, and a whole frame of any size goes. Read from the node,
+         * never assumed from a version.
+         */
+        val fragmenting: Boolean = false,
     ) : CallState
 
     /** The node said no, by id (`call.not_a_member`, `call.anonymous_mode`, …). */
@@ -209,17 +215,24 @@ sealed interface CallState {
 }
 
 data class Attendee(
+    /** The NODE key the stream arrives from (CIRISServer: Edge names a stream by its link). */
     val member: String,
     val streamId: ByteArray? = null,
     val sendingAudio: Boolean = false,
     val sendingVideo: Boolean = false,
     /** The node's reason when it paused this member's video, said on the tile. */
     val videoPaused: String? = null,
+    /**
+     * The PERSON who owns that node, from the server's roster, or null until it is
+     * bound: the tile then reads "someone in this room". Name them from contacts.
+     */
+    val person: String? = null,
 ) {
     override fun equals(other: Any?) = other is Attendee && member == other.member &&
         (streamId?.contentEquals(other.streamId) ?: (other.streamId == null)) &&
-        sendingAudio == other.sendingAudio && sendingVideo == other.sendingVideo && videoPaused == other.videoPaused
-    override fun hashCode() = listOf(member, streamId?.contentHashCode(), sendingAudio, sendingVideo, videoPaused).hashCode()
+        sendingAudio == other.sendingAudio && sendingVideo == other.sendingVideo && videoPaused == other.videoPaused &&
+        person == other.person
+    override fun hashCode() = listOf(member, streamId?.contentHashCode(), sendingAudio, sendingVideo, videoPaused, person).hashCode()
 }
 
 sealed interface CallNotice {
@@ -240,9 +253,9 @@ enum class LeaveReason(val wire: String) {
 /** The socket's text events (CSD-134 §3): one JSON object each, members as key ids only. */
 sealed interface CallEvent {
     /** The node is ready for this device's frames, at this budget; sent again when the budget changes. */
-    data class Ready(val frameBudgetBytes: Int) : CallEvent
-    data class AttendeeJoined(val member: String, val streamId: String?) : CallEvent
-    data class AttendeeLeft(val member: String, val streamId: String?, val left: LeaveReason) : CallEvent
+    data class Ready(val frameBudgetBytes: Int, val fragmenting: Boolean = false) : CallEvent
+    data class AttendeeJoined(val member: String, val streamId: String?, val person: String? = null) : CallEvent
+    data class AttendeeLeft(val member: String, val streamId: String?, val left: LeaveReason, val person: String? = null) : CallEvent
     data class EpochRolled(val epoch: Long) : CallEvent
     data class TierChanged(val tier: String) : CallEvent
     data class VideoPaused(val member: String, val reason: String) : CallEvent
@@ -262,9 +275,11 @@ sealed interface CallEvent {
             val o = runCatching { json.parseToJsonElement(text).jsonObject }.getOrNull() ?: return null
             fun str(k: String) = (o[k] as? JsonPrimitive)?.contentOrNull
             return when (str("type")) {
-                "ready" -> (o["frame_budget_bytes"] as? JsonPrimitive)?.contentOrNull?.toIntOrNull()?.let { Ready(it) }
-                "attendee_joined" -> str("member")?.let { AttendeeJoined(it, str("stream_id")) }
-                "attendee_left" -> str("member")?.let { AttendeeLeft(it, str("stream_id"), LeaveReason.of(str("left"))) }
+                "ready" -> (o["frame_budget_bytes"] as? JsonPrimitive)?.contentOrNull?.toIntOrNull()?.let {
+                    Ready(it, (o["fragmenting"] as? JsonPrimitive)?.contentOrNull == "true")
+                }
+                "attendee_joined" -> str("member")?.let { AttendeeJoined(it, str("stream_id"), str("person")) }
+                "attendee_left" -> str("member")?.let { AttendeeLeft(it, str("stream_id"), LeaveReason.of(str("left")), str("person")) }
                 "epoch_rolled" -> (o["epoch"] as? JsonPrimitive)?.longOrNull?.let { EpochRolled(it) }
                 "tier_changed" -> str("tier")?.let { TierChanged(it) }
                 "video_paused" -> str("member")?.let { VideoPaused(it, str("reason") ?: "") }

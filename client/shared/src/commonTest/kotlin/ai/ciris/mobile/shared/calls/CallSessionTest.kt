@@ -151,6 +151,29 @@ class CallSessionTest {
         assertTrue(call.departed.isEmpty(), "nobody left")
     }
 
+    /** From Edge 45.1 the node fragments: the budget is information, and a whole keyframe goes. */
+    @Test fun aFragmentingNodeTakesAWholeFrame() = runTest {
+        val t = FakeTransport()
+        val s = CallSession("r", t, backgroundScope)
+        s.join(video = true); runCurrent()
+        t.socket.inbox.send(CallSocketMessage.Text("""{"type":"ready","frame_budget_bytes":244,"fragmenting":true}""")); runCurrent()
+        assertTrue(s.publish(OutgoingFrame(CallVideoCodecId, Layer.BASE, ByteArray(40_000))))
+        assertEquals(1, t.socket.sent.size)
+    }
+
+    /** The server names the person beside the node; the tile is grouped and named by the person. */
+    @Test fun theEventNamesThePersonBesideTheNode() = runTest {
+        val t = FakeTransport()
+        val s = CallSession("r", t, backgroundScope)
+        s.join(video = false); runCurrent()
+        t.socket.inbox.send(CallSocketMessage.Text("""{"type":"attendee_joined","member":"node-bob","person":"bob-person"}"""))
+        t.socket.inbox.send(CallSocketMessage.Text("""{"type":"attendee_joined","member":"node-dan","person":null}"""))
+        runCurrent()
+        val call = assertIs<CallState.InCall>(s.state.value)
+        assertEquals("bob-person", call.attendees.getValue("node-bob").person)
+        assertNull(call.attendees.getValue("node-dan").person, "unbound: someone in this room")
+    }
+
     @Test fun anUnknownEventIsSkipped() {
         assertNull(CallEvent.parse("""{"type":"something_new","member":"x"}"""))
         assertNull(CallEvent.parse("not json"))
@@ -164,3 +187,5 @@ class CallSessionTest {
         assertEquals(listOf("alice", "bob", "carol"), CallJoinAnswer.parse(o).attendees)
     }
 }
+
+private const val CallVideoCodecId = 0x04
