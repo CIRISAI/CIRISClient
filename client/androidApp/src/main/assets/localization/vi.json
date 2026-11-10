@@ -4487,7 +4487,15 @@
     "call_someones_screen": "Màn hình của {who}",
     "call_camera_off": "Camera tắt",
     "call_camera_on": "Camera bật",
-    "call_rejoin": "Tham gia lại"
+    "call_rejoin": "Tham gia lại",
+    "call_share": "Chia sẻ màn hình",
+    "call_share_stop": "Dừng chia sẻ",
+    "call_share_starting": "Đang bắt đầu chia sẻ…",
+    "call_sharing_screen": "Bạn đang chia sẻ toàn bộ màn hình của mình, bao gồm cả cuộc gọi này.",
+    "call_sharing_window": "Bạn đang chia sẻ một cửa sổ.",
+    "call_share_unavailable_here": "Chia sẻ màn hình không khả dụng trên thiết bị này.",
+    "call_share_notification_title": "Đang chia sẻ màn hình của bạn",
+    "call_share_notification_text": "Những người khác trong cuộc gọi có thể thấy màn hình của bạn."
   },
   "moderation": {
     "ladder": {

@@ -1670,6 +1670,14 @@ mobile.call_ready_voice	client	client	literal	-	-	-	-
 mobile.call_rejoin	client	client	literal	-	-	-	-
 mobile.call_save	client	client	literal	-	-	-	-
 mobile.call_save_unavailable	client	client	literal	-	-	-	-
+mobile.call_share	client	client	literal	-	-	-	-
+mobile.call_share_notification_text	client	client	literal	-	-	-	-
+mobile.call_share_notification_title	client	client	literal	-	-	-	-
+mobile.call_share_starting	client	client	literal	-	-	-	-
+mobile.call_share_stop	client	client	literal	-	-	-	-
+mobile.call_share_unavailable_here	client	client	literal	-	-	-	-
+mobile.call_sharing_screen	client	client	literal	-	-	-	-
+mobile.call_sharing_window	client	client	literal	-	-	-	-
 mobile.call_someone	client	client	literal	-	-	-	-
 mobile.call_someones_screen	client	client	literal	-	-	-	-
 mobile.call_tile_audio	client	client	literal	-	-	-	-

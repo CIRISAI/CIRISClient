@@ -4487,7 +4487,15 @@
     "call_someones_screen": "{who} کی اسکرین",
     "call_camera_off": "کیمرہ بند",
     "call_camera_on": "کیمرہ آن",
-    "call_rejoin": "دوبارہ شامل ہوں"
+    "call_rejoin": "دوبارہ شامل ہوں",
+    "call_share": "اسکرین شیئر کریں",
+    "call_share_stop": "شیئر کرنا بند کریں",
+    "call_share_starting": "شیئر کرنا شروع ہو رہا ہے…",
+    "call_sharing_screen": "آپ اپنی پوری اسکرین شیئر کر رہے ہیں، بشمول یہ کال۔",
+    "call_sharing_window": "آپ ایک ونڈو شیئر کر رہے ہیں۔",
+    "call_share_unavailable_here": "اپنی اسکرین شیئر کرنا اس آلے پر دستیاب نہیں ہے۔",
+    "call_share_notification_title": "آپ کی اسکرین شیئر ہو رہی ہے",
+    "call_share_notification_text": "کال میں موجود دیگر افراد آپ کی اسکرین دیکھ سکتے ہیں۔"
   },
   "moderation": {
     "ladder": {

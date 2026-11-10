@@ -4487,6 +4487,14 @@
     "call_camera_off": "கேமரா அணைக்கப்பட்டது",
     "call_camera_on": "கேமரா இயக்கப்பட்டது",
     "call_rejoin": "மீண்டும் இணை",
+    "call_share": "திரையைப் பகிர்",
+    "call_share_stop": "பகிர்வதை நிறுத்து",
+    "call_share_starting": "பகிர்வதைத் தொடங்குகிறது…",
+    "call_sharing_screen": "இந்த அழைப்பு உட்பட உங்கள் முழுத் திரையையும் பகிர்கிறீர்கள்.",
+    "call_sharing_window": "நீங்கள் ஒரு சாளரத்தைப் பகிர்கிறீர்கள்.",
+    "call_share_unavailable_here": "இந்தச் சாதனத்தில் உங்கள் திரையைப் பகிர்வது கிடைக்கவில்லை.",
+    "call_share_notification_title": "உங்கள் திரையைப் பகிர்கிறீர்கள்",
+    "call_share_notification_text": "அழைப்பில் உள்ள மற்றவர்கள் உங்கள் திரையைப் பார்க்க முடியும்.",
     "approve_device_approve": "அங்கீகரி"
   },
   "moderation": {

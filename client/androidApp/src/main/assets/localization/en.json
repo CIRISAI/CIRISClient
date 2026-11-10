@@ -4582,7 +4582,15 @@
     "call_someones_screen": "{who}'s screen",
     "call_camera_off": "Camera off",
     "call_camera_on": "Camera on",
-    "call_rejoin": "Rejoin"
+    "call_rejoin": "Rejoin",
+    "call_share": "Share screen",
+    "call_share_stop": "Stop sharing",
+    "call_share_starting": "Starting to share…",
+    "call_sharing_screen": "You're sharing your whole screen, including this call.",
+    "call_sharing_window": "You're sharing one window.",
+    "call_share_unavailable_here": "Sharing your screen isn't available on this device.",
+    "call_share_notification_title": "Sharing your screen",
+    "call_share_notification_text": "Others in the call can see your screen."
   },
   "moderation": {
     "ladder": {

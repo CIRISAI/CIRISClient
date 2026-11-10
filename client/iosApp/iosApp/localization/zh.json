@@ -4487,7 +4487,15 @@
     "call_someones_screen": "{who}的屏幕",
     "call_camera_off": "摄像头已关闭",
     "call_camera_on": "摄像头已开启",
-    "call_rejoin": "重新加入"
+    "call_rejoin": "重新加入",
+    "call_share": "共享屏幕",
+    "call_share_stop": "停止共享",
+    "call_share_starting": "正在开始共享……",
+    "call_sharing_screen": "您正在共享整个屏幕，包括此通话。",
+    "call_sharing_window": "您正在共享一个窗口。",
+    "call_share_unavailable_here": "此设备不支持屏幕共享功能。",
+    "call_share_notification_title": "正在共享您的屏幕",
+    "call_share_notification_text": "通话中的其他人可以看到您的屏幕。"
   },
   "moderation": {
     "ladder": {

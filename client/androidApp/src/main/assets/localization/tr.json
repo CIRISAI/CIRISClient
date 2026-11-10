@@ -4487,7 +4487,15 @@
     "call_someones_screen": "{who} adlı kişinin ekranı",
     "call_camera_off": "Kamera kapalı",
     "call_camera_on": "Kamera açık",
-    "call_rejoin": "Yeniden Katıl"
+    "call_rejoin": "Yeniden Katıl",
+    "call_share": "Ekranı paylaş",
+    "call_share_stop": "Paylaşımı durdur",
+    "call_share_starting": "Paylaşım başlatılıyor…",
+    "call_sharing_screen": "Bu arama dahil olmak üzere tüm ekranınızı paylaşıyorsunuz.",
+    "call_sharing_window": "Bir pencereyi paylaşıyorsunuz.",
+    "call_share_unavailable_here": "Ekranınızı paylaşma bu cihazda kullanılamıyor.",
+    "call_share_notification_title": "Ekranınızı paylaşıyorsunuz",
+    "call_share_notification_text": "Aramadaki diğer kişiler ekranınızı görebilir."
   },
   "moderation": {
     "ladder": {

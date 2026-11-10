@@ -4493,7 +4493,15 @@
     "call_someones_screen": "صفحهٔ {who}",
     "call_camera_off": "دوربین خاموش",
     "call_camera_on": "دوربین روشن",
-    "call_rejoin": "دوباره بپیوندید"
+    "call_rejoin": "دوباره بپیوندید",
+    "call_share": "هم‌رسانی صفحه‌نمایش",
+    "call_share_stop": "توقف هم‌رسانی",
+    "call_share_starting": "در حال شروع هم‌رسانی…",
+    "call_sharing_screen": "شما در حال هم‌رسانی تمام صفحه‌نمایش خود هستید، از جمله همین تماس.",
+    "call_sharing_window": "شما در حال هم‌رسانی یک پنجره هستید.",
+    "call_share_unavailable_here": "هم‌رسانی صفحه‌نمایش شما روی این دستگاه در دسترس نیست.",
+    "call_share_notification_title": "در حال هم‌رسانی صفحه‌نمایش شما",
+    "call_share_notification_text": "دیگران در تماس می‌توانند صفحه‌نمایش شما را ببینند."
   },
   "moderation": {
     "ladder": {

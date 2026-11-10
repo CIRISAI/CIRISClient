@@ -4487,7 +4487,15 @@
     "data_erase_fact_erased_label": "消去済み",
     "data_erase_fact_erased": "このノード上で{hash}のもとに記録されたすべてのトレースと、そのモデル呼び出し。検出はリンクを失います。",
     "child_safety_subject_unresolved": "誰の状態かを特定できませんでした。所有者の照会に失敗したため、代わりの状態は表示しません。",
-    "call_rejoin": "再参加"
+    "call_rejoin": "再参加",
+    "call_share": "画面を共有",
+    "call_share_stop": "共有を停止",
+    "call_share_starting": "共有を開始しています…",
+    "call_sharing_screen": "画面全体を共有しています。この通話も含まれます。",
+    "call_sharing_window": "1つのウィンドウを共有しています。",
+    "call_share_unavailable_here": "このデバイスでは画面の共有を利用できません。",
+    "call_share_notification_title": "画面を共有中",
+    "call_share_notification_text": "通話中の他の参加者には、あなたの画面が見えます。"
   },
   "moderation": {
     "ladder": {

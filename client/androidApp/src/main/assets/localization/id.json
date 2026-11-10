@@ -4487,7 +4487,15 @@
     "call_someones_screen": "Layar {who}",
     "call_camera_off": "Kamera mati",
     "call_camera_on": "Kamera menyala",
-    "call_rejoin": "Gabung lagi"
+    "call_rejoin": "Gabung lagi",
+    "call_share": "Bagikan layar",
+    "call_share_stop": "Hentikan berbagi",
+    "call_share_starting": "Mulai membagikan…",
+    "call_sharing_screen": "Anda sedang membagikan seluruh layar Anda, termasuk panggilan ini.",
+    "call_sharing_window": "Anda sedang membagikan satu jendela.",
+    "call_share_unavailable_here": "Berbagi layar tidak tersedia di perangkat ini.",
+    "call_share_notification_title": "Membagikan layar Anda",
+    "call_share_notification_text": "Orang lain dalam panggilan dapat melihat layar Anda."
   },
   "moderation": {
     "ladder": {

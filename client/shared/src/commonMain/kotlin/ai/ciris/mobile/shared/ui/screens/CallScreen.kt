@@ -295,6 +295,7 @@ private fun LiveCall(
                     )
                 }
             }
+            ShareControls(call)
             s.departed.forEach { (member, reason) ->
                 Text(
                     localizedString(memberLeftKey(reason)),
@@ -338,3 +339,73 @@ private fun memberLeftKey(r: ai.ciris.mobile.shared.calls.LeaveReason) = when (r
     ai.ciris.mobile.shared.calls.LeaveReason.REMOVED -> "mobile.call_member_removed"
     ai.ciris.mobile.shared.calls.LeaveReason.LOST -> "mobile.call_member_lost"
 }
+
+/**
+ * Share a screen or a window (CSD-134). Desktop lists its own choices; phones and
+ * the browser show the system's picker. While sharing, the screen says what is
+ * shared, including that a whole screen shows this call too.
+ */
+@Composable
+private fun ShareControls(call: ai.ciris.mobile.shared.viewmodels.CallViewModel) {
+    val picker = ai.ciris.mobile.shared.calls.media.rememberSharePicker()
+    val share by call.shareState.collectAsState()
+    var choosing by remember { mutableStateOf(false) }
+    var sharedKind by remember { mutableStateOf<ai.ciris.mobile.shared.calls.media.VideoKind?>(null) }
+    when (val st = share) {
+        is ai.ciris.mobile.shared.calls.CallShare.State.Sharing -> {
+            Text(
+                localizedString(
+                    if (sharedKind == ai.ciris.mobile.shared.calls.media.VideoKind.WINDOW) "mobile.call_sharing_window"
+                    else "mobile.call_sharing_screen"
+                ),
+                modifier = Modifier.testable("call_sharing", sharedKind?.name?.lowercase() ?: "screen"),
+            )
+            OutlinedButton(
+                onClick = { call.stopShare() },
+                modifier = Modifier.testableClickable("btn_call_share_stop") { call.stopShare() },
+            ) { Text(localizedString("mobile.call_share_stop")) }
+        }
+        is ai.ciris.mobile.shared.calls.CallShare.State.Starting -> Text(localizedString("mobile.call_share_starting"))
+        else -> {
+            if (st is ai.ciris.mobile.shared.calls.CallShare.State.Refused) {
+                Text(
+                    localizedString(st.reasonId),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testable("call_share_refused", st.reasonId),
+                )
+            }
+            val start: (ai.ciris.mobile.shared.calls.media.ShareChoice?) -> Unit = { choice ->
+                choosing = false
+                picker.pick(choice) { source ->
+                    if (source != null) {
+                        sharedKind = source.kind
+                        call.startShare(source)
+                    }
+                }
+            }
+            if (picker.unavailable != null) {
+                Text(
+                    localizedString("mobile.call_share_unavailable_here"),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testable("call_share_unavailable_here"),
+                )
+            } else {
+                OutlinedButton(
+                    onClick = { if (picker.choices().isEmpty()) start(null) else choosing = true },
+                    modifier = Modifier.testableClickable("btn_call_share") {
+                        if (picker.choices().isEmpty()) start(null) else choosing = true
+                    },
+                ) { Text(localizedString("mobile.call_share")) }
+                if (choosing) {
+                    picker.choices().forEach { c ->
+                        OutlinedButton(
+                            onClick = { start(c) },
+                            modifier = Modifier.fillMaxWidth().testableClickable("btn_call_share_pick_${c.id}") { start(c) },
+                        ) { Text(c.title) }
+                    }
+                }
+            }
+        }
+    }
+}
+

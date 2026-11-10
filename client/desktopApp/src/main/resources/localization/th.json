@@ -4487,7 +4487,15 @@
     "call_someones_screen": "หน้าจอของ {who}",
     "call_camera_off": "กล้องปิด",
     "call_camera_on": "กล้องเปิด",
-    "call_rejoin": "เข้าร่วมใหม่"
+    "call_rejoin": "เข้าร่วมใหม่",
+    "call_share": "แชร์หน้าจอ",
+    "call_share_stop": "หยุดแชร์",
+    "call_share_starting": "กำลังเริ่มแชร์…",
+    "call_sharing_screen": "คุณกำลังแชร์หน้าจอทั้งหมดของคุณ รวมถึงการโทรนี้ด้วย",
+    "call_sharing_window": "คุณกำลังแชร์หน้าต่างเดียว",
+    "call_share_unavailable_here": "การแชร์หน้าจอของคุณไม่พร้อมใช้งานบนอุปกรณ์นี้",
+    "call_share_notification_title": "กำลังแชร์หน้าจอของคุณ",
+    "call_share_notification_text": "ผู้อื่นในสายสามารถเห็นหน้าจอของคุณ"
   },
   "moderation": {
     "ladder": {
