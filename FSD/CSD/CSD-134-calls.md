@@ -113,6 +113,7 @@ populated: {tag: "proposed:call_screen", renders: "the tiles, participants, cont
 | Member added mid-call | The room seats them (CSD-106; in a room of three or more, a majority of current members must approve), the epoch rolls, and nobody sees a gap |
 | A leaver rejoins | A new stream: a new tile, never the old one resumed |
 | Service tier changes | The tier is shown; video drops before audio, tile by tile |
+| The app goes to the background | The node leaves the call (`enter_background`) and the others see `attendee_left` with `left: backgrounded` (agreed by CIRISServer and CIRISEdge, 2026-11-10). Before joining, the screen says a call ends when the app leaves the screen; coming back offers Rejoin, which is a new stream. Nothing keeps a call running in the background in v1 |
 | Remote client (the node is elsewhere) | Works over the same route, on that connection's bandwidth; labelled if it is the limit |
 | No camera or denied | Audio-only, stated; the call is not refused |
 
