@@ -4486,7 +4486,8 @@
     "call_video_unavailable_here": "วิดีโอยังไม่พร้อมใช้งานบนอุปกรณ์นี้ ดังนั้นนี่จะเป็นการโทรด้วยเสียง คุณจะยังคงเห็นวิดีโอของผู้อื่นในที่ที่สามารถแสดงได้",
     "call_someones_screen": "หน้าจอของ {who}",
     "call_camera_off": "กล้องปิด",
-    "call_camera_on": "กล้องเปิด"
+    "call_camera_on": "กล้องเปิด",
+    "call_rejoin": "เข้าร่วมใหม่"
   },
   "moderation": {
     "ladder": {

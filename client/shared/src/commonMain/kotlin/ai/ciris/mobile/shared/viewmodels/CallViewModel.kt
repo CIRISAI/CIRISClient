@@ -175,9 +175,15 @@ class CallViewModel(
         stopShare()
     }
 
-    fun leave() {
+    fun leave(reason: ai.ciris.mobile.shared.calls.LeaveReason = ai.ciris.mobile.shared.calls.LeaveReason.LEFT) {
         stopAudio()
-        session.leave()
+        session.leave(reason)
+    }
+
+    /** A new stream after leaving: rejoining is never the old stream resumed. */
+    fun rejoin() {
+        starting = false
+        session.join(wantsVideo)
     }
 
     fun close() {

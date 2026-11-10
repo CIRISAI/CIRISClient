@@ -4486,7 +4486,8 @@
     "call_video_unavailable_here": "Görüntü bu cihaz için henüz kullanılamıyor, bu yüzden bu bir sesli arama olacak. Yine de gösterilebildiği yerlerde diğer kişilerin görüntüsünü göreceksiniz.",
     "call_someones_screen": "{who} adlı kişinin ekranı",
     "call_camera_off": "Kamera kapalı",
-    "call_camera_on": "Kamera açık"
+    "call_camera_on": "Kamera açık",
+    "call_rejoin": "Yeniden Katıl"
   },
   "moderation": {
     "ladder": {

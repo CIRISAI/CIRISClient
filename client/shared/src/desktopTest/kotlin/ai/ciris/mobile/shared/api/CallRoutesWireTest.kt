@@ -70,7 +70,7 @@ class CallRoutesWireTest {
                     )
                 }
                 delete("/v1/chat/{room}/call") {
-                    asked += "DELETE ${call.parameters["room"]}"
+                    asked += "DELETE ${call.parameters["room"]} left=${call.request.queryParameters["left"]}"
                     call.respondText("{}", ContentType.Application.Json)
                 }
                 webSocket("/v1/chat/{room}/call/frames") {
@@ -119,6 +119,17 @@ class CallRoutesWireTest {
 
         assertTrue(asked.any { it.startsWith("POST room-1 ") && "\"video\":false" in it }, "joined: $asked")
         assertTrue("WS ticket=t-123" in asked, "the socket opened with the single-use ticket: $asked")
+    }
+
+    /** Leaving because the app left the screen says so, so the others read "backgrounded". */
+    @Test fun aBackgroundedLeaveTellsTheNodeWhy() = runBlocking {
+        val session = CallSession("room-2", CIRISApiClient(url).callTransport(url, scope), scope)
+        session.join(video = false)
+        withTimeout(10_000) { session.state.first { it is CallState.InCall } }
+        session.leave(LeaveReason.BACKGROUNDED)
+        assertEquals(CallState.Left(LeaveReason.BACKGROUNDED), session.state.value)
+        withTimeout(10_000) { while (asked.none { it.startsWith("DELETE room-2") }) kotlinx.coroutines.delay(50) }
+        assertTrue("DELETE room-2 left=backgrounded" in asked, "$asked")
     }
 
     @Test fun aRefusalComesBackByItsId() = runBlocking {

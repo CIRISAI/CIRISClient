@@ -4423,6 +4423,7 @@
     "call_someones_screen": "Pantalla de {who}",
     "call_camera_off": "Cámara desactivada",
     "call_camera_on": "Cámara activada",
+    "call_rejoin": "Volver a unirte",
     "data_receipt_uncheckable": "No se puede verificar aquí",
     "data_receipt_key_label": "Clave",
     "data_receipt_key_not_current": "Firmado con una clave que este agente ya no usa. Solo se comprueba contra su clave actual, así que este recibo se interpreta como que no se comprueba aunque sea genuino.",

@@ -1161,6 +1161,7 @@
     "call_someones_screen": "የ{who} ስክሪን",
     "call_camera_off": "ካሜራ ጠፍቷል",
     "call_camera_on": "ካሜራ በርቷል",
+    "call_rejoin": "ዳግም ተቀላቀል",
     "chat_op_no_route": "ይህ ኖድ ይህን እስካሁን ማድረግ አይችልም፦ ለእሱ መንገድ አይሰጥም።",
     "chat_op_not_permitted": "ይህን ማድረግ የሚችለው ይህን መልዕክት የጻፈው ሰው ብቻ ነው፣ እና መልዕክቱ ገና ሥራ ላይ እያለ ብቻ።",
     "chat_editing": "መልዕክት {id}ን በመተካት ላይ። አዲሱን ጽሑፍ ለማስቀመጥ ላክ።",

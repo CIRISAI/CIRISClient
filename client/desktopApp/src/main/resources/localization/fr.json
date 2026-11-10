@@ -1464,6 +1464,7 @@
     "call_someones_screen": "Écran de {who}",
     "call_camera_off": "Caméra désactivée",
     "call_camera_on": "Caméra activée",
+    "call_rejoin": "Rejoindre",
     "add_fedid_confirm": "Ajouter l'ID de fédération",
     "add_fedid_intro": "Vous êtes déjà connecté — ceci ajoute un ID de fédération à votre compte existant sans le recréer. Votre identifiant de connexion est préservé.",
     "add_fedid_label_heading": "Nommez votre ID de fédération",

@@ -2116,6 +2116,7 @@
     "call_someones_screen": "Allon {who}",
     "call_camera_off": "An kashe kamara",
     "call_camera_on": "An kunna kamara",
+    "call_rejoin": "Sake shiga",
     "federation_create_associate": "Danganta Fed ID da ke akwai",
     "federation_create_associate_button": "Danganta",
     "federation_create_associate_hint": "Id na maɓallin tarayya da ke akwai ko fedcode",

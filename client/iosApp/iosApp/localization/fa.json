@@ -4492,7 +4492,8 @@
     "call_video_unavailable_here": "ویدیو هنوز در این دستگاه در دسترس نیست، پس این یک تماس صوتی خواهد بود. همچنان ویدیوی دیگران را هر جا که قابل نمایش باشد خواهید دید.",
     "call_someones_screen": "صفحهٔ {who}",
     "call_camera_off": "دوربین خاموش",
-    "call_camera_on": "دوربین روشن"
+    "call_camera_on": "دوربین روشن",
+    "call_rejoin": "دوباره بپیوندید"
   },
   "moderation": {
     "ladder": {

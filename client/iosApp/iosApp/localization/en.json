@@ -4581,7 +4581,8 @@
     "call_video_unavailable_here": "Video isn't available on this device yet, so this is a voice call. You'll still see others' video where it can be shown.",
     "call_someones_screen": "{who}'s screen",
     "call_camera_off": "Camera off",
-    "call_camera_on": "Camera on"
+    "call_camera_on": "Camera on",
+    "call_rejoin": "Rejoin"
   },
   "moderation": {
     "ladder": {

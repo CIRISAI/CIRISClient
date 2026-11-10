@@ -2757,6 +2757,7 @@
     "call_someones_screen": "{who} యొక్క స్క్రీన్",
     "call_camera_off": "కెమెరా ఆఫ్",
     "call_camera_on": "కెమెరా ఆన్",
+    "call_rejoin": "మళ్లీ చేరండి",
     "yubikey_probe_failed": "YUBIKEY స్థితిని చదవలేకపోయాం",
     "yubikey_probe_not_on_this_node": "ఈ నోడ్ YUBIKEY స్థితిని నివేదించదు",
     "yubikey_probe_reason": "కారణం: {detail}",

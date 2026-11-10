@@ -1666,6 +1666,7 @@ mobile.call_not_connecting	client	client	literal	-	-	-	-
 mobile.call_not_saved	client	client	literal	-	-	-	-
 mobile.call_ready_video	client	client	literal	-	-	-	-
 mobile.call_ready_voice	client	client	literal	-	-	-	-
+mobile.call_rejoin	client	client	literal	-	-	-	-
 mobile.call_save	client	client	literal	-	-	-	-
 mobile.call_save_unavailable	client	client	literal	-	-	-	-
 mobile.call_someone	client	client	literal	-	-	-	-

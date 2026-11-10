@@ -4486,7 +4486,8 @@
     "call_video_unavailable_here": "Il video non è ancora disponibile su questo dispositivo, quindi questa sarà una chiamata vocale. Potrai comunque vedere il video degli altri dove può essere mostrato.",
     "call_someones_screen": "Schermo di {who}",
     "call_camera_off": "Fotocamera spenta",
-    "call_camera_on": "Fotocamera accesa"
+    "call_camera_on": "Fotocamera accesa",
+    "call_rejoin": "Rientra"
   },
   "moderation": {
     "ladder": {

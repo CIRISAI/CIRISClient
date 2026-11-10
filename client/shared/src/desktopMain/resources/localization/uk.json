@@ -1168,6 +1168,7 @@
     "call_someones_screen": "Екран {who}",
     "call_camera_off": "Камера вимкнена",
     "call_camera_on": "Камера увімкнена",
+    "call_rejoin": "Приєднатися повторно",
     "contact_requests_heading": "Хоче зв'язатися",
     "contact_requests_title_named": "{label} (вони самі себе назвали) хоче зв'язатися",
     "contact_requests_title_someone": "Хтось хоче зв'язатися",

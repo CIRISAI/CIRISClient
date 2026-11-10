@@ -4486,6 +4486,7 @@
     "call_someones_screen": "{who} இன் திரை",
     "call_camera_off": "கேமரா அணைக்கப்பட்டது",
     "call_camera_on": "கேமரா இயக்கப்பட்டது",
+    "call_rejoin": "மீண்டும் இணை",
     "approve_device_approve": "அங்கீகரி"
   },
   "moderation": {

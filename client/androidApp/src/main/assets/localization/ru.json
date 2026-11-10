@@ -1162,6 +1162,7 @@
     "call_someones_screen": "Экран {who}",
     "call_camera_off": "Камера выключена",
     "call_camera_on": "Камера включена",
+    "call_rejoin": "Вернуться к звонку",
     "contact_requests_accepted": "Теперь вы контакты.",
     "contact_requests_accept_pending": "Принято, но этот узел всё ещё ожидает их ключ. Они появятся в контактах, как только он поступит.",
     "contact_requests_ignored_notice": "Игнорируется. Им об этом не сообщается.",

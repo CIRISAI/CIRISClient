@@ -193,6 +193,20 @@ private fun LiveCall(
 ) {
     val state by call.state.collectAsState()
     val muted by call.muted.collectAsState()
+    // The app leaving the screen ends the call, and the others are told why
+    // (CSD-134). Nothing keeps a call running in the background in v1.
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
+    androidx.compose.runtime.DisposableEffect(lifecycle, call) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_STOP &&
+                call.state.value is ai.ciris.mobile.shared.calls.CallState.InCall
+            ) {
+                call.leave(ai.ciris.mobile.shared.calls.LeaveReason.BACKGROUNDED)
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
     when (val s = state) {
         ai.ciris.mobile.shared.calls.CallState.Idle,
         ai.ciris.mobile.shared.calls.CallState.Joining -> Text(
@@ -204,10 +218,19 @@ private fun LiveCall(
             color = MaterialTheme.colorScheme.error,
             modifier = Modifier.testable("call_refused", s.reasonId),
         )
-        is ai.ciris.mobile.shared.calls.CallState.Left -> Text(
-            localizedString(youLeftKey(s.reason)),
-            modifier = Modifier.testable("call_left", s.reason.wire),
-        )
+        is ai.ciris.mobile.shared.calls.CallState.Left -> {
+            Text(
+                localizedString(youLeftKey(s.reason)),
+                modifier = Modifier.testable("call_left", s.reason.wire),
+            )
+            // Removed from the room is not something a tap undoes.
+            if (s.reason != ai.ciris.mobile.shared.calls.LeaveReason.REMOVED) {
+                Button(
+                    onClick = { call.rejoin() },
+                    modifier = Modifier.testableClickable("btn_call_rejoin") { call.rejoin() },
+                ) { Text(localizedString("mobile.call_rejoin")) }
+            }
+        }
         is ai.ciris.mobile.shared.calls.CallState.InCall -> {
             val audioUnavailable by call.audioUnavailable.collectAsState()
             if (audioUnavailable) {

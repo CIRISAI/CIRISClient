@@ -2146,10 +2146,16 @@ class CIRISApiClient internal constructor(
             }
         }
 
-        override suspend fun leave(room: String) {
+        override suspend fun leave(room: String) = leave(room, ai.ciris.mobile.shared.calls.LeaveReason.LEFT)
+
+        override suspend fun leave(room: String, reason: ai.ciris.mobile.shared.calls.LeaveReason) {
             val client = federationHttpClient()
             try {
-                client.delete("$nodeUrl${callPath(room)}") { authHeader()?.let { header("Authorization", it) } }
+                // `left` tells the others why (CSD-134); a node that does not read it reports `left`.
+                client.delete("$nodeUrl${callPath(room)}") {
+                    authHeader()?.let { header("Authorization", it) }
+                    url.parameters.append("left", reason.wire)
+                }
             } finally {
                 client.close()
             }

@@ -1198,6 +1198,7 @@
     "call_someones_screen": "Skrini ya {who}",
     "call_camera_off": "Kamera imezimwa",
     "call_camera_on": "Kamera imewashwa",
+    "call_rejoin": "Jiunge tena",
     "final_genesis_amend_needed_only": "Idhini {needed} za washikilizi zinahitajika",
     "final_genesis_amend_status_label": "Idhini zilizotolewa hadi sasa",
     "final_genesis_amend_complete": "Washikilizi wa kutosha wameidhinisha. Maliza huandika kifurushi cha toleo la 4.",

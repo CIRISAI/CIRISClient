@@ -4486,7 +4486,8 @@
     "call_video_unavailable_here": "ویڈیو ابھی اس آلے پر دستیاب نہیں ہے، اس لیے یہ ایک وائس کال ہے۔ آپ پھر بھی دوسروں کی ویڈیو دیکھیں گے جہاں اسے دکھایا جا سکے۔",
     "call_someones_screen": "{who} کی اسکرین",
     "call_camera_off": "کیمرہ بند",
-    "call_camera_on": "کیمرہ آن"
+    "call_camera_on": "کیمرہ آن",
+    "call_rejoin": "دوبارہ شامل ہوں"
   },
   "moderation": {
     "ladder": {

@@ -2742,6 +2742,7 @@
     "call_someones_screen": "Ìbòjú {who}",
     "call_camera_off": "Kámẹ́rà ti pa",
     "call_camera_on": "Kámẹ́rà ti ṣí",
+    "call_rejoin": "Tún Darapọ̀ Mọ́",
     "yubikey_probe_failed": "A KÒ LÈ KA IPÒ YUBIKEY",
     "yubikey_probe_not_on_this_node": "NÓDÙ YÌÍ KÒ ṢE ÌJÁBỌ̀ NÍPA IPÒ YUBIKEY",
     "yubikey_probe_reason": "Ìdí: {detail}",

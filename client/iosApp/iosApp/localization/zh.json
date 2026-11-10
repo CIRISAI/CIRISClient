@@ -4486,7 +4486,8 @@
     "call_video_unavailable_here": "此设备尚不支持视频，因此此次通话将为语音通话。在可以显示的地方，您仍可看到其他人的视频。",
     "call_someones_screen": "{who}的屏幕",
     "call_camera_off": "摄像头已关闭",
-    "call_camera_on": "摄像头已开启"
+    "call_camera_on": "摄像头已开启",
+    "call_rejoin": "重新加入"
   },
   "moderation": {
     "ladder": {

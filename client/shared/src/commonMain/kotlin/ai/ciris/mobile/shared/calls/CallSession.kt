@@ -81,13 +81,13 @@ class CallSession(
         }
     }
 
-    fun leave() {
+    fun leave(reason: LeaveReason = LeaveReason.LEFT) {
         val wasIn = _state.value is CallState.InCall
         reader?.cancel()
         socket?.close()
         socket = null
-        if (wasIn) scope.launch { runCatching { transport.leave(room) } }
-        _state.value = CallState.Left(LeaveReason.LEFT)
+        if (wasIn) scope.launch { runCatching { transport.leave(room, reason) } }
+        _state.value = CallState.Left(reason)
     }
 
     /**
@@ -345,6 +345,9 @@ class CallRefusal(val reasonId: String, detail: String? = null) : Exception(deta
 interface CallTransport {
     suspend fun join(room: String, video: Boolean): CallJoinAnswer
     suspend fun leave(room: String)
+
+    /** Leave, saying why: the node passes `backgrounded` on to the others (CSD-134). */
+    suspend fun leave(room: String, reason: LeaveReason) = leave(room)
     suspend fun openFrames(room: String): CallSocket
 
     /**

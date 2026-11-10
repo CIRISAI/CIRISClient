@@ -1236,6 +1236,7 @@
     "call_someones_screen": "{who} ची स्क्रीन",
     "call_camera_off": "कॅमेरा बंद",
     "call_camera_on": "कॅमेरा चालू",
+    "call_rejoin": "पुन्हा सामील व्हा",
     "trust_hosts_verified": "{checked} पैकी {verified} ट्रस्ट-रूट होस्ट पडताळले गेले",
     "trust_hosts_unreachable": "{count} ट्रस्ट-रूट होस्टपर्यंत पोहोचता आले नाही. हे अपयश नाही: ते बंद असू शकतात किंवा या नेटवर्कवरून ब्लॉक केलेले असू शकतात.",
     "contact_requests_heading": "जोडू इच्छित आहे",

@@ -1205,6 +1205,7 @@
     "call_someones_screen": "{who}님의 화면",
     "call_camera_off": "카메라 꺼짐",
     "call_camera_on": "카메라 켜짐",
+    "call_rejoin": "다시 참여하기",
     "claim_node_cohort_biosphere": "모든 생명체 (생물권)",
     "claim_node_cohort_federation": "전체 페더레이션 (페더레이션)",
     "claim_node_cohort_more": "옵션 더 보기",

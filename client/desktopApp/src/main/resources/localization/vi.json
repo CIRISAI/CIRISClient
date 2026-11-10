@@ -4486,7 +4486,8 @@
     "call_video_unavailable_here": "Video chưa khả dụng trên thiết bị này, nên đây sẽ là cuộc gọi thoại. Bạn vẫn sẽ thấy video của người khác ở nơi có thể hiển thị được.",
     "call_someones_screen": "Màn hình của {who}",
     "call_camera_off": "Camera tắt",
-    "call_camera_on": "Camera bật"
+    "call_camera_on": "Camera bật",
+    "call_rejoin": "Tham gia lại"
   },
   "moderation": {
     "ladder": {

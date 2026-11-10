@@ -4465,6 +4465,7 @@
     "call_someones_screen": "Tela de {who}",
     "call_camera_off": "Câmera desligada",
     "call_camera_on": "Câmera ligada",
+    "call_rejoin": "Entrar de novo",
     "data_erase_self_label": "Apagar você",
     "data_erase_self_blocked": "Ainda não é possível a partir deste aplicativo. O nó só apaga uma pessoa mediante uma solicitação que essa pessoa assina, e este aplicativo não assina (CIRISServer#677). Apagar traços não apaga você.",
     "data_erase_agent_id_label": "ID do agente",

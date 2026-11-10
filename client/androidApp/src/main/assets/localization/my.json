@@ -1634,6 +1634,7 @@
     "call_someones_screen": "{who} ၏ မျက်နှာပြင်",
     "call_camera_off": "ကင်မရာ ပိတ်ထားသည်",
     "call_camera_on": "ကင်မရာ ဖွင့်ထားသည်",
+    "call_rejoin": "ပြန်ပါဝင်ပါ",
     "add_fedid_confirm": "Federation ID ထည့်ပါ",
     "add_fedid_intro": "သင် ဝင်ရောက်ပြီးဖြစ်သည် — ဤသည်က သင်၏ရှိပြီးအကောင့်ကို ပြန်မဖန်တီးဘဲ federation ID တစ်ခု ထည့်ပေးသည်။ သင်၏ ဝင်ရောက်မှုကို ထိန်းသိမ်းထားသည်။",
     "add_fedid_label_heading": "သင်၏ federation ID ကို အမည်ပေးပါ",
