@@ -1,4 +1,4 @@
-@file:OptIn(ExperimentalForeignApi::class)
+@file:OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 
 package ai.ciris.mobile.shared.calls.media
 
