@@ -92,6 +92,14 @@ class CallFramesVectorsTest {
         assertTrue(CallSession.streamIdBytes(replaced.s("new_stream_id")) != null)
     }
 
+    /** The server's real H.264 vector is a keyframe by the payload format: SPS, PPS, IDR. */
+    @Test fun theH264VectorIsAKeyframeAccessUnit() {
+        val c = cases("client_to_node").first { it.s("name") == "video_h264_keyframe" }
+        val payload = hex(c.s("payload_hex"))
+        assertEquals(listOf(7, 8, 5), ai.ciris.mobile.shared.calls.media.Keyframes.h264NalTypes(payload))
+        assertTrue(ai.ciris.mobile.shared.calls.media.Keyframes.isKeyframe(0x04, payload))
+    }
+
     /** The audio pin: the vector's payload is a real Opus packet, TOC 0x78 (one 20 ms full-band frame). */
     @Test fun theAudioVectorIsOneOpusPacket() {
         val audio = cases("client_to_node").first { it.s("name") == "audio_opus_20ms" }

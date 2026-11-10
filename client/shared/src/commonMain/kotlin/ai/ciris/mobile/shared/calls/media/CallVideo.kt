@@ -69,6 +69,60 @@ class VideoFrame(
     }
 }
 
+/**
+ * Is this payload a keyframe, read from the bytes themselves (the payload format
+ * above), so a late joiner knows where it can start. Edge treats payloads as
+ * opaque, so this is the client's witness (CC, 2026-11-10).
+ *
+ * H.264: an IDR slice (NAL type 5) in the access unit. AV1: a sequence header OBU
+ * (type 1), which the format puts before every keyframe.
+ */
+object Keyframes {
+    fun isKeyframe(codecId: Int, payload: ByteArray): Boolean = when (codecId) {
+        CallVideoCodec.TEMPORAL_LAYERED -> h264NalTypes(payload).contains(5)
+        CallVideoCodec.AV1_SVC -> av1ObuTypes(payload).contains(1)
+        else -> false
+    }
+
+    /** NAL unit types in an Annex B access unit (3- or 4-byte start codes). */
+    fun h264NalTypes(au: ByteArray): List<Int> {
+        val types = mutableListOf<Int>()
+        var i = 0
+        while (i + 3 < au.size) {
+            if (au[i].toInt() == 0 && au[i + 1].toInt() == 0 && au[i + 2].toInt() == 1) {
+                types += au[i + 3].toInt() and 0x1F
+                i += 3
+            } else i++
+        }
+        return types
+    }
+
+    /** OBU types in a low-overhead AV1 stream (every OBU carries its size). */
+    fun av1ObuTypes(tu: ByteArray): List<Int> {
+        val types = mutableListOf<Int>()
+        var i = 0
+        while (i < tu.size) {
+            val header = tu[i].toInt() and 0xFF
+            val type = (header shr 3) and 0x0F
+            val hasExtension = header and 0x04 != 0
+            val hasSize = header and 0x02 != 0
+            i += if (hasExtension) 2 else 1
+            if (!hasSize) { types += type; break }
+            var size = 0L
+            var shift = 0
+            while (i < tu.size) { // leb128
+                val b = tu[i++].toInt() and 0xFF
+                size = size or ((b and 0x7F).toLong() shl shift)
+                if (b and 0x80 == 0) break
+                shift += 7
+            }
+            types += type
+            i += size.toInt()
+        }
+        return types
+    }
+}
+
 /** What a video stream shows: the camera, a whole screen, one window, or a test pattern in the runner. */
 enum class VideoKind { CAMERA, SCREEN, WINDOW, TEST_PATTERN }
 
@@ -176,7 +230,10 @@ class CallVideo(
 ) {
     private var listener: Job? = null
     private val decoders = mutableMapOf<String, Pair<Int, VideoDecoder>>()
+    /** Streams whose decoder has seen its first keyframe; before it, chunks are skipped. */
+    private val started = mutableSetOf<String>()
     private var keyframeDue = true
+    private var lastKeyframeUs = Long.MIN_VALUE
 
     var cameraOff: Boolean = false
 
@@ -186,8 +243,11 @@ class CallVideo(
         if (encoder != null && source != null) {
             source.start { frame ->
                 if (cameraOff) return@start
-                val force = keyframeDue
+                // Edge has no keyframe request yet, so a late joiner waits for the next
+                // one: a keyframe at least every KEYFRAME_INTERVAL_US (CIRISEdge, 2026-11-10).
+                val force = keyframeDue || frame.timestampUs - lastKeyframeUs >= KEYFRAME_INTERVAL_US
                 keyframeDue = false
+                if (force) lastKeyframeUs = frame.timestampUs
                 encoder.encode(frame, force) { chunk ->
                     session.publish(OutgoingFrame(encoder.codecId, chunk.layer, chunk.bytes))
                 }
@@ -206,6 +266,7 @@ class CallVideo(
         var entry = decoders[key]
         if (entry == null || entry.first != codecId) {
             entry?.second?.close()
+            started -= key
             val dec = newDecoder(codecId)
             if (dec == null) {
                 undecodable(publisher, codecId)
@@ -213,6 +274,12 @@ class CallVideo(
             }
             entry = codecId to dec
             decoders[key] = entry
+        }
+        // A late joiner, or a codec change, starts at the first keyframe it receives:
+        // anything before it references pictures this decoder never had.
+        if (key !in started) {
+            if (!Keyframes.isKeyframe(codecId, bytes)) return
+            started += key
         }
         entry.second.decode(layer, bytes) { render(publisher, streamId, it) }
     }
@@ -224,6 +291,11 @@ class CallVideo(
         encoder?.close()
         decoders.values.forEach { it.second.close() }
         decoders.clear()
+    }
+
+    companion object {
+        /** Two seconds: how long a late joiner waits for a picture at most. */
+        const val KEYFRAME_INTERVAL_US = 2_000_000L
     }
 
     private fun streamKey(id: ByteArray) = id.joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }

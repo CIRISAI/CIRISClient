@@ -8,6 +8,13 @@ import kotlin.test.assertTrue
 
 /** The shared half of call video: the test pattern, I420 to ARGB, and per-stream decoding. */
 class CallVideoTest {
+    /** SPS, PPS, IDR: an H.264 keyframe access unit in Annex B. */
+    private val KEY = byteArrayOf(0, 0, 0, 1, 0x67, 0x42, 0, 0, 0, 1, 0x68, 0x42, 0, 0, 0, 1, 0x65, 0x11)
+    /** An AV1 sequence header OBU then a frame OBU: what the format puts at a keyframe. */
+    private val AV1_KEY = byteArrayOf(0x0A, 0x02, 0x00, 0x00, 0x32, 0x01, 0x00)
+    /** A non-IDR slice only. */
+    private val P_FRAME = byteArrayOf(0, 0, 0, 1, 0x41, 0x9A.toByte())
+
     @Test fun theTestPatternMovesFromFrameToFrame() {
         val p = TestPatternSource(kotlinx.coroutines.GlobalScope)
         val a = p.nextFrame()
@@ -45,9 +52,9 @@ class CallVideoTest {
     @Test fun eachStreamHasItsOwnDecoder() {
         val log = mutableListOf<String>(); val rendered = mutableListOf<String>()
         val v = video(log, rendered)
-        v.receive("ada", ByteArray(32) { 1 }, 0x01, Layer.BASE, byteArrayOf(1))
-        v.receive("ada", ByteArray(32) { 2 }, 0x04, Layer.BASE, byteArrayOf(1))
-        v.receive("ada", ByteArray(32) { 1 }, 0x01, Layer.BASE, byteArrayOf(1))
+        v.receive("ada", ByteArray(32) { 1 }, 0x01, Layer.BASE, AV1_KEY)
+        v.receive("ada", ByteArray(32) { 2 }, 0x04, Layer.BASE, KEY)
+        v.receive("ada", ByteArray(32) { 1 }, 0x01, Layer.BASE, AV1_KEY)
         assertEquals(listOf("decode 1", "decode 4", "decode 1"), log)
         assertEquals(3, rendered.size)
     }
@@ -56,7 +63,7 @@ class CallVideoTest {
     @Test fun anUndecodableStreamIsSaid() {
         val log = mutableListOf<String>(); val rendered = mutableListOf<String>()
         val v = video(log, rendered, decodable = setOf(0x01))
-        v.receive("sam", ByteArray(32) { 3 }, 0x04, Layer.BASE, byteArrayOf(1))
+        v.receive("sam", ByteArray(32) { 3 }, 0x04, Layer.BASE, KEY)
         assertEquals(listOf("undecodable sam 4"), rendered)
     }
 
@@ -65,10 +72,34 @@ class CallVideoTest {
         val log = mutableListOf<String>(); val rendered = mutableListOf<String>()
         val v = video(log, rendered)
         val s = ByteArray(32) { 1 }
-        v.receive("ada", s, 0x01, Layer.BASE, byteArrayOf(1))
-        v.receive("ada", s, 0x04, Layer.BASE, byteArrayOf(1))
+        v.receive("ada", s, 0x01, Layer.BASE, AV1_KEY)
+        v.receive("ada", s, 0x04, Layer.BASE, KEY)
         assertEquals(listOf("decode 1", "close 1", "decode 4"), log)
         assertNotEquals(0, rendered.size)
+    }
+
+    /** The witness CC asked for: a late joiner skips until its first keyframe, then decodes. */
+    @Test fun aLateJoinerStartsAtTheFirstKeyframe() {
+        val log = mutableListOf<String>(); val rendered = mutableListOf<String>()
+        val v = video(log, rendered)
+        val s = ByteArray(32) { 9 }
+        v.receive("ada", s, 0x04, Layer.BASE, P_FRAME)
+        v.receive("ada", s, 0x04, Layer(0, 1, 0), P_FRAME)
+        assertEquals(emptyList(), log, "nothing before a keyframe")
+        v.receive("ada", s, 0x04, Layer.BASE, KEY)
+        v.receive("ada", s, 0x04, Layer(0, 1, 0), P_FRAME)
+        assertEquals(listOf("decode 4", "decode 4"), log)
+    }
+
+    @Test fun keyframesAreReadFromTheBytes() {
+        assertTrue(Keyframes.isKeyframe(0x04, KEY))
+        assertTrue(!Keyframes.isKeyframe(0x04, P_FRAME))
+        // AV1: sequence header OBU (type 1, has_size) then a frame OBU (type 6).
+        val av1Key = byteArrayOf(0x0A, 0x02, 0x00, 0x00, 0x32, 0x01, 0x00)
+        val av1Inter = byteArrayOf(0x32, 0x01, 0x00)
+        assertTrue(Keyframes.isKeyframe(0x01, av1Key))
+        assertTrue(!Keyframes.isKeyframe(0x01, av1Inter))
+        assertEquals(listOf(1, 6), Keyframes.av1ObuTypes(av1Key))
     }
 
     private object NoTransport : ai.ciris.mobile.shared.calls.CallTransport {
