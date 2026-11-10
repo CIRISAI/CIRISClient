@@ -31,10 +31,16 @@ class DesktopAudioLoopbackTest {
         val arrivals = java.util.concurrent.ConcurrentLinkedQueue<Long>() // ms since start, per frame
         mic.start { pcm -> arrivals += (System.nanoTime() - t0mic) / 1_000_000; pcm.forEach { heard += it } }
         try {
-            // Two seconds of tone through Opus both ways, paced by an absolute clock so
+            // A cold sound server can take seconds to deliver the first captured frame
+            // (2 s on a CI runner): wait for the microphone before playing anything.
+            val warm = System.nanoTime() + 10_000_000_000L
+            while (arrivals.isEmpty() && System.nanoTime() < warm) Thread.sleep(50)
+            assertTrue(arrivals.isNotEmpty(), "the microphone delivered nothing in 10 s")
+            heard.clear()
+            // Three seconds of tone through Opus both ways, paced by an absolute clock so
             // the loop does not drift slower than real time and starve the line.
             val t0 = System.nanoTime()
-            repeat(100) { i ->
+            repeat(150) { i ->
                 enc.encode(tone.nextFrame()) { p -> dec.decode(p) { pcm -> sink.play("ada", pcm) } }
                 val due = t0 + (i + 1) * CallAudioFormat.FRAME_MS * 1_000_000L
                 val wait = (due - System.nanoTime()) / 1_000_000L
