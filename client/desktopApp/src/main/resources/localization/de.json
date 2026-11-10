@@ -6399,6 +6399,7 @@
     "cross_origin": "Dieser Anruf kann nur von der eigenen Seite dieses Geräts aus geöffnet werden.",
     "socket_already_open": "Für diesen Anruf ist bereits eine Frames-Verbindung geöffnet.",
     "keep_refused": "Das Speichern von Anrufen ist noch nicht bereit, daher wird dieser Anruf nicht aufbewahrt.",
-    "share_unavailable": "Bildschirmfreigabe ist auf diesem Knoten noch nicht verfügbar."
+    "share_unavailable": "Bildschirmfreigabe ist auf diesem Knoten noch nicht verfügbar.",
+    "leave_reason_unknown": "Das ist kein Grund, einen Anruf zu verlassen."
   }
 }

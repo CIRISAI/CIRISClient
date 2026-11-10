@@ -6399,6 +6399,7 @@
     "cross_origin": "Simu hii inaweza kufunguliwa tu kutoka ukurasa wa kifaa hiki chenyewe.",
     "socket_already_open": "Simu hii tayari ina muunganisho wa fremu uliofunguliwa.",
     "keep_refused": "Kuhifadhi simu bado hakujakamilika, hivyo simu hii haihifadhiwi.",
-    "share_unavailable": "Kushiriki skrini yako hakupatikani bado kwenye nodi hii."
+    "share_unavailable": "Kushiriki skrini yako hakupatikani bado kwenye nodi hii.",
+    "leave_reason_unknown": "Hiyo si sababu ya kuondoka kwenye simu."
   }
 }

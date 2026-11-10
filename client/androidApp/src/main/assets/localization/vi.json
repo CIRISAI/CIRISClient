@@ -6399,6 +6399,7 @@
     "cross_origin": "Cuộc gọi này chỉ có thể được mở từ trang riêng của thiết bị này.",
     "socket_already_open": "Cuộc gọi này đã có một kết nối khung hình đang mở.",
     "keep_refused": "Tính năng lưu cuộc gọi chưa sẵn sàng, nên cuộc gọi này sẽ không được lưu lại.",
-    "share_unavailable": "Chia sẻ màn hình chưa khả dụng trên nút này."
+    "share_unavailable": "Chia sẻ màn hình chưa khả dụng trên nút này.",
+    "leave_reason_unknown": "Đó không phải là lý do để rời khỏi cuộc gọi."
   }
 }

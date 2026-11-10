@@ -6399,6 +6399,7 @@
     "cross_origin": "Esta llamada solo se puede abrir desde la propia página de este dispositivo.",
     "socket_already_open": "Esta llamada ya tiene una conexión de fotogramas abierta.",
     "keep_refused": "Guardar llamadas todavía no está listo, así que esta llamada no se está guardando.",
-    "share_unavailable": "Compartir tu pantalla todavía no está disponible en este nodo."
+    "share_unavailable": "Compartir tu pantalla todavía no está disponible en este nodo.",
+    "leave_reason_unknown": "Esa no es una razón para salir de la llamada."
   }
 }

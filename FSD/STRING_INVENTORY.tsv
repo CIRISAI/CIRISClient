@@ -350,6 +350,7 @@ call.cross_origin	unclaimed	-	-	-	-	-	-
 call.ended	unclaimed	-	-	-	-	-	-
 call.frame_over_budget	unclaimed	-	-	-	-	-	-
 call.keep_refused	unclaimed	-	-	-	-	-	-
+call.leave_reason_unknown	unclaimed	-	-	-	-	-	-
 call.not_a_member	unclaimed	-	-	-	-	-	-
 call.not_joined	unclaimed	-	-	-	-	-	-
 call.not_owner	unclaimed	-	-	-	-	-	-

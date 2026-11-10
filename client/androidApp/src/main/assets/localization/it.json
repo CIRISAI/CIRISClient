@@ -6399,6 +6399,7 @@
     "cross_origin": "Questa chiamata può essere aperta solo dalla pagina propria di questo dispositivo.",
     "socket_already_open": "Questa chiamata ha già una connessione per i frame aperta.",
     "keep_refused": "Il salvataggio delle chiamate non è ancora pronto, quindi questa chiamata non viene conservata.",
-    "share_unavailable": "La condivisione dello schermo non è ancora disponibile su questo nodo."
+    "share_unavailable": "La condivisione dello schermo non è ancora disponibile su questo nodo.",
+    "leave_reason_unknown": "Questo non è un motivo per lasciare la chiamata."
   }
 }

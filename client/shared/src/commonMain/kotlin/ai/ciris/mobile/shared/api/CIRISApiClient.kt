@@ -2154,7 +2154,12 @@ class CIRISApiClient internal constructor(
                 // `left` tells the others why (CSD-134); a node that does not read it reports `left`.
                 client.delete("$nodeUrl${callPath(room)}") {
                     authHeader()?.let { header("Authorization", it) }
-                    url.parameters.append("left", reason.wire)
+                    // The node accepts only left|backgrounded (CIRISServer e5a9ccc3); removed and
+                    // lost are its words about others, never a reason this device gives.
+                    url.parameters.append(
+                        "left",
+                        if (reason == ai.ciris.mobile.shared.calls.LeaveReason.BACKGROUNDED) "backgrounded" else "left",
+                    )
                 }
             } finally {
                 client.close()

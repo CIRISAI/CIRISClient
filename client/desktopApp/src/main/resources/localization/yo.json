@@ -6399,6 +6399,7 @@
     "cross_origin": "A lè ṣí ìpè yìí nìkan láti orí ojú-ìwé ẹ̀rọ yìí fúnra rẹ̀.",
     "socket_already_open": "Ìpè yìí ti ní ìsopọ̀ férémù kan tí ó ṣí sílẹ̀ tẹ́lẹ̀.",
     "keep_refused": "Fífi ìpè pamọ́ kò tíì ṣetán, nítorí náà a kò ní pa ìpè yìí mọ́.",
-    "share_unavailable": "Pínpín ojú ìbòjú rẹ kò tíì sí lórí nódù yìí síi."
+    "share_unavailable": "Pínpín ojú ìbòjú rẹ kò tíì sí lórí nódù yìí síi.",
+    "leave_reason_unknown": "Ìdí yẹn kì í ṣe ìdí fún yíyọ kúrò nínú ìpè."
   }
 }

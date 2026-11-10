@@ -6382,6 +6382,7 @@
   "call": {
     "keep_refused": "Aramaları kaydetme henüz hazır değil, bu yüzden bu arama tutulmuyor.",
     "share_unavailable": "Ekranınızı paylaşma bu düğümde henüz kullanılamıyor.",
+    "leave_reason_unknown": "Bu, bir aramadan ayrılmak için geçerli bir neden değil.",
     "session_absent": "Bir aramaya katılmak için oturum açın.",
     "not_owner": "Bu cihazdan yalnızca cihazın sahibi aramalara katılabilir.",
     "plumbing": "Aramalar şu anda bu cihazda kullanılamıyor.",

@@ -6399,6 +6399,7 @@
     "cross_origin": "Ana iya buɗe wannan kiran ne kawai daga shafin wannan na'urar kanta.",
     "socket_already_open": "Wannan kiran yana da haɗin firam-firam a buɗe tuni.",
     "keep_refused": "Ajiye kira ba a shirya ba tukuna, don haka ba a ajiye wannan kiran ba.",
-    "share_unavailable": "Raba allon ku ba ya samuwa a wannan kumburi tukuna."
+    "share_unavailable": "Raba allon ku ba ya samuwa a wannan kumburi tukuna.",
+    "leave_reason_unknown": "Wannan ba dalili ba ne na barin kiran."
   }
 }
