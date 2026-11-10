@@ -227,6 +227,10 @@ class CallVideo(
     private val newDecoder: (codecId: Int) -> VideoDecoder? = ::createVideoDecoder,
     /** Says, per stream, that this device cannot decode its codec (the tile shows audio only). */
     private val undecodable: (publisher: String, codecId: Int) -> Unit = { _, _ -> },
+    /** Where encoded frames go: the call's own stream, or a share's socket. */
+    private val publish: (OutgoingFrame) -> Boolean = session::publish,
+    /** False for a share: it only sends; other members' video is the call's to render. */
+    private val receive: Boolean = true,
 ) {
     private var listener: Job? = null
     private val decoders = mutableMapOf<String, Pair<Int, VideoDecoder>>()
@@ -249,10 +253,11 @@ class CallVideo(
                 keyframeDue = false
                 if (force) lastKeyframeUs = frame.timestampUs
                 encoder.encode(frame, force) { chunk ->
-                    session.publish(OutgoingFrame(encoder.codecId, chunk.layer, chunk.bytes))
+                    publish(OutgoingFrame(encoder.codecId, chunk.layer, chunk.bytes))
                 }
             }
         }
+        if (!receive) return
         listener = scope.launch {
             session.frames.collect { f ->
                 if (f.codecId == CallFrames.CODEC_OPAQUE) return@collect
@@ -300,3 +305,6 @@ class CallVideo(
 
     private fun streamKey(id: ByteArray) = id.joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
 }
+
+/** A decoded picture as a Compose image, for a tile. */
+expect fun VideoFrame.toImageBitmap(): androidx.compose.ui.graphics.ImageBitmap

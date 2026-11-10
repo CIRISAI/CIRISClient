@@ -9,11 +9,11 @@ not a key to delete.
 
 Agent usage recorded at CIRISAgent `f0a079953`. CI carries it forward.
 
-**5919 keys in 29 languages.**
+**5923 keys in 29 languages.**
 
 | Owner | Keys |
 |---|---|
-| client | 4729 |
+| client | 4733 |
 | server | 552 |
 | agent | 216 |
 | unclaimed | 422 |
@@ -30,11 +30,11 @@ bound: the node serves that screen once it answers.
 
 ## Duplicates
 
-374 English strings sit under 1021 keys.
+375 English strings sit under 1023 keys.
 
 - **Same in every language:** 93 groups, 199 keys.
   Candidates to share a key, for a person to confirm.
-- **Short, and differ in at least one language:** 281 groups, 822 keys. Context can explain these: read before merging.
+- **Short, and differ in at least one language:** 282 groups, 824 keys. Context can explain these: read before merging.
 - **Sentences that differ:** 0 groups, 0 keys.
   Identical English, translated differently: drift until read.
 - **Confirmation facts:** 129 keys, 43 of them duplicates.

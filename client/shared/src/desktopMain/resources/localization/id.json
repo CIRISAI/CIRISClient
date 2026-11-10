@@ -4482,7 +4482,11 @@
     "call_member_lost": "Koneksi seseorang terputus.",
     "call_mute": "Bisukan",
     "call_unmute": "Aktifkan Suara",
-    "call_leave": "Keluar"
+    "call_leave": "Keluar",
+    "call_video_unavailable_here": "Video belum tersedia di perangkat ini, sehingga ini adalah panggilan suara. Anda tetap akan melihat video orang lain jika dapat ditampilkan.",
+    "call_someones_screen": "Layar {who}",
+    "call_camera_off": "Kamera mati",
+    "call_camera_on": "Kamera menyala"
   },
   "moderation": {
     "ladder": {

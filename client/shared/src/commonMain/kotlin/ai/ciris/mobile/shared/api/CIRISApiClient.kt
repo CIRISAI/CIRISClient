@@ -2155,11 +2155,53 @@ class CIRISApiClient internal constructor(
             }
         }
 
-        override suspend fun openFrames(room: String): ai.ciris.mobile.shared.calls.CallSocket {
-            val path = framesPath ?: "${callPath(room)}/frames"
+        private var shareTicket: String? = null
+
+        override suspend fun startShare(room: String): ai.ciris.mobile.shared.calls.CallShareAnswer {
+            val client = federationHttpClient()
+            try {
+                val response = client.post("$nodeUrl${callPath(room)}/share") {
+                    authHeader()?.let { header("Authorization", it) }
+                    contentType(ContentType.Application.Json)
+                    setBody("{}")
+                }
+                val raw = response.bodyAsText()
+                if (!response.status.isSuccess()) {
+                    // A node without the share route (before Edge 45.1) answers 404 or 405: not available, by name.
+                    val r = NodeRefusal.fromBody(response.status.value, raw)
+                    throw ai.ciris.mobile.shared.calls.CallRefusal(
+                        r.reasonId ?: ai.ciris.mobile.shared.calls.CallTransport.SHARE_UNAVAILABLE, r.detail,
+                    )
+                }
+                val o = jsonConfig.parseToJsonElement(raw) as JsonObject
+                shareTicket = (o["frames_ticket"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull
+                return ai.ciris.mobile.shared.calls.CallShareAnswer(
+                    streamId = (o["stream_id"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull ?: "",
+                    frameBudgetBytes = (o["frame_budget_bytes"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull?.toIntOrNull() ?: 0,
+                )
+            } finally {
+                client.close()
+            }
+        }
+
+        override suspend fun openShareFrames(room: String): ai.ciris.mobile.shared.calls.CallSocket =
+            openSocket("${callPath(room)}/share/frames", shareTicket.also { shareTicket = null })
+
+        override suspend fun stopShare(room: String) {
+            val client = federationHttpClient()
+            try {
+                client.delete("$nodeUrl${callPath(room)}/share") { authHeader()?.let { header("Authorization", it) } }
+            } finally {
+                client.close()
+            }
+        }
+
+        override suspend fun openFrames(room: String): ai.ciris.mobile.shared.calls.CallSocket =
+            openSocket(framesPath ?: "${callPath(room)}/frames", ticket.also { ticket = null })
+
+        private suspend fun openSocket(path: String, ticket: String?): ai.ciris.mobile.shared.calls.CallSocket {
             val base = nodeUrl.replaceFirst(Regex("^http"), "ws")
-            val url = base + path + (ticket?.let { "?ticket=${it.encodeURLParameter()}" } ?: "")
-            ticket = null // single use
+            val url = base + path + (ticket?.let { "?ticket=${it.encodeURLParameter()}" } ?: "") // single use
             val http = agentHttpClient { install(io.ktor.client.plugins.websocket.WebSockets) }
             val auth = authHeader()
             val session = try {

@@ -4488,7 +4488,11 @@
     "call_member_lost": "اتصال کسی قطع شد.",
     "call_mute": "بی‌صدا",
     "call_unmute": "باصدا",
-    "call_leave": "ترک تماس"
+    "call_leave": "ترک تماس",
+    "call_video_unavailable_here": "ویدیو هنوز در این دستگاه در دسترس نیست، پس این یک تماس صوتی خواهد بود. همچنان ویدیوی دیگران را هر جا که قابل نمایش باشد خواهید دید.",
+    "call_someones_screen": "صفحهٔ {who}",
+    "call_camera_off": "دوربین خاموش",
+    "call_camera_on": "دوربین روشن"
   },
   "moderation": {
     "ladder": {

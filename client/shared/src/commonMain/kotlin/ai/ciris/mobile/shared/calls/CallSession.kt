@@ -154,6 +154,9 @@ class CallSession(
                 is CallEvent.PublishRefused -> call.copy(notice = CallNotice.PublishRefused(event.reason, event.budget))
                 // Same tile, new stream: what it was sending carries on until the new
                 // stream's frames say otherwise, so the picture never reads as "left".
+                is CallEvent.ShareStarted ->
+                    call.copy(shares = call.shares + (event.streamId.orEmpty() to Share(event.member, event.person)))
+                is CallEvent.ShareStopped -> call.copy(shares = call.shares - event.streamId.orEmpty())
                 is CallEvent.StreamReplaced -> {
                     val prior = call.attendees[event.member] ?: Attendee(event.member)
                     call.copy(attendees = call.attendees + (event.member to prior.copy(streamId = streamIdBytes(event.newStreamId))))
@@ -197,6 +200,8 @@ sealed interface CallState {
         val departed: Map<String, LeaveReason> = emptyMap(),
         val notice: CallNotice? = null,
         val lastFrame: ReceivedFrame? = null,
+        /** Screens and windows being shared, by their stream id (hex): one tile each. */
+        val shares: Map<String, Share> = emptyMap(),
         /** The node said `ready`. Nothing is published before it (CIRISServer d662d99a). */
         val ready: Boolean = false,
         /**
@@ -213,6 +218,9 @@ sealed interface CallState {
     /** This device is out of the call; [reason] tells "you were removed" from "you left". */
     data class Left(val reason: LeaveReason) : CallState
 }
+
+/** A member's share: whose it is, so the tile reads "Ada's screen". */
+data class Share(val member: String, val person: String?)
 
 data class Attendee(
     /** The NODE key the stream arrives from (CIRISServer: Edge names a stream by its link). */
@@ -266,6 +274,9 @@ sealed interface CallEvent {
      * in the same membership, make-before-break. The tile swaps in place; nobody left.
      */
     data class StreamReplaced(val member: String, val oldStreamId: String?, val newStreamId: String?) : CallEvent
+    /** A member started sharing: a second stream and a second tile, "Ada's screen". */
+    data class ShareStarted(val member: String, val streamId: String?, val person: String?) : CallEvent
+    data class ShareStopped(val member: String, val streamId: String?) : CallEvent
 
     companion object {
         private val json = Json { ignoreUnknownKeys = true }
@@ -286,6 +297,8 @@ sealed interface CallEvent {
                 "keep_refused" -> str("reason_id")?.let { KeepRefused(it) }
                 "publish_refused" -> PublishRefused(str("reason") ?: "", (o["budget"] as? JsonPrimitive)?.contentOrNull?.toIntOrNull())
                 "stream_replaced" -> str("member")?.let { StreamReplaced(it, str("old_stream_id"), str("new_stream_id")) }
+                "share_started" -> str("member")?.let { ShareStarted(it, str("stream_id"), str("person")) }
+                "share_stopped" -> str("member")?.let { ShareStopped(it, str("stream_id")) }
                 else -> null
             }
         }
@@ -333,7 +346,23 @@ interface CallTransport {
     suspend fun join(room: String, video: Boolean): CallJoinAnswer
     suspend fun leave(room: String)
     suspend fun openFrames(room: String): CallSocket
+
+    /**
+     * Start sharing a screen or window (CSD-134): a second own stream with no
+     * `replaces`, its frames on their own socket. Needs Edge 45.1 on the node; a
+     * node without the route refuses by name.
+     */
+    suspend fun startShare(room: String): CallShareAnswer = throw CallRefusal(SHARE_UNAVAILABLE)
+    suspend fun openShareFrames(room: String): CallSocket = throw CallRefusal(SHARE_UNAVAILABLE)
+    suspend fun stopShare(room: String) = Unit
+
+    companion object {
+        const val SHARE_UNAVAILABLE = "call.share_unavailable"
+    }
 }
+
+/** `POST /v1/chat/{room}/call/share` answer. */
+data class CallShareAnswer(val streamId: String, val frameBudgetBytes: Int)
 
 interface CallSocket {
     val incoming: Flow<CallSocketMessage>
@@ -346,4 +375,71 @@ sealed interface CallSocketMessage {
     class Text(val text: String) : CallSocketMessage
     /** [reason] is the close reason: this device's own leave reason when the node ended it. */
     class Closed(val reason: String?) : CallSocketMessage
+}
+
+/**
+ * Sharing this device's screen or one window (CSD-134): its own stream and its
+ * own socket. Frames from [source] go through [encoder] and out; nothing comes
+ * back on this socket (receivers see the share on their main call socket).
+ */
+class CallShare(
+    private val room: String,
+    private val transport: CallTransport,
+    private val scope: kotlinx.coroutines.CoroutineScope,
+) {
+    sealed interface State {
+        data object Idle : State
+        data object Starting : State
+        data class Sharing(val streamId: String, val budget: Int, val fragmenting: Boolean = false) : State
+        data class Refused(val reasonId: String) : State
+        data object Stopped : State
+    }
+
+    private val _state = MutableStateFlow<State>(State.Idle)
+    val state: StateFlow<State> = _state.asStateFlow()
+    private var socket: CallSocket? = null
+    private var reader: Job? = null
+
+    fun start() {
+        if (_state.value is State.Starting || _state.value is State.Sharing) return
+        _state.value = State.Starting
+        scope.launch {
+            val answer = try { transport.startShare(room) } catch (e: CallRefusal) {
+                _state.value = State.Refused(e.reasonId); return@launch
+            }
+            val s = try { transport.openShareFrames(room) } catch (e: Exception) {
+                runCatching { transport.stopShare(room) }
+                _state.value = State.Refused(CallSession.PLUMBING); return@launch
+            }
+            socket = s
+            _state.value = State.Sharing(answer.streamId, answer.frameBudgetBytes)
+            reader = scope.launch {
+                s.incoming.collect { m ->
+                    if (m is CallSocketMessage.Text) {
+                        val e = CallEvent.parse(m.text)
+                        val cur = _state.value
+                        if (e is CallEvent.Ready && cur is State.Sharing) {
+                            _state.value = cur.copy(budget = e.frameBudgetBytes, fragmenting = e.fragmenting)
+                        }
+                    }
+                    if (m is CallSocketMessage.Closed) _state.value = State.Stopped
+                }
+            }
+        }
+    }
+
+    fun publish(frame: OutgoingFrame): Boolean {
+        val s = _state.value as? State.Sharing ?: return false
+        if (!s.fragmenting && frame.payload.size > s.budget) return false
+        socket?.send(CallFrames.encode(frame)) ?: return false
+        return true
+    }
+
+    fun stop() {
+        reader?.cancel()
+        socket?.close()
+        socket = null
+        if (_state.value is State.Sharing) scope.launch { runCatching { transport.stopShare(room) } }
+        _state.value = State.Stopped
+    }
 }

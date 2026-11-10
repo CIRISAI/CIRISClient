@@ -4482,7 +4482,11 @@
     "call_member_lost": "การเชื่อมต่อของใครบางคนหลุด",
     "call_mute": "ปิดเสียง",
     "call_unmute": "เปิดเสียง",
-    "call_leave": "ออก"
+    "call_leave": "ออก",
+    "call_video_unavailable_here": "วิดีโอยังไม่พร้อมใช้งานบนอุปกรณ์นี้ ดังนั้นนี่จะเป็นการโทรด้วยเสียง คุณจะยังคงเห็นวิดีโอของผู้อื่นในที่ที่สามารถแสดงได้",
+    "call_someones_screen": "หน้าจอของ {who}",
+    "call_camera_off": "กล้องปิด",
+    "call_camera_on": "กล้องเปิด"
   },
   "moderation": {
     "ladder": {

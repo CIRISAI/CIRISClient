@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -216,6 +217,31 @@ private fun LiveCall(
                     modifier = Modifier.testable("call_audio_unavailable"),
                 )
             }
+            val videoUnavailable by call.videoUnavailable.collectAsState()
+            if (videoUnavailable) {
+                Text(
+                    localizedString("mobile.call_video_unavailable_here"),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testable("call_video_unavailable"),
+                )
+            }
+            // One picture per stream: a member's camera and their screen are two tiles.
+            val pictures by call.pictures.collectAsState()
+            pictures.forEach { (stream, picture) ->
+                val isShare = stream in s.shares
+                val owner = (s.shares[stream]?.person ?: s.attendees[picture.publisher]?.person)
+                    ?.let { nameOf(it) } ?: localizedString("mobile.call_someone")
+                Column(modifier = Modifier.testable("call_video_$stream", picture.publisher)) {
+                    androidx.compose.foundation.Image(
+                        bitmap = picture.image,
+                        contentDescription = if (isShare) {
+                            localizedString("mobile.call_someones_screen", "who", owner)
+                        } else owner,
+                        modifier = Modifier.fillMaxWidth().aspectRatio(picture.image.width.toFloat() / picture.image.height),
+                    )
+                    if (isShare) Text(localizedString("mobile.call_someones_screen", "who", owner))
+                }
+            }
             if (s.attendees.isEmpty()) {
                 Text(localizedString("mobile.call_alone"), modifier = Modifier.testable("call_alone"))
             }
@@ -254,6 +280,13 @@ private fun LiveCall(
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+                val cameraOff by call.cameraOff.collectAsState()
+                if (!videoUnavailable) {
+                    OutlinedButton(
+                        onClick = { call.setCameraOff(!cameraOff) },
+                        modifier = Modifier.weight(1f).testableClickable("btn_call_camera") { call.setCameraOff(!cameraOff) },
+                    ) { Text(localizedString(if (cameraOff) "mobile.call_camera_on" else "mobile.call_camera_off")) }
+                }
                 OutlinedButton(
                     onClick = { call.setMuted(!muted) },
                     modifier = Modifier.weight(1f).testableClickable("btn_call_mute") { call.setMuted(!muted) },

@@ -4482,7 +4482,11 @@
     "call_member_lost": "ਕਿਸੇ ਦਾ ਕਨੈਕਸ਼ਨ ਟੁੱਟ ਗਿਆ।",
     "call_mute": "ਮਿਊਟ",
     "call_unmute": "ਅਨਮਿਊਟ",
-    "call_leave": "ਛੱਡੋ"
+    "call_leave": "ਛੱਡੋ",
+    "call_video_unavailable_here": "ਵੀਡੀਓ ਹਾਲੇ ਇਸ ਡਿਵਾਈਸ ਉੱਤੇ ਉਪਲਬਧ ਨਹੀਂ ਹੈ, ਇਸ ਲਈ ਇਹ ਇੱਕ ਵੌਇਸ ਕਾਲ ਹੈ। ਤੁਸੀਂ ਫਿਰ ਵੀ ਦੂਜਿਆਂ ਦਾ ਵੀਡੀਓ ਦੇਖ ਸਕੋਗੇ ਜਿੱਥੇ ਇਹ ਦਿਖਾਇਆ ਜਾ ਸਕਦਾ ਹੈ।",
+    "call_someones_screen": "{who} ਦੀ ਸਕ੍ਰੀਨ",
+    "call_camera_off": "ਕੈਮਰਾ ਬੰਦ",
+    "call_camera_on": "ਕੈਮਰਾ ਚਾਲੂ"
   },
   "moderation": {
     "ladder": {
