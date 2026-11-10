@@ -346,7 +346,12 @@ jobs:
         # CIRIS_AUDIO_LOOPBACK=1, so this step is where it actually runs.
         working-directory: client
         run: |
+          # The runner has plain PulseAudio and no ALSA config, so ALSA's default is
+          # not Pulse and Java Sound opens nothing useful. Point it at the pulse
+          # plugin here, on the runner only (never on a desktop, where PipeWire owns it).
+          printf 'pcm.!default { type pulse }\nctl.!default { type pulse }\n' > ~/.asoundrc
           eval "$(bash ../packaging/virtual_audio.sh up)"
+          pactl info | grep -E "Default (Sink|Source)"
           CIRIS_AUDIO_LOOPBACK=1 ./gradlew --no-daemon :shared:desktopTest --tests '*DesktopAudioLoopbackTest*'
           python3 - <<'PY'
           import glob, re, sys
