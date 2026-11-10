@@ -4486,7 +4486,8 @@
     "data_erase_confirm_title": "このノードからこれらのトレースを消去しますか？",
     "data_erase_fact_erased_label": "消去済み",
     "data_erase_fact_erased": "このノード上で{hash}のもとに記録されたすべてのトレースと、そのモデル呼び出し。検出はリンクを失います。",
-    "child_safety_subject_unresolved": "誰の状態かを特定できませんでした。所有者の照会に失敗したため、代わりの状態は表示しません。"
+    "child_safety_subject_unresolved": "誰の状態かを特定できませんでした。所有者の照会に失敗したため、代わりの状態は表示しません。",
+    "call_rejoin": "再参加"
   },
   "moderation": {
     "ladder": {
