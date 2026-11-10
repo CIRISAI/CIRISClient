@@ -6397,6 +6397,7 @@
     "bad_layer_policy": "Ce paramètre de qualité n'est pas reconnu par cet appareil.",
     "cross_origin": "Cet appel ne peut être ouvert que depuis la page propre à cet appareil.",
     "socket_already_open": "Cet appel dispose déjà d'une connexion de trames ouverte.",
-    "keep_refused": "L'enregistrement des appels n'est pas encore disponible, cet appel n'est donc pas conservé."
+    "keep_refused": "L'enregistrement des appels n'est pas encore disponible, cet appel n'est donc pas conservé.",
+    "share_unavailable": "Le partage d'écran n'est pas encore disponible sur ce nœud."
   }
 }

@@ -6397,6 +6397,7 @@
     "bad_layer_policy": "Pengaturan kualitas tersebut tidak dikenali oleh perangkat ini.",
     "cross_origin": "Panggilan ini hanya dapat dibuka dari halaman milik perangkat ini sendiri.",
     "socket_already_open": "Panggilan ini sudah memiliki koneksi frame yang terbuka.",
-    "keep_refused": "Penyimpanan panggilan belum siap, sehingga panggilan ini tidak disimpan."
+    "keep_refused": "Penyimpanan panggilan belum siap, sehingga panggilan ini tidak disimpan.",
+    "share_unavailable": "Berbagi layar belum tersedia di node ini."
   }
 }

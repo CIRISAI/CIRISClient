@@ -6397,6 +6397,7 @@
     "bad_layer_policy": "此设备无法识别该画质设置。",
     "cross_origin": "此通话只能从本设备自己的页面打开。",
     "socket_already_open": "此通话已打开一个帧连接。",
-    "keep_refused": "保存通话功能尚未就绪，因此此通话不会被保留。"
+    "keep_refused": "保存通话功能尚未就绪，因此此通话不会被保留。",
+    "share_unavailable": "此节点尚不支持屏幕共享功能。"
   }
 }

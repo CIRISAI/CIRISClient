@@ -6397,6 +6397,7 @@
     "bad_layer_policy": "That quality setting isn't one this device understands.",
     "cross_origin": "This call can only be opened from this device's own page.",
     "socket_already_open": "This call already has a frames connection open.",
-    "keep_refused": "Saving calls isn't ready yet, so this call isn't being kept."
+    "keep_refused": "Saving calls isn't ready yet, so this call isn't being kept.",
+    "share_unavailable": "Sharing your screen isn't available on this node yet."
   }
 }

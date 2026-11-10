@@ -357,6 +357,7 @@ call.owner_pen_unavailable	unclaimed	-	-	-	-	-	-
 call.plumbing	client	client	literal	-	-	-	-
 call.room_may_keep.not_yet	unclaimed	-	-	-	-	-	-
 call.session_absent	unclaimed	-	-	-	-	-	-
+call.share_unavailable	client	client	literal	-	-	-	-
 call.socket_already_open	unclaimed	-	-	-	-	-	-
 call.visible_to_watcher.visible	unclaimed	-	-	-	-	-	-
 ceg.consent_kind.gloss	client	client	literal	-	-	-	-

@@ -6397,6 +6397,7 @@
     "bad_layer_policy": "Este dispositivo não entende essa configuração de qualidade.",
     "cross_origin": "Esta chamada só pode ser aberta a partir da própria página deste dispositivo.",
     "socket_already_open": "Esta chamada já tem uma Conexão de quadros aberta.",
-    "keep_refused": "Salvar chamadas ainda não está pronto, por isso esta chamada não está sendo mantida."
+    "keep_refused": "Salvar chamadas ainda não está pronto, por isso esta chamada não está sendo mantida.",
+    "share_unavailable": "Compartilhar sua tela ainda não está disponível neste nó."
   }
 }

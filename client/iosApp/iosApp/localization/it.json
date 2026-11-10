@@ -6397,6 +6397,7 @@
     "bad_layer_policy": "Questo dispositivo non comprende questa impostazione di qualità.",
     "cross_origin": "Questa chiamata può essere aperta solo dalla pagina propria di questo dispositivo.",
     "socket_already_open": "Questa chiamata ha già una connessione per i frame aperta.",
-    "keep_refused": "Il salvataggio delle chiamate non è ancora pronto, quindi questa chiamata non viene conservata."
+    "keep_refused": "Il salvataggio delle chiamate non è ancora pronto, quindi questa chiamata non viene conservata.",
+    "share_unavailable": "La condivisione dello schermo non è ancora disponibile su questo nodo."
   }
 }
