@@ -214,6 +214,14 @@ in the tree on every call, and that a refused keep leaves `Not saved` with the w
 
 **Video, by device (Eric, with CC, 2026-11-10).** A device that can encode AV1 in real time publishes `0x01`; one that cannot publishes `0x04` (H.264 or kin, temporal layers at spatial 0, the stream's binding naming the codec). Every client MUST decode `0xFF` and `0x01` and SHOULD decode `0x04`. Two resolutions are two streams. Open with CC: whether MUST-decode `0x01` stands, since most phones have no AV1 hardware decoder; and the presence floor, proposed as a separate ~96×96, 1 fps `0x04` stream at about 0.5 kB/s.
 
+**What a video payload is (client, 2026-11-10).** `0x04` H.264: one access unit in Annex B form, SPS and PPS before every keyframe. `0x01` AV1: one temporal unit's low-overhead OBUs for that layer (`obu_has_size_field = 1`), the sequence header OBU before every keyframe. So a late joiner starts at any keyframe. From Edge 45.1 a whole frame goes to the node and Edge fragments it (`ready.fragmenting`).
+
+**Sharing (agreed, Edge 45.1).** A share is a second own stream with no `replaces` (`Call::add_stream`, signed `StreamAdded {kind: share}`): `POST /v1/chat/{room}/call/share` → `{stream_id, frames_ticket, frame_budget_bytes}`, `DELETE` to stop, the sharer's frames on `WS …/call/share/frames`. Receivers keep one socket, see `share_started` / `share_stopped` and the share's frames told apart by `stream_id`: a tile for "Ada's screen" beside Ada's camera. Desktop shares a screen or one window; phones share their screen.
+
+**Who a tile is.** A frame's `publisher` and an event's `member` are the sender's NODE key; every event also carries `person`, the node's owner, or null until bound (then "someone in this room"). Tiles are keyed by stream, grouped and named by person from contacts.
+
+**Testing without cameras (five-platform runner).** CI runners have no camera and mostly no microphone, so every platform can take a test source in test mode: a 440 Hz tone and a moving test pattern, pure Kotlin and identical everywhere. OS virtual devices are used where a runner has them (PulseAudio virtual sources on Linux, the Android emulator's camera). One leg calls the server's echo node (`POST /v1/qa/call/echo`, frames returned byte-identical); two legs in one room call each other across platforms.
+
 **Video, the earlier reading.** Edge registers `0x01` AV1 SVC, `0x02` JPEG XS and `0x03` MDC (both reserved) and `0xFF`; it has **no `0x04` and no H.264 or VP8 id**, while the paragraph below, from CC 5.3.3.2.1, names `0x04`. AV1 hardware encode is on few phones. An H.264 or VP8 id with its layer rule is Eric's and CC's to decide; CIRISEdge is raising it. Until then video is not buildable to a wire both ends agree on.
 
 **Codec (CC 5.3.3.2.1, as the card read it).** Audio is `0xFF`, so a call never falls silent. Video is `0x01` where
