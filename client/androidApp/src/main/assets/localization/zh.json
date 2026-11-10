@@ -2219,7 +2219,6 @@
     "add_device_name_label": "为此设备命名（可选）",
     "add_device_name_hint": "例如：S23 手机、2023 笔记本电脑",
     "add_device_contact_label": "您的 CIRIS ID",
-    "add_device_contact_hint": "在您的其他设备上，打开“分享我的 ID”。扫描其二维码，或在此处粘贴长格式或短格式。",
     "add_device_send": "发送请求",
     "add_device_sending": "正在询问您的其他设备……",
     "add_device_retry": "重试",
@@ -4461,7 +4460,11 @@
     "remote_node_no_transport": "此节点无法连接到您的其他节点。请检查其网络设置。",
     "remote_node_needs_update": "该节点需要先更新才能显示此内容。",
     "remote_node_not_owner": "该节点未接受此请求。只有其所有者的设备才能读取该请求。",
-    "remote_node_failed": "该节点的应答无法读取。"
+    "remote_node_failed": "该节点的应答无法读取。",
+    "add_device_contact_hint_2": "在您的其他设备上，打开“分享我的 ID”。扫描其二维码，或在此处粘贴长格式或短格式。当您的其他设备已被公告时，仅凭您的联邦 ID 也同样有效。",
+    "contacts_reach_sent": "已发送：正在等待对方应答",
+    "contacts_reach_waiting": "正在等待联系到对方",
+    "contacts_stale_since": "自 {date} 起未收到对方消息"
   },
   "moderation": {
     "ladder": {

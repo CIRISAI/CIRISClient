@@ -119,7 +119,7 @@ with the path locked and Cancel available. Cancelling there needs no confirm
 and asks the node nothing, because no request reached the other device. After
 the bound, the refusal shows by id with Try again.
 
-**Every node, and a bare fed-ID (0.5.245).** The field also takes a fed-ID alone. The new device asks the canonical which nodes the person announced and asks every one it can reach, not just the first, so a dead node does not end the join. That needs the canonical on 0.5.245; with an older one a bare fed-ID finds no node, so ask for the contact code. A person with an unannounced device still needs the code or the pairing QR. Past two keys the other device's approval may answer 202 `held: true` (CSD-095): this device keeps waiting, and that is not a failure.
+**Every node, and a bare fed-ID (0.5.245).** The field also takes a fed-ID alone, and its hint says so (`mobile.add_device_contact_hint_2`, client 0.5.239; the field was always free text). The new device asks the canonical which nodes the person announced and asks every one it can reach, not just the first, so a dead node does not end the join. That needs the canonical on 0.5.245; with an older one a bare fed-ID finds no node, so ask for the contact code. A person with an unannounced device still needs the code or the pairing QR. Past two keys the other device's approval may answer 202 `held: true` (CSD-095): this device keeps waiting, and that is not a failure.
 
 **A disabled Next always says why.** With an agent the add-device path still
 asks the local account; once the request is out, a blank or mismatched account

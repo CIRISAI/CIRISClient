@@ -2107,7 +2107,6 @@
     "add_device_name_label": "Beri nama perangkat ini (opsional)",
     "add_device_name_hint": "mis. Ponsel S23, Laptop 2023",
     "add_device_contact_label": "CIRIS ID Anda",
-    "add_device_contact_hint": "Pada perangkat lain Anda, buka Bagikan ID saya. Pindai kode QR-nya, atau tempel bentuk panjang atau pendeknya di sini.",
     "add_device_send": "Kirim permintaan",
     "add_device_sending": "Menghubungi perangkat lain Anda…",
     "add_device_retry": "Coba lagi",
@@ -4461,7 +4460,11 @@
     "remote_node_no_transport": "Node ini tidak dapat menjangkau node Anda yang lain. Periksa pengaturan jaringannya.",
     "remote_node_needs_update": "Node tersebut perlu diperbarui sebelum dapat menampilkan ini.",
     "remote_node_not_owner": "Node tersebut tidak menerima permintaan ini. Hanya perangkat pemiliknya yang dapat membacanya.",
-    "remote_node_failed": "Jawaban node tersebut tidak dapat dibaca."
+    "remote_node_failed": "Jawaban node tersebut tidak dapat dibaca.",
+    "add_device_contact_hint_2": "Pada perangkat lain Anda, buka Bagikan ID Saya. Pindai kode QR-nya, atau tempel bentuk panjang atau pendeknya di sini. ID federasi Anda saja juga berfungsi ketika perangkat lain Anda telah diumumkan.",
+    "contacts_reach_sent": "Terkirim: menunggu mereka merespons",
+    "contacts_reach_waiting": "Menunggu untuk menjangkau mereka",
+    "contacts_stale_since": "Tidak ada kabar sejak {date}"
   },
   "moderation": {
     "ladder": {

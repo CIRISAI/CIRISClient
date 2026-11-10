@@ -4,6 +4,7 @@ import ai.ciris.mobile.shared.ceg.formatDate
 import ai.ciris.mobile.shared.ceg.shortKey
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.models.federation.Contact
+import ai.ciris.mobile.shared.models.federation.ContactReach
 import ai.ciris.mobile.shared.models.federation.LocalPeerState
 import ai.ciris.mobile.shared.models.federation.PeerTrustState
 import ai.ciris.mobile.shared.platform.testable
@@ -784,6 +785,18 @@ private fun ContactRow(
         // human can retract it.
         if (contact.projectionMissing) add(RowFlag(localizedString("mobile.contacts_projection_missing")))
         if (chatIneligible) add(RowFlag(localizedString("mobile.contacts_chat_not_covered"), tag = PeopleTags.ineligible(contact.keyId)))
+        // How far the add got, from `reach` and never inferred from `mutual` or
+        // a route (CSD-005). Neither line ever says delivered.
+        when (contact.reachState) {
+            ContactReach.SENT -> add(RowFlag(localizedString("mobile.contacts_reach_sent"), tag = PeopleTags.reach(contact.keyId), tone = Tone.DIM))
+            ContactReach.WAITING_TO_REACH -> add(RowFlag(localizedString("mobile.contacts_reach_waiting"), tag = PeopleTags.reach(contact.keyId), tone = Tone.DIM))
+            ContactReach.CONNECTED, null -> Unit
+        }
+        // A label only. Away and reinstalled-as-someone-new look the same from
+        // here, so it says neither, and the row stays.
+        contact.staleSince?.let {
+            add(RowFlag(localizedString("mobile.contacts_stale_since", "date", formatDate(it)), tag = PeopleTags.stale(contact.keyId), tone = Tone.DIM))
+        }
     }
     val secondary = buildList {
         add(if (contact.chatStarted) localizedString("mobile.contacts_chat_started") else localizedString("mobile.contacts_chat_not_started"))

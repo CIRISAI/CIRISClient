@@ -41,6 +41,10 @@ object PeopleTags {
     fun pendingRetry(id: String) = "btn_contacts_pending_retry_$id"
     /** Forget the code. Nothing on the node changes — it never wrote a row. */
     fun pendingForget(id: String) = "btn_contacts_pending_forget_$id"
+    /** How far adding a contact got, under its name (CSD-005 `x_private:contact_reach`, 0.5.245). */
+    fun reach(keyId: String) = "contacts_reach_$keyId"
+    /** "Not heard from since {date}" (CSD-005 `x_private:contact_stale`, 0.5.245). */
+    fun stale(keyId: String) = "contacts_stale_$keyId"
     /** The row's status line: still asking / stopped / refused by id. */
     fun pendingStatus(id: String) = "contacts_pending_status_$id"
     /** QrScanAction beside [ADD_KEY]; it fills the field and never submits (CSD-005). */

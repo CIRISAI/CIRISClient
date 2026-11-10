@@ -1174,6 +1174,8 @@
     "contact_requests_ignored_hide": "Ficha zilizopuuzwa",
     "contact_requests_ignored_secondary": "Imepuuzwa. Wewe pekee unaweza kuona hili.",
     "contact_requests_error": "Imeshindikana kusoma maombi yako. {why}",
+    "contacts_reach_waiting": "Inasubiri kuwafikia",
+    "contacts_stale_since": "Hakuna taarifa kutoka kwao tangu {date}",
     "final_genesis_amend_needed_only": "Idhini {needed} za washikilizi zinahitajika",
     "final_genesis_amend_status_label": "Idhini zilizotolewa hadi sasa",
     "final_genesis_amend_complete": "Washikilizi wa kutosha wameidhinisha. Maliza huandika kifurushi cha toleo la 4.",
@@ -2105,7 +2107,6 @@
     "add_device_name_label": "Taja jina la kifaa hiki (hiari)",
     "add_device_name_hint": "mfano: Simu S23, Laptop 2023",
     "add_device_contact_label": "CIRIS ID yako",
-    "add_device_contact_hint": "Kwenye kifaa chako kingine, fungua Shiriki ID yangu. Changanua msimbo wake wa QR, au bandika hapa fomu ndefu au fupi.",
     "add_device_send": "Tuma ombi",
     "add_device_sending": "Inauliza kifaa chako kingine…",
     "add_device_retry": "Jaribu tena",
@@ -2681,6 +2682,7 @@
     "remote_node_needs_update": "Nodi hiyo inahitaji sasisho kabla ya kuonyesha hili.",
     "remote_node_not_owner": "Nodi hiyo haikukubali ombi hili. Vifaa vya mmiliki wake pekee ndivyo vinavyoweza kulisoma.",
     "remote_node_failed": "Jibu la nodi hiyo halikuweza kusomwa.",
+    "add_device_contact_hint_2": "Kwenye kifaa chako kingine, fungua Shiriki Kitambulisho Changu. Changanua msimbo wake wa QR, au bandika muundo mrefu au mfupi hapa. Kitambulisho chako cha shirikisho peke yake pia hufanya kazi wakati kifaa chako kingine kimetangazwa.",
     "trust_root_import_not_yet_accepted": "Imeingizwa, bado haijakubaliwa",
     "trust_root_import_not_yet_accepted_why": "Rekodi za mzizi zipo kwenye nodi hii, lakini nodi hii bado haiuamini. Ama bado haina rekodi za mwanzo za mzizi huo, na kukubali kutajaribiwa tena itakapowashwa au kuingizwa tena, ama kukubali kwake hakukuweza kuandikwa.",
     "yubikey_probe_failed": "IMESHINDIKANA KUSOMA HALI YA YUBIKEY",
@@ -4461,7 +4463,8 @@
     "data_erase_fact_erased_label": "Imefutwa",
     "data_erase_fact_erased": "Kila nyayo iliyowasilishwa chini ya {hash} kwenye nodi hii, na miito yake ya modeli. Matokeo ya utambuzi hupoteza kiungo.",
     "trust_root_eval_error": "Haikuweza kutathminiwa: {error}",
-    "files_custody_footnote_remove": "Chaguo la kuondoa nakala litakapopatikana, halitafuta kamwe nakala ya mwisho iliyobaki ya faili ambayo hujaiondoa."
+    "files_custody_footnote_remove": "Chaguo la kuondoa nakala litakapopatikana, halitafuta kamwe nakala ya mwisho iliyobaki ya faili ambayo hujaiondoa.",
+    "contacts_reach_sent": "Imetumwa: inasubiri jibu lao"
   },
   "moderation": {
     "ladder": {

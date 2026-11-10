@@ -261,7 +261,7 @@ fun AddThisDeviceSection(
 
         Spacer(Modifier.height(12.dp))
         Text(localizedString("mobile.add_device_contact_label"), style = type.label, color = t.dim)
-        Text(localizedString("mobile.add_device_contact_hint"), style = type.label, color = t.mute)
+        Text(localizedString("mobile.add_device_contact_hint_2"), style = type.label, color = t.mute)
         Spacer(Modifier.height(4.dp))
         CirisTextField(
             tag = AddDeviceTags.CONTACT,

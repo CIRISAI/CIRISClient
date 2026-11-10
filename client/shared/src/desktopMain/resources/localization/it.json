@@ -2271,7 +2271,6 @@
     "add_device_name_label": "Assegna un nome a questo dispositivo (opzionale)",
     "add_device_name_hint": "ad es. S23 Phone, Laptop 2023",
     "add_device_contact_label": "Il tuo CIRIS ID",
-    "add_device_contact_hint": "Sul tuo altro dispositivo, apri Condividi il mio ID. Scansiona il suo codice QR, oppure incolla qui la forma lunga o breve.",
     "add_device_send": "Invia richiesta",
     "add_device_sending": "Richiesta al tuo altro dispositivo in corso…",
     "add_device_retry": "Riprova",
@@ -4461,7 +4460,11 @@
     "remote_node_no_transport": "Questo nodo non riesce a raggiungere i tuoi altri nodi. Controlla le sue impostazioni di rete.",
     "remote_node_needs_update": "Quel nodo deve essere aggiornato prima di poter mostrare questo contenuto.",
     "remote_node_not_owner": "Quel nodo non ha accettato questa richiesta. Solo i dispositivi del suo proprietario possono leggerla.",
-    "remote_node_failed": "Non è stato possibile leggere la risposta di quel nodo."
+    "remote_node_failed": "Non è stato possibile leggere la risposta di quel nodo.",
+    "add_device_contact_hint_2": "Sul tuo altro dispositivo, apri Condividi il mio ID. Scansiona il suo codice QR, oppure incolla qui la forma estesa o breve. Anche il solo ID di federazione funziona quando il tuo altro dispositivo è annunciato.",
+    "contacts_reach_sent": "Inviato: in attesa che rispondano",
+    "contacts_reach_waiting": "In attesa di raggiungerli",
+    "contacts_stale_since": "Nessuna notizia da {date}"
   },
   "moderation": {
     "ladder": {

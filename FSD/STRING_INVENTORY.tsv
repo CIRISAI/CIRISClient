@@ -1494,7 +1494,7 @@ mobile.add_device_cancelled	client	client	literal	-	-	-	-
 mobile.add_device_cancelled_local	client	client	literal	-	-	-	-
 mobile.add_device_cancelling	client	client	literal	-	-	-	-
 mobile.add_device_check_again	client	client	literal	-	141	differs:16	-
-mobile.add_device_contact_hint	client	client	literal	-	-	-	-
+mobile.add_device_contact_hint_2	client	client	literal	-	-	-	-
 mobile.add_device_contact_label	client	client	literal	-	-	-	-
 mobile.add_device_denied	client	client	literal	-	-	-	-
 mobile.add_device_desc	client	client	literal	-	-	-	-
@@ -2098,6 +2098,8 @@ mobile.contacts_pending_stopped	client	client	literal	-	-	-	-
 mobile.contacts_pending_title	client	client	literal	-	-	-	-
 mobile.contacts_projection_missing	client	client	literal	-	-	-	-
 mobile.contacts_pubkey	client	client	literal	-	-	-	-
+mobile.contacts_reach_sent	client	client	literal	-	-	-	-
+mobile.contacts_reach_waiting	client	client	literal	-	-	-	-
 mobile.contacts_remove	client	client	literal	-	89	differs:13	-
 mobile.contacts_remove_confirm_title	client	client	literal	-	-	-	-
 mobile.contacts_remove_fact_stops_value	client	client	literal	-	-	-	fact
@@ -2108,6 +2110,7 @@ mobile.contacts_remove_unsupported	client	client	literal	-	-	-	-
 mobile.contacts_removed	client	client	literal	-	-	-	-
 mobile.contacts_search_hint	client	client	literal	-	-	-	-
 mobile.contacts_search_peers_hint	client	client	literal	-	-	-	-
+mobile.contacts_stale_since	client	client	literal	-	-	-	-
 mobile.contacts_title	client	client	dynamic	-	197	differs:6	-
 mobile.contacts_title_picker	client	client	literal	-	-	-	-
 mobile.contacts_trust_blocked	client	client	literal	-	198	differs:14	-

@@ -2229,7 +2229,6 @@
     "add_device_name_label": "Bu cihaza ad verin (isteğe bağlı)",
     "add_device_name_hint": "örn. S23 Telefon, 2023 Dizüstü",
     "add_device_contact_label": "CIRIS ID'niz",
-    "add_device_contact_hint": "Diğer cihazınızda Kimliğimi paylaş seçeneğini açın. QR kodunu tarayın veya uzun ya da kısa biçimini buraya yapıştırın.",
     "add_device_send": "İsteği gönder",
     "add_device_sending": "Diğer cihazınıza soruluyor…",
     "add_device_retry": "Tekrar deneyin",
@@ -4461,7 +4460,11 @@
     "remote_node_no_transport": "Bu düğüm diğer düğümlerinize ulaşamıyor. Ağ ayarlarını kontrol edin.",
     "remote_node_needs_update": "Bunu gösterebilmesi için o düğümün güncellenmesi gerekir.",
     "remote_node_not_owner": "O düğüm bu isteği kabul etmedi. Yalnızca sahibinin cihazları bunu okuyabilir.",
-    "remote_node_failed": "O düğümün yanıtı okunamadı."
+    "remote_node_failed": "O düğümün yanıtı okunamadı.",
+    "add_device_contact_hint_2": "Diğer cihazınızda Kimliğimi paylaş'ı açın. QR kodunu tarayın veya uzun ya da kısa biçimini buraya yapıştırın. Diğer cihazınız duyurulmuşsa, federasyon kimliğiniz tek başına da işe yarar.",
+    "contacts_reach_sent": "Gönderildi: yanıt vermeleri bekleniyor",
+    "contacts_reach_waiting": "Onlara ulaşılması bekleniyor",
+    "contacts_stale_since": "{date} tarihinden bu yana onlardan haber alınamadı"
   },
   "moderation": {
     "ladder": {

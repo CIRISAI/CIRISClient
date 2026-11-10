@@ -2085,7 +2085,6 @@
     "add_device_name_label": "Đặt tên cho thiết bị này (tùy chọn)",
     "add_device_name_hint": "ví dụ: S23 Phone, 2023 Laptop",
     "add_device_contact_label": "CIRIS ID của bạn",
-    "add_device_contact_hint": "Trên thiết bị khác của bạn, mở Chia sẻ ID của tôi. Quét mã QR của nó, hoặc dán dạng dài hoặc ngắn vào đây.",
     "add_device_send": "Gửi yêu cầu",
     "add_device_sending": "Đang hỏi thiết bị khác của bạn…",
     "add_device_retry": "Thử lại",
@@ -4461,7 +4460,11 @@
     "remote_node_no_transport": "Nút này không thể kết nối tới các nút khác của bạn. Hãy kiểm tra cài đặt mạng của nút.",
     "remote_node_needs_update": "Nút đó cần được cập nhật trước khi có thể hiển thị nội dung này.",
     "remote_node_not_owner": "Nút đó không chấp nhận yêu cầu này. Chỉ các thiết bị của chủ sở hữu của nó mới có thể đọc được.",
-    "remote_node_failed": "Không thể đọc được câu trả lời của nút đó."
+    "remote_node_failed": "Không thể đọc được câu trả lời của nút đó.",
+    "add_device_contact_hint_2": "Trên thiết bị khác của bạn, hãy mở Chia sẻ ID của tôi. Quét mã QR của nó, hoặc dán mã dạng dài hoặc dạng ngắn vào đây. Chỉ riêng ID liên bang của bạn cũng hoạt động khi thiết bị khác của bạn được công bố.",
+    "contacts_reach_sent": "Đã gửi: đang chờ họ trả lời",
+    "contacts_reach_waiting": "Đang chờ liên hệ được với họ",
+    "contacts_stale_since": "Không nghe tin gì từ {date}"
   },
   "moderation": {
     "ladder": {
