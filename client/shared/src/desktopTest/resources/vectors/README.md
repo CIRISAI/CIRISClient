@@ -4,6 +4,6 @@ Never edit it here: update it from a new Verify tag and let `FedCodeVectorsTest`
 what changed. The agent and server pin the same file.
 
 `call_frames_v1.json` is copied byte for byte from CIRISServer release/0.5.246 at
-92d5d864, `tests/vectors/call_frames_v1.json` (CSD-134 §3, the call frames socket v1).
+d662d99a (re-pinned from 92d5d864: adds the events section and an H.264 case), `tests/vectors/call_frames_v1.json` (CSD-134 §3, the call frames socket v1).
 Never edit it here: update it from the server and let `CallFramesVectorsTest` say what
 changed.

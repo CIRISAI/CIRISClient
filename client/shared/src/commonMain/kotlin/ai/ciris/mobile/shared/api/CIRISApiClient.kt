@@ -11428,9 +11428,9 @@ class CIRISApiClient internal constructor(
         // enumerates every wire shape and is the reference CIRISServer and
         // CIRISAgent read. A second parser here would be a second opinion about
         // what silence means, which is the thing that keeps going wrong.
-        ai.ciris.mobile.shared.models.capability.CapabilityWire.parse(
-            body,
-            ai.ciris.mobile.shared.models.capability.CapabilityWire.FIELD_CONFERRED,
+        val wire = ai.ciris.mobile.shared.models.capability.CapabilityWire
+        wire.parse(body, wire.FIELD_CONFERRED).copy(
+            features = wire.parse(body, wire.FIELD_FEATURES).declared,
         )
     } catch (e: kotlinx.coroutines.CancellationException) {
         // Structured concurrency: a cancelled probe must die, not publish state.

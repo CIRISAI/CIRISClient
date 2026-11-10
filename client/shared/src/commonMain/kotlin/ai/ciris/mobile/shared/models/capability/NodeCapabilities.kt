@@ -95,8 +95,9 @@ object Capability {
     const val INFRA_SERVE = "infra:serve"
 
     /**
-     * Calls in rooms (CSD-134). No node declares it yet: the server's call routes
-     * are CIRISServer#859, so the Call action stays hidden until one does.
+     * Calls in rooms (CSD-134): a FEATURE, read from the conformance document's
+     * `features` (CIRISServer 0.5.246), never from `capabilities`. Check it with
+     * [NodeCapabilities.hasFeature].
      */
     const val CHAT_CALL = "chat:call"
 }
@@ -112,7 +113,12 @@ data class NodeCapabilities(
     val unreachable: Boolean = false,
     /** True when the node emitted `capabilities: null` — see [CapabilityState.UNDETERMINED]. */
     val undetermined: Boolean = false,
+    /** The routes the node serves (`features`); null when it lists none, which every node before 0.5.246 is. */
+    val features: Set<String>? = null,
 ) {
+    /** A served route, present only when the node says so: no list, or an unknown node, is no. */
+    fun hasFeature(id: String): Boolean = !unreachable && features?.contains(id) == true
+
 
     fun state(id: String): CapabilityState = when {
         unreachable -> CapabilityState.UNREACHABLE

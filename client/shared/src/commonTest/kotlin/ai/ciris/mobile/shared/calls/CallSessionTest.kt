@@ -126,6 +126,8 @@ class CallSessionTest {
         val t = FakeTransport()
         val s = CallSession("r", t, backgroundScope)
         s.join(video = false); runCurrent()
+        assertFalse(s.publish(OutgoingFrame(CallFrames.CODEC_OPAQUE, Layer.BASE, ByteArray(60))), "nothing before ready")
+        t.socket.inbox.send(CallSocketMessage.Text("""{"type":"ready","frame_budget_bytes":244}""")); runCurrent()
         assertTrue(s.publish(OutgoingFrame(CallFrames.CODEC_OPAQUE, Layer.BASE, ByteArray(60))))
         assertFalse(s.publish(OutgoingFrame(CallFrames.CODEC_OPAQUE, Layer.BASE, ByteArray(245))))
         assertEquals(1, t.socket.sent.size)

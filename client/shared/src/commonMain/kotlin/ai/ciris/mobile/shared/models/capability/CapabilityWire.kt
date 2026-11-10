@@ -84,6 +84,13 @@ object CapabilityWire {
      */
     const val FIELD_AGENT = "agent_capabilities"
 
+    /**
+     * The routes this node SERVES (`features`, CIRISServer 0.5.246), kept apart
+     * from [FIELD_CONFERRED], which is conferred authority. `chat:call` is the
+     * first: the call routes exist on this node.
+     */
+    const val FIELD_FEATURES = "features"
+
     private val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
     /**

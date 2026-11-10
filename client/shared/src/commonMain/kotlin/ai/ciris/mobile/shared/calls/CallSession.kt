@@ -84,6 +84,7 @@ class CallSession(
      */
     fun publish(frame: OutgoingFrame): Boolean {
         val call = _state.value as? CallState.InCall ?: return false
+        if (!call.ready) return false
         if (frame.payload.size > call.frameBudgetBytes) {
             _state.value = call.copy(notice = CallNotice.OverBudget(call.frameBudgetBytes))
             return false
@@ -123,6 +124,7 @@ class CallSession(
     private fun onEvent(event: CallEvent) {
         updateCall { call ->
             when (event) {
+                is CallEvent.Ready -> call.copy(ready = true, frameBudgetBytes = event.frameBudgetBytes)
                 is CallEvent.AttendeeJoined ->
                     call.copy(attendees = call.attendees + (event.member to Attendee(event.member, streamId = streamIdBytes(event.streamId))))
                 is CallEvent.AttendeeLeft ->
@@ -182,6 +184,8 @@ sealed interface CallState {
         val departed: Map<String, LeaveReason> = emptyMap(),
         val notice: CallNotice? = null,
         val lastFrame: ReceivedFrame? = null,
+        /** The node said `ready`. Nothing is published before it (CIRISServer d662d99a). */
+        val ready: Boolean = false,
     ) : CallState
 
     /** The node said no, by id (`call.not_a_member`, `call.anonymous_mode`, …). */
@@ -222,6 +226,8 @@ enum class LeaveReason(val wire: String) {
 
 /** The socket's text events (CSD-134 §3): one JSON object each, members as key ids only. */
 sealed interface CallEvent {
+    /** The node is ready for this device's frames, at this budget; sent again when the budget changes. */
+    data class Ready(val frameBudgetBytes: Int) : CallEvent
     data class AttendeeJoined(val member: String, val streamId: String?) : CallEvent
     data class AttendeeLeft(val member: String, val streamId: String?, val left: LeaveReason) : CallEvent
     data class EpochRolled(val epoch: Long) : CallEvent
@@ -243,6 +249,7 @@ sealed interface CallEvent {
             val o = runCatching { json.parseToJsonElement(text).jsonObject }.getOrNull() ?: return null
             fun str(k: String) = (o[k] as? JsonPrimitive)?.contentOrNull
             return when (str("type")) {
+                "ready" -> (o["frame_budget_bytes"] as? JsonPrimitive)?.contentOrNull?.toIntOrNull()?.let { Ready(it) }
                 "attendee_joined" -> str("member")?.let { AttendeeJoined(it, str("stream_id")) }
                 "attendee_left" -> str("member")?.let { AttendeeLeft(it, str("stream_id"), LeaveReason.of(str("left"))) }
                 "epoch_rolled" -> (o["epoch"] as? JsonPrimitive)?.longOrNull?.let { EpochRolled(it) }

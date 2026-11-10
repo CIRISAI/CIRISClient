@@ -4549,7 +4549,7 @@ fun CIRISApp(
                         currentScreen = Screen.Moderation
                     },
                     // Calls (CSD-134): only on a node that declares them.
-                    onCall = if (nodeCapabilities.has(ai.ciris.mobile.shared.models.capability.Capability.CHAT_CALL)) {
+                    onCall = if (nodeCapabilities.hasFeature(ai.ciris.mobile.shared.models.capability.Capability.CHAT_CALL)) {
                         { currentScreen = Screen.Call(route) }
                     } else null,
                 )

@@ -76,6 +76,22 @@ class CallFramesVectorsTest {
         }
     }
 
+    /** Every event example in the vectors parses, and every `left` value is one this client names. */
+    @Test fun everyEventExampleParses() {
+        val events = file["events"]!!.jsonObject
+        val examples = events["examples"]!!.jsonArray
+        assertTrue(examples.size >= 10)
+        for (e in examples) {
+            assertTrue(CallEvent.parse(e.toString()) != null, "unparsed: $e")
+        }
+        for (l in events["left_values"]!!.jsonArray.map { it.jsonPrimitive.content }) {
+            assertEquals(l, LeaveReason.of(l).wire, "left value $l")
+        }
+        // Every stream_id in an event is the frames' raw 32 bytes as hex.
+        val replaced = examples.map { it.jsonObject }.first { it.s("type") == "stream_replaced" }
+        assertTrue(CallSession.streamIdBytes(replaced.s("new_stream_id")) != null)
+    }
+
     /** The audio pin: the vector's payload is a real Opus packet, TOC 0x78 (one 20 ms full-band frame). */
     @Test fun theAudioVectorIsOneOpusPacket() {
         val audio = cases("client_to_node").first { it.s("name") == "audio_opus_20ms" }
