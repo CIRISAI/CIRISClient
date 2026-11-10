@@ -202,7 +202,11 @@ in the tree on every call, and that a refused keep leaves `Not saved` with the w
 
 ## 6. Delta — card vs API vs CC
 
-**Codec (CC 5.3.3.2.1).** Audio is `0xFF`, so a call never falls silent. Video is `0x01` where
+**Audio, agreed with CIRISEdge 2026-11-10.** `0xFF` (Edge's `CODEC_OPAQUE`, `src/transport/realtime_av.rs:181-198` at v44.1.1) carries **Opus, 20 ms frames, 48 kHz mono, VOIP application, about 24–32 kbit/s**: one Opus packet per frame at layer `{0,0,0}`, about 60–80 B, inside the 244 B budget at 50 frames a second. Edge treats `0xFF` as audio (base layer only, audio TTL, kept under shedding) and drops audio older than 300 ms, so packets stay short. The server's frames-v1 vectors carry the same. Phones encode and decode it with the platform (Android MediaCodec, API 29+; iOS AudioToolbox).
+
+**Video, open.** Edge registers `0x01` AV1 SVC, `0x02` JPEG XS and `0x03` MDC (both reserved) and `0xFF`; it has **no `0x04` and no H.264 or VP8 id**, while the paragraph below, from CC 5.3.3.2.1, names `0x04`. AV1 hardware encode is on few phones. An H.264 or VP8 id with its layer rule is Eric's and CC's to decide; CIRISEdge is raising it. Until then video is not buildable to a wire both ends agree on.
+
+**Codec (CC 5.3.3.2.1, as the card read it).** Audio is `0xFF`, so a call never falls silent. Video is `0x01` where
 the device can encode it in real time, otherwise `0x04`, the temporal-layered class
 (`ChunkLayer {0, t, 0}`) for H.264, VP8, VP9 and their kind; the stream's binding names the
 codec. Every client decodes `0xFF` and `0x01` and SHOULD decode `0x04`. A receiver that can't
@@ -215,6 +219,7 @@ so Edge's `is_base_or_audio` must agree. Device coverage is unmeasured.
 | 6 | **The frames socket's byte layout.** Agreed 2026-11-10 (§3), with a leading version byte and golden vectors at CIRISServer `tests/vectors/call_frames_v1.json` | Closed; pin the vectors when they ship |
 | 7 | **The two facts before publishing.** Agreed 2026-11-10: on the GET, each as a flag and words | Closed |
 | 8 | **Frame budget per call.** 244 B on Edge v44.1.1; about 1,140 B on a punched direct link at v45, only if every member runs v45. Read `frame_budget_bytes` per call, never assume | CIRISEdge |
+| 10 | **The video codec.** Edge has no `0x04`, H.264 or VP8 id; the CC names `0x04`. Which ids, and their layer rule | Eric, CC, CIRISEdge |
 | 9 | **Capture on desktop.** The JVM has no camera or microphone API; a native library is needed, and its size counts against PyPI's project limit | CIRISClient |
 | 2 | Does a saved call count against the room's files and quota, and where does it show? | CIRISServer |
 | 3 | Screen sharing is the same wire (CC 5.3.3.2) | Later |
