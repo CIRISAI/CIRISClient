@@ -13,7 +13,7 @@ where the card is drafted or asked for. **To adopt a reserved card**, add its fi
 delete its row in the same commit; `--check` refuses a card on a number that is still
 reserved. **A retired number is never reused.**
 
-**87 cards** — 1 envisioned · 8 sketched · 70 building · 8 testable. **19 reserved**, **2 retired**.
+**104 cards** — 9 envisioned · 17 sketched · 70 building · 8 testable. **13 reserved**, **2 retired**.
 
 ## Cards
 
@@ -102,10 +102,27 @@ reserved. **A retired number is never reused.**
 | [CSD-108](CSD-108-steward-purge.md) | Steward purge (remove rows that never belonged, under the global trust root) | `sketched` | none yet |
 | [CSD-109](CSD-109-contact-requests.md) | Contact requests (someone added you; you say yes, or ignore it) | `building` | `testing/flows/drafts/csd-109-contact-requests.yaml` |
 | [CSD-110](CSD-110-community-chats.md) | The rooms you talk in (Communities and affiliations › Chats) | `building` | none yet |
+| [CSD-120](CSD-120-affiliation.md) | Affiliation (an organization is a community gathered by necessity) | `envisioned` | none yet |
+| [CSD-121](CSD-121-members-and-roles.md) | Members and roles (a role is a delegation, a member is a person who said yes) | `envisioned` | none yet |
+| [CSD-122](CSD-122-licensure.md) | Licensure (any authority, under its own key, says who may practise) | `envisioned` | none yet |
+| [CSD-123](CSD-123-partners.md) | Partners (recognition, role, forums: the half of a partner that is not a licence) | `envisioned` | none yet |
+| [CSD-124](CSD-124-authority-delegations.md) | Authority delegations (the right to issue, handed down one attenuating step at a time) | `envisioned` | none yet |
+| [CSD-125](CSD-125-grants.md) | Grants (access to one thing, from its owner, and never passed on) | `envisioned` | none yet |
+| [CSD-126](CSD-126-affiliation-keys.md) | Affiliation keys (register, rotate, revoke, escrow — and the registry holds nothing) | `envisioned` | none yet |
 | [CSD-131](CSD-131-owner-requests.md) | Requests from your nodes (sign or decide) | `sketched` | none yet |
 | [CSD-132](CSD-132-owned-agents.md) | Agents you own (My things › Devices & keys) | `building` | none yet |
 | [CSD-133](CSD-133-my-devices.md) | My devices (My things › Devices & keys) | `building` | none yet |
 | [CSD-134](CSD-134-calls.md) | Calls (a room's live streams, and whether this one is saved) | `sketched` | none yet |
+| [CSD-135](CSD-135-feeds.md) | Feeds (what this node holds, by circle: mine, my communities', everyone's) | `sketched` | none yet |
+| [CSD-136](CSD-136-library-article.md) | Library: an encyclopedia article (body, revisions, corrections, citations, quality) | `sketched` | none yet |
+| [CSD-137](CSD-137-news.md) | News (headline, publisher, byline, how long it holds, and the publisher's standing) | `sketched` | none yet |
+| [CSD-138](CSD-138-dictionary.md) | Dictionary (no content kind exists; what must be decided first) | `envisioned` | none yet |
+| [CSD-139](CSD-139-posts-and-comments.md) | Posts and comments (a blog post, the comments on it, and the replies to those) | `sketched` | none yet |
+| [CSD-140](CSD-140-media-gallery.md) | Media gallery (images, audio, video, film and 3D shared at a circle, each with its description and AI disclosure) | `sketched` | none yet |
+| [CSD-141](CSD-141-events.md) | Events (a listing, who is going, and whether it is still on) | `sketched` | none yet |
+| [CSD-142](CSD-142-observations.md) | Observations (a notice others can support, rebut or ask to clarify) | `sketched` | none yet |
+| [CSD-143](CSD-143-drafts-and-bookmarks.md) | Notes, drafts and bookmarks (private until the owner shares one wider) | `sketched` | none yet |
+| [CSD-144](CSD-144-registry-lookups.md) | Registry lookups (a build, a partner, a revocation, the transparency witnesses) | `sketched` | none yet |
 
 ## Reserved
 
@@ -124,15 +141,9 @@ this directory yet.
 | CSD-117 | The judges are judged | [#179](https://github.com/CIRISAI/CIRISClient/issues/179) | someone-i-trust |
 | CSD-118 | Never allowed, and the operator's declaration | [#179](https://github.com/CIRISAI/CIRISClient/issues/179) | this-node; setup (extends CSD-014) |
 | CSD-119 | Guardian bond and help channel | [#179](https://github.com/CIRISAI/CIRISClient/issues/179) | family / safety |
-| CSD-120 | Affiliation (found, charter, dissolve) | [#206](https://github.com/CIRISAI/CIRISClient/issues/206) | Drafted in CIRISRegistry fold/org-as-affiliation (CIRISPortal fold) |
-| CSD-121 | Members and roles | [#206](https://github.com/CIRISAI/CIRISClient/issues/206) | Drafted in CIRISRegistry fold/org-as-affiliation (CIRISPortal fold) |
-| CSD-122 | Licensure | [#206](https://github.com/CIRISAI/CIRISClient/issues/206) | Drafted in CIRISRegistry fold/org-as-affiliation (CIRISPortal fold) |
-| CSD-123 | Partners | [#206](https://github.com/CIRISAI/CIRISClient/issues/206) | Drafted in CIRISRegistry fold/org-as-affiliation (CIRISPortal fold) |
-| CSD-124 | Authority delegations | [#206](https://github.com/CIRISAI/CIRISClient/issues/206) | Drafted in CIRISRegistry fold/org-as-affiliation (CIRISPortal fold); extends CSD-055 |
-| CSD-125 | Grants | [#206](https://github.com/CIRISAI/CIRISClient/issues/206) | Drafted in CIRISRegistry fold/org-as-affiliation (CIRISPortal fold) |
-| CSD-126 | Affiliation keys | [#206](https://github.com/CIRISAI/CIRISClient/issues/206) | Drafted in CIRISRegistry fold/org-as-affiliation (CIRISPortal fold) |
 | CSD-127 | First contact, and leaving a root | [#179](https://github.com/CIRISAI/CIRISClient/issues/179) | global-commons |
 | CSD-128 | The protected reporter channel | [#179](https://github.com/CIRISAI/CIRISClient/issues/179) | local-community / safety |
+| CSD-129 | Drill, halt, announce: end to end | CIRISServer FSD/CONSTITUTIONAL_HALT.md | used by the server's CSD/4 catalogue (T8, T19; packaging/csd4/requirements.yaml); no client card yet |
 
 ## Retired
 
@@ -147,4 +158,4 @@ this directory yet.
 
 ## Unassigned
 
-Below CSD-134, these numbers are free: 009, 017–019, 038, 058–064, 072–079, 089, 097–099, 129–130. Numbers above CSD-134 are free too, up to the test range.
+Below CSD-144, these numbers are free: 009, 017–019, 038, 058–064, 072–079, 089, 097–099, 130. Numbers above CSD-144 are free too, up to the test range.
