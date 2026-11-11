@@ -104,8 +104,10 @@ class OpusIosTest {
         assertTrue(decodedLengths.all { it == samples }, "every packet decodes to $samples samples. $facts")
         val hz = dominantHz(heard)
         assertTrue(abs(hz - 440) < 15, "decoded pitch $hz Hz, sent 440 Hz. $facts")
-        // CIRISEdge's smallest leg carries a 241 B packet; a larger one is refused there.
-        assertTrue(sizes.all { it in 1..241 }, "every packet is at most 241 B. $facts")
+        // CIRISEdge 45.1: max_packet_bytes is 239 when any leg of the call is a Channel
+        // leg (241 datagram-only); one byte more is refused FrameTooLarge. 239 is the
+        // cap a sender can be sure of before it knows the legs.
+        assertTrue(sizes.all { it in 1..239 }, "every packet is at most 239 B. $facts")
     }
 
     @Test fun twentyMillisecondsCarriesATone() = roundTrip(20)
