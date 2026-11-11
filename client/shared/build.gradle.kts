@@ -393,6 +393,13 @@ kotlin {
             }
         }
 
+        // Tests that need an Apple framework run on the simulator target
+        // (`:shared:iosSimulatorArm64Test`, the ios-kotlin job): AudioToolbox's
+        // Opus exists nowhere else.
+        val iosTest by creating { dependsOn(commonTest) }
+        val iosArm64Test by getting { dependsOn(iosTest) }
+        val iosSimulatorArm64Test by getting { dependsOn(iosTest) }
+
         // On-device tests (connectedDebugAndroidTest): MediaCodec exists only on a
         // device or emulator, so call video's encode/decode round trip runs here.
         val androidInstrumentedTest by getting {
