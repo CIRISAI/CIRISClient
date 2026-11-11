@@ -152,10 +152,15 @@ data class CommonsStanding(
      */
     val standing: String = "",
     @SerialName("standing_message") val standingMessage: SurfaceMessage? = null,
-    /** **The price of raising a brake. It is one.** Named on every response. */
-    @SerialName("objection_threshold") val objectionThreshold: Int = 0,
-    /** The absolute floor the escalated undo can never fall below. */
-    @SerialName("escalation_respondent_floor") val escalationRespondentFloor: Int = 0,
+    /**
+     * **The price of raising a brake. It is one.** Named on every answer that is
+     * not a refusal. `null` is "the node did not say": a refusal body carries its
+     * token and sentence only, and a `0` drawn there is a price nobody quoted
+     * (CSD-070 §2.3, law L4).
+     */
+    @SerialName("objection_threshold") val objectionThreshold: Int? = null,
+    /** The absolute floor the escalated undo can never fall below; `null` as above. */
+    @SerialName("escalation_respondent_floor") val escalationRespondentFloor: Int? = null,
     @SerialName("asymmetry_message") val asymmetryMessage: SurfaceMessage? = null,
     val dimensions: CommonsDimensions? = null,
     @SerialName("action_author") val actionAuthor: String? = null,
@@ -229,7 +234,25 @@ data class CommonsDismissalRequest(
     @SerialName("objection_id") val objectionId: String,
     @SerialName("additional_scrubs") val additionalScrubs: List<CommonsScrubSig> = emptyList(),
     @SerialName("dry_run") val dryRun: Boolean = false,
+    /**
+     * The dry run's `envelope`, sent back verbatim (CIRISServer#402,
+     * `commons_surface.rs`). The node stamps a row id and an instant into the
+     * envelope it advertises, and the co-signers sign THAT; a submission with
+     * co-signatures and no `stamped_envelope` is refused
+     * `stamped_envelope_required`, because a second stamp would be a different
+     * document. Left out on the dry run itself.
+     */
+    @SerialName("stamped_envelope") val stampedEnvelope: JsonElement? = null,
 )
+
+/**
+ * Every objection a standing names, whether the fold counted it or only an
+ * escalation record carries it. The one list the screen draws cards from and
+ * the view model checks a held dismissal against.
+ */
+fun CommonsStanding.objectionIds(): List<String> =
+    ((fold?.countedObjectionIds ?: emptyList()) + (escalation?.objections?.map { it.objectionId } ?: emptyList()))
+        .distinct()
 
 /** The m-of-n evidence, carried on BOTH arms: a refusal names its shortfall. */
 @Serializable
