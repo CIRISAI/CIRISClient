@@ -539,6 +539,10 @@ class EchoCanceller internal constructor(
     /** The measured delay in milliseconds, once there is one. */
     val measuredDelayMs: Int? get() = synchronized(this) { estimator.delay?.let { it * n * 1000 / CallAudioFormat.SAMPLE_RATE } }
 
+    /** Written-minus-read samples at the last capture, raw and as applied, for tests. */
+    internal val offsets: Pair<Long, Long> get() = synchronized(this) { lastRawOffset to applied }
+    private var lastRawOffset = 0L
+
     /** The filter's leak estimate (1 untrained, near 0 converged), for tests. */
     internal val leak: Double get() = synchronized(this) { mdf.leak }
 
@@ -557,7 +561,16 @@ class EchoCanceller internal constructor(
         require(pcm.size % n == 0) { "${pcm.size} samples is not whole 10 ms blocks" }
         val start = micCount
         micCount += pcm.size
-        trackOffset(farCount - micCount)
+        lastRawOffset = farCount - micCount
+        val moved = trackOffset(lastRawOffset)
+        if (moved != 0L) {
+            // The reference moved [moved] samples, a whole number of blocks: the echo
+            // now sits that many blocks later in the filter, so the filter moves too.
+            val k = (moved / n).toInt()
+            val newZero = start + applied
+            val newFrom = newZero - maxOf(0, delaySamples - margin)
+            mdf.shift(-k) { j -> DoubleArray(n).also { readFar(newFrom - j.toLong() * n, it) } }
+        }
         val out = ShortArray(pcm.size)
         for (b in 0 until pcm.size / n) {
             val micStart = start + b * n
@@ -595,16 +608,29 @@ class EchoCanceller internal constructor(
      * holds still; the reference moves only when the average has moved a whole
      * block, because to the filter every move is an echo path that changed.
      */
-    private fun trackOffset(o: Long) {
-        if (offset.isNaN()) { offset = o.toDouble(); applied = o; return }
+    private fun trackOffset(o: Long): Long {
+        if (offset.isNaN()) { offset = o.toDouble(); applied = o; return 0 }
         if (abs(o - offset) > CallAudioFormat.SAMPLE_RATE / 10) {
             // A tenth of a second off for ten frames in a row: a line restarted. Follow it.
-            if (++offsetMisses >= 10) { offset = o.toDouble(); applied = o; offsetMisses = 0 }
-            return
+            if (++offsetMisses >= 10) { offset = o.toDouble(); offsetMisses = 0; return moveApplied() }
+            return 0
         }
         offsetMisses = 0
         offset += 0.01 * (o - offset)
-        if (abs(offset - applied) > n) applied = offset.roundToLong()
+        return if (abs(offset - applied) > n * 3 / 2) moveApplied() else 0
+    }
+
+    /**
+     * Moves [applied] towards [offset] by whole blocks only, and returns how far.
+     * A move of part of a block would leave the filter's learned echo between its
+     * taps and cost seconds of relearning (seen on a real line: 502 samples, 6 dB);
+     * a whole-block move is followed exactly by shifting the filter. What is left
+     * over, under half a block, holds still, and the filter learns it as delay.
+     */
+    private fun moveApplied(): Long {
+        val blocks = ((offset - applied) / n).roundToLong()
+        applied += blocks * n
+        return blocks * n
     }
 
     private fun readFar(from: Long, into: DoubleArray) {

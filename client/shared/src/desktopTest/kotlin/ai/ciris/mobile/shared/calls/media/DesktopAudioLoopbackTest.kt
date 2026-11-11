@@ -84,10 +84,14 @@ class DesktopAudioLoopbackTest {
         val sink = DesktopSpeakerSink(echo)
         val mic = DesktopMicrophoneSource()
         val heard = java.util.concurrent.ConcurrentLinkedQueue<Pair<Long, Pair<Double, Double>>>() // ms, (raw, sent) energy
+        val trace = java.util.concurrent.ConcurrentLinkedQueue<String>()
         val t0 = System.nanoTime()
         mic.start { raw ->
             val sent = echo.capture(raw)
-            heard += ((System.nanoTime() - t0) / 1_000_000) to (raw.sumOf { it.toDouble() * it } to sent.sumOf { it.toDouble() * it })
+            val ms = (System.nanoTime() - t0) / 1_000_000
+            heard += ms to (raw.sumOf { it.toDouble() * it } to sent.sumOf { it.toDouble() * it })
+            val (rawOff, applied) = echo.offsets
+            trace += "$ms:$rawOff/$applied/${echo.measuredDelayMs}"
         }
         val voice = TestVoice.voice(10.0, seed = 7, pitchHz = 150.0, level = -12.0)
         try {
@@ -116,9 +120,15 @@ class DesktopAudioLoopbackTest {
         val erle = 10 * kotlin.math.log10(raw / sent.coerceAtLeast(1.0))
         val facts = "${late.size} frames; heard ${"%.1f".format(10 * kotlin.math.log10(raw / late.size.coerceAtLeast(1) / 960 / 32768.0 / 32768.0))} dBFS; " +
             "${"%.1f".format(erle)} dB less sent than heard; delay measured ${echo.measuredDelayMs} ms"
-        println("[aec loopback] $facts")
+        // Per second: dB taken off, so a test that fails says whether it never learned or lost it.
+        val perSecond = heard.groupBy { (it.first - playedFrom) / 1000 }.toSortedMap().map { (sec, fs) ->
+            val r = fs.sumOf { it.second.first }; val o = fs.sumOf { it.second.second }
+            "$sec:${"%.0f".format(10 * kotlin.math.log10(r / o.coerceAtLeast(1.0)))}"
+        }
+        val offs = trace.toList().filterIndexed { i, _ -> i % 25 == 0 }
+        println("[aec loopback] $facts; per second $perSecond; offsets (ms:raw/applied/delay) $offs")
         assertTrue(late.size > 100, "the microphone kept delivering. $facts")
         assertTrue(raw > 0.0, "the microphone heard the speaker. $facts")
-        assertTrue(erle >= 25.0, "what would be sent is at least 25 dB quieter than the echo heard. $facts")
+        assertTrue(erle >= 25.0, "what would be sent is at least 25 dB quieter than the echo heard. $facts; per second $perSecond; offsets $offs")
     }
 }
