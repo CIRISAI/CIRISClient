@@ -1,7 +1,7 @@
 # `formal/csd5/` — one TLA+ module per CSD/5 card
 
 **GENERATED.** `python3 packaging/check_csd5.py --write-tla` writes
-`<card>.tla` and `<card>.cfg` from the card's `csd:inputs`, `csd:view` and
+`<card>.tla`, `<card>.cfg` and `<card>.join.json` from the card's `csd:inputs`, `csd:view` and
 `csd:acts` blocks. Edit the card, not these files: the gate regenerates each
 module in memory on every run and fails if the committed one differs.
 
@@ -13,6 +13,11 @@ The standard is `FSD/CSD5.md`. The registry and its twelve laws are
 | module | card | distinct states, explorer | distinct states, TLC | invariants |
 |---|---|---|---|---|
 | `CSD070.tla` | CSD-070 Commons | 134,928 | 134,928 | 11 |
+
+`CSD070.join.json` is the same card as data (`FSD/CSD5.md` §7.0): each write
+with its row, its confirm, what it sends and shows and who may send it, and each
+drawn instance with what it is bound to. It is for the model that joins a card to
+CIRISConstitution `formal/event_lifecycle`, which CC plans and has not built.
 
 ## What has been run
 
@@ -33,7 +38,7 @@ The standard is `FSD/CSD5.md`. The registry and its twelve laws are
   from them. The same number of distinct states from both is the cross-check.
   A different number means the generator and the explorer disagree about the
   card, and that is a defect in `check_csd5.py`, not in the card.
-* **`--self-test`**, which plants 28 defects and requires each to go red,
+* **`--self-test`**, which plants 29 defects and requires each to go red,
   including one that removes the L7 invariant from a generated module and
   requires the drift check to notice. It also plants one thing that must stay
   green: a one-step write sent by an Action with no sheet.

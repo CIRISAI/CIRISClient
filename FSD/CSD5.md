@@ -301,7 +301,7 @@ card that passes says nothing about them:
 python3 packaging/check_csd5.py                 # registry, every CSD/5 card, Kotlin tags, baseline, TLA+ drift
 python3 packaging/check_csd5.py FSD/CSD/CSD-070-commons.md
 python3 packaging/check_csd5.py --tags CSD-070  # old tag -> derived tag
-python3 packaging/check_csd5.py --write-tla     # regenerate formal/csd5/<card>.tla and .cfg
+python3 packaging/check_csd5.py --write-tla     # regenerate formal/csd5/<card>.tla, .cfg and .join.json
 python3 packaging/check_csd5.py --write-baseline
 python3 packaging/check_csd5.py --self-test     # plant defects; each must go red
 python3 packaging/check_csd5.py --tlc tla2tools.jar              # also run TLC on each committed module
@@ -319,7 +319,8 @@ What the gate fails on:
   shortest sequence of edits, presses and answers that reaches it;
 * a tag literal in the card's Kotlin files that the model does not account for,
   or a `was:` tag the Kotlin does not have;
-* `formal/csd5/<card>.tla` differs from what the card generates;
+* `formal/csd5/<card>.tla`, `.cfg` or `.join.json` differs from what the card
+  generates;
 * with `--tlc`: TLC does not finish the search, finds an invariant violated, or
   counts a different number of distinct states than the explorer did;
 * **the ratchet.** `packaging/csd5/baseline.json` records, for the whole
@@ -330,17 +331,32 @@ What the gate fails on:
   when one has, the gate says how many can be lowered and `--write-baseline`
   re-records them.
 
-`--self-test` plants 28 defects, one or more per law plus the Kotlin, TLA+ and
+`--self-test` plants 29 defects, one or more per law plus the Kotlin, TLA+ and
 ratchet checks, and fails unless every one goes red. It also plants one thing
 that must stay green: an exit sent in one step from an Action, with no sheet.
 The first planted defect is the one that shipped: editing the dismissal grounds
-while the dry run stays held. With `--tlc` it plants five more, 33 in all: four
+while the dry run stays held. With `--tlc` it plants five more, 34 in all: four
 modules, each generated from the card with one defect planted (L2, L7, L11,
 L12), where TLC must name an invariant of that law as violated; and the clean
 module held against a state count that is off by one.
 
 A card with no `csd:inputs` block is untouched. Adoption is per card; the
 ratchet is what holds the rest of the client still while that happens.
+
+### 7.0 The join export
+
+`--write-tla` also writes `formal/csd5/<card>.join.json`: the card as data, for
+the model that will join it to CIRISConstitution's kernel (§4). It holds each
+write as family, verb, scope, confirm, what it sends and adds, the preview that
+covers it, and every sender: the ConfirmSheet or Action that issues it, the
+guards under which it can, the Actions that open the sheet, the tags a flow
+presses, and what the sender itself `shows:`. It also lists every drawn
+instance with the read, preview or local value it is bound to. Guards are the
+card's own text. `scope` is `null`: the card grammar puts no scope on a row.
+
+It is an export, not a proof. Nothing reads it yet. CC asked for this data to
+build the join, and the gate holds it to the card so that it cannot go stale
+while it waits.
 
 ### 7.1 The TLA+ module
 
