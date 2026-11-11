@@ -6,6 +6,7 @@ registry is CIRISConstitution (`manifests/ui_primitives.json`, beside
 `packaging/csd5/ui_primitives.json` is the only copy and that is a row in
 `evidence/blocked_upstream.tsv`. Draft 1 keys L6 on the `confirm` cell of CC's
 `manifests/transitions.json` (rc19 `63b2f06`) and adds L12.
+**To write, update or review a card**: [`CSD5_GUIDE.md`](CSD5_GUIDE.md).
 **Builds on**: CSD/3 (`CSD.md`: stage, surface, shows, states) and CSD/4
 (`FSD/CSD4_EVALUATION.md`, `packaging/csd4/`: what the node holds at one instant).
 **Adopted by**: one card, CSD-070 Commons (`FSD/CSD/CSD-070-commons.md` §2.3).
@@ -131,20 +132,60 @@ those tags; a card's `was:` entries are the list of what that rename touches.
 | L11 | **An answer is about its question.** A read's answer, and a preview, are held only while every input they were taken over still has the value it had when asked | a standing drawn beside a cohort key it was not read for |
 | L12 | **Shown is sent.** A write is sent only from something the person answered, a ConfirmSheet's confirm or an Action, and at that moment every value it sends is drawn: by a present Field or Choice bound to it, or by the sheet or Action, which lists it under `shows:` | a write that carries a value the person could not see when they pressed |
 
-L6, L7 and L12 are not new. CIRISConstitution `formal/event_lifecycle` proves
-them over the view and the queue of CC 4.5.13 (`manifests/view.cddl`,
-`manifests/choice_item.cddl`), and CSD/5 carries them from the row to the pixels:
+Where the laws come from. CIRISConstitution `formal/event_lifecycle` proves that
+the queue, the preview and the door are one function over the rows a node holds,
+over a view whose only moving part is the object's state (CC 4.5.13,
+`manifests/view.cddl`, `manifests/choice_item.cddl`). It says nothing about
+values, about an answer going stale, or about what was drawn. The laws sort by
+how much of each that work carries. This is the CC session's reading at rc19
+`7f79649`, agreed with this repo; it is not a ruling, and no Part states the
+laws.
 
-* **L6** is `confirm_is_lookup` and `exit_is_one_step`. Which writes are
-  confirmed is not decided here. CC's `manifests/transitions.json` gives every
-  transition a `confirm` cell, true when the row widens or the table offers no
-  way back, and a card copies that cell for the row its write puts down. The law
-  runs both ways on purpose: a confirm in front of an exit is friction on the
-  way out, and the gate refuses it as it refuses a missing one.
-* **L7** is `preview_is_execution`: the kernel says the node will not execute
-  what was not previewed, and L7 says the screen will not ask it to.
-* **L12** is the screen's half of `answer.shown_digest` in `choice_item.cddl`:
-  an answer covers what was shown, so what is sent has to have been shown.
+* **L6 is carried and proved.** It is `confirm_is_lookup`, with its halves
+  `widening_is_confirmed` and `no_way_back_is_confirmed`, and `exit_is_one_step`.
+  Which writes are confirmed is not decided here. CC's
+  `manifests/transitions.json` gives every transition a `confirm` cell, true
+  when the row widens or the table offers no way back, and a card copies that
+  cell for the row its write puts down. The law runs both ways on purpose: a
+  confirm in front of an exit is friction on the way out, and the gate refuses
+  it as it refuses a missing one. Where a transition's `undo` cell is `gap`, the
+  `confirm` value is provisional.
+* **L7 is half carried.** `preview_is_execution` proves that the view an item
+  previews is the view the door produces when the row arrives. It does not prove
+  that a write is sent only while its preview is held, or that it sends only
+  what the preview covered: the kernel has no held preview and no values. That
+  half is this standard's own, and it is the half CSD-070 broke (§8).
+* **L5 is carried, in part proved.** `queue_sound`, `queue_complete` and
+  `door_is_queue` give "offered if and only if admitted";
+  `stranger_sees_nothing` gives absence for a reader with no standing;
+  `refused_previews_nothing` says a transition not offered produces nothing at
+  the door. That an Action is disabled with a reason and not absent is data,
+  `option.available` and `option.unavailable` in `choice_item.cddl`, and no
+  theorem.
+* **L3 and L4 are carried from data, in part.** `fact.provenance` in
+  `choice_item.cddl` and `kind` in `view.cddl` say a fact is `wire`, `by_rule`
+  or `not_sent`, and a `not_sent` fact is not a value. The read-outcome half of
+  L3 (`error`, `loading`, `empty` only when the node answered) has no CC source:
+  a read's transport outcome is the client's.
+* **L10 is carried from text**: CC 3.4.14, the AI-generation disclosure, which
+  is mandatory and has its own fail rule, and CC 3.3.13, the Source struct. The
+  alt text has no CC source found.
+* **L12 is carried from data and no theorem.** `answer.shown_digest` in
+  `choice_item.cddl` is the hash of the item as the node served it: it binds an
+  answer to that item, not to what was drawn. "Every value it sends is drawn" is
+  this standard's claim on top of the digest, and no CC text says who checks
+  the digest.
+* **L1, L2, L8, L9 and L11 are method.** No promise requires them. They are
+  what lets a screen be checked at all, as "state is a fold over the held rows
+  and nothing else" lets a node be. L11 is what makes L7 and L12 mean anything
+  on a screen, and `shown_digest` is its natural anchor, since an answer to a
+  stale item carries another digest.
+
+The two models are **not composed**. CC plans a refinement from a card to its
+kernel (an Action that is present and enabled is a transition in the queue; a
+card's `issue` is the door's step; a ConfirmSheet is the item's confirm) and
+has not started it. Until it exists nothing checks one model against the other.
+[`CSD5_GUIDE.md`](CSD5_GUIDE.md) has the same table for a card's author.
 
 The gate checks that a write's `row:` names a family in the namespace registry
 pinned at `client/ceg/namespace_registry.json` and one of the five verbs. It
@@ -185,7 +226,7 @@ writes:
     sends: [cohort, cohort_key, action, dismiss_grounds]
     adds: [cosigners]
     previewed_by: dry_run
-    row: {family: "objection:{state}", verb: attest}   # the row this write puts on the node
+    row: {family: "objection:{state}", verb: attest, scope: cohort}   # the row this write puts on the node
     confirm: true                                      # CC transitions.json, that family and verb
 defs:
   has_objections: "standing = ok and not standing.refused and standing.objections"
@@ -195,7 +236,11 @@ defs:
 written down: when the guard is false the value returns to its initial value.
 `adds:` names values a write carries that the preview did not need to cover,
 because they do not change what is signed (co-signatures over the previewed
-bytes). Every write declares `confirm:` and `row:`. `row: null` is for a write
+bytes). Every write declares `confirm:` and `row:`. A row names its family, its verb
+and its `scope:`, which is one circle of the registry or the enum local the
+person picks the circle with (that local's values are all circles, and the
+write sends it). The door judges a row at one scope, and a wider scope can
+change whether it is confirmed. `row: null` is for a write
 that puts no row on the node, and says so.
 
 ### 5.2 `csd:view`
@@ -301,7 +346,7 @@ card that passes says nothing about them:
 python3 packaging/check_csd5.py                 # registry, every CSD/5 card, Kotlin tags, baseline, TLA+ drift
 python3 packaging/check_csd5.py FSD/CSD/CSD-070-commons.md
 python3 packaging/check_csd5.py --tags CSD-070  # old tag -> derived tag
-python3 packaging/check_csd5.py --write-tla     # regenerate formal/csd5/<card>.tla and .cfg
+python3 packaging/check_csd5.py --write-tla     # regenerate formal/csd5/<card>.tla, .cfg and .join.json
 python3 packaging/check_csd5.py --write-baseline
 python3 packaging/check_csd5.py --self-test     # plant defects; each must go red
 python3 packaging/check_csd5.py --tlc tla2tools.jar              # also run TLC on each committed module
@@ -314,12 +359,14 @@ What the gate fails on:
   one word, a primitive that owns no prefix, a state tied to no read outcome,
   a missing law, no `write_verbs`);
 * a write that does not say `confirm:` and `row:`, or whose row names a family
-  the pinned namespace registry does not have or a verb outside the five;
+  the pinned namespace registry does not have, a verb outside the five, or a
+  scope that is neither a circle nor a local whose values are circles;
 * a CSD/5 card breaks any law in any reachable state. The failure prints the
   shortest sequence of edits, presses and answers that reaches it;
 * a tag literal in the card's Kotlin files that the model does not account for,
   or a `was:` tag the Kotlin does not have;
-* `formal/csd5/<card>.tla` differs from what the card generates;
+* `formal/csd5/<card>.tla`, `.cfg` or `.join.json` differs from what the card
+  generates;
 * with `--tlc`: TLC does not finish the search, finds an invariant violated, or
   counts a different number of distinct states than the explorer did;
 * **the ratchet.** `packaging/csd5/baseline.json` records, for the whole
@@ -330,17 +377,32 @@ What the gate fails on:
   when one has, the gate says how many can be lowered and `--write-baseline`
   re-records them.
 
-`--self-test` plants 28 defects, one or more per law plus the Kotlin, TLA+ and
+`--self-test` plants 30 defects, one or more per law plus the Kotlin, TLA+ and
 ratchet checks, and fails unless every one goes red. It also plants one thing
 that must stay green: an exit sent in one step from an Action, with no sheet.
 The first planted defect is the one that shipped: editing the dismissal grounds
-while the dry run stays held. With `--tlc` it plants five more, 33 in all: four
+while the dry run stays held. With `--tlc` it plants five more, 35 in all: four
 modules, each generated from the card with one defect planted (L2, L7, L11,
 L12), where TLC must name an invariant of that law as violated; and the clean
 module held against a state count that is off by one.
 
 A card with no `csd:inputs` block is untouched. Adoption is per card; the
 ratchet is what holds the rest of the client still while that happens.
+
+### 7.0 The join export
+
+`--write-tla` also writes `formal/csd5/<card>.join.json`: the card as data, for
+the model that will join it to CIRISConstitution's kernel (§4). It holds each
+write as family, verb, scope, confirm, what it sends and adds, the preview that
+covers it, and every sender: the ConfirmSheet or Action that issues it, the
+guards under which it can, the Actions that open the sheet, the tags a flow
+presses, and what the sender itself `shows:`. It also lists every drawn
+instance with the read, preview or local value it is bound to. Guards are the
+card's own text. `scope` is one circle, or the local that carries it with the circles it can hold.
+
+It is an export, not a proof. Nothing reads it yet. CC asked for this data to
+build the join, and the gate holds it to the card so that it cannot go stale
+while it waits.
 
 ### 7.1 The TLA+ module
 

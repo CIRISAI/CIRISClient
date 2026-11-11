@@ -363,6 +363,7 @@ class Model:
 
         # ── defs, then every guard ───────────────────────────────────────────
         self.defs: dict[str, tuple] = {}
+        self.defs_src: dict[str, str] = {k: str(v) for k, v in (inputs.get("defs") or {}).items()}
         for name, src in (inputs.get("defs") or {}).items():
             if name in self.kind:
                 raise CardError(f"{card}: def `{name}` shadows a declared input")
@@ -662,8 +663,23 @@ class Model:
                                 "lands, or `null` for a write that lands none)")
             row = w["row"]
             if row is not None:
-                if not isinstance(row, dict) or set(row) != {"family", "verb"}:
-                    raise CardError(f"L6 {card}: write `{name}` `row:` must be {{family, verb}} or null")
+                if not isinstance(row, dict) or set(row) != {"family", "verb", "scope"}:
+                    raise CardError(f"L6 {card}: write `{name}` `row:` must be {{family, verb, scope}} or null")
+                # The door judges a row at one scope, and a wider scope can change whether it is
+                # confirmed. A row says its scope: one circle, or the local value the person picks it with.
+                circles = self.reg["context"]["circle"]
+                sc = row["scope"]
+                if sc in self.locals:
+                    body = self.locals[sc]
+                    vals = [str(v) for v in body.get("values") or []]
+                    if body["type"] != "enum" or not vals or any(v not in circles for v in vals):
+                        raise CardError(f"L6 {card}: write `{name}` takes its scope from `{sc}`, "
+                                        f"whose values are not all circles of the registry {circles}")
+                    if sc not in (w.get("sends") or []):
+                        raise CardError(f"L6 {card}: write `{name}` takes its scope from `{sc}` and does not send it")
+                elif sc not in circles:
+                    raise CardError(f"L6 {card}: write `{name}` has scope `{sc}`, which is neither a circle "
+                                    f"of the registry {circles} nor a local value")
                 if row["family"] not in families():
                     raise CardError(f"L6 {card}: write `{name}` lands a row in `{row['family']}`, "
                                     f"which is not a family in {NAMESPACES.name}")
@@ -1505,22 +1521,134 @@ def check_card(path: Path, reg: dict, verbose=False):
     return problems, m, ex, n
 
 
-def write_tla(m: "Model", ex: "Explorer", n: int, formal: Path) -> None:
+def join_export(m: "Model", n: int) -> str:
+    """The card as data for a model that joins it to CIRISConstitution's kernel.
+
+    CC `formal/event_lifecycle` proves the queue, the preview and the door are one
+    function over held rows. A join maps a card onto it: an Action that is present
+    and enabled is a transition in the queue, a card's `issue` is the door's step,
+    a ConfirmSheet is the item's confirm. That model is CC's to build and is not
+    built. This is the data it asked for: each write as (family, verb, scope,
+    confirm, sends, shows) with the guards that let it be sent, and what each
+    drawn instance is bound to. Guards are the card's own text, unexpanded; `defs`
+    gives the names they use.
+    """
+    def tags(inst):
+        return {slot or "root": tag for slot, tag in m.tags(inst)}
+
+    def issues(effs):
+        return sorted({str(next(v for k, v in e.items() if k not in BRANCHES))
+                       for e in m._walk(effs) if _kind(e) == "issue"})
+
+    def opens(effs):
+        return {str(e["open"]) for e in m._walk(effs) if _kind(e) == "open"}
+
+    by_id = {i["id"]: i for i in m.instances if i["primitive"] in ("ConfirmSheet", "Action")}
+    writes = {}
+    for name, w in m.writes.items():
+        row = w.get("row")
+        senders = []
+        for inst in m.instances:
+            prim = inst["primitive"]
+            if prim not in ("ConfirmSheet", "Action"):
+                continue
+            key = "confirm" if prim == "ConfirmSheet" else "effect"
+            if name not in issues(inst.get(key)):
+                continue
+            sender = {"id": inst["id"], "primitive": prim, "tags": tags(inst),
+                      "shows": list(inst.get("shows") or [])}
+            if prim == "ConfirmSheet":
+                sender["sent_from"] = "confirm"
+                sender["while"] = inst.get("while")
+                sender["opened_by"] = [
+                    {"id": a["id"], "present": a.get("present"), "enabled": a.get("enabled"),
+                     "per": a.get("per"), "tags": tags(a)}
+                    for a in m.instances
+                    if a["primitive"] == "Action" and inst["id"] in opens(a.get("effect"))]
+            else:
+                sender["sent_from"] = "action"
+                sender["present"] = inst.get("present")
+                sender["enabled"] = inst.get("enabled")
+                sender["per"] = inst.get("per")
+            senders.append(sender)
+        prev = w.get("previewed_by")
+        writes[name] = {
+            "family": (row or {}).get("family"),
+            "verb": (row or {}).get("verb"),
+            # One circle, or the local the person picks it with and the circles that local can hold.
+            "scope": (None if not row else row["scope"] if row["scope"] not in m.locals else
+                      {"local": row["scope"], "values": [str(v) for v in m.locals[row["scope"]]["values"]]}),
+            "confirm": w.get("confirm"),
+            "sends": list(w.get("sends") or []),
+            "adds": list(w.get("adds") or []),
+            "previewed_by": prev,
+            "preview_covers": list(m.answers.get(prev) or []) if prev else [],
+            "senders": senders,
+        }
+    drawn = []
+    for inst in m.instances:
+        prim = inst["primitive"]
+        bound = None
+        if inst.get("var"):
+            bound = {"local": inst["var"]}
+        elif inst.get("of"):
+            bound = {"preview" if inst["of"] in m.previews else "read": inst["of"]}
+        if bound is None and prim in ("ConfirmSheet", "Action"):
+            continue
+        entry = {"id": inst["id"], "primitive": prim, "bound_to": bound, "per": inst.get("per"),
+                 "present": inst.get("present"), "tags": tags(inst)}
+        if prim == "Metric":
+            entry["shown"] = inst.get("shown")
+            entry["sent"] = inst.get("sent")
+        if prim == "StateBlock":
+            entry["states"] = dict(inst.get("states") or {})
+        drawn.append(entry)
+    out = {
+        "_meta": {
+            "generated_by": "packaging/check_csd5.py --write-tla",
+            "what": "One CSD/5 card as data for a model joining it to CIRISConstitution formal/event_lifecycle. "
+                    "The join is not built. Guards are the card's text; `defs` names what they use.",
+            "format": 1,
+        },
+        "card": m.card,
+        "surface": m.surface,
+        "registry_draft": m.reg.get("_meta", {}).get("draft"),
+        "distinct_states": n,
+        "context": list(m.context),
+        "locals": {k: {"type": v["type"], **({"values": [str(x) for x in v["values"]]} if v.get("values") else {}),
+                       "lives_while": v.get("lives_while")} for k, v in m.locals.items()},
+        "reads": {k: {"of": list(v.get("of") or []),
+                      "carries": {c: dict(cb) for c, cb in (v.get("carries") or {}).items()},
+                      "where": list(v.get("where") or [])} for k, v in m.reads.items()},
+        "previews": {k: {"covers": list(v.get("covers") or []), "lives_while": v.get("lives_while")}
+                     for k, v in m.previews.items()},
+        "defs": dict(m.defs_src),
+        "writes": writes,
+        "drawn": drawn,
+    }
+    return json.dumps(out, indent=1, ensure_ascii=False) + "\n"
+
+
+def generated(m: "Model", ex: "Explorer", n: int) -> list[tuple[str, str]]:
+    """(file name, contents) of everything a card generates under formal/csd5/."""
     t = Tla(m, ex)
     tla, cfg = t.module(n)
+    return [(f"{t.name}.tla", tla), (f"{t.name}.cfg", cfg), (f"{t.name}.join.json", join_export(m, n))]
+
+
+def write_tla(m: "Model", ex: "Explorer", n: int, formal: Path) -> None:
     formal.mkdir(parents=True, exist_ok=True)
-    (formal / f"{t.name}.tla").write_text(tla)
-    (formal / f"{t.name}.cfg").write_text(cfg)
+    for name, text in generated(m, ex, n):
+        (formal / name).write_text(text)
 
 
 def tla_drift(m: "Model", ex: "Explorer", n: int, formal: Path) -> list[str]:
-    """The committed module is the generated one, byte for byte, or the gate fails."""
-    t = Tla(m, ex)
-    tla, cfg = t.module(n)
-    for name, want in ((f"{t.name}.tla", tla), (f"{t.name}.cfg", cfg)):
+    """The committed files are the generated ones, byte for byte, or the gate fails."""
+    for name, want in generated(m, ex, n):
         path = formal / name
         if not path.exists() or path.read_text() != want:
-            return [f"TLA+ {m.card}: {name} under {formal.name}/ is not what the card generates; "
+            kind = "Join" if name.endswith(".json") else "TLA+"
+            return [f"{kind} {m.card}: {name} under {formal.name}/ is not what the card generates; "
                     "run packaging/check_csd5.py --write-tla"]
     return []
 
@@ -1759,6 +1887,9 @@ def self_test(tlc: str | None = None) -> int:
     def row_in_no_family(b):
         b["inputs"]["writes"]["raise"]["row"]["family"] = "objection:{mood}"
 
+    def scope_is_no_circle(b):
+        b["inputs"]["writes"]["raise"]["row"]["scope"] = "planet"
+
     def ballot_way_not_shown(b):
         inst(b, "ballot")["shows"].remove("ballot")
 
@@ -1778,7 +1909,7 @@ def self_test(tlc: str | None = None) -> int:
         # step (L6), and everything it sends is in a field that is on screen (L12).
         b["inputs"]["writes"]["withdraw"] = {
             "sends": ["cohort", "cohort_key", "action"],
-            "row": {"family": "objection:{state}", "verb": "withdraw"}, "confirm": False}
+            "row": {"family": "objection:{state}", "verb": "withdraw", "scope": "cohort"}, "confirm": False}
         b["acts"]["acts"].append({"id": "withdraw", "present": "has_objections", "effect": [
             {"issue": "withdraw", "on_ok": [{"ask": "standing"}]}]})
 
@@ -1806,6 +1937,7 @@ def self_test(tlc: str | None = None) -> int:
         ("L6", "an exit is put behind a confirm", exit_behind_a_confirm, None),
         ("L6", "a write that does not say whether it is confirmed", confirm_unsaid, None),
         ("L6", "a write whose row is in no family of the pinned registry", row_in_no_family, None),
+        ("L6", "a write whose row is at a scope that is no circle", scope_is_no_circle, None),
         ("L12", "the ballot confirm no longer says which way the ballot goes", ballot_way_not_shown, None),
         ("L12", "the dismissal confirm no longer says how many co-signed", cosigners_not_shown, None),
         ("L12", "the dismissal grounds are off screen when the dismissal is confirmed", grounds_hidden_at_confirm, None),
@@ -1852,6 +1984,13 @@ def self_test(tlc: str | None = None) -> int:
         mod.write_text(cut)
         extra.append(("TLA+", "the committed module has lost its L7 invariant",
                       [] if fresh or cut == text else tla_drift(m, ex, n, formal)))
+        mod.write_text(text)
+        jf = formal / f"{Tla(m, ex).name}.join.json"
+        jtext = jf.read_text()
+        flipped = jtext.replace('"confirm": true', '"confirm": false', 1)
+        jf.write_text(flipped)
+        extra.append(("Join", "the committed join export says a confirmed write is not confirmed",
+                      [] if fresh or flipped == jtext else tla_drift(m, ex, n, formal)))
     unowned = scan_prefixes(reg)
     held = {"unowned_prefixes": dict(unowned), "undrawn_reasons": {m.card: m.debts()}}
     if ratchet(unowned, {m.card: m.debts()}, held):

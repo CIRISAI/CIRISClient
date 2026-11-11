@@ -298,9 +298,9 @@ previews:
 writes:
   # Each lands one new signed row (`objection:raised:v1`, `objection:upheld:v1` or
   # `objection:overruled:v1`, `objection:dismissed:v1`): an attest, which widens, so it is confirmed.
-  raise:   {sends: [cohort, cohort_key, action, raise_grounds], row: {family: "objection:{state}", verb: attest}, confirm: true}
-  ballot:  {sends: [cohort, cohort_key, action, ballot_grounds, ballot], row: {family: "objection:{state}", verb: attest}, confirm: true}
-  dismiss: {sends: [cohort, cohort_key, action, dismiss_grounds], adds: [cosigners], previewed_by: dry_run, row: {family: "objection:{state}", verb: attest}, confirm: true}
+  raise:   {sends: [cohort, cohort_key, action, raise_grounds], row: {family: "objection:{state}", verb: attest, scope: cohort}, confirm: true}
+  ballot:  {sends: [cohort, cohort_key, action, ballot_grounds, ballot], row: {family: "objection:{state}", verb: attest, scope: cohort}, confirm: true}
+  dismiss: {sends: [cohort, cohort_key, action, dismiss_grounds], adds: [cosigners], previewed_by: dry_run, row: {family: "objection:{state}", verb: attest, scope: cohort}, confirm: true}
 defs:
   answered:        "standing = ok and not standing.refused"
   has_objections:  "standing = ok and not standing.refused and standing.objections"
