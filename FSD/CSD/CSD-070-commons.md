@@ -151,6 +151,15 @@ most carefully built zero-discipline in the client.
 `txt_commons_escalation`. Every text field has an input sink and every
 button's automation handler runs the same act as a tap.
 
+**One tag says which state the block is in.** `state_commons_standing` wraps
+whatever the standing draws and its value is the state token: `idle`,
+`loading`, `error`, `refused`, `unknown`, `not_on_this_node`, `empty` or
+`populated` (`standingState()`, pure, `CommonsStandingStateTest`). A write or a
+dry run that did not arrive is `txt_commons_write_error`, apart from
+`txt_commons_error`, because the standing under a failed write is still the
+answer and stays drawn. What the node said to a write is `card_commons_result`,
+whose value is `admitted`, `dry_run` or the refusal token.
+
 ### 2.0.1 Every write is confirmed first
 
 Every write on this screen is signed by this node's key on its owner's behalf
@@ -192,9 +201,46 @@ unreachable without it, because the co-signers must sign the exact
 `payload_sha256` the dry run hands back.
 
 The screen has a tag for every button in that sequence and for the hash it
-produces (`txt_commons_dry_run_hash`). That the submit sends the bytes the dry
-run disclosed — the same preview-then-ratify invariant CSD-065 §2 names on the
-enforcement ladder (`txt_ladder_selection_hash`) — has no test (§5).
+produces (`txt_commons_dry_run_hash`). **The submit sends the dry run.** The
+view model keeps the request the dry run was taken over and the node's stamped
+`envelope` (`DismissalDraft`), and `submitDismissal` sends that request with
+`dry_run` off, the co-signatures added and the envelope back as
+`stamped_envelope`; it takes no grounds from the screen. This is the
+preview-then-ratify invariant CSD-065 §2 names on the enforcement ladder
+(`txt_ladder_selection_hash`), and `CommonsViewModelTest` pins it.
+
+Before this the submit rebuilt the request from the fields as they then stood,
+so the grounds, cohort key or action could be changed under a hash already on
+screen, and it never sent `stamped_envelope`. The node has refused a co-signed
+dismissal without it since CIRISServer#402 (2026-08-13;
+`stamped_envelope_required`, 400), so no lift that needed a second signature
+could succeed from this client. Read from the server's source, not observed on
+a node: no co-signed dismissal has been run from this client before or since.
+
+**One voice, two hashes.** When nobody co-signs, the node ignores the echoed
+envelope and stamps the dismissal again (`post_dismissal`: "ignored rather than
+refused"). The row that lands then has another instant, id and
+`payload_sha256` than the dry run showed. The screen sends nothing false and
+the result card draws the hash the node answered with, which is the hash of
+the row that landed; but the hash under step 1 and the hash in the result
+differ on this path and agree on the co-signed one. The client echoes the
+envelope on every path, so this closes on the node's side with no client
+change: CIRISServer#872 asks it to honour the echo whenever it is present. The
+dry-run hash is not hidden meanwhile, because it is the bytes a co-signer needs
+and the person has not yet said whether there will be one.
+
+What ends a held dry run, and only this:
+
+| event | the dry run and its co-signatures |
+|---|---|
+| the dismissal grounds are edited to a different sentence | let go |
+| the cohort, cohort key or action changes | let go, with the standing |
+| a second dry run | replaced; the old signatures go, because each dry run is stamped anew |
+| Cancel in step 3 | let go |
+| a submission the node admits | let go, and the standing is read again |
+| a submission the node refuses, or that never arrives | **kept**: a shortfall is answered by one more signature over the same bytes |
+| a re-read that is in flight, fails or is refused | **kept**: none of those says the objection is gone |
+| a re-read that answers and no longer names the objection | let go |
 
 ## 3. Contracts (who)
 
@@ -284,10 +330,14 @@ submit sends.
 
 **Status.** Card, CSD and API agree: the tags and eight arms, all four routes
 live at the node URL, the non-2xx-with-body contract honoured, and
-irreversible writes behind a three-fact ConfirmSheet (§2.0.1). Open: the six
+irreversible writes behind a three-fact ConfirmSheet (§2.0.1). `CommonsViewModelTest`
+(16) and `CommonsStandingStateTest` (7) pin the rules of §2.2 and the state
+tag in the Kotlin. Open: the six
 `x_private:` prices have no registry family (the ask in §2,
-CIRISConstitution#110); the raise/lift visual asymmetry and the
-submit-sends-the-dry-run-bytes invariant have no test. Stage: `building` (the
+CIRISConstitution#110); the raise/lift visual asymmetry has no test; the tags inside an objection's card are not
+yet keyed by its id, so two objections on screen share them; a dismissal with
+no co-signer lands a different hash than its dry run showed (CIRISServer#872);
+and no co-signed dismissal has been run against a node from this client. Stage: `building` (the
 floor is `unreleased` and no flow has run on the matrix).
 
 **Not tested here.**

@@ -18,6 +18,7 @@ import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.models.surfaces.CommonsEscalationRecord
 import ai.ciris.mobile.shared.models.surfaces.CommonsStanding
 import ai.ciris.mobile.shared.models.surfaces.CommonsWriteResult
+import ai.ciris.mobile.shared.models.surfaces.objectionIds
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
@@ -84,7 +85,9 @@ fun CommonsScreen(
     val loading by viewModel.loading.collectAsState()
     val busy by viewModel.busy.collectAsState()
     val error by viewModel.error.collectAsState()
+    val writeError by viewModel.writeError.collectAsState()
     val writeResult by viewModel.writeResult.collectAsState()
+    val raiseGrounds by viewModel.raiseGrounds.collectAsState()
 
     Scaffold(
         modifier = modifier,
@@ -138,35 +141,57 @@ fun CommonsScreen(
                 onRead = { viewModel.readStanding() },
             )
 
-            // A read that did not arrive (transport failure, unparseable body) is
-            // its own state, never the `unreadable` arm and never `quiet` (CSD-070).
-            error?.let {
+            // A write or a dry run that did not arrive. The standing under it is
+            // still the answer to the question, so it stays drawn (CSD-070 §2.3).
+            writeError?.let {
                 Text(
                     text = it,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.testable("txt_commons_error", it),
+                    modifier = Modifier.testable("txt_commons_write_error", it),
                 )
-            }
-            if (loading) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().testable("spinner_commons_read"))
             }
             writeResult?.let { WriteResultCard(it) { viewModel.clearWriteResult() } }
 
+            // ONE block, ONE state at a time. Its tag carries the state's token,
+            // so a flow asks which of the eight it is instead of inferring it
+            // from which children happen to exist.
             val s = standing
-            if (s == null) {
-                Text(
-                    text = localizedString("surfaces.commons.no_reading"),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            } else {
-                StandingCard(s)
+            val state = standingState(loading, error, s)
+            Column(
+                modifier = Modifier.fillMaxWidth().testable("state_commons_standing", state.token),
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                when {
+                    state == StandingState.LOADING ->
+                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth().testable("spinner_commons_read"))
+                    // A read that did not arrive (transport failure, unparseable
+                    // body) is its own state, never the `unreadable` arm and
+                    // never `quiet`.
+                    state == StandingState.ERROR -> (error ?: "").let {
+                        Text(
+                            text = it,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.testable("txt_commons_error", it),
+                        )
+                    }
+                    s == null -> Text(
+                        text = localizedString("surfaces.commons.no_reading"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    else -> StandingCard(s)
+                }
+            }
+            if (s != null && state.answered) {
                 RaiseTheBrake(
                     threshold = s.objectionThreshold,
+                    grounds = raiseGrounds,
+                    onGrounds = viewModel::setRaiseGrounds,
                     busy = busy,
                     subject = commonsSubject(actionId, cohortKeyId),
-                    onRaise = { grounds -> viewModel.raiseObjection(grounds) },
+                    onRaise = { viewModel.raiseObjection() },
                 )
                 ObjectionsBlock(standing = s, viewModel = viewModel, busy = busy)
             }
@@ -355,6 +380,45 @@ internal fun standingBody(s: CommonsStanding): StandingBody = when {
     s.standing in ABSENCE_ARMS || s.fold == null -> StandingBody.NO_COUNTS
     s.standing == "quiet" -> StandingBody.QUIET
     else -> StandingBody.COUNTED
+}
+
+/** The four arms the fold counts. Each needs a fold to mean anything. */
+private val COUNTED_ARMS = setOf("quiet", "objected", "stood", "reversed")
+
+/**
+ * The eight states of the standing block (CSD-070 §2.3, `StateBlock standing`).
+ * [token] is what the block's tag carries; [answered] is whether a node's
+ * answer is on screen, refusal included.
+ */
+internal enum class StandingState(val token: String, val answered: Boolean) {
+    IDLE("idle", false),
+    LOADING("loading", false),
+    ERROR("error", false),
+    REFUSED("refused", true),
+    UNKNOWN("unknown", true),
+    NOT_ON_THIS_NODE("not_on_this_node", true),
+    EMPTY("empty", true),
+    POPULATED("populated", true),
+}
+
+/**
+ * Which of the eight the block is in. Pure, and total: exactly one state for
+ * any input.
+ *
+ * `UNKNOWN` is the plane that could not be read, a counted arm that arrived
+ * without its fold, and an arm this client has no name for. None of the three
+ * may read as "nobody objected": `EMPTY` is `quiet` WITH a fold and nothing else.
+ */
+internal fun standingState(loading: Boolean, error: String?, standing: CommonsStanding?): StandingState = when {
+    loading -> StandingState.LOADING
+    error != null -> StandingState.ERROR
+    standing == null -> StandingState.IDLE
+    standing.refused -> StandingState.REFUSED
+    standing.standing == "action_unknown" || standing.standing == "cohort_unknown" -> StandingState.NOT_ON_THIS_NODE
+    standing.standing == "not_governed" -> StandingState.POPULATED
+    standing.standing in COUNTED_ARMS && standing.fold != null ->
+        if (standing.standing == "quiet") StandingState.EMPTY else StandingState.POPULATED
+    else -> StandingState.UNKNOWN
 }
 
 @Composable
@@ -566,9 +630,15 @@ private fun IdList(label: String, ids: List<String>) {
  * because there is nothing to reach: the threshold IS one.
  */
 @Composable
-private fun RaiseTheBrake(threshold: Int, busy: Boolean, subject: String, onRaise: (String) -> Unit) {
-    var grounds by remember { mutableStateOf("") }
-    rememberTextInputDriver("input_commons_objection_grounds", grounds) { grounds = it }
+private fun RaiseTheBrake(
+    threshold: Int?,
+    grounds: String,
+    onGrounds: (String) -> Unit,
+    busy: Boolean,
+    subject: String,
+    onRaise: () -> Unit,
+) {
+    rememberTextInputDriver("input_commons_objection_grounds", grounds, onValueChange = onGrounds)
     // A raised brake cannot be taken back by the one who raised it — only the
     // cohort's own m-of-n lifts it — so the three facts come first.
     var confirming by remember { mutableStateOf(false) }
@@ -581,10 +651,11 @@ private fun RaiseTheBrake(threshold: Int, busy: Boolean, subject: String, onRais
             what = localizedString("surfaces.commons.confirm_raise_what"),
             who = localizedString("surfaces.commons.confirm_signs_node"),
             confirmLabel = localizedString("surfaces.commons.raise_action"),
+            // The grounds stay until the node has taken them: a refusal or a
+            // write that never arrived must not cost the person their sentence.
             onConfirm = {
                 confirming = false
-                onRaise(grounds)
-                grounds = ""
+                onRaise()
             },
             onDismiss = { confirming = false },
         )
@@ -602,13 +673,17 @@ private fun RaiseTheBrake(threshold: Int, busy: Boolean, subject: String, onRais
                 fontWeight = FontWeight.Bold,
                 color = SemanticColors.Default.warning,
             )
-            Text(
-                text = localizedString("surfaces.commons.raise_price", "threshold", threshold.toString()),
-                style = MaterialTheme.typography.bodySmall,
-            )
+            // Only a price the node sent. A refusal carries none, and the
+            // banner above already says it was not read.
+            if (threshold != null) {
+                Text(
+                    text = localizedString("surfaces.commons.raise_price", "threshold", threshold.toString()),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
             OutlinedTextField(
                 value = grounds,
-                onValueChange = { grounds = it },
+                onValueChange = onGrounds,
                 label = { Text(localizedString("surfaces.commons.grounds")) },
                 minLines = 2,
                 modifier = Modifier.fillMaxWidth().testable("input_commons_objection_grounds"),
@@ -635,9 +710,8 @@ private fun RaiseTheBrake(threshold: Int, busy: Boolean, subject: String, onRais
 @Composable
 private fun ObjectionsBlock(standing: CommonsStanding, viewModel: CommonsViewModel, busy: Boolean) {
     val records = standing.escalation?.objections ?: emptyList()
-    val counted = standing.fold?.countedObjectionIds ?: emptyList()
     // Every objection the fold named, whether or not it has an escalation record.
-    val ids = (counted + records.map { it.objectionId }).distinct()
+    val ids = standing.objectionIds()
     if (ids.isEmpty()) return
 
     val floor = standing.escalationRespondentFloor
@@ -648,13 +722,18 @@ private fun ObjectionsBlock(standing: CommonsStanding, viewModel: CommonsViewMod
             fontWeight = FontWeight.Bold,
         )
         ids.forEach { id ->
-            ObjectionCard(
-                objectionId = id,
-                record = records.firstOrNull { it.objectionId == id },
-                floor = floor,
-                viewModel = viewModel,
-                busy = busy,
-            )
+            // Keyed: what was typed under one objection stays under THAT
+            // objection when the list changes, and never slides onto its
+            // neighbour.
+            key(id) {
+                ObjectionCard(
+                    objectionId = id,
+                    record = records.firstOrNull { it.objectionId == id },
+                    floor = floor,
+                    viewModel = viewModel,
+                    busy = busy,
+                )
+            }
         }
     }
 }
@@ -663,22 +742,26 @@ private fun ObjectionsBlock(standing: CommonsStanding, viewModel: CommonsViewMod
 private fun ObjectionCard(
     objectionId: String,
     record: CommonsEscalationRecord?,
-    floor: Int,
+    floor: Int?,
     viewModel: CommonsViewModel,
     busy: Boolean,
 ) {
     var ballotGrounds by remember { mutableStateOf("") }
     rememberTextInputDriver("input_commons_ballot_grounds", ballotGrounds) { ballotGrounds = it }
-    var lifting by remember { mutableStateOf(false) }
     // One ballot per respondent, and it is not taken back: confirmed first.
     var ballotUpholds by remember { mutableStateOf<Boolean?>(null) }
-    // The dismissal is the m-of-n act itself; its grounds wait here for the confirm.
-    var dismissGrounds by remember { mutableStateOf<String?>(null) }
     val cohortKeyId by viewModel.cohortKeyId.collectAsState()
     val actionId by viewModel.actionId.collectAsState()
     val subject = commonsSubject(actionId, cohortKeyId)
-    val payloadSha by viewModel.dismissalPayloadSha256.collectAsState()
-    val draftObjection by viewModel.dismissalObjectionId.collectAsState()
+    val draft by viewModel.dismissalDraft.collectAsState()
+    // The dry run held for THIS objection, if there is one. A re-read takes
+    // this card off screen and puts it back; the ceremony reopens on what is
+    // held instead of starting empty beside a hash nobody can see.
+    val held = draft?.takeIf { it.request.objectionId == objectionId }
+    var lifting by remember { mutableStateOf(held != null) }
+    // The dismissal is the m-of-n act itself. What is being confirmed is one
+    // dry run, named by its hash; a different dry run is a different question.
+    var confirmingSha by remember { mutableStateOf<String?>(null) }
     val cosigners by viewModel.cosigners.collectAsState()
 
     Card(modifier = Modifier.fillMaxWidth()) {
@@ -715,11 +798,13 @@ private fun ObjectionCard(
                                 text = localizedString("surfaces.commons.respondents_note"),
                                 style = MaterialTheme.typography.bodySmall,
                             )
-                            Text(
-                                text = localizedString("surfaces.commons.floor", "floor", floor.toString()),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
+                            if (floor != null) {
+                                Text(
+                                    text = localizedString("surfaces.commons.floor", "floor", floor.toString()),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
                         }
                     }
                 }
@@ -776,13 +861,15 @@ private fun ObjectionCard(
             AnimatedVisibility(visible = lifting) {
                 DismissalCeremony(
                     objectionId = objectionId,
-                    payloadSha = payloadSha.takeIf { draftObjection == objectionId },
-                    cosigners = cosigners.size,
+                    payloadSha = held?.payloadSha256,
+                    heldGrounds = held?.request?.grounds,
+                    cosigners = if (held != null) cosigners.size else 0,
                     busy = busy,
+                    onGroundsEdited = { grounds -> viewModel.dismissalGroundsEdited(objectionId, grounds) },
                     onDryRun = { grounds -> viewModel.dismissDryRun(objectionId, grounds) },
                     onAddCosigner = viewModel::addCosigner,
                     onRemoveCosigner = viewModel::removeCosigner,
-                    onSubmit = { grounds -> dismissGrounds = grounds },
+                    onSubmit = { confirmingSha = held?.payloadSha256 },
                     onAbandon = { viewModel.clearDismissalDraft() },
                 )
             }
@@ -807,7 +894,7 @@ private fun ObjectionCard(
             onDismiss = { ballotUpholds = null },
         )
     }
-    dismissGrounds?.let { grounds ->
+    if (held != null && confirmingSha == held.payloadSha256) {
         CommonsConfirm(
             tagPrefix = "commons_dismiss",
             title = localizedString("surfaces.commons.dismiss_label"),
@@ -815,11 +902,12 @@ private fun ObjectionCard(
             what = localizedString("surfaces.commons.confirm_dismiss_what", "objection", objectionId),
             who = localizedString("surfaces.commons.confirm_signs_cosigners", "count", cosigners.size.toString()),
             confirmLabel = localizedString("surfaces.commons.dismiss_submit"),
+            // Sends the held dry run and nothing typed since (CSD-070 §2.3, L7).
             onConfirm = {
-                dismissGrounds = null
-                viewModel.submitDismissal(objectionId, grounds)
+                confirmingSha = null
+                viewModel.submitDismissal(objectionId)
             },
-            onDismiss = { dismissGrounds = null },
+            onDismiss = { confirmingSha = null },
         )
     }
 }
@@ -871,19 +959,29 @@ private fun CommonsConfirm(
 private fun DismissalCeremony(
     objectionId: String,
     payloadSha: String?,
+    heldGrounds: String?,
     cosigners: Int,
     busy: Boolean,
+    onGroundsEdited: (String) -> Unit,
     onDryRun: (String) -> Unit,
     onAddCosigner: (String, String, String?) -> Unit,
     onRemoveCosigner: (Int) -> Unit,
-    onSubmit: (String) -> Unit,
+    onSubmit: () -> Unit,
     onAbandon: () -> Unit,
 ) {
-    var grounds by remember { mutableStateOf("") }
-    var keyId by remember { mutableStateOf("") }
-    var classical by remember { mutableStateOf("") }
-    var pqc by remember { mutableStateOf("") }
-    rememberTextInputDriver("input_commons_dismiss_grounds", grounds) { grounds = it }
+    // Starts from the grounds the held dry run was taken over, when there is one.
+    var grounds by remember { mutableStateOf(heldGrounds ?: "") }
+    // A co-signature is over one dry run; half-typed ones do not carry to the next.
+    var keyId by remember(payloadSha) { mutableStateOf("") }
+    var classical by remember(payloadSha) { mutableStateOf("") }
+    var pqc by remember(payloadSha) { mutableStateOf("") }
+    // Editing the grounds lets the dry run go: the hash on screen would no
+    // longer be a preview of what is typed.
+    val editGrounds = { v: String ->
+        grounds = v
+        onGroundsEdited(v)
+    }
+    rememberTextInputDriver("input_commons_dismiss_grounds", grounds) { editGrounds(it) }
     rememberTextInputDriver("input_commons_cosigner_key", keyId, enabled = payloadSha != null) { keyId = it }
     rememberTextInputDriver("input_commons_cosigner_classical", classical, enabled = payloadSha != null) { classical = it }
     rememberTextInputDriver("input_commons_cosigner_pqc", pqc, enabled = payloadSha != null) { pqc = it }
@@ -909,7 +1007,7 @@ private fun DismissalCeremony(
         )
         OutlinedTextField(
             value = grounds,
-            onValueChange = { grounds = it },
+            onValueChange = editGrounds,
             label = { Text(localizedString("surfaces.commons.grounds")) },
             minLines = 2,
             modifier = Modifier.fillMaxWidth().testable("input_commons_dismiss_grounds"),
@@ -992,12 +1090,12 @@ private fun DismissalCeremony(
         )
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Button(
-                onClick = { onSubmit(grounds) },
-                enabled = !busy && payloadSha != null && grounds.isNotBlank(),
+                onClick = onSubmit,
+                enabled = !busy && payloadSha != null,
                 modifier = Modifier.testableClickable(
                     "btn_commons_dismiss_submit",
-                    enabled = !busy && payloadSha != null && grounds.isNotBlank(),
-                ) { onSubmit(grounds) },
+                    enabled = !busy && payloadSha != null,
+                ) { onSubmit() },
             ) {
                 Text(localizedString("surfaces.commons.dismiss_submit"))
             }
@@ -1024,10 +1122,15 @@ private fun WriteResultCard(result: CommonsWriteResult, onDismiss: () -> Unit) {
         result.dryRun -> SemanticColors.Default.info
         else -> SemanticColors.Default.success
     }
+    val outcome = when {
+        result.refused -> result.refusal ?: "refused"
+        result.dryRun -> "dry_run"
+        else -> "admitted"
+    }
     Surface(
         color = color.copy(alpha = 0.12f),
         shape = RoundedCornerShape(8.dp),
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().testable("card_commons_result", outcome),
     ) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(
