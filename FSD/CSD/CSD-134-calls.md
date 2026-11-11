@@ -4,7 +4,7 @@
 **Reads with**: CSD-091 (the room a call starts from), CSD-103 (Chats), CSD-106 (seating a new member: the quorum item), CSD-088 (the first-run rung that says what a watcher sees of a call)
 **Design**: CIRISEdge `FSD/AV_CALL_API.md`; CC 5.3.3.2 (group calls), CC 4.5.13 (the choice as data)
 **Scope (Eric, 2026-11-10)**: calls with N participants, audio and video, with every option the routes expose. The routes in §3 are CIRISServer's proposal for 0.5.246 (CIRISServer#859), adopted here with the changes in §6
-**Flow**: unwritten — no capture, no route and no screen exist yet
+**Flow**: unwritten. The screen, capture and codecs are built on every platform (§2, Built); no flow file drives a call yet
 
 > **SCOPE.** A card, not a section of CSD-091: a call belongs to a room of any
 > size, and CSD-091 is the two-person chat. CSD-091 gains one row, the Call
@@ -96,10 +96,10 @@ fields:
 ```
 
 ```yaml csd:states
-loading:   {tag: "proposed:call_connecting", renders: "'Connecting…' with the room's name, and before publishing the two facts a joiner must see: whether streams here may be kept, and whether a watcher can see this call"}
-empty:     {tag: "proposed:call_alone", renders: "'Waiting for others to join.' Joining alone is valid; others in the room see the call on their Call action"}
+loading:   {tag: state_call_connecting, renders: "'Joining…'. Not built: the room's name here, and the two facts a joiner must see before publishing (whether streams here may be kept, and whether a watcher can see this call)"}
+empty:     {tag: state_call_alone, renders: "'Waiting for others to join.' Joining alone is valid; others in the room see the call on their Call action"}
 error:     {tag: call_microphone_denied, renders: "the named refusal in words: no microphone permission, not a member, or this device's privacy setting has no calls"}
-populated: {tag: "proposed:call_screen", renders: "the tiles, participants, controls and the save state"}
+populated: {tag: call_screen, renders: "the tiles, participants, controls and the save state"}
 ```
 
 | State | Behaviour |
@@ -120,11 +120,11 @@ populated: {tag: "proposed:call_screen", renders: "the tiles, participants, cont
 | Remote client (the node is elsewhere) | Works over the same route, on that connection's bandwidth; labelled if it is the limit |
 | No camera or denied | Audio-only, stated; the call is not refused |
 
-**Built (client 0.5.239).** The Call action in a room's header (`btn_chat_call`), shown
-only when the node declares `chat:call` (`Capability.CHAT_CALL`); no node does yet,
-so it is hidden everywhere today. The screen offers a voice or a video call
-(`btn_call_voice`, `btn_call_video`) and asks for what that call needs at that
-moment, never at launch (`platform/CallMedia.kt`, `callPermissionStep`):
+**Built (client 0.5.241, for CIRISServer 0.5.246 on Edge v45.0.0).** The Call action in a
+room's header (`btn_chat_call`), shown only when the node declares `chat:call`
+(`Capability.CHAT_CALL`). The screen offers a voice or a video call (`btn_call_voice`,
+`btn_call_video`) and asks for what that call needs at that moment, never at launch
+(`platform/CallMedia.kt`, `callPermissionStep`):
 
 | Call | Asks for | If refused |
 |---|---|---|
@@ -135,14 +135,72 @@ moment, never at launch (`platform/CallMedia.kt`, `callPermissionStep`):
 |---|---|---|
 | Android | `RECORD_AUDIO`, in the library manifest, `android.hardware.microphone` not required | `CAMERA`, already declared for QR |
 | iOS | `NSMicrophoneUsageDescription` | `NSCameraUsageDescription`, now naming video calls |
-| Desktop, web | No capture yet: `call_unavailable` (`platform`) | Same |
+| Desktop | No permission to ask for: the step checks that a microphone line exists (none: `call_unavailable`, `no_device`). macOS shows its own prompt when the device is first opened | Opened only when its picture is sent; none or refused: `txt_call_video_unavailable` |
+| Web | `getUserMedia` is the prompt: the microphone is opened once before the call and let go. Refused: no call, and Try again asks again | Asked by the browser when it is first opened to send; refused: `txt_call_video_unavailable` |
 
 A second refusal in one attempt counts as a refusal, because Android reports a
-once-refused permission as still askable. A ready call says it cannot connect yet
-(`call_not_connecting`): capture, encoding and the connection to the node are not
-built, and the node has no call routes (CIRISServer#859). Saving shows as not ready
-(`opt_call_save_mine` disabled, `txt_call_save_unavailable`). An agent build's own iOS
-host (`apps/ios`) needs the same two Info.plist keys.
+once-refused permission as still askable. Until 0.5.241 desktop and web answered "no
+capture on this platform" at this step, so the capture behind it was unreachable from the
+screen. An agent build's own iOS host (`apps/ios`) needs the same two Info.plist keys.
+
+**The call itself.** Joining shows `state_call_connecting`, then the call: one line per
+attendee (`row_call_tile_<member>`, inside `card_call_tiles`) saying video, audio or
+quiet; one picture per stream (`media_call_video_<stream>`), a member's camera and their
+screen being two; `state_call_alone` while nobody else is there; `btn_call_mute`,
+`btn_call_camera` (video calls), `btn_call_leave`. A refused join is the server's reason
+in words (`state_call_refused`). After leaving, `state_call_left` says why, with
+`btn_call_rejoin` unless this person was removed; each other member who left has a line
+(`row_call_departed_<member>`). No microphone or speaker once in the call:
+`txt_call_audio_unavailable`. Leaving the screen, or the app going to the background,
+leaves the call.
+
+**Capture and codecs.** Audio is Opus on every platform. Video:
+
+| Platform | Capture | Sends | Decodes |
+|---|---|---|---|
+| Android | Camera2, MediaProjection for the screen | AV1 where the device has a hardware encoder that runs this size and rate, otherwise H.264 (MediaCodec) | H.264; AV1 where the device has a hardware decoder |
+| iOS | AVFoundation; ReplayKit for the screen, this app only | H.264 (VideoToolbox) | H.264; AV1 where the device has a hardware decoder |
+| Desktop | The bundled FFmpeg: camera, a screen or one window. No screen share on Wayland | AV1 (SVT-AV1); H.264 only with Cisco's library, below | AV1; H.264 only with Cisco's library |
+| Web | `getUserMedia`, `getDisplayMedia` | AV1 where WebCodecs encodes it here, otherwise H.264 | Both, where WebCodecs has them |
+
+**The camera is open only while its picture is sent.** Camera off, a call over the video
+limit, no encoder, leaving, and closing the screen each release the device, so its light
+is on only when someone can see the picture. Turning the camera back on opens it again
+(a browser may ask again), and the first frame sent is a keyframe.
+
+**Video is for two people (Eric, 2026-11-10; CIRISServer `fe0a93ec`; lifted at Edge 45.1).**
+The node carries video and screen share only while the call has at most two people,
+counted per person. The join answer and the `video_allowed` event carry `video_allowed`
+and `video_max_people`; a `publish_refused` with `call.video_two_people_only` says the
+same if the event was lost. Over the limit this device sends audio only, releases its
+camera, says so (`txt_call_video_limited`, in this device's language, with the number),
+and offers no share button. When the call is back to two and the camera is still on, it
+sends again without being asked. Eric did not rule on resuming; the server's commit
+describes it and the client follows that.
+
+**H.264 on desktop comes from Cisco, and is the person's choice.** The desktop app does
+not use the H.264 code inside the bundled FFmpeg. A switch on the call screen
+(`card_call_h264`: `txt_call_h264_state`, `btn_call_h264_on`, `btn_call_h264_off`) is off
+until the person turns it on. Turning it on downloads Cisco's OpenH264 2.7.0 library for
+this machine from `ciscobinary.openh264.org`, checks it against the SHA-256 Cisco
+publishes, and loads it; turning it off deletes it. The request carries nothing about the
+person. Cisco's binary licence sets three conditions this screen meets: the person can
+turn the codec on and off here; Cisco's sentence is shown beside the switch, in English
+in every language (`txt_call_h264_attribution`); and the licence can be read in full
+(`btn_call_h264_licence`, `txt_call_h264_licence`). With the switch off a desktop still
+sends and shows AV1. It shows no picture from a member who sends H.264, and says so
+(`txt_call_h264_needed`). Not run: loading the library on macOS or Windows.
+
+**Sharing.** `btn_call_share` lists what can be shared (`btn_call_share_pick_<id>`; phones
+and the browser use the system's own picker), `txt_call_sharing` and `btn_call_share_stop`
+while sharing. CIRISServer 0.5.246 refuses a share by name (`call.share_unavailable`,
+shown at `txt_call_share_refused`) until Edge 45.1. Where this device cannot share:
+`txt_call_share_unavailable_here`.
+
+**Not built.** The participants list as its own element, receive quality per member
+(`…/call/layers`), the two facts before joining, an active-speaker view, and saving
+(`opt_call_save_mine` disabled, `txt_call_save_unavailable`, until CIRISPersist#1067).
+Desktop has no echo cancellation: Java Sound has none, so headphones are needed.
 
 ## 3. Contracts (who)
 
@@ -161,7 +219,8 @@ host (`apps/ios`) needs the same two Info.plist keys.
 | waking a closed app | push-to-wake on that row, content-free | CIRISServer#859 | **missing**: until then a person with the app closed sees nothing |
 | keeping a stream | `CallOptions::keep = Kept` | CIRISEdge · CIRISPersist#1067 | **refused by name** today; #1068, #1069 also wait |
 | the save choice item, and whether this room forbids keeping | the room's policy row | CIRISServer | **missing** |
-| capture, encode, decode, render | platform code in the client | CIRISClient | **missing**, every platform |
+| capture, encode, decode, render | platform code in the client (§2, Built) | CIRISClient | **built** on Android, iOS, desktop and web; no call between two real devices has been run |
+| video only for two people | `video_allowed`, `video_max_people` on the join answer and the `video_allowed` event; `publish_refused {reason: call.video_two_people_only}` | CIRISServer | **live** on release/0.5.246 (`fe0a93ec`); lifted at Edge 45.1 |
 
 **Where frames run (recommended).** Capture and encode in the client, then encoded frames
 over a local server socket to the node, which hands them to Edge.
@@ -174,10 +233,9 @@ over a local server socket to the node, which hands them to Edge.
   client sends them to its node over that link. **Loopback latency is unmeasured; measure it
   before committing, with audio as the test.** If it fails, native surfaces are the fallback.
 
-**Client work today: none exists.** QR scanning is the only camera use. Android declares neither
-`CAMERA` nor `RECORD_AUDIO`; iOS declares camera, not microphone. There is no codec, and no
-camera or microphone API in the JVM, so desktop needs a native library. That library's size
-counts against the wheel limit and PyPI's project limit, which has about three releases of room.
+**Client work.** Built; see §2. Desktop capture and AV1 come from the FFmpeg the wheel
+already carries. Desktop H.264 is not in the wheel: it is Cisco's library, downloaded by
+the person's choice (§2). JNA, which loads it, adds about 2 MiB to a wheel with a 100 MiB limit.
 
 ## 4. Flow (how)
 
@@ -196,7 +254,7 @@ save while it is unavailable sees why, and the state stays `Not saved`.
 
 ## 5. QA plan
 
-**Not drivable yet.** When built: three real nodes, mirroring CIRISServer's `av_room` harness
+**No flow file yet.** The unit tests cover the session, the codecs, the playout buffer, the camera's holding rule and the frames vectors. Not yet run: a call between two real devices, and the five-platform legs against CIRISServer 0.5.246. For those: three real nodes, mirroring CIRISServer's `av_room` harness
 scenario (late join, add mid-call, leave and rejoin), with a test source in place of a camera,
 since a CI runner has none. Assert frames arrive decoded, not just connected, and that each tile
 is the publisher it claims. Assert video drops before audio when the tier sheds. Assert the save state is
@@ -214,7 +272,7 @@ in the tree on every call, and that a refused keep leaves `Not saved` with the w
 
 **Video, by device (Eric, with CC, 2026-11-10).** A device that can encode AV1 in real time publishes `0x01`; one that cannot publishes `0x04` (H.264 or kin, temporal layers at spatial 0, the stream's binding naming the codec). Every client MUST decode `0xFF` and `0x01` and SHOULD decode `0x04`. Two resolutions are two streams. Open with CC: whether MUST-decode `0x01` stands, since most phones have no AV1 hardware decoder; and the presence floor, proposed as a separate ~96×96, 1 fps `0x04` stream at about 0.5 kB/s.
 
-**What a video payload is (client, 2026-11-10).** `0x04` H.264: one access unit in Annex B form, SPS and PPS before every keyframe. `0x01` AV1: one temporal unit's low-overhead OBUs for that layer (`obu_has_size_field = 1`), the sequence header OBU before every keyframe. So a late joiner starts at any keyframe. From Edge 45.1 a whole frame goes to the node and Edge fragments it (`ready.fragmenting`).
+**What a video payload is (client, 2026-11-10).** `0x04` H.264: one access unit in Annex B form, SPS and PPS before every keyframe. `0x01` AV1: one temporal unit's low-overhead OBUs for that layer (`obu_has_size_field = 1`), the sequence header OBU before every keyframe. So a late joiner starts at any keyframe. From Edge 45.0.0 a whole frame goes to the node and Edge fragments it (`ready.fragmenting`): at most 4,096 fragments and 1 MiB a frame.
 
 **Sharing (agreed, Edge 45.1).** A share is a second own stream with no `replaces` (`Call::add_stream`, signed `StreamAdded {kind: share}`): `POST /v1/chat/{room}/call/share` → `{stream_id, frames_ticket, frame_budget_bytes}`, `DELETE` to stop, the sharer's frames on `WS …/call/share/frames`. Receivers keep one socket, see `share_started` / `share_stopped` and the share's frames told apart by `stream_id`: a tile for "Ada's screen" beside Ada's camera. Desktop shares a screen or one window; phones share their screen.
 
@@ -239,9 +297,9 @@ so Edge's `is_base_or_audio` must agree. Device coverage is unmeasured.
 | 8 | **Frame budget per call.** 244 B on Edge v44.1.1; about 1,140 B on a punched direct link at v45, only if every member runs v45. Read `frame_budget_bytes` per call, never assume | CIRISEdge |
 | 11 | **A codec change mid-call.** CC is writing "one codec per stream" (Edge 45.1's v2 binding names a codec per class: `opus` under `0xFF`; `av1`; `h264`, `vp8`, `vp9`). One stream per publisher carries audio and video. Agreed by CC 2026-11-10: a codec change is an in-call stream replacement, the publisher signing which stream it replaces; a second stream that replaces nothing (screen share) stays separate. A codec change is an in-call stream replacement (make-before-break, `Call::replace_stream`), with `stream_replaced {member, old_stream_id, new_stream_id}` on the frames socket, so the tile swaps in place and nobody sees "left" | CC, CIRISEdge 45.1, CIRISServer |
 | 10 | **The video codec.** Edge has no `0x04`, H.264 or VP8 id; the CC names `0x04`. Which ids, and their layer rule | Eric, CC, CIRISEdge |
-| 9 | **Capture on desktop.** The JVM has no camera or microphone API; a native library is needed, and its size counts against PyPI's project limit | CIRISClient |
+| 9 | **Capture on desktop.** Closed: Java Sound for audio, the bundled FFmpeg for the camera and the screen. Open: echo cancellation, and screen share on Wayland (needs the PipeWire portal) | CIRISClient |
 | 2 | Does a saved call count against the room's files and quota, and where does it show? | CIRISServer |
-| 3 | Screen sharing is the same wire (CC 5.3.3.2) | Later |
+| 3 | Screen sharing is the same wire (CC 5.3.3.2) | Built in the client; refused by CIRISServer 0.5.246 until Edge 45.1 |
 | 4 | No ad-hoc call outside a room: `Edge::ring` is documented but not in the code | Later |
 | 5 | The row travels the room's normal path, so at Hide when I talk it waits for the gap. Don't promise "rings instantly" until measured | Measure |
 
