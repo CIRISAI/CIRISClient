@@ -360,6 +360,7 @@ call.room_may_keep.not_yet	unclaimed	-	-	-	-	-	-
 call.session_absent	unclaimed	-	-	-	-	-	-
 call.share_unavailable	client	client	literal	-	-	-	-
 call.socket_already_open	unclaimed	-	-	-	-	-	-
+call.video_two_people_only	client	client	literal	-	-	-	-
 call.visible_to_watcher.visible	unclaimed	-	-	-	-	-	-
 ceg.consent_kind.gloss	client	client	literal	-	-	-	-
 ceg.consent_kind.label	client	client	literal	-	28	differs:9	-
@@ -1655,6 +1656,17 @@ mobile.call_audio_unavailable_here	client	client	literal	-	-	-	-
 mobile.call_camera_off	client	client	literal	-	-	-	-
 mobile.call_camera_on	client	client	literal	-	150	differs:7	-
 mobile.call_choose	client	client	literal	-	-	-	-
+mobile.call_h264_downloading	client	client	literal	-	-	-	-
+mobile.call_h264_failed_check	client	client	literal	-	-	-	-
+mobile.call_h264_failed_download	client	client	literal	-	-	-	-
+mobile.call_h264_failed_load	client	client	literal	-	-	-	-
+mobile.call_h264_licence	client	client	literal	-	-	-	-
+mobile.call_h264_licence_hide	client	client	literal	-	-	-	-
+mobile.call_h264_needed	client	client	literal	-	-	-	-
+mobile.call_h264_off	client	client	literal	-	-	-	-
+mobile.call_h264_on	client	client	literal	-	-	-	-
+mobile.call_h264_turn_off	client	client	literal	-	-	-	-
+mobile.call_h264_turn_on	client	client	literal	-	-	-	-
 mobile.call_joining	client	client	literal	-	-	-	-
 mobile.call_leave	client	client	literal	-	87	differs:13	-
 mobile.call_member_backgrounded	client	client	literal	-	-	-	-
