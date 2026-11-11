@@ -1727,7 +1727,7 @@ mobile.chat_details_subjects	client	client	literal	-	-	-	-
 mobile.chat_editing	client	client	literal	-	-	-	-
 mobile.chat_empty	client	client	literal	-	-	-	-
 mobile.chat_empty_room	client	client	literal	-	-	-	-
-mobile.chat_flag_author	client	client	literal	-	154	same	-
+mobile.chat_flag_author	client	client	dynamic	-	154	same	-
 mobile.chat_input_hint	client	client	literal	-	-	-	-
 mobile.chat_length_counter	client	client	literal	-	-	-	-
 mobile.chat_moderate_author	client	client	literal	-	155	same	-
@@ -2487,7 +2487,9 @@ mobile.federation_create_prompt	client	client	literal	-	-	-	-
 mobile.federation_create_secure_note	client	client	literal	-	-	-	-
 mobile.federation_create_title	client	client	literal	-	-	-	-
 mobile.federation_import_usb	client	client	literal	-	-	-	-
-mobile.files_act_flag_author	client	client	literal	-	154	same	-
+mobile.files_act_flag_author	client	client	dynamic	-	154	same	-
+mobile.files_act_flag_cleared	client	client	literal	-	-	-	-
+mobile.files_act_flagged	client	client	literal	-	-	-	-
 mobile.files_act_moderate_author	client	client	literal	-	155	same	-
 mobile.files_act_move	client	client	literal	-	-	-	-
 mobile.files_act_moved	client	client	literal	-	-	-	-
@@ -3299,6 +3301,7 @@ mobile.moderation_appeal_reversed	client	client	literal	-	-	-	-
 mobile.moderation_appeal_upheld	client	client	literal	-	-	-	-
 mobile.moderation_candidate_row	client	client	literal	-	-	-	-
 mobile.moderation_check_moderator	client	client	literal	-	-	-	-
+mobile.moderation_clear_flag	client	client	literal	-	-	-	-
 mobile.moderation_community_label	client	client	literal	-	-	-	-
 mobile.moderation_community_section	client	client	literal	-	97	differs:16	-
 mobile.moderation_delegate_body	client	client	literal	-	-	-	-
@@ -3313,12 +3316,16 @@ mobile.moderation_file_takedown_unavailable	client	client	literal	-	-	-	-
 mobile.moderation_filed_id	client	client	literal	-	-	-	-
 mobile.moderation_flag_action_clear	client	client	literal	-	-	-	-
 mobile.moderation_flag_action_flag	client	client	literal	-	-	-	-
+mobile.moderation_flag_as	client	client	literal	-	-	-	-
 mobile.moderation_flag_button	client	client	literal	-	159	differs:3	-
+mobile.moderation_flag_effect	client	client	literal	-	-	-	-
 mobile.moderation_flag_explain	client	client	literal	-	-	-	-
 mobile.moderation_flag_infohazard	client	client	literal	-	-	-	-
 mobile.moderation_flag_reported	client	client	literal	-	-	-	-
 mobile.moderation_flag_section	client	client	literal	-	-	-	-
+mobile.moderation_flag_signer	client	client	literal	-	-	-	-
 mobile.moderation_flag_subject	client	client	literal	-	-	-	-
+mobile.moderation_flag_title	client	client	literal	-	-	-	-
 mobile.moderation_intro	client	client	literal	-	-	-	-
 mobile.moderation_named_error	client	client	literal	-	-	-	-
 mobile.moderation_named_none	client	client	literal	-	-	-	-
@@ -4665,6 +4672,8 @@ mobile.wallet_warning	client	client	literal	-	69	differs:1	-
 mobile.yubikey_probe_failed	client	client	literal	-	-	-	-
 mobile.yubikey_probe_not_on_this_node	client	client	literal	-	-	-	-
 mobile.yubikey_probe_reason	client	client	literal	-	-	-	-
+moderation.delegate_may_not_moderate	unclaimed	-	-	-	-	-	-
+moderation.flag_failed	unclaimed	-	-	-	-	-	-
 moderation.item_not_in_room	server	server	-	-	-	-	-
 moderation.ladder.attestation_type_label	client	client	literal	-	-	-	-
 moderation.ladder.attesting_key_label	client	client	literal	-	-	-	-
@@ -4772,7 +4781,9 @@ moderation.ladder.unparsable_response	client	client	literal	-	-	-	-
 moderation.ladder.window_application	client	client	literal	-	-	-	-
 moderation.ladder.window_substrate	client	client	literal	-	-	-	-
 moderation.ladder.withdrew_row	client	client	literal	-	-	-	-
+moderation.not_a_moderator	unclaimed	-	-	-	-	-	-
 moderation.not_flagged	server	server	-	-	-	-	-
+moderation.nothing_to_clear	unclaimed	-	-	-	-	-	-
 moderation.proposal.action_label	client	client	literal	-	-	-	-
 moderation.proposal.action_question	client	client	literal	-	-	-	-
 moderation.proposal.action_report	client	client	literal	-	-	-	-
@@ -4789,6 +4800,7 @@ moderation.proposal.submitting	client	client	literal	-	-	-	-
 moderation.proposal.title	client	client	literal	-	-	-	-
 moderation.reveal_failed	server	server	-	-	-	-	-
 moderation.unknown_action	server	server	-	-	-	-	-
+moderation.unknown_class	unclaimed	-	-	-	-	-	-
 nav.back	client	client	literal	-	36	differs:7	-
 nav.circle.agent	client	client	literal	-	218	differs:8	-
 nav.circle.family	client	client	literal	-	43	same	-

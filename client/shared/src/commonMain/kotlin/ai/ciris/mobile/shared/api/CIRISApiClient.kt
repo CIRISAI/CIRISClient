@@ -2761,6 +2761,41 @@ class CIRISApiClient internal constructor(
      * Hits ``POST /v1/chat/{communityId}/items/{itemId}/reveal`` with no body;
      * it is per item and stays on the viewer's own devices (0.5.243).
      */
+    /**
+     * A room moderator's own signed decision on one message or room file
+     * (CIRISServer 0.5.246): flag it as [contentClass], `reported` or
+     * `infohazard`, or clear the live flag when [contentClass] is null. [itemId]
+     * for a flag is the current version's id; for a clear it is the version that
+     * carries the flag (`moderation.item_attestation_id`), or the node answers 409
+     * `moderation.nothing_to_clear`. The node answers the item's moderation view;
+     * the caller re-reads the listing.
+     */
+    suspend fun moderateRoomItem(communityId: String, itemId: String, contentClass: String?, nodeUrl: String = LOCAL_NODE_URL) {
+        val method = if (contentClass == null) "clearRoomItem" else "flagRoomItem"
+        val room = communityId.encodeURLPathPart()
+        val item = itemId.encodeURLPathPart()
+        val client = federationHttpClient()
+        try {
+            val response = if (contentClass == null) {
+                client.post("$nodeUrl/v1/chat/$room/items/$item/clear") {
+                    authHeader()?.let { header("Authorization", it) }
+                }
+            } else {
+                client.post("$nodeUrl/v1/chat/$room/items/$item/flag") {
+                    authHeader()?.let { header("Authorization", it) }
+                    contentType(ContentType.Application.Json)
+                    setBody(buildJsonObject { put("class", JsonPrimitive(contentClass)) }.toString())
+                }
+            }
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, response.bodyAsText())
+        } catch (e: Exception) {
+            logException(method, e, "url=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
     suspend fun revealRoomItem(communityId: String, itemId: String, nodeUrl: String = LOCAL_NODE_URL) {
         val method = "revealRoomItem"
         val client = federationHttpClient()

@@ -203,13 +203,19 @@ card (CSD-007) for exactly this room, with add, open, *Where is this file*
 (CSD-107), and the author's rename, move and withdraw.
 
 **Moderation under the menu.** On someone else's message, the ⋮ adds *Moderate
-the author…* and *Flag the author…* (`mi_chat_moderate_<id>`,
-`mi_chat_flag_<id>`), which open the Moderation forms (CSD-065) prefilled with
-this room and the author's key: moderation acts on keys, not on messages. They
-are unavailable, with "only a moderator of this room", unless the viewer holds
+the author…* (`mi_chat_moderate_<id>`), which opens the Moderation form
+(CSD-065) prefilled with this room and the author's key: a moderation event
+acts on a key. It is
+unavailable, with "only a moderator of this room", unless the viewer holds
 `moderate` here: the node's `viewer_duties` on the transcript when it sends it
-(0.5.243), otherwise the `author_duties` on the viewer's own messages. A flag is
-recorded and hides nothing yet. *Report to the room's moderators*
+(0.5.243), otherwise the `author_duties` on the viewer's own messages. For a
+moderator the ⋮ also flags THE MESSAGE (server 0.5.246, CSD-065 §2.4): *Flag as
+reported…* and *Flag as potentially harmful…* (`mi_chat_flag_reported_<id>`,
+`mi_chat_flag_infohazard_<id>`), each behind a confirm, send
+`POST /v1/chat/{room}/items/{attestation_id}/flag`; *Clear the flag*
+(`mi_chat_clear_flag_<id>`), drawn while a flag is live, sends
+`POST /v1/chat/{room}/items/{item_attestation_id}/clear` in one step. A member is
+not shown them. The transcript is read again afterwards. *Report to the room's moderators*
 (`mi_chat_report_<id>`) is drawn unavailable: no route (CIRISServer#665).
 
 **Attachments (server 0.5.243).** Attach (`btn_chat_attach`) is offered only when
@@ -246,7 +252,10 @@ drive. Replacing a message keeps its file, so Attach is hidden while editing.
 | the panel: rename, move, withdraw a file you sent | `POST /v1/files/{id}/rename {filename}`, `POST /v1/files/{id}/move {cohort, room_id?, keep_source}`, `DELETE /v1/files/{id}?cohort&room_id` | CIRISServer | **live** (0.5.242), author only — CSD-007's acts, one action with two doors |
 | (closure only) households and owned nodes | `GET /v1/families`, `GET /v1/setup/owned-nodes` | CIRISServer | **not called in a room**: the Files card reads them only for a family tab; the route checker's closure follows the shared composable |
 | who sees those items | `viewer_duties` / `author_duties` | CIRISServer · CIRISPersist 61.0.2 (#1195) | **at the pin**: only a founder or a delegated holder has a duty in any room; before that tag a `majority` room lists every member, so the items stay unavailable there |
-| a message's moderation items | none here — they open the Moderation forms (CSD-065) for the author in this room | — | moderate and flag act on the AUTHOR's key; drawn unavailable with "only a moderator of this room" for a non-moderator. "Report to the room's moderators" is drawn unavailable: no route (CIRISServer#665) |
+| moderate a message's author | none here — it opens the Moderation form (CSD-065) for the author in this room | — | a moderation event acts on the AUTHOR's key; drawn unavailable with "only a moderator of this room" for a non-moderator. "Report to the room's moderators" is drawn unavailable: no route (CIRISServer#665) |
+| a moderator flags a message | `POST /v1/chat/{room}/items/{attestation_id}/flag {class?: reported\|infohazard}` | CIRISServer `src/contacts_chat.rs` (`adopt/edge-v45` `05cbe665`, for 0.5.246) | called — `api/ChatApi.kt` `moderateItem`. Behind `sheet_moderation_flag`; drawn for a holder of `moderate` only (CSD-065 §2.4). Not on a tag yet; not observed on a node |
+| a moderator clears a live flag | `POST /v1/chat/{room}/items/{item_attestation_id}/clear` | CIRISServer, as above | called — `api/ChatApi.kt` `moderateItem`. One step, by the version that carries the flag |
+| see one flagged message | `POST /v1/chat/{room}/items/{item_attestation_id}/reveal` | CIRISServer (0.5.243) | called — `api/ChatApi.kt` `reveal`; the viewer's own consent, behind `RevealConfirm` (CSD-065 §2.4) |
 | a file shown in the chat as an attachment | send `POST …/messages {body, attachment_attestation_id}`; the transcript's per-message `attachment`; the gate `accepts_attachments: true` on the transcript | CIRISServer 0.5.243 (needs CIRISEdge's unreleased consent fix) | **not offered in this client yet** (planned for client 0.5.238): an older node ignores the field and posts the caption without the file, so Attach is offered only where the transcript says `accepts_attachments: true` |
 
 **Wrong host: none.** Every route here is the NODE's, on `:4243`. The three

@@ -198,8 +198,13 @@ file* (CSD-107), then the author's acts: **Rename** (`dialog_file_rename`),
 and refuses anyone else by id; the outcome is a named line
 (`dialog_file_act_result`), never a silent success. In a room (the files panel
 of CSD-091 and CSD-110) the receipt adds the moderation acts on the file's
-AUTHOR (CSD-065: *Moderate the author*, *Flag the author*; unavailable with
-"only a moderator of this room" for anyone else) and two acts drawn
+AUTHOR (CSD-065: *Moderate the author*; unavailable with
+"only a moderator of this room" for anyone else), a moderator's flag and clear
+on the FILE (server 0.5.246, CSD-065 §2.4: `btn_file_act_flag_reported_{id}`,
+`btn_file_act_flag_infohazard_{id}` behind a confirm,
+`POST /v1/chat/{room}/items/{attestation_id}/flag`; `btn_file_act_clear_flag_{id}`
+in one step, `POST /v1/chat/{room}/items/{item_attestation_id}/clear`; drawn for a
+moderator only) and two acts drawn
 unavailable with their blockers: *Take down (legal basis)* (CIRISPersist#1160)
 and *Report to the room's moderators* (CIRISServer#665). An unavailable act is a
 dim chip that says why when tapped (`receipt_act_unavailable`); it never acts.
@@ -244,6 +249,9 @@ version. Rows marked "not called" are live on the node and not wired here.
 | withdraw a file you wrote | `DELETE /v1/files/{id}?cohort&room_id` | CIRISServer `withdraw_file` | **live**, called. Author only; persist then refuses every read of the bytes (CC 2.3) and holders drop it on their next pass. The confirm (`dialog_file_withdraw`) says the others in the room no longer see it |
 | a moderator's takedown of a FILE by legal basis | none yet | CIRISPersist · CIRISServer | **blocked_by CIRISPersist#1160** (persist's signer check cannot authorize a fed-ID moderator); drawn as the unavailable `btn_file_act_takedown_{id}` with that reason |
 | report a file to the room's moderators | none yet | CIRISServer | **blocked_by CIRISServer#665**; drawn as the unavailable `btn_file_act_report_{id}` (CSD-128 is the protected reporter channel) |
+| a moderator flags a room file | `POST /v1/chat/{room}/items/{attestation_id}/flag {class?: reported\|infohazard}` | CIRISServer `src/contacts_chat.rs` (`adopt/edge-v45` `05cbe665`, for 0.5.246) | called — `api/DriveApi.kt` `moderateItem`. Behind `sheet_moderation_flag`; drawn for a holder of `moderate` only (CSD-065 §2.4). Not on a tag yet; not observed on a node |
+| a moderator clears a file's live flag | `POST /v1/chat/{room}/items/{item_attestation_id}/clear` | CIRISServer, as above | called — `api/DriveApi.kt` `moderateItem`. One step, by the version that carries the flag |
+| see one flagged room file | `POST /v1/chat/{room}/items/{item_attestation_id}/reveal` | CIRISServer (0.5.243) | called — `api/DriveApi.kt` `revealItem`; the viewer's own consent |
 
 Refusals arrive as `{error: <id>, detail: <english>}`; `NodeRefusal.fromBody`
 reads the id from `error` when it is dotted. The `drive.*` ids are localized.

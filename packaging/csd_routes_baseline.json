@@ -8,6 +8,8 @@
     "POST /v1/auth/login :: Login, Setup",
     "POST /v1/auth/native/apple :: Login, Setup",
     "POST /v1/auth/native/google :: Login, Setup",
+    "POST /v1/chat/{}/items/{}/clear :: Files, UserChat",
+    "POST /v1/chat/{}/items/{}/flag :: Files, UserChat",
     "POST /v1/chat/{}/items/{}/reveal :: Files, UserChat",
     "POST /v1/communities :: AffiliationsChats, CommunityChats, LayerAffiliations, LayerAgent, LayerFamily, LayerGlobalCommunities, LayerLocalCommunity, LocalChats",
     "POST /v1/families/{}/changes/envelope :: HouseholdMembers, LayerFamily",
@@ -36,15 +38,9 @@
     "PUT /v1/system/adapters/{}/reload :: Adapters, LLMSettings"
   ],
   "uncited": {
-    "Files": [
-      "POST /v1/chat/{}/items/{}/reveal"
-    ],
     "Interact": [
       "GET /v1/federation/self-key-record",
       "GET /v1/safety/age-assurance/{}"
-    ],
-    "UserChat": [
-      "POST /v1/chat/{}/items/{}/reveal"
     ]
   }
 }

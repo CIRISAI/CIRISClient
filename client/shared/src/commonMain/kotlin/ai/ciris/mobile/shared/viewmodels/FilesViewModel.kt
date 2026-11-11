@@ -33,7 +33,7 @@ data class FileGroup(val roomId: String, val entries: List<DriveEntry>)
 
 /** An author's act on one file (rename, move, withdraw), and how it ended. */
 sealed interface FileActState {
-    enum class Kind { RENAME, MOVE, WITHDRAW, REVEAL }
+    enum class Kind { RENAME, MOVE, WITHDRAW, REVEAL, FLAG, CLEAR_FLAG }
     data object Idle : FileActState
     data class Working(val entry: DriveEntry, val kind: Kind) : FileActState
     data class Done(val entry: DriveEntry, val kind: Kind) : FileActState
@@ -152,6 +152,16 @@ class FilesViewModel(
     fun revealFile(entry: DriveEntry) {
         val item = entry.moderation?.itemAttestationId ?: return
         runAct(entry, FileActState.Kind.REVEAL) { api.revealItem(entry.roomId, item) }
+    }
+
+    /** A room moderator's flag on one file (0.5.246): `reported` or `infohazard`, signed by their own key. */
+    fun flagFile(entry: DriveEntry, contentClass: String) =
+        runAct(entry, FileActState.Kind.FLAG) { api.moderateItem(entry.roomId, entry.attestationId, contentClass) }
+
+    /** Lift the live flag on one file, by the version that carries it (the node's view names it). */
+    fun clearFileFlag(entry: DriveEntry) {
+        val item = entry.moderation?.itemAttestationId ?: return
+        runAct(entry, FileActState.Kind.CLEAR_FLAG) { api.moderateItem(entry.roomId, item, null) }
     }
 
     fun dismissAct() {

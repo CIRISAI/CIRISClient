@@ -205,9 +205,13 @@ fun ChatScreen(
     var confirmRevision by remember { mutableStateOf<Pair<CegChatMessage, String>?>(null) }
     val history by viewModel.history.collectAsState()
     val editing by viewModel.editing.collectAsState()
+    // A flag awaiting its confirm: (message, class).
+    var flagging by remember { mutableStateOf<Pair<CegChatMessage, String>?>(null) }
     val moderationLabels = ModerationLabels(
         moderate = localizedString("mobile.chat_moderate_author"),
-        flag = localizedString("mobile.chat_flag_author"),
+        flagReported = flagAsLabel(FLAG_REPORTED),
+        flagInfohazard = flagAsLabel(FLAG_INFOHAZARD),
+        clearFlag = localizedString("mobile.moderation_clear_flag"),
         report = localizedString("mobile.chat_report_message"),
         onlyModerator = localizedString("mobile.files_act_only_moderator"),
         reportUnavailable = localizedString("mobile.files_act_report_unavailable"),
@@ -389,6 +393,9 @@ fun ChatScreen(
                                     isModerator = isModerator(viewerDuties, messages),
                                     onModerate = onModerateItem,
                                     labels = moderationLabels,
+                                    onFlag = { m, c -> flagging = m to c },
+                                    // The flag may sit on an earlier version of an edited message: the node's view names it.
+                                    onClearFlag = { m -> viewModel.clearFlag(m.moderation?.itemAttestationId ?: m.attestationId) },
                                 ),
                                 onOp = { op ->
                                     // Replace / Withdraw / Recant are enabled
@@ -542,7 +549,6 @@ fun ChatScreen(
                     moderation = if (onModerateItem == null) null else ai.ciris.mobile.shared.ui.screens.files.FileModeration(
                         isModerator = isModerator(listingDuties ?: viewerDuties, viewModel.messages.value),
                         onModerateAuthor = { e -> closePanel(); onModerateItem(room, e.authorKeyId) },
-                        onFlagAuthor = { e -> closePanel(); onModerateItem(room, e.authorKeyId) },
                     ),
                     onPick = if (!attaching) null else ({ e ->
                         viewModel.attach(ai.ciris.mobile.shared.viewmodels.AttachedFile(e.attestationId, e.filename))
@@ -554,6 +560,9 @@ fun ChatScreen(
     }
     revealing?.let { m ->
         RevealConfirm(m, onConfirm = { revealing = null; viewModel.reveal(m.itemAttestationId) }, onDismiss = { revealing = null })
+    }
+    flagging?.let { (m, c) ->
+        FlagConfirm(c, onConfirm = { flagging = null; viewModel.flagItem(m.attestationId, c) }, onDismiss = { flagging = null })
     }
     history?.let { h ->
         AttestationHistoryDialog(localizedString("mobile.accord_op_history"), h, viewModel::closeHistory)
@@ -937,18 +946,46 @@ private fun String.toAttStatus(): AttStatus = when (this) {
 internal fun isModerator(viewerDuties: List<String>?, messages: List<CegChatMessage>): Boolean =
     viewerDuties?.contains("moderate") ?: messages.any { it.mine && "moderate" in it.authorDuties }
 
+/** The two classes a room moderator flags an item with (CIRISServer `content_class`). */
+internal const val FLAG_REPORTED = "reported"
+internal const val FLAG_INFOHAZARD = "infohazard"
+
+/**
+ * The classes a moderator may still flag an item with, given the flag that is
+ * live on it. A class is offered only where flagging it changes what readers
+ * see: the live class again signs nothing, and `reported` under a live
+ * `infohazard` signs a row nobody sees, because the more severe class leads
+ * (CIRISServer 0.5.246). To move down a moderator clears, then flags.
+ */
+internal fun flagClassesOffered(live: String?): List<String> = when (live) {
+    null -> listOf(FLAG_REPORTED, FLAG_INFOHAZARD)
+    FLAG_INFOHAZARD -> emptyList()
+    else -> listOf(FLAG_INFOHAZARD)
+}
+
 internal data class ModerationLabels(
     val moderate: String,
-    val flag: String,
+    val flagReported: String,
+    val flagInfohazard: String,
+    val clearFlag: String,
     val report: String,
     val onlyModerator: String,
     val reportUnavailable: String,
 )
 
 /**
- * A message's moderation items (CSD-065), on someone else's message: a room
- * moderator moderates or flags the AUTHOR (moderation acts on keys), from the
- * Moderation screen's forms; anyone could report the message to the room's
+ * A message's moderation items (CSD-065), on someone else's message.
+ *
+ * A room moderator FLAGS THE MESSAGE (0.5.246, `…/items/{id}/flag`): as
+ * `reported` or `infohazard`, each behind a confirm, and clears a live flag in
+ * one step. Those are drawn only for a holder of `moderate`: the node refuses
+ * anyone else, and a member has no use for a list of what they may not do. The
+ * class that is already live is not offered again, since flagging it twice
+ * signs nothing. Before 0.5.246 "flag" went to `/v1/safety/flag` on the
+ * author's key, signed by the node, which a room's readers ignore.
+ *
+ * A moderator also moderates the AUTHOR (a ModerationEvent acts on a key), from
+ * the Moderation screen's form. Anyone could report the message to the room's
  * moderators once the route exists (CIRISServer#665), so that item is drawn
  * unavailable with its blocker.
  */
@@ -957,15 +994,27 @@ internal fun chatModerationOps(
     isModerator: Boolean,
     onModerate: ((String, String) -> Unit)?,
     labels: ModerationLabels,
+    onFlag: ((CegChatMessage, String) -> Unit)? = null,
+    onClearFlag: ((CegChatMessage) -> Unit)? = null,
 ): List<ExtraOp> {
     if (message.mine || message.isSystemEntry) return emptyList()
     val author = message.author?.takeIf { it.isNotBlank() } ?: message.attestingKeyId
     val room = message.communityId
+    val id = message.attestationId
+    val live = message.moderation?.flag
     return buildList {
         if (onModerate != null) {
             val why = if (isModerator) null else labels.onlyModerator
-            add(ExtraOp(labels.moderate, "mi_chat_moderate_${message.attestationId}", unavailable = why) { onModerate(room, author) })
-            add(ExtraOp(labels.flag, "mi_chat_flag_${message.attestationId}", unavailable = why) { onModerate(room, author) })
+            add(ExtraOp(labels.moderate, "mi_chat_moderate_$id", unavailable = why) { onModerate(room, author) })
+        }
+        if (isModerator && onFlag != null) {
+            for (c in flagClassesOffered(live)) {
+                val label = if (c == FLAG_REPORTED) labels.flagReported else labels.flagInfohazard
+                add(ExtraOp(label, "mi_chat_flag_${c}_$id") { onFlag(message, c) })
+            }
+        }
+        if (isModerator && onClearFlag != null && live != null) {
+            add(ExtraOp(labels.clearFlag, "mi_chat_clear_flag_$id") { onClearFlag(message) })
         }
         add(ExtraOp(labels.report, "mi_chat_report_${message.attestationId}", unavailable = labels.reportUnavailable) {})
     }

@@ -191,6 +191,8 @@ fun FilesScreen(
     var moving by remember { mutableStateOf<DriveEntry?>(null) }
     var withdrawing by remember { mutableStateOf<DriveEntry?>(null) }
     var revealing by remember { mutableStateOf<DriveEntry?>(null) }
+    // A flag awaiting its confirm: (file, class).
+    var flagging by remember { mutableStateOf<Pair<DriveEntry, String>?>(null) }
 
     // Which household, for a family tab: the one the hub's switcher picked.
     val family = viewModel.cohort == FilesCohort.FAMILY
@@ -371,7 +373,8 @@ fun FilesScreen(
                                             onMove = { receiptFor = null; moving = entry },
                                             onWithdraw = { receiptFor = null; withdrawing = entry },
                                             onModerate = { receiptFor = null; moderation?.onModerateAuthor?.invoke(entry) },
-                                            onFlag = { receiptFor = null; moderation?.onFlagAuthor?.invoke(entry) },
+                                            onFlag = { c -> receiptFor = null; flagging = entry to c },
+                                            onClearFlag = { receiptFor = null; viewModel.clearFileFlag(entry) },
                                             onReveal = { receiptFor = null; revealing = entry },
                                         ),
                                     ),
@@ -392,6 +395,9 @@ fun FilesScreen(
         }
     }
 
+    flagging?.let { (entry, c) ->
+        ai.ciris.mobile.shared.ui.screens.FlagConfirm(c, onConfirm = { flagging = null; viewModel.flagFile(entry, c) }, onDismiss = { flagging = null })
+    }
     revealing?.let { entry ->
         entry.moderation?.let { m ->
             RevealConfirm(m, onConfirm = { revealing = null; viewModel.revealFile(entry) }, onDismiss = { revealing = null })
@@ -661,14 +667,14 @@ internal fun humanBytes(n: Long): String = when {
 }
 
 /**
- * A room moderator's acts on a file's author (CSD-065). Moderation events and
- * flags are on KEYS: the author's, not the file's.
+ * A room moderator's acts on a room file (CSD-065). A moderation event is on a
+ * KEY, the author's. A flag is on the FILE (0.5.246) and the screen sends it
+ * itself, so it needs no callback here.
  */
 data class FileModeration(
-    /** The viewer holds `moderate` in this room; false leaves the acts shown and unavailable. */
+    /** The viewer holds `moderate` in this room; false hides flag and clear and leaves "moderate the author" unavailable. */
     val isModerator: Boolean,
     val onModerateAuthor: (DriveEntry) -> Unit,
-    val onFlagAuthor: (DriveEntry) -> Unit,
 )
 
 /**
@@ -685,7 +691,8 @@ internal fun fileActs(
     onMove: () -> Unit,
     onWithdraw: () -> Unit,
     onModerate: () -> Unit,
-    onFlag: () -> Unit,
+    onFlag: (String) -> Unit,
+    onClearFlag: () -> Unit,
     onReveal: () -> Unit,
 ): List<ReceiptAct> = buildList {
     val id = entry.attestationId
@@ -698,7 +705,15 @@ internal fun fileActs(
     if (moderation != null) {
         val notModerator = if (moderation.isModerator) null else localizedString("mobile.files_act_only_moderator")
         add(ReceiptAct(localizedString("mobile.files_act_moderate_author"), "btn_file_act_moderate_$id", unavailable = notModerator, onAct = onModerate))
-        add(ReceiptAct(localizedString("mobile.files_act_flag_author"), "btn_file_act_flag_$id", unavailable = notModerator, onAct = onFlag))
+        // Flag and clear are the moderator's alone and are drawn for nobody else, and
+        // a class is offered only where flagging it changes what readers see.
+        if (moderation.isModerator && entry.cohort != FilesCohort.SELF.wire) {
+            val live = entry.moderation?.flag
+            for (c in ai.ciris.mobile.shared.ui.screens.flagClassesOffered(live)) {
+                add(ReceiptAct(ai.ciris.mobile.shared.ui.screens.flagAsLabel(c), "btn_file_act_flag_${c}_$id") { onFlag(c) })
+            }
+            if (live != null) add(ReceiptAct(localizedString("mobile.moderation_clear_flag"), "btn_file_act_clear_flag_$id", onAct = onClearFlag))
+        }
         add(ReceiptAct(localizedString("mobile.files_act_takedown"), "btn_file_act_takedown_$id",
             unavailable = localizedString("mobile.files_act_takedown_unavailable")))
     }
@@ -774,6 +789,8 @@ private fun FileActDialogs(
             FileActState.Kind.MOVE -> "mobile.files_act_moved"
             FileActState.Kind.WITHDRAW -> "mobile.files_act_withdrawn"
             FileActState.Kind.REVEAL -> "mobile.files_act_revealed"
+            FileActState.Kind.FLAG -> "mobile.files_act_flagged"
+            FileActState.Kind.CLEAR_FLAG -> "mobile.files_act_flag_cleared"
         })
         is FileActState.Refused -> refusalText(state.refusal)
         FileActState.Idle -> null
