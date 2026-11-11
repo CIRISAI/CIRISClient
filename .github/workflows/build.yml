@@ -757,6 +757,27 @@ jobs:
             exit 1
           fi
 
+      - name: Print why an iOS test failed
+        # Gradle's testLogging applies to JVM Test tasks only, so a Kotlin/Native
+        # test's assertion message reaches the XML report and never the log. PR
+        # #292's first run said "OpusIosTest.kt:108 FAILED" and nothing about
+        # which packet sizes broke the cap. The messages are printed here.
+        if: failure()
+        working-directory: client
+        run: |
+          python3 - <<'PY'
+          import glob, xml.etree.ElementTree as ET
+          files = glob.glob('shared/build/test-results/iosSimulatorArm64Test/*.xml')
+          print(f'{len(files)} report file(s)')
+          for f in files:
+              for case in ET.parse(f).getroot().iter('testcase'):
+                  for bad in list(case.findall('failure')) + list(case.findall('error')):
+                      print(f"::group::{case.get('classname')}.{case.get('name')}")
+                      print(bad.get('message') or '')
+                      print((bad.text or '')[:4000])
+                      print('::endgroup::')
+          PY
+
   # ── Package. Runs whatever gradle managed, and says so ──────────────────────
   wheels:
     name: wheels

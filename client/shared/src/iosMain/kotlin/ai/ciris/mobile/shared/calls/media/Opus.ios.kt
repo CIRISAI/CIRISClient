@@ -59,12 +59,12 @@ private fun AudioStreamBasicDescription.pcm16Mono() {
     mReserved = 0u
 }
 
-private fun AudioStreamBasicDescription.opusMono() {
+private fun AudioStreamBasicDescription.opusMono(frameSamples: Int) {
     mSampleRate = CallAudioFormat.SAMPLE_RATE.toDouble()
     mFormatID = FORMAT_OPUS
     mFormatFlags = 0u
     mBytesPerPacket = 0u
-    mFramesPerPacket = CallAudioFormat.FRAME_SAMPLES.toUInt()
+    mFramesPerPacket = frameSamples.toUInt()
     mBytesPerFrame = 0u
     mChannelsPerFrame = 1u
     mBitsPerChannel = 0u
@@ -131,17 +131,27 @@ private fun supplyInput(
 
 private val supplyInputProc = staticCFunction(::supplyInput)
 
-private class AudioToolboxOpusEncoder private constructor(private var converter: AudioConverterRef?) : OpusEncoder {
+/**
+ * [frameSamples] is one packet's worth of sound, fixed for the converter's life:
+ * 960 (20 ms) in a call today. The 40 and 60 ms sizes exist for
+ * `OpusIosTest`, which asks whether AudioToolbox makes them at all.
+ */
+internal class AudioToolboxOpusEncoder private constructor(
+    private var converter: AudioConverterRef?,
+    private val frameSamples: Int,
+) : OpusEncoder {
     private val lock = NSLock()
-    private val input = ConverterInput(CallAudioFormat.FRAME_SAMPLES * 2)
+    private val input = ConverterInput(frameSamples * 2)
     private val inputRef = StableRef.create(input)
-    private val out = nativeHeap.allocArray<ByteVar>(CallAudioFormat.MAX_PACKET_BYTES)
+    /** Room for one packet: the 20 ms allowance, scaled by the packet time. */
+    private val outCapacity = CallAudioFormat.MAX_PACKET_BYTES * (frameSamples / CallAudioFormat.FRAME_SAMPLES)
+    private val out = nativeHeap.allocArray<ByteVar>(outCapacity)
     private val outDesc = nativeHeap.alloc<AudioStreamPacketDescription>()
     private val outList = nativeHeap.alloc<AudioBufferList>()
     private val outPackets = nativeHeap.alloc<UIntVar>()
 
     override fun encode(pcm: ShortArray, onPacket: (ByteArray) -> Unit) {
-        require(pcm.size == CallAudioFormat.FRAME_SAMPLES) { "one 20 ms frame is ${CallAudioFormat.FRAME_SAMPLES} samples" }
+        require(pcm.size == frameSamples) { "one packet here is $frameSamples samples, not ${pcm.size}" }
         var packet: ByteArray? = null
         lock.lock()
         try {
@@ -154,7 +164,7 @@ private class AudioToolboxOpusEncoder private constructor(private var converter:
             outList.mNumberBuffers = 1u
             val buf = outList.mBuffers[0]
             buf.mNumberChannels = 1u
-            buf.mDataByteSize = CallAudioFormat.MAX_PACKET_BYTES.toUInt()
+            buf.mDataByteSize = outCapacity.toUInt()
             buf.mData = out
             outPackets.value = 1u
             val status = AudioConverterFillComplexBuffer(conv, supplyInputProc, inputRef.asCPointer(), outPackets.ptr, outList.ptr, outDesc.ptr)
@@ -162,7 +172,7 @@ private class AudioToolboxOpusEncoder private constructor(private var converter:
             if ((status == 0 || status == NO_MORE_INPUT) && outPackets.value > 0u) {
                 val size = outDesc.mDataByteSize.toInt().takeIf { it > 0 } ?: buf.mDataByteSize.toInt()
                 val offset = outDesc.mStartOffset.toInt()
-                if (size > 0 && offset + size <= CallAudioFormat.MAX_PACKET_BYTES) {
+                if (size > 0 && offset + size <= outCapacity) {
                     packet = (out + offset)!!.readBytes(size)
                 }
             }
@@ -191,33 +201,38 @@ private class AudioToolboxOpusEncoder private constructor(private var converter:
     }
 
     companion object {
-        fun open(): AudioToolboxOpusEncoder? {
-            val conv = newConverter({ pcm16Mono() }, { opusMono() }) ?: return null
+        fun open(frameSamples: Int = CallAudioFormat.FRAME_SAMPLES): AudioToolboxOpusEncoder? {
+            require(frameSamples > 0 && frameSamples % CallAudioFormat.FRAME_SAMPLES == 0) { "whole 20 ms frames, not $frameSamples samples" }
+            val conv = newConverter({ pcm16Mono() }, { opusMono(frameSamples) }) ?: return null
             memScoped {
                 val bitrate = alloc<UIntVar>().apply { value = CallAudioFormat.BITRATE.toUInt() }
                 // Best effort: a converter that refuses keeps its own default rate.
                 AudioConverterSetProperty(conv, PROP_ENCODE_BITRATE, sizeOf<UIntVar>().toUInt(), bitrate.ptr)
             }
-            return AudioToolboxOpusEncoder(conv)
+            return AudioToolboxOpusEncoder(conv, frameSamples)
         }
     }
 }
 
-private class AudioToolboxOpusDecoder private constructor(private var converter: AudioConverterRef?) : OpusDecoder {
+/** [frameSamples] is the length of every packet this converter is given, fixed for its life (see the encoder). */
+internal class AudioToolboxOpusDecoder private constructor(
+    private var converter: AudioConverterRef?,
+    private val frameSamples: Int,
+) : OpusDecoder {
     private val lock = NSLock()
     private val input = ConverterInput(MAX_INBOUND_PACKET)
     private val inputRef = StableRef.create(input)
-    private val out = nativeHeap.allocArray<ShortVar>(CallAudioFormat.FRAME_SAMPLES)
+    private val out = nativeHeap.allocArray<ShortVar>(frameSamples)
     private val outList = nativeHeap.alloc<AudioBufferList>()
     private val outFrames = nativeHeap.alloc<UIntVar>()
 
     override fun decode(packet: ByteArray?, onPcm: (ShortArray) -> Unit) {
-        val pcm = ShortArray(CallAudioFormat.FRAME_SAMPLES)
+        val pcm = ShortArray(frameSamples)
         lock.lock()
         try {
             val conv = converter
             // A lost packet, or one that cannot be a frame: AudioConverter exposes no
-            // Opus PLC, so the gap is silence. Always FRAME_SAMPLES, so timing holds.
+            // Opus PLC, so the gap is silence. Always one packet long, so timing holds.
             if (conv != null && packet != null && packet.isNotEmpty() && packet.size <= MAX_INBOUND_PACKET) {
                 packet.usePinned { platform.posix.memcpy(input.data, it.addressOf(0), packet.size.toULong()) }
                 input.bytes = packet.size
@@ -227,12 +242,12 @@ private class AudioToolboxOpusDecoder private constructor(private var converter:
                 outList.mNumberBuffers = 1u
                 val buf = outList.mBuffers[0]
                 buf.mNumberChannels = 1u
-                buf.mDataByteSize = (CallAudioFormat.FRAME_SAMPLES * 2).toUInt()
+                buf.mDataByteSize = (frameSamples * 2).toUInt()
                 buf.mData = out
-                outFrames.value = CallAudioFormat.FRAME_SAMPLES.toUInt()
+                outFrames.value = frameSamples.toUInt()
                 val status = AudioConverterFillComplexBuffer(conv, supplyInputProc, inputRef.asCPointer(), outFrames.ptr, outList.ptr, null)
                 if (status == 0 || status == NO_MORE_INPUT) {
-                    val n = outFrames.value.toInt().coerceIn(0, CallAudioFormat.FRAME_SAMPLES)
+                    val n = outFrames.value.toInt().coerceIn(0, frameSamples)
                     for (i in 0 until n) pcm[i] = out[i]
                 }
             }
@@ -259,12 +274,13 @@ private class AudioToolboxOpusDecoder private constructor(private var converter:
     }
 
     companion object {
-        /** Far above any 20 ms Opus packet; anything bigger is not one. */
+        /** Far above any Opus packet a call carries; anything bigger is not one. */
         const val MAX_INBOUND_PACKET = 1500
 
-        fun open(): AudioToolboxOpusDecoder? {
-            val conv = newConverter({ opusMono() }, { pcm16Mono() }) ?: return null
-            return AudioToolboxOpusDecoder(conv)
+        fun open(frameSamples: Int = CallAudioFormat.FRAME_SAMPLES): AudioToolboxOpusDecoder? {
+            require(frameSamples > 0 && frameSamples % CallAudioFormat.FRAME_SAMPLES == 0) { "whole 20 ms frames, not $frameSamples samples" }
+            val conv = newConverter({ opusMono(frameSamples) }, { pcm16Mono() }) ?: return null
+            return AudioToolboxOpusDecoder(conv, frameSamples)
         }
     }
 }
