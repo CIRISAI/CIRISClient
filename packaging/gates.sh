@@ -29,7 +29,7 @@ fetch_pin() {
     git -C "$EMITTERS" fetch -q --depth 1 origin "$ref"
     git -C "$EMITTERS" checkout -q --detach FETCH_HEAD
 }
-if [ ! -d "$EMITTERS/.git" ]; then
+if [ ! -e "$EMITTERS/.git" ]; then
     echo "emitters: fetching CIRISAI/CIRISServer@$ref -> $EMITTERS"
     mkdir -p "$EMITTERS"
     git -C "$EMITTERS" init -q
@@ -64,4 +64,14 @@ python3 packaging/check_csd_routes.py --self-test
 python3 packaging/check_csd_routes.py
 python3 client/tools/check_localization_sync.py --self-test --server-src "$EMITTERS"
 python3 client/tools/check_localization_sync.py --server-src "$EMITTERS" --strict
+# The four below ran only in build.yml. PR #291 passed this file at the keyboard
+# and failed CI on the string inventory, which is the gap this file exists to close.
+python3 packaging/check_english_fragments.py --self-test
+python3 packaging/check_english_fragments.py
+python3 packaging/gen_string_inventory.py --self-test
+python3 packaging/gen_string_inventory.py --server-src "$EMITTERS" --check
+python3 client/tools/check_ui_drivable.py
+# CSD/5 without TLC: the model check needs a JVM and a jar, and stays build.yml's.
+python3 packaging/check_csd5.py --self-test
+python3 packaging/check_csd5.py
 echo "[OK] every release gate passed (emitters: CIRISServer@$ref)"
