@@ -22,6 +22,24 @@ class WebMediaException(message: String) : Exception(message)
 /** The microphone, with echo cancellation and noise suppression, as 960-sample 48 kHz mono frames. */
 suspend fun webMicrophoneSource(): AudioSource = WebMicrophoneSource(acquire(jsGetMicrophone(CallAudioFormat.SAMPLE_RATE)))
 
+/**
+ * Open the microphone to ask for it, and let it go. The browser's refusal
+ * (`NotAllowedError`, or `SecurityError` where the page may not ask) is the
+ * person's or the site's; anything else means there is no microphone to open.
+ */
+suspend fun webAskMicrophone(): ai.ciris.mobile.shared.platform.MediaOpened =
+    try {
+        jsStopStream(acquire(jsGetMicrophone(CallAudioFormat.SAMPLE_RATE)))
+        ai.ciris.mobile.shared.platform.MediaOpened.OPENED
+    } catch (e: WebMediaException) {
+        val name = e.message.orEmpty()
+        if (name.startsWith("NotAllowedError") || name.startsWith("SecurityError")) {
+            ai.ciris.mobile.shared.platform.MediaOpened.REFUSED
+        } else {
+            ai.ciris.mobile.shared.platform.MediaOpened.NO_DEVICE
+        }
+    }
+
 /** The speakers: one scheduled queue per publisher, mixed at the destination. */
 fun webSpeakerSink(): AudioSink = WebSpeakerSink()
 
