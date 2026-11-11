@@ -64,6 +64,10 @@ private class AttachChat(private val accepts: Boolean, private val refuse: NodeR
         refuse?.let { throw it }
         decisions += "$communityId $itemId ${contentClass ?: "clear"}"
     }
+    override suspend fun appealItem(nodeUrl: String, communityId: String, itemId: String, grounds: String?, outcome: String?) {
+        refuse?.let { throw it }
+        decisions += "$communityId $itemId grounds=$grounds outcome=$outcome"
+    }
 }
 
 private class RevealDrive : DriveApi {
@@ -82,6 +86,10 @@ private class RevealDrive : DriveApi {
     override suspend fun moderateItem(roomId: String, itemId: String, contentClass: String?) {
         refuse?.let { throw it }
         decisions += "$roomId $itemId ${contentClass ?: "clear"}"
+    }
+    override suspend fun appealItem(roomId: String, itemId: String, grounds: String?, outcome: String?) {
+        refuse?.let { throw it }
+        decisions += "$roomId $itemId grounds=$grounds outcome=$outcome"
     }
 }
 
@@ -203,6 +211,38 @@ class ChatAttachmentsAndRevealTest {
         assertEquals(listOf("room-1 msg-9 infohazard", "room-1 msg-9 clear"), chat.decisions)
         assertEquals(before + 2, chat.reads)
         assertNull(vm.refusalReasonId.value)
+    }
+
+    /** An appeal files with grounds and a ruling carries an outcome, never both, and each re-reads the transcript. */
+    @Test
+    fun anAppealFilesWithGroundsAndARulingCarriesAnOutcome() {
+        val chat = AttachChat(accepts = true)
+        val vm = room(chat)
+        val before = chat.reads
+        vm.appealFlag("msg-1", "new_evidence")
+        vm.ruleOnAppeal("msg-1", "reversed")
+        assertEquals(listOf("room-1 msg-1 grounds=new_evidence outcome=null", "room-1 msg-1 grounds=null outcome=reversed"), chat.decisions)
+        assertEquals(before + 2, chat.reads)
+    }
+
+    @Test
+    fun aFileAppealAndRulingNameTheFlaggedVersionAndARefusalIsNamed() {
+        val drive = RevealDrive()
+        val vm = FilesViewModel(drive, FilesCohort.COMMUNITY, room = "room-7").also { made += it }
+        val file = DriveEntry(
+            "community", "room-7", "row-2", "a", "2026-11-01T00:00:00Z", bytes = "here",
+            moderation = RoomModeration(flag = "reported", itemAttestationId = "row-1", withheld = true),
+        )
+        vm.appealFileFlag(file, "procedural_error")
+        assertEquals(FileActState.Kind.APPEAL, assertIs<FileActState.Done>(vm.act.value).kind)
+        vm.dismissAct()
+        vm.ruleOnFileAppeal(file, "upheld")
+        assertEquals(FileActState.Kind.RULE, assertIs<FileActState.Done>(vm.act.value).kind)
+        assertEquals(listOf("room-7 row-1 grounds=procedural_error outcome=null", "room-7 row-1 grounds=null outcome=upheld"), drive.decisions)
+        vm.dismissAct()
+        drive.refuse = NodeRefusal("moderation.no_standing", "not yours to appeal", 403)
+        vm.appealFileFlag(file, "new_evidence")
+        assertEquals("moderation.no_standing", assertIs<FileActState.Refused>(vm.act.value).refusal.reasonId)
     }
 
     @Test

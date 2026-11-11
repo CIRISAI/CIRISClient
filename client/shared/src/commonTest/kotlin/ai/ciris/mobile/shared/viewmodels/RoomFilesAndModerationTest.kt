@@ -105,12 +105,56 @@ class RoomFilesAndModerationTest {
         assertEquals("drive.not_author", s.refusal.reasonId)
     }
 
-    private val labels = ModerationLabels("Moderate", "Flag reported", "Flag harmful", "Clear", "Report", "Only a moderator", "No route yet")
-    private fun msg(mine: Boolean, author: String = "bob-key", duties: List<String> = emptyList(), flag: String? = null, flagged: Boolean = false) =
-        CegChatMessage(
-            attestationId = "m1", communityId = "room-7", author = author, mine = mine, authorDuties = duties,
-            moderation = if (!flagged) null else ai.ciris.mobile.shared.models.chat.RoomModeration(flag = flag, itemAttestationId = "m1"),
+    private val labels = ModerationLabels(
+        "Moderate", "Flag reported", "Flag harmful", "Clear", "Report", "Only a moderator", "No route yet",
+        appeal = listOf("Appeal evidence", "Appeal process", "Appeal compromised"),
+        rule = listOf("Rule stays", "Rule part", "Rule lift"),
+    )
+    private fun msg(
+        mine: Boolean, author: String = "bob-key", duties: List<String> = emptyList(),
+        flag: String? = null, flagged: Boolean = false, reconsideration: String? = null,
+    ) = CegChatMessage(
+        attestationId = "m1", communityId = "room-7", author = author, mine = mine, authorDuties = duties,
+        moderation = if (!flagged) null else ai.ciris.mobile.shared.models.chat.RoomModeration(
+            flag = flag, itemAttestationId = "m1", reconsideration = reconsideration,
+        ),
+    )
+
+    /** Appeals (0.5.246): the author appeals their own flagged message; a reviewer rules once one is filed. */
+    @Test
+    fun theAuthorAppealsAndAReviewerRules() {
+        val appealed = mutableListOf<String>()
+        val ruled = mutableListOf<String>()
+        fun ops(m: CegChatMessage, reviewer: Boolean = false, moderator: Boolean = false) = chatModerationOps(
+            m, isModerator = moderator, onModerate = null, labels = labels, onFlag = { _, _ -> }, onClearFlag = {},
+            isReviewer = reviewer, onAppeal = { _, g -> appealed += g }, onRule = { _, o -> ruled += o },
         )
+        val mine = ops(msg(mine = true, flag = "reported", flagged = true))
+        assertEquals(listOf("Appeal evidence", "Appeal process", "Appeal compromised"), mine.map { it.label },
+            "an appeal is the one moderation act on your own message")
+        assertEquals("mi_chat_appeal_new_evidence_m1", mine[0].tag)
+        mine[1].onClick()
+        assertEquals(listOf("procedural_error"), appealed)
+        assertTrue(ops(msg(mine = true)).isEmpty(), "nothing to appeal on a message nobody flagged")
+        assertTrue(ops(msg(mine = true, flag = null, flagged = true)).isEmpty(), "nor once the flag was cleared or reversed")
+        assertTrue(ops(msg(mine = true, flag = "reported", flagged = true, reconsideration = "filed")).isEmpty(),
+            "one appeal is waiting for its ruling")
+        assertEquals(3, ops(msg(mine = true, flag = "reported", flagged = true, reconsideration = "upheld")).size,
+            "a ruling that left the flag can be appealed again")
+
+        val member = ops(msg(mine = false, flag = "reported", flagged = true))
+        assertEquals(listOf("Report"), member.map { it.label }, "someone else's flag is not a member's to appeal")
+        val reviewerBefore = ops(msg(mine = false, flag = "reported", flagged = true), reviewer = true)
+        assertEquals(listOf("Appeal evidence", "Appeal process", "Appeal compromised", "Report"), reviewerBefore.map { it.label },
+            "a reviewer may file too, and has nothing to rule on yet")
+        val reviewerFiled = ops(msg(mine = false, flag = "reported", flagged = true, reconsideration = "filed"), reviewer = true)
+        assertEquals(listOf("Rule stays", "Rule part", "Rule lift", "Report"), reviewerFiled.map { it.label })
+        assertEquals("mi_chat_rule_reversed_m1", reviewerFiled[2].tag)
+        reviewerFiled[2].onClick()
+        assertEquals(listOf("reversed"), ruled)
+        val moderatorFiled = ops(msg(mine = false, flag = "reported", flagged = true, reconsideration = "filed"), moderator = true)
+        assertTrue(moderatorFiled.none { it.label.startsWith("Rule") }, "moderating a room is not reviewing it")
+    }
 
     @Test
     fun aModeratorModeratesTheAuthorAndFlagsTheMessage() {

@@ -349,6 +349,24 @@ class UserChatViewModel(
     /** Lift the live flag, by the version that carries it (`moderation.item_attestation_id`). Its history stays. */
     fun clearFlag(itemId: String) = moderate(itemId, null)
 
+    /** The author's (or a reviewer's) appeal of a flag, by the version that carries it. A reviewer then rules. */
+    fun appealFlag(itemId: String, grounds: String) = appeal(itemId, grounds, null)
+
+    /** A reviewer's ruling on a filed appeal: `upheld`, `partial` or `reversed`. */
+    fun ruleOnAppeal(itemId: String, outcome: String) = appeal(itemId, null, outcome)
+
+    private fun appeal(itemId: String, grounds: String?, outcome: String?) {
+        val id = _community.value?.communityId ?: return
+        val node = roomNodeUrl ?: return
+        val epoch = entryEpoch
+        viewModelScope.launch {
+            callTyped(if (grounds != null) "appealFlag" else "ruleOnAppeal") {
+                chat.appealItem(node, id, itemId, grounds, outcome)
+            } ?: return@launch
+            loadMessages(node, id, epoch)
+        }
+    }
+
     private fun moderate(itemId: String, contentClass: String?) {
         val id = _community.value?.communityId ?: return
         val node = roomNodeUrl ?: return

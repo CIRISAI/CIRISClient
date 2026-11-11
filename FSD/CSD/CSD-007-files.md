@@ -251,6 +251,8 @@ version. Rows marked "not called" are live on the node and not wired here.
 | report a file to the room's moderators | none yet | CIRISServer | **blocked_by CIRISServer#665**; drawn as the unavailable `btn_file_act_report_{id}` (CSD-128 is the protected reporter channel) |
 | a moderator flags a room file | `POST /v1/chat/{room}/items/{attestation_id}/flag {class?: reported\|infohazard}` | CIRISServer `src/contacts_chat.rs` (`adopt/edge-v45` `05cbe665`, for 0.5.246) | called — `api/DriveApi.kt` `moderateItem`. Behind `sheet_moderation_flag`; drawn for a holder of `moderate` only (CSD-065 §2.4). Not on a tag yet; not observed on a node |
 | a moderator clears a file's live flag | `POST /v1/chat/{room}/items/{item_attestation_id}/clear` | CIRISServer, as above | called — `api/DriveApi.kt` `moderateItem`. One step, by the version that carries the flag |
+| appeal a file's flag | `POST /v1/chat/{room}/items/{item_attestation_id}/reconsider {grounds}` | CIRISServer `src/contacts_chat.rs` (`adopt/edge-v45` `e9866938`, for 0.5.246) | called — `api/DriveApi.kt` `appealItem`. Behind `sheet_moderation_appeal`; offered on any flagged file, and the node names who has standing (CSD-065 §2.4). Not on a tag yet; not observed on a node |
+| a reviewer rules on a file's filed appeal | `POST /v1/chat/{room}/items/{item_attestation_id}/rule {outcome}` | CIRISServer, as above | called — `api/DriveApi.kt` `appealItem`. Behind `sheet_moderation_rule`; drawn for a holder of `review` only |
 | see one flagged room file | `POST /v1/chat/{room}/items/{item_attestation_id}/reveal` | CIRISServer (0.5.243) | called — `api/DriveApi.kt` `revealItem`; the viewer's own consent |
 
 Refusals arrive as `{error: <id>, detail: <english>}`; `NodeRefusal.fromBody`
