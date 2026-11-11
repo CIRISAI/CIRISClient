@@ -4495,7 +4495,18 @@
     "call_sharing_window": "Stai condividendo una finestra.",
     "call_share_unavailable_here": "La condivisione dello schermo non è disponibile su questo dispositivo.",
     "call_share_notification_title": "Condivisione dello schermo",
-    "call_share_notification_text": "Gli altri partecipanti alla chiamata possono vedere il tuo schermo."
+    "call_share_notification_text": "Gli altri partecipanti alla chiamata possono vedere il tuo schermo.",
+    "call_h264_off": "Il video H.264 è disattivato su questo computer, quindi il video inviato da alcune persone non verrà mostrato qui. Attivandolo scaricherai il codec H.264 da Cisco, meno di 1 MB. Disattivandolo lo eliminerai.",
+    "call_h264_turn_on": "Attiva il video H.264",
+    "call_h264_downloading": "Download del codec H.264 da Cisco…",
+    "call_h264_on": "Il video H.264 è attivo. Disattivandolo eliminerai il codec da questo computer.",
+    "call_h264_turn_off": "Disattiva il video H.264",
+    "call_h264_failed_download": "Non è stato possibile scaricare il codec H.264. Controlla la connessione, poi riprova.",
+    "call_h264_failed_check": "Il file scaricato non corrispondeva a quello pubblicato da Cisco, quindi non è stato conservato. Riprova più tardi.",
+    "call_h264_failed_load": "Il codec H.264 è stato scaricato, ma questo computer non è riuscito a caricarlo. Riprova, oppure disattiva il video H.264, il che eliminerà il codec.",
+    "call_h264_needed": "Qualcuno in questa chiamata sta inviando video H.264. Attiva il video H.264 per vederlo.",
+    "call_h264_licence": "Mostra la licenza",
+    "call_h264_licence_hide": "Nascondi la licenza"
   },
   "moderation": {
     "ladder": {
@@ -6408,6 +6419,7 @@
     "socket_already_open": "Questa chiamata ha già una connessione per i frame aperta.",
     "keep_refused": "Il salvataggio delle chiamate non è ancora pronto, quindi questa chiamata non viene conservata.",
     "share_unavailable": "La condivisione dello schermo non è ancora disponibile su questo nodo.",
-    "leave_reason_unknown": "Questo non è un motivo per lasciare la chiamata."
+    "leave_reason_unknown": "Questo non è un motivo per lasciare la chiamata.",
+    "video_two_people_only": "Per ora, video e condivisione dello schermo funzionano nelle chiamate tra due persone. Questa chiamata ne ha di più, quindi è solo vocale. Se la tua fotocamera è attiva, riprenderà a trasmettere quando la chiamata tornerà a due persone."
   }
 }

@@ -1473,6 +1473,17 @@
     "call_share_unavailable_here": "Le partage d'écran n'est pas disponible sur cet appareil.",
     "call_share_notification_title": "Partage de votre écran",
     "call_share_notification_text": "Les autres participants à l'appel peuvent voir votre écran.",
+    "call_h264_off": "La vidéo H.264 est désactivée sur cet ordinateur, la vidéo envoyée par certaines personnes ne s'affichera donc pas ici. L'activer télécharge le codec H.264 depuis Cisco, moins de 1 Mo. La désactiver le supprime.",
+    "call_h264_turn_on": "Activer la vidéo H.264",
+    "call_h264_downloading": "Téléchargement du codec H.264 depuis Cisco…",
+    "call_h264_on": "La vidéo H.264 est activée. La désactiver supprime le codec de cet ordinateur.",
+    "call_h264_turn_off": "Désactiver la vidéo H.264",
+    "call_h264_failed_download": "Le codec H.264 n'a pas pu être téléchargé. Vérifiez votre connexion, puis réessayez.",
+    "call_h264_failed_check": "Le fichier téléchargé n'était pas celui publié par Cisco, il n'a donc pas été conservé. Réessayez plus tard.",
+    "call_h264_failed_load": "Le codec H.264 a été téléchargé, mais cet ordinateur n'a pas pu le charger. Réessayez, ou désactivez la vidéo H.264, ce qui supprime le codec.",
+    "call_h264_needed": "Une personne dans cet appel envoie de la vidéo H.264. Activez la vidéo H.264 pour la voir.",
+    "call_h264_licence": "Afficher la licence",
+    "call_h264_licence_hide": "Masquer la licence",
     "add_fedid_confirm": "Ajouter l'ID de fédération",
     "add_fedid_intro": "Vous êtes déjà connecté — ceci ajoute un ID de fédération à votre compte existant sans le recréer. Votre identifiant de connexion est préservé.",
     "add_fedid_label_heading": "Nommez votre ID de fédération",
@@ -6408,6 +6419,7 @@
     "socket_already_open": "Cet appel dispose déjà d'une connexion de trames ouverte.",
     "keep_refused": "L'enregistrement des appels n'est pas encore disponible, cet appel n'est donc pas conservé.",
     "share_unavailable": "Le partage d'écran n'est pas encore disponible sur ce nœud.",
-    "leave_reason_unknown": "Ce n'est pas une raison valable pour quitter un appel."
+    "leave_reason_unknown": "Ce n'est pas une raison valable pour quitter un appel.",
+    "video_two_people_only": "La vidéo et le partage d'écran fonctionnent pour l'instant uniquement dans les appels entre deux personnes. Cet appel compte plus de participants, il est donc uniquement vocal. Si votre caméra est activée, elle recommencera à transmettre lorsque l'appel reviendra à deux participants."
   }
 }

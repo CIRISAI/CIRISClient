@@ -9,14 +9,12 @@ import org.bytedeco.ffmpeg.avcodec.AVPacket
 import org.bytedeco.ffmpeg.avutil.AVDictionary
 import org.bytedeco.ffmpeg.avutil.AVFrame
 import org.bytedeco.ffmpeg.global.avcodec.AV_CODEC_FLAG_LOW_DELAY
-import org.bytedeco.ffmpeg.global.avcodec.AV_CODEC_ID_H264
 import org.bytedeco.ffmpeg.global.avcodec.AV_PKT_FLAG_KEY
 import org.bytedeco.ffmpeg.global.avcodec.av_new_packet
 import org.bytedeco.ffmpeg.global.avcodec.av_packet_alloc
 import org.bytedeco.ffmpeg.global.avcodec.av_packet_free
 import org.bytedeco.ffmpeg.global.avcodec.av_packet_unref
 import org.bytedeco.ffmpeg.global.avcodec.avcodec_alloc_context3
-import org.bytedeco.ffmpeg.global.avcodec.avcodec_find_decoder
 import org.bytedeco.ffmpeg.global.avcodec.avcodec_find_decoder_by_name
 import org.bytedeco.ffmpeg.global.avcodec.avcodec_find_encoder_by_name
 import org.bytedeco.ffmpeg.global.avcodec.avcodec_free_context
@@ -47,57 +45,70 @@ import org.bytedeco.javacpp.BytePointer
 import org.bytedeco.javacpp.DoublePointer
 
 /**
- * Video on desktop: FFmpeg 7.1 through JavaCPP (bytedeco 1.5.11, the LGPL build),
- * called through the raw libavcodec API, not javacv.
+ * Video on desktop.
  *
- * Encoder: AV1 via SVT-AV1 (`libsvtav1`, low-delay, preset 12) where a probe at
- * the requested size shows it keeps up in real time, codec `0x01`; else H.264 via
- * OpenH264 (`libopenh264`), codec `0x04`. Output goes through [Av1Packetizer] /
- * [H264Packetizer] so it matches [CallVideoCodec] whatever the library emits.
- * Decoders: FFmpeg's own `h264` for `0x04`; `libdav1d` if this build has it, else
- * `libaom-av1`, for `0x01`. One spatial and one temporal layer: [Layer.BASE].
+ * AV1, codec `0x01`, is FFmpeg 7.1 through JavaCPP (bytedeco 1.5.11, the LGPL
+ * build), called through the raw libavcodec API, not javacv: SVT-AV1
+ * (`libsvtav1`, low-delay, preset 12) to encode, and `libdav1d` if this build
+ * has it, else `libaom-av1`, to decode.
  *
- * Null (audio only) when the native library will not load on this machine.
+ * H.264, codec `0x04`, is Cisco's OpenH264 library and nothing else. It is not
+ * in this app: the person turns it on, it is downloaded from Cisco onto their
+ * machine, and they can turn it off again ([h264Download]). The FFmpeg in this
+ * app can also encode and decode H.264, and this file does not ask it to. With
+ * H.264 off, this desktop neither sends nor shows H.264.
+ *
+ * Encoder: AV1 where a probe at the requested size shows SVT-AV1 keeps up in
+ * real time; else H.264 if it is on; else none, and the call is audio only from
+ * this side. Output goes through [Av1Packetizer] / [H264Packetizer] so it matches
+ * [CallVideoCodec] whatever the library emits. One spatial and one temporal
+ * layer: [Layer.BASE].
  */
 actual fun createVideoEncoder(width: Int, height: Int, fps: Int, bitrate: Int): VideoEncoder? {
-    if (!Ffmpeg.loaded) return null
-    val av1 = Av1Probe.realTime(width, height, fps, bitrate)
-    return createDesktopVideoEncoder(if (av1) DesktopVideoCodec.AV1 else DesktopVideoCodec.H264, width, height, fps, bitrate)
-        ?: if (av1) createDesktopVideoEncoder(DesktopVideoCodec.H264, width, height, fps, bitrate) else null
+    if (Av1Probe.realTime(width, height, fps, bitrate)) {
+        createDesktopVideoEncoder(DesktopVideoCodec.AV1, width, height, fps, bitrate)?.let { return it }
+    }
+    return createDesktopVideoEncoder(DesktopVideoCodec.H264, width, height, fps, bitrate)
 }
 
-actual fun createVideoDecoder(codecId: Int): VideoDecoder? {
-    if (!Ffmpeg.loaded) return null
-    val codec = when (codecId) {
-        CallVideoCodec.TEMPORAL_LAYERED -> avcodec_find_decoder(AV_CODEC_ID_H264)
-        CallVideoCodec.AV1_SVC -> avcodec_find_decoder_by_name("libdav1d") ?: avcodec_find_decoder_by_name("libaom-av1")
-        else -> null
-    } ?: return null
-    return try { FfmpegVideoDecoder(codec) } catch (e: IllegalStateException) { null }
+actual fun createVideoDecoder(codecId: Int): VideoDecoder? = when (codecId) {
+    CallVideoCodec.TEMPORAL_LAYERED -> DesktopH264Holder.get()?.api?.decoder()
+    CallVideoCodec.AV1_SVC -> if (!Ffmpeg.loaded) null else {
+        val codec = avcodec_find_decoder_by_name("libdav1d") ?: avcodec_find_decoder_by_name("libaom-av1")
+        try { codec?.let { FfmpegVideoDecoder(it) } } catch (e: IllegalStateException) { null }
+    }
+    else -> null
 }
 
 /** The desktop encoders by name, so a caller (or a test) can pick one rather than take the probe's choice. */
-enum class DesktopVideoCodec(val codecId: Int, val codecName: String, val ffmpegName: String) {
-    AV1(CallVideoCodec.AV1_SVC, "av1", "libsvtav1"),
-    H264(CallVideoCodec.TEMPORAL_LAYERED, "h264", "libopenh264"),
+enum class DesktopVideoCodec(val codecId: Int, val codecName: String) {
+    AV1(CallVideoCodec.AV1_SVC, "av1"),
+    H264(CallVideoCodec.TEMPORAL_LAYERED, "h264"),
 }
 
-/** That encoder at that size, or null if this FFmpeg build cannot open it. */
-fun createDesktopVideoEncoder(codec: DesktopVideoCodec, width: Int, height: Int, fps: Int, bitrate: Int): VideoEncoder? {
-    if (!Ffmpeg.loaded) return null
-    return try {
-        FfmpegVideoEncoder(codec, width, height, fps, bitrate)
+/**
+ * That encoder at that size. Null for AV1 if this FFmpeg build cannot open
+ * SVT-AV1, and for H.264 unless the person has OpenH264 turned on.
+ */
+fun createDesktopVideoEncoder(codec: DesktopVideoCodec, width: Int, height: Int, fps: Int, bitrate: Int): VideoEncoder? = when (codec) {
+    DesktopVideoCodec.H264 -> DesktopH264Holder.get()?.api?.encoder(width, height, fps, bitrate)
+    DesktopVideoCodec.AV1 -> if (!Ffmpeg.loaded) null else try {
+        FfmpegVideoEncoder(width, height, fps, bitrate)
     } catch (e: IllegalStateException) {
-        System.err.println("[call] video encoder ${codec.ffmpegName} ${width}x$height: ${e.message}")
+        System.err.println("[call] video encoder $SVT_AV1 ${width}x$height: ${e.message}")
         null
     }
 }
 
 /** Which encoder [createVideoEncoder] picks at this size on this machine, and why. For logs and the report. */
-fun desktopVideoEncoderChoice(width: Int, height: Int, fps: Int, bitrate: Int): String =
-    if (!Ffmpeg.loaded) "none (FFmpeg did not load: ${Ffmpeg.error})"
+fun desktopVideoEncoderChoice(width: Int, height: Int, fps: Int, bitrate: Int): String {
+    val h264 = if (DesktopH264Holder.get()?.api != null) "h264 (OpenH264 is on)" else "none (H.264 is off)"
+    return if (!Ffmpeg.loaded) "$h264; FFmpeg did not load: ${Ffmpeg.error}"
     else if (Av1Probe.realTime(width, height, fps, bitrate)) "av1 (${Av1Probe.describe(width, height, fps)})"
-    else "h264 (${Av1Probe.describe(width, height, fps)})"
+    else "$h264; ${Av1Probe.describe(width, height, fps)}"
+}
+
+private const val SVT_AV1 = "libsvtav1"
 
 internal object Ffmpeg {
     var error: String? = null
@@ -129,6 +140,7 @@ internal object Av1Probe {
 
     private fun probe(width: Int, height: Int, fps: Int, bitrate: Int): Pair<Boolean, String> = synchronized(results) {
         results.getOrPut("${width}x$height@$fps") {
+            if (!Ffmpeg.loaded) return@getOrPut false to "FFmpeg did not load"
             val enc = createDesktopVideoEncoder(DesktopVideoCodec.AV1, width, height, fps, bitrate) as FfmpegVideoEncoder?
                 ?: return@getOrPut false to "libsvtav1 would not open"
             val pattern = TestPatternSource(CoroutineScope(Dispatchers.Unconfined), width, height, fps)
@@ -214,27 +226,26 @@ internal class ToI420 {
 
 private fun BytePointer.bytes(size: Int): ByteArray = ByteArray(size).also { position(0).get(it, 0, size) }
 
+/** AV1 through SVT-AV1. The only encoder this app asks FFmpeg for. */
 internal class FfmpegVideoEncoder(
-    private val codec: DesktopVideoCodec,
     private val width: Int,
     private val height: Int,
     fps: Int,
     bitrate: Int,
 ) : VideoEncoder {
-    override val codecId = codec.codecId
-    override val codecName = codec.codecName
+    override val codecId = DesktopVideoCodec.AV1.codecId
+    override val codecName = DesktopVideoCodec.AV1.codecName
 
     private val ctx: AVCodecContext
     private val frame: AVFrame
     private val packet: AVPacket = av_packet_alloc()
-    private val h264 = H264Packetizer()
     private val av1 = Av1Packetizer()
     private var pts = 0L
     private var closed = false
 
     init {
         require(width > 0 && height > 0 && width % 2 == 0 && height % 2 == 0) { "I420 needs even dimensions" }
-        val c: AVCodec = avcodec_find_encoder_by_name(codec.ffmpegName) ?: error("${codec.ffmpegName} not in this FFmpeg build")
+        val c: AVCodec = avcodec_find_encoder_by_name(SVT_AV1) ?: error("$SVT_AV1 not in this FFmpeg build")
         ctx = avcodec_alloc_context3(c) ?: error("context")
         ctx.width(width).height(height).pix_fmt(AV_PIX_FMT_YUV420P)
         ctx.time_base(av_make_q(1, fps)).framerate(av_make_q(fps, 1))
@@ -242,25 +253,17 @@ internal class FfmpegVideoEncoder(
         // Keyframes are the caller's (CallVideo forces one every two seconds and on request).
         ctx.gop_size(fps * 60).max_b_frames(0)
         val opts = AVDictionary(null)
-        when (codec) {
-            DesktopVideoCodec.AV1 -> {
-                av_dict_set(opts, "preset", "12", 0)
-                // Low delay (no reordering, no lookahead), CBR (SVT-AV1 2.2 takes a max
-                // rate only with CRF, so no rc_max_rate here), and a forced keyframe is a
-                // real KEY_FRAME (closed GOP), not an intra-only frame.
-                av_dict_set(opts, "svtav1-params", "pred-struct=1:rc=2:lookahead=0:irefresh-type=2:scd=0", 0)
-            }
-            DesktopVideoCodec.H264 -> {
-                ctx.rc_max_rate(bitrate.toLong())
-                av_dict_set(opts, "allow_skip_frames", "0", 0)
-            }
-        }
+        av_dict_set(opts, "preset", "12", 0)
+        // Low delay (no reordering, no lookahead), CBR (SVT-AV1 2.2 takes a max
+        // rate only with CRF, so no rc_max_rate here), and a forced keyframe is a
+        // real KEY_FRAME (closed GOP), not an intra-only frame.
+        av_dict_set(opts, "svtav1-params", "pred-struct=1:rc=2:lookahead=0:irefresh-type=2:scd=0", 0)
         val r = avcodec_open2(ctx, c, opts)
         av_dict_free(opts)
         if (r < 0) {
             avcodec_free_context(ctx)
             av_packet_free(packet)
-            error("${codec.ffmpegName} would not open ($r)")
+            error("$SVT_AV1 would not open ($r)")
         }
         frame = av_frame_alloc()
         frame.format(AV_PIX_FMT_YUV420P).width(width).height(height)
@@ -268,10 +271,7 @@ internal class FfmpegVideoEncoder(
         // Out-of-band headers, where the library gives them, seed the packetizers.
         if (ctx.extradata_size() > 0) {
             val extra = ctx.extradata().bytes(ctx.extradata_size())
-            when (codec) {
-                DesktopVideoCodec.H264 -> if (AnnexB.startsWithStartCode(extra)) h264.accessUnit(extra, false) else h264.onDescription(extra)
-                DesktopVideoCodec.AV1 -> if (extra[0].toInt() and 0x80 != 0) av1.onDescription(extra) else av1.temporalUnit(extra, false)
-            }
+            if (extra[0].toInt() and 0x80 != 0) av1.onDescription(extra) else av1.temporalUnit(extra, false)
         }
     }
 
@@ -310,10 +310,7 @@ internal class FfmpegVideoEncoder(
             val data = packet.data().bytes(packet.size())
             val flaggedKey = packet.flags() and AV_PKT_FLAG_KEY != 0
             av_packet_unref(packet)
-            val payload = when (codec) {
-                DesktopVideoCodec.H264 -> h264.accessUnit(data, flaggedKey || AnnexB.isKeyframe(data))
-                DesktopVideoCodec.AV1 -> av1.temporalUnit(data, flaggedKey)
-            }
+            val payload = av1.temporalUnit(data, flaggedKey)
             // The witness is the bytes, as a receiver will read them.
             onChunk(EncodedChunk(Layer.BASE, payload, Keyframes.isKeyframe(codecId, payload)))
         }

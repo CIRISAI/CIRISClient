@@ -4,6 +4,9 @@ import org.bytedeco.ffmpeg.avcodec.AVCodecContext
 import org.bytedeco.ffmpeg.avdevice.AVDeviceInfoList
 import org.bytedeco.ffmpeg.avformat.AVFormatContext
 import org.bytedeco.ffmpeg.avutil.AVDictionary
+import org.bytedeco.ffmpeg.global.avcodec.AV_CODEC_ID_BMP
+import org.bytedeco.ffmpeg.global.avcodec.AV_CODEC_ID_MJPEG
+import org.bytedeco.ffmpeg.global.avcodec.AV_CODEC_ID_RAWVIDEO
 import org.bytedeco.ffmpeg.global.avcodec.av_packet_alloc
 import org.bytedeco.ffmpeg.global.avcodec.av_packet_free
 import org.bytedeco.ffmpeg.global.avcodec.av_packet_unref
@@ -201,10 +204,16 @@ private fun run(vararg cmd: String): String? = try {
     null
 }
 
+/** What a capture device may hand over. Nothing here carries a patent licence question. */
+internal val CAPTURE_CODECS = setOf(AV_CODEC_ID_RAWVIDEO, AV_CODEC_ID_MJPEG, AV_CODEC_ID_BMP)
+
 /**
- * One avdevice input, read on its own thread: packets are decoded (raw video,
- * MJPEG, whatever the device gives) and scaled to I420 inside [maxW]x[maxH],
- * keeping the aspect, then thinned to [fps].
+ * One avdevice input, read on its own thread: packets are decoded and scaled to
+ * I420 inside [maxW]x[maxH], keeping the aspect, then thinned to [fps].
+ *
+ * Only the three formats in [CAPTURE_CODECS] are decoded: raw video, MJPEG (most
+ * webcams) and BMP (Windows `gdigrab`). A camera that offers only H.264 does not
+ * open, because this app does not ask FFmpeg for H.264 (see `Video.desktop.kt`).
  *
  * [attempts] are option sets tried in order until the device opens: a camera
  * that refuses 15 fps may take 30, which is then thinned.
@@ -252,6 +261,10 @@ internal class FfmpegCaptureSource(
         for (i in 0 until ctx.nb_streams()) {
             val par = ctx.streams(i).codecpar()
             if (par.codec_type() != AVMEDIA_TYPE_VIDEO) continue
+            if (par.codec_id() !in CAPTURE_CODECS) {
+                System.err.println("[call] capture $format: codec ${par.codec_id()} is not one this app decodes")
+                return false
+            }
             val codec = avcodec_find_decoder(par.codec_id()) ?: return false
             val d = avcodec_alloc_context3(codec) ?: return false
             if (avcodec_parameters_to_context(d, par) < 0 || avcodec_open2(d, codec, null as AVDictionary?) < 0) {

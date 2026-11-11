@@ -1207,6 +1207,17 @@
     "call_share_unavailable_here": "Kushiriki skrini yako hakupatikani kwenye kifaa hiki.",
     "call_share_notification_title": "Unashiriki skrini yako",
     "call_share_notification_text": "Wengine kwenye simu wanaweza kuona skrini yako.",
+    "call_h264_off": "Video ya H.264 imezimwa kwenye kompyuta hii, hivyo video ambayo baadhi ya watu wanatuma haitaonekana hapa. Kuiwasha hupakua kodeki ya H.264 kutoka Cisco, chini ya MB 1. Kuizima huifuta.",
+    "call_h264_turn_on": "Washa video ya H.264",
+    "call_h264_downloading": "Inapakua kodeki ya H.264 kutoka Cisco…",
+    "call_h264_on": "Video ya H.264 imewashwa. Kuizima hufuta kodeki kutoka kwenye kompyuta hii.",
+    "call_h264_turn_off": "Zima video ya H.264",
+    "call_h264_failed_download": "Kodeki ya H.264 haikuweza kupakuliwa. Hakikisha muunganisho wako, kisha jaribu tena.",
+    "call_h264_failed_check": "Faili lililopakuliwa halikuwa lile lililochapishwa na Cisco, hivyo halikuhifadhiwa. Jaribu tena baadaye.",
+    "call_h264_failed_load": "Kodeki ya H.264 ilipakuliwa, lakini kompyuta hii haikuweza kuipakia. Jaribu tena, au zima video ya H.264, ambayo hufuta kodeki hiyo.",
+    "call_h264_needed": "Mtu katika simu hii anatuma video ya H.264. Washa video ya H.264 ili kuiona.",
+    "call_h264_licence": "Onyesha leseni",
+    "call_h264_licence_hide": "Ficha leseni",
     "final_genesis_amend_needed_only": "Idhini {needed} za washikilizi zinahitajika",
     "final_genesis_amend_status_label": "Idhini zilizotolewa hadi sasa",
     "final_genesis_amend_complete": "Washikilizi wa kutosha wameidhinisha. Maliza huandika kifurushi cha toleo la 4.",
@@ -6408,6 +6419,7 @@
     "socket_already_open": "Simu hii tayari ina muunganisho wa fremu uliofunguliwa.",
     "keep_refused": "Kuhifadhi simu bado hakujakamilika, hivyo simu hii haihifadhiwi.",
     "share_unavailable": "Kushiriki skrini yako hakupatikani bado kwenye nodi hii.",
-    "leave_reason_unknown": "Hiyo si sababu ya kuondoka kwenye simu."
+    "leave_reason_unknown": "Hiyo si sababu ya kuondoka kwenye simu.",
+    "video_two_people_only": "Video na kushiriki skrini hufanya kazi kwenye simu kati ya watu wawili kwa sasa. Simu hii ina watu zaidi, hivyo ni ya sauti pekee. Ikiwa kamera yako imewashwa, itaanza kutuma tena wakati simu itakaporudi kuwa ya watu wawili."
   }
 }

@@ -4495,7 +4495,18 @@
     "call_sharing_window": "Bạn đang chia sẻ một cửa sổ.",
     "call_share_unavailable_here": "Chia sẻ màn hình không khả dụng trên thiết bị này.",
     "call_share_notification_title": "Đang chia sẻ màn hình của bạn",
-    "call_share_notification_text": "Những người khác trong cuộc gọi có thể thấy màn hình của bạn."
+    "call_share_notification_text": "Những người khác trong cuộc gọi có thể thấy màn hình của bạn.",
+    "call_h264_off": "Video H.264 đang tắt trên máy tính này, nên video mà một số người gửi sẽ không hiển thị ở đây. Bật lên sẽ tải codec H.264 từ Cisco, dưới 1 MB. Tắt đi sẽ xóa codec đó.",
+    "call_h264_turn_on": "Bật video H.264",
+    "call_h264_downloading": "Đang tải codec H.264 từ Cisco…",
+    "call_h264_on": "Video H.264 đang bật. Tắt đi sẽ xóa codec khỏi máy tính này.",
+    "call_h264_turn_off": "Tắt video H.264",
+    "call_h264_failed_download": "Không thể tải codec H.264. Hãy kiểm tra kết nối của bạn, rồi thử lại.",
+    "call_h264_failed_check": "Tệp tải về không phải là tệp mà Cisco đã công bố, nên nó không được giữ lại. Hãy thử lại sau.",
+    "call_h264_failed_load": "Codec H.264 đã được tải xuống, nhưng máy tính này không thể nạp nó. Hãy thử lại, hoặc tắt video H.264, việc này sẽ xóa codec.",
+    "call_h264_needed": "Có người trong cuộc gọi này đang gửi video H.264. Hãy bật video H.264 để xem.",
+    "call_h264_licence": "Hiện giấy phép",
+    "call_h264_licence_hide": "Ẩn giấy phép"
   },
   "moderation": {
     "ladder": {
@@ -6408,6 +6419,7 @@
     "socket_already_open": "Cuộc gọi này đã có một kết nối khung hình đang mở.",
     "keep_refused": "Tính năng lưu cuộc gọi chưa sẵn sàng, nên cuộc gọi này sẽ không được lưu lại.",
     "share_unavailable": "Chia sẻ màn hình chưa khả dụng trên nút này.",
-    "leave_reason_unknown": "Đó không phải là lý do để rời khỏi cuộc gọi."
+    "leave_reason_unknown": "Đó không phải là lý do để rời khỏi cuộc gọi.",
+    "video_two_people_only": "Video và chia sẻ màn hình hiện chỉ hoạt động trong cuộc gọi giữa hai người. Cuộc gọi này có nhiều người hơn, nên đây là cuộc gọi chỉ có thoại. Nếu camera của bạn đang bật, nó sẽ bắt đầu gửi lại khi cuộc gọi trở về còn hai người."
   }
 }

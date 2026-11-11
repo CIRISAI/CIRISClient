@@ -365,6 +365,11 @@ kotlin {
                 implementation("org.bytedeco:ffmpeg:7.1-1.5.11")
                 implementation("org.bytedeco:javacpp:1.5.11:$bytedecoHostClassifier")
                 implementation("org.bytedeco:ffmpeg:7.1-1.5.11:$bytedecoHostClassifier")
+                // Call video's H.264 (CSD-134): JNA calls Cisco's OpenH264 library, which
+                // is NOT a dependency. The person turns it on and it is downloaded from
+                // Cisco onto their machine (calls/media/OpenH264.desktop.kt). JNA is
+                // Apache-2.0 or LGPL-2.1+, ~1.9 MB with its natives for every desktop OS.
+                implementation("net.java.dev.jna:jna:5.15.0")
                 implementation(compose.desktop.currentOs)
                 implementation("io.ktor:ktor-client-cio:3.0.3")
                 // NOTE: federation crypto (JCS canonicalization + hybrid signing)

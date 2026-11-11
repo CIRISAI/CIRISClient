@@ -4432,6 +4432,17 @@
     "call_share_unavailable_here": "Compartir tu pantalla no está disponible en este dispositivo.",
     "call_share_notification_title": "Compartiendo tu pantalla",
     "call_share_notification_text": "Los demás en la llamada pueden ver tu pantalla.",
+    "call_h264_off": "El video H.264 está desactivado en este equipo, así que el video que envíen algunas personas no se mostrará aquí. Activarlo descarga el códec H.264 de Cisco, menos de 1 MB. Desactivarlo lo elimina.",
+    "call_h264_turn_on": "Activar video H.264",
+    "call_h264_downloading": "Descargando el códec H.264 de Cisco…",
+    "call_h264_on": "El video H.264 está activado. Desactivarlo elimina el códec de este equipo.",
+    "call_h264_turn_off": "Desactivar video H.264",
+    "call_h264_failed_download": "No se pudo descargar el códec H.264. Comprueba tu conexión y vuelve a intentarlo.",
+    "call_h264_failed_check": "La descarga no coincidía con el archivo publicado por Cisco, así que no se conservó. Vuelve a intentarlo más tarde.",
+    "call_h264_failed_load": "El códec H.264 se descargó, pero este equipo no pudo cargarlo. Vuelve a intentarlo, o desactiva el video H.264, lo que elimina el códec.",
+    "call_h264_needed": "Alguien en esta llamada está enviando video H.264. Activa el video H.264 para verlo.",
+    "call_h264_licence": "Mostrar la licencia",
+    "call_h264_licence_hide": "Ocultar la licencia",
     "data_receipt_uncheckable": "No se puede verificar aquí",
     "data_receipt_key_label": "Clave",
     "data_receipt_key_not_current": "Firmado con una clave que este agente ya no usa. Solo se comprueba contra su clave actual, así que este recibo se interpreta como que no se comprueba aunque sea genuino.",
@@ -6408,6 +6419,7 @@
     "socket_already_open": "Esta llamada ya tiene una conexión de fotogramas abierta.",
     "keep_refused": "Guardar llamadas todavía no está listo, así que esta llamada no se está guardando.",
     "share_unavailable": "Compartir tu pantalla todavía no está disponible en este nodo.",
-    "leave_reason_unknown": "Esa no es una razón para salir de la llamada."
+    "leave_reason_unknown": "Esa no es una razón para salir de la llamada.",
+    "video_two_people_only": "El video y la pantalla compartida funcionan por ahora en llamadas entre dos personas. Esta llamada tiene más personas, así que es solo de voz. Si tu cámara está activada, volverá a enviar video cuando la llamada vuelva a tener dos personas."
   }
 }

@@ -4495,7 +4495,18 @@
     "call_sharing_window": "您正在共享一个窗口。",
     "call_share_unavailable_here": "此设备不支持屏幕共享功能。",
     "call_share_notification_title": "正在共享您的屏幕",
-    "call_share_notification_text": "通话中的其他人可以看到您的屏幕。"
+    "call_share_notification_text": "通话中的其他人可以看到您的屏幕。",
+    "call_h264_off": "此电脑上的 H.264 视频已关闭，因此部分人发送的视频将无法在此显示。开启后将从 Cisco 下载 H.264 编解码器，不到 1 MB。关闭后会将其删除。",
+    "call_h264_turn_on": "开启 H.264 视频",
+    "call_h264_downloading": "正在从 Cisco 下载 H.264 编解码器……",
+    "call_h264_on": "H.264 视频已开启。关闭后会将编解码器从此电脑中删除。",
+    "call_h264_turn_off": "关闭 H.264 视频",
+    "call_h264_failed_download": "无法下载 H.264 编解码器。请检查您的网络连接，然后重试。",
+    "call_h264_failed_check": "下载的内容与 Cisco 发布的文件不符，因此未予保留。请稍后重试。",
+    "call_h264_failed_load": "H.264 编解码器已下载，但此电脑无法加载它。请重试，或关闭 H.264 视频，这会将编解码器删除。",
+    "call_h264_needed": "此次通话中有人正在发送 H.264 视频。请开启 H.264 视频以查看。",
+    "call_h264_licence": "显示许可证",
+    "call_h264_licence_hide": "隐藏许可证"
   },
   "moderation": {
     "ladder": {
@@ -6408,6 +6419,7 @@
     "socket_already_open": "此通话已打开一个帧连接。",
     "keep_refused": "保存通话功能尚未就绪，因此此通话不会被保留。",
     "share_unavailable": "此节点尚不支持屏幕共享功能。",
-    "leave_reason_unknown": "这不是离开通话的有效原因。"
+    "leave_reason_unknown": "这不是离开通话的有效原因。",
+    "video_two_people_only": "目前，视频和屏幕共享仅支持双人通话。此次通话人数更多，因此仅支持语音。如果您的摄像头已开启，当通话恢复为双人时，它会重新开始发送画面。"
   }
 }

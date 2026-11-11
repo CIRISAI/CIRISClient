@@ -4474,6 +4474,17 @@
     "call_share_unavailable_here": "Compartilhar sua tela não está disponível neste dispositivo.",
     "call_share_notification_title": "Compartilhando sua tela",
     "call_share_notification_text": "As outras pessoas na chamada podem ver sua tela.",
+    "call_h264_off": "O vídeo H.264 está desativado neste computador, por isso o vídeo que algumas pessoas enviam não será exibido aqui. Ativá-lo baixa o codec H.264 da Cisco, com menos de 1 MB. Desativá-lo o exclui.",
+    "call_h264_turn_on": "Ativar o vídeo H.264",
+    "call_h264_downloading": "Baixando o codec H.264 da Cisco…",
+    "call_h264_on": "O vídeo H.264 está ativado. Desativá-lo exclui o codec deste computador.",
+    "call_h264_turn_off": "Desativar o vídeo H.264",
+    "call_h264_failed_download": "Não foi possível baixar o codec H.264. Verifique sua conexão e tente novamente.",
+    "call_h264_failed_check": "O download não era o arquivo publicado pela Cisco, por isso não foi mantido. Tente novamente mais tarde.",
+    "call_h264_failed_load": "O codec H.264 foi baixado, mas este computador não conseguiu carregá-lo. Tente novamente ou desative o vídeo H.264, o que exclui o codec.",
+    "call_h264_needed": "Alguém nesta chamada está enviando vídeo H.264. Ative o vídeo H.264 para vê-lo.",
+    "call_h264_licence": "Mostrar a licença",
+    "call_h264_licence_hide": "Ocultar a licença",
     "data_erase_self_label": "Apagar você",
     "data_erase_self_blocked": "Ainda não é possível a partir deste aplicativo. O nó só apaga uma pessoa mediante uma solicitação que essa pessoa assina, e este aplicativo não assina (CIRISServer#677). Apagar traços não apaga você.",
     "data_erase_agent_id_label": "ID do agente",
@@ -6408,6 +6419,7 @@
     "socket_already_open": "Esta chamada já tem uma Conexão de quadros aberta.",
     "keep_refused": "Salvar chamadas ainda não está pronto, por isso esta chamada não está sendo mantida.",
     "share_unavailable": "Compartilhar sua tela ainda não está disponível neste nó.",
-    "leave_reason_unknown": "Esse não é um motivo para sair de uma chamada."
+    "leave_reason_unknown": "Esse não é um motivo para sair de uma chamada.",
+    "video_two_people_only": "Por enquanto, o vídeo e o compartilhamento de tela funcionam em chamadas entre duas pessoas. Esta chamada tem mais pessoas, por isso é só voz. Se sua câmera estiver ligada, ela volta a enviar quando a chamada voltar a ter duas pessoas."
   }
 }

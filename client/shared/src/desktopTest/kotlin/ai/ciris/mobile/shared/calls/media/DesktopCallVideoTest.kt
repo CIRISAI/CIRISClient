@@ -7,24 +7,72 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import java.io.File
+import java.nio.file.Files
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
+import kotlin.test.AfterTest
+import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * Desktop call video (CSD-134) through FFmpeg: both encoders emit the agreed
- * payload format and round-trip through the decoders with the picture moving;
- * the server's real H.264 vector decodes; x11grab captures the screen where
- * there is an X display; the camera, only when CIRIS_CAMERA_TEST=1 (it may be busy).
+ * Desktop call video (CSD-134): both encoders emit the agreed payload format and
+ * round-trip through the decoders with the picture moving; the server's real
+ * H.264 vector decodes; x11grab captures the screen where there is an X display;
+ * the camera, only when CIRIS_CAMERA_TEST=1 (it may be busy).
+ *
+ * H.264 is Cisco's OpenH264 library, which is not in the build. The tests that
+ * need it run when `CIRIS_OPENH264_BZ2` names Cisco's `.bz2` for this machine,
+ * as downloaded from Cisco (CI fetches it), and say so when they are skipped.
+ * No test here reaches Cisco: the switch under test is on a directory of the
+ * test's own and a server on this machine.
  */
 class DesktopCallVideoTest {
     private val w = 320
     private val h = 180
     private val fps = 15
+
+    private lateinit var dir: File
+    private lateinit var cisco: ServedFiles
+    private lateinit var h264: DesktopH264
+
+    /** Cisco's file for this machine, or null when the variable is not set. A set variable that names no file is an error, not a skip. */
+    private val ciscosFile: ByteArray? = System.getenv("CIRIS_OPENH264_BZ2")?.takeIf { it.isNotBlank() }?.let {
+        check(File(it).isFile) { "CIRIS_OPENH264_BZ2 is set to '$it', which is not a file" }
+        File(it).readBytes()
+    }
+
+    @BeforeTest fun setUp() {
+        dir = Files.createTempDirectory("openh264-test").toFile()
+        cisco = ServedFiles()
+        val build = checkNotNull(OpenH264Builds.forMachine()) { "no OpenH264 build for this machine" }
+        ciscosFile?.let { cisco.files["/${build.fileName}.bz2"] = it }
+        h264 = DesktopH264(OpenH264Store(dir, build, cisco.baseUrl), CoroutineScope(Dispatchers.Unconfined))
+        DesktopH264Holder.current = h264
+    }
+
+    @AfterTest fun tearDown() {
+        DesktopH264Holder.current = null
+        h264.turnOff()
+        cisco.close()
+        dir.deleteRecursively()
+    }
+
+    /** Turns H.264 on as a person would, from the stand-in server. False (and a line saying so) without Cisco's file. */
+    private fun h264On(test: String): Boolean {
+        if (ciscosFile == null) {
+            println("[call video] $test skipped: set CIRIS_OPENH264_BZ2 to Cisco's .bz2 for this machine")
+            return false
+        }
+        h264.turnOn()
+        assertEquals(H264Download.State.ON, h264.state.value)
+        return true
+    }
 
     /** Mean column of the bright square (luma >= 250), or null if none is visible. */
     private fun squareX(f: VideoFrame): Double? {
@@ -43,7 +91,7 @@ class DesktopCallVideoTest {
         val chunks = mutableListOf<EncodedChunk>()
         repeat(30) { i -> enc.encode(pattern.nextFrame(), i == 0 || i == 15) { chunks += it } }
         held = 30 - chunks.size
-        (enc as FfmpegVideoEncoder).flush { chunks += it } // what SVT-AV1 still holds, in order
+        (enc as? FfmpegVideoEncoder)?.flush { chunks += it } // what SVT-AV1 still holds, in order
         enc.close()
         val dec = assertNotNull(createVideoDecoder(enc.codecId), "a decoder for ${enc.codecName}")
         val frames = mutableListOf<VideoFrame>()
@@ -61,8 +109,65 @@ class DesktopCallVideoTest {
         assertTrue(last - first > 80, "$codec: the square moved $first -> $last")
     }
 
+    /**
+     * The FFmpeg in this app can encode and decode H.264. Until the person turns
+     * H.264 on, nothing here does: no encoder, no decoder, and the server's own
+     * H.264 keyframe is not decoded.
+     */
+    @Test fun withH264OffTheDesktopNeitherEncodesNorDecodesIt() {
+        assertEquals(H264Download.State.OFF, h264.state.value)
+        assertTrue(Ffmpeg.loaded, "FFmpeg is here, so it is not its absence that says no: ${Ffmpeg.error}")
+        assertNull(createDesktopVideoEncoder(DesktopVideoCodec.H264, w, h, fps, 300_000), "an H.264 encoder with H.264 off")
+        assertNull(createVideoDecoder(CallVideoCodec.TEMPORAL_LAYERED), "an H.264 decoder with H.264 off")
+        val enc = createVideoEncoder(w, h, fps, 300_000)
+        assertTrue(enc == null || enc.codecName == "av1", "the platform's encoder is AV1 or none, got ${enc?.codecName}")
+        enc?.close()
+        assertEquals(0, cisco.requests.size, "and nothing was asked of Cisco")
+    }
+
+    @Test fun turningH264OnDownloadsItAndTurningItOffStopsItAndDeletesIt() {
+        if (!h264On("the on/off round trip")) return
+        val build = checkNotNull(OpenH264Builds.forMachine())
+        assertEquals(listOf("/${build.fileName}.bz2"), cisco.requests.map { it.path }, "one request, for this machine's file")
+        assertEquals(listOf(build.fileName), dir.list()!!.toList())
+        val enc = assertNotNull(createDesktopVideoEncoder(DesktopVideoCodec.H264, w, h, fps, 300_000))
+        val dec = assertNotNull(createVideoDecoder(CallVideoCodec.TEMPORAL_LAYERED))
+        val pattern = TestPatternSource(CoroutineScope(Dispatchers.Unconfined), w, h, fps)
+        val before = mutableListOf<EncodedChunk>()
+        enc.encode(pattern.nextFrame(), true) { before += it }
+        assertEquals(1, before.size)
+
+        h264.turnOff()
+        assertEquals(H264Download.State.OFF, h264.state.value)
+        assertEquals(emptyList(), dir.list()!!.toList(), "the library is deleted")
+        // An encoder and a decoder made while it was on do nothing now.
+        val after = mutableListOf<EncodedChunk>()
+        enc.encode(pattern.nextFrame(), true) { after += it }
+        assertEquals(0, after.size, "an encoder made earlier encoded after H.264 was turned off")
+        val frames = mutableListOf<VideoFrame>()
+        dec.decode(Layer.BASE, before[0].bytes) { frames += it }
+        assertEquals(0, frames.size, "a decoder made earlier decoded after H.264 was turned off")
+        assertNull(createVideoDecoder(CallVideoCodec.TEMPORAL_LAYERED))
+        enc.close()
+        dec.close()
+
+        // And on again: a second download, and it works.
+        h264.turnOn()
+        assertEquals(H264Download.State.ON, h264.state.value)
+        assertEquals(2, cisco.requests.size)
+        assertNotNull(createVideoDecoder(CallVideoCodec.TEMPORAL_LAYERED)).close()
+    }
+
+    @Test fun turnedOnInAnEarlierRunIsOnAtStartWithNoRequest() {
+        if (!h264On("on at the next start")) return
+        val next = DesktopH264(OpenH264Store(dir, checkNotNull(OpenH264Builds.forMachine()), cisco.baseUrl), CoroutineScope(Dispatchers.Unconfined))
+        assertEquals(H264Download.State.ON, next.state.value)
+        assertEquals(1, cisco.requests.size, "only the first run's download")
+    }
+
     @Test fun h264EncodesTheAgreedFormatAndRoundTrips() {
-        val enc = assertNotNull(createDesktopVideoEncoder(DesktopVideoCodec.H264, w, h, fps, 300_000), "libopenh264")
+        if (!h264On("H.264 round trip")) return
+        val enc = assertNotNull(createDesktopVideoEncoder(DesktopVideoCodec.H264, w, h, fps, 300_000), "OpenH264")
         assertEquals(CallVideoCodec.TEMPORAL_LAYERED, enc.codecId)
         assertEquals("h264", enc.codecName)
         val (chunks, frames) = roundTrip(enc)
@@ -100,17 +205,25 @@ class DesktopCallVideoTest {
         assertPictureMoved(frames, "av1")
     }
 
-    @Test fun thePlatformEncoderIsOneOfTheTwo() {
+    /** AV1 where SVT-AV1 keeps up; where it does not, H.264 if it is on, and no video if it is off. */
+    @Test fun thePlatformEncoderIsAv1WhereItKeepsUpElseH264IfOn() {
         for ((sw, sh, sf) in listOf(Triple(320, 180, 15), Triple(640, 480, 15), Triple(1280, 720, 5))) {
-            println("[call video] ${sw}x$sh@$sf: ${desktopVideoEncoderChoice(sw, sh, sf, 500_000)}")
+            println("[call video] ${sw}x$sh@$sf, H.264 off: ${desktopVideoEncoderChoice(sw, sh, sf, 500_000)}")
         }
-        val enc = assertNotNull(createVideoEncoder(640, 480, 15, 500_000))
-        assertTrue(enc.codecName == "av1" || enc.codecName == "h264")
-        enc.close()
+        val av1KeepsUp = Av1Probe.realTime(640, 480, 15, 500_000)
+        val off = createVideoEncoder(640, 480, 15, 500_000)
+        assertEquals(if (av1KeepsUp) "av1" else null, off?.codecName, "with H.264 off")
+        off?.close()
+        if (!h264On("the encoder choice with H.264 on")) return
+        println("[call video] 640x480@15, H.264 on: ${desktopVideoEncoderChoice(640, 480, 15, 500_000)}")
+        val on = assertNotNull(createVideoEncoder(640, 480, 15, 500_000), "with H.264 on there is always an encoder")
+        assertEquals(if (av1KeepsUp) "av1" else "h264", on.codecName)
+        on.close()
     }
 
     /** The server's real vector (CIRISServer tests/vectors/call_frames_v1.json) decodes to its 32x32 picture. */
     @Test fun theServersH264VectorDecodes() {
+        if (!h264On("the server's H.264 vector")) return
         val file = Json.parseToJsonElement(checkNotNull(javaClass.getResource("/vectors/call_frames_v1.json")).readText()).jsonObject
         val case = file["client_to_node"]!!.jsonArray.map { it.jsonObject }.first { it["name"]!!.jsonPrimitive.content == "video_h264_keyframe" }
         val hex = case["payload_hex"]!!.jsonPrimitive.content

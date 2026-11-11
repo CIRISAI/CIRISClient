@@ -4495,7 +4495,18 @@
     "call_sharing_window": "Bir pencereyi paylaşıyorsunuz.",
     "call_share_unavailable_here": "Ekranınızı paylaşma bu cihazda kullanılamıyor.",
     "call_share_notification_title": "Ekranınızı paylaşıyorsunuz",
-    "call_share_notification_text": "Aramadaki diğer kişiler ekranınızı görebilir."
+    "call_share_notification_text": "Aramadaki diğer kişiler ekranınızı görebilir.",
+    "call_h264_off": "Bu bilgisayarda H.264 görüntü kapalı, bu yüzden bazı kişilerin gönderdiği görüntü burada gösterilmeyecek. Bunu açmak, Cisco'dan 1 MB'tan küçük H.264 kodekini indirir. Kapatmak ise onu siler.",
+    "call_h264_turn_on": "H.264 görüntüyü aç",
+    "call_h264_downloading": "Cisco'dan H.264 kodeki indiriliyor…",
+    "call_h264_on": "H.264 görüntü açık. Kapatmak, kodeki bu bilgisayardan siler.",
+    "call_h264_turn_off": "H.264 görüntüyü kapat",
+    "call_h264_failed_download": "H.264 kodeki indirilemedi. Bağlantınızı kontrol edin, ardından tekrar deneyin.",
+    "call_h264_failed_check": "İndirilen dosya, Cisco'nun yayınladığı dosya değildi, bu yüzden tutulmadı. Daha sonra tekrar deneyin.",
+    "call_h264_failed_load": "H.264 kodeki indirildi, ancak bu bilgisayar onu yükleyemedi. Tekrar deneyin veya H.264 görüntüyü kapatın; kapatmak kodeki siler.",
+    "call_h264_needed": "Bu aramadaki biri H.264 görüntü gönderiyor. Görmek için H.264 görüntüyü açın.",
+    "call_h264_licence": "Lisansı göster",
+    "call_h264_licence_hide": "Lisansı gizle"
   },
   "moderation": {
     "ladder": {
@@ -6391,6 +6402,7 @@
     "keep_refused": "Aramaları kaydetme henüz hazır değil, bu yüzden bu arama tutulmuyor.",
     "share_unavailable": "Ekranınızı paylaşma bu düğümde henüz kullanılamıyor.",
     "leave_reason_unknown": "Bu, bir aramadan ayrılmak için geçerli bir neden değil.",
+    "video_two_people_only": "Görüntü ve ekran paylaşımı şu an yalnızca iki kişi arasındaki aramalarda çalışır. Bu aramada daha fazla kişi var, bu yüzden bu arama yalnızca sesli. Kameranız açıksa, arama tekrar iki kişiye düştüğünde görüntü göndermeye yeniden başlar.",
     "session_absent": "Bir aramaya katılmak için oturum açın.",
     "not_owner": "Bu cihazdan yalnızca cihazın sahibi aramalara katılabilir.",
     "plumbing": "Aramalar şu anda bu cihazda kullanılamıyor.",

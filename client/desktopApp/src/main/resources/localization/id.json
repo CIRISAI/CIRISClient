@@ -4495,7 +4495,18 @@
     "call_sharing_window": "Anda sedang membagikan satu jendela.",
     "call_share_unavailable_here": "Berbagi layar tidak tersedia di perangkat ini.",
     "call_share_notification_title": "Membagikan layar Anda",
-    "call_share_notification_text": "Orang lain dalam panggilan dapat melihat layar Anda."
+    "call_share_notification_text": "Orang lain dalam panggilan dapat melihat layar Anda.",
+    "call_h264_off": "Video H.264 nonaktif di komputer ini, sehingga video yang dikirim oleh sebagian orang tidak akan ditampilkan di sini. Mengaktifkannya akan mengunduh codec H.264 dari Cisco, kurang dari 1 MB. Menonaktifkannya akan menghapusnya.",
+    "call_h264_turn_on": "Aktifkan video H.264",
+    "call_h264_downloading": "Mengunduh codec H.264 dari Cisco…",
+    "call_h264_on": "Video H.264 aktif. Menonaktifkannya akan menghapus codec dari komputer ini.",
+    "call_h264_turn_off": "Nonaktifkan video H.264",
+    "call_h264_failed_download": "Codec H.264 tidak dapat diunduh. Periksa koneksi Anda, lalu coba lagi.",
+    "call_h264_failed_check": "Berkas yang diunduh bukan berkas yang dipublikasikan Cisco, sehingga tidak disimpan. Coba lagi nanti.",
+    "call_h264_failed_load": "Codec H.264 berhasil diunduh, tetapi komputer ini tidak dapat memuatnya. Coba lagi, atau nonaktifkan video H.264, yang akan menghapus codec tersebut.",
+    "call_h264_needed": "Seseorang dalam panggilan ini mengirim video H.264. Aktifkan video H.264 untuk melihatnya.",
+    "call_h264_licence": "Tampilkan lisensi",
+    "call_h264_licence_hide": "Sembunyikan lisensi"
   },
   "moderation": {
     "ladder": {
@@ -6408,6 +6419,7 @@
     "socket_already_open": "Panggilan ini sudah memiliki koneksi frame yang terbuka.",
     "keep_refused": "Penyimpanan panggilan belum siap, sehingga panggilan ini tidak disimpan.",
     "share_unavailable": "Berbagi layar belum tersedia di node ini.",
-    "leave_reason_unknown": "Itu bukan alasan untuk meninggalkan panggilan."
+    "leave_reason_unknown": "Itu bukan alasan untuk meninggalkan panggilan.",
+    "video_two_people_only": "Video dan berbagi layar untuk saat ini hanya berfungsi dalam panggilan antara dua orang. Panggilan ini memiliki lebih dari itu, sehingga hanya suara. Jika kamera Anda aktif, pengiriman video akan dimulai lagi saat panggilan kembali menjadi dua orang."
   }
 }

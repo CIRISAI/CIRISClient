@@ -14,9 +14,10 @@ import kotlinx.coroutines.launch
  * Call video (CSD-134). A device that encodes AV1 in real time publishes `0x01`
  * (AV1 SVC); one that cannot publishes `0x04` (H.264, temporal layers at spatial
  * 0; the stream's binding names the codec). Every client MUST decode `0x01` and
- * SHOULD decode `0x04` (CC, 2026-11-10). From Edge 45.1 a whole encoded frame
- * goes to the node and Edge fragments it; until then a frame over the budget is
- * refused, so video is not usable on v44 budgets.
+ * SHOULD decode `0x04` (CC, 2026-11-10). From Edge 45.0.0 a whole encoded frame
+ * goes to the node and Edge fragments it (at most 4,096 fragments and 1 MiB a
+ * frame); before it a frame over the budget is refused, so video is not usable
+ * on v44 budgets.
  */
 /**
  * What a video payload IS, the same on every platform's encoder and decoder:
@@ -247,6 +248,12 @@ class CallVideo(
     private var keyframeDue = true
     private var lastKeyframeUs = Long.MIN_VALUE
 
+    /**
+     * The person turned the camera off: from this moment no frame is encoded. The
+     * camera itself is released by whoever owns this sender, by stopping it
+     * ([CallViewModel] does), so the device's camera light goes out too.
+     */
+    @kotlin.concurrent.Volatile
     var cameraOff: Boolean = false
 
     fun requestKeyframe() { keyframeDue = true }

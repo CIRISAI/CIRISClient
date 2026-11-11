@@ -151,7 +151,7 @@ class CallSessionTest {
         assertTrue(call.departed.isEmpty(), "nobody left")
     }
 
-    /** From Edge 45.1 the node fragments: the budget is information, and a whole keyframe goes. */
+    /** From Edge 45.0.0 the node fragments: the budget is information, and a whole keyframe goes. */
     @Test fun aFragmentingNodeTakesAWholeFrame() = runTest {
         val t = FakeTransport()
         val s = CallSession("r", t, backgroundScope)
@@ -172,6 +172,68 @@ class CallSessionTest {
         val call = assertIs<CallState.InCall>(s.state.value)
         assertEquals("bob-person", call.attendees.getValue("node-bob").person)
         assertNull(call.attendees.getValue("node-dan").person, "unbound: someone in this room")
+    }
+
+    /**
+     * CIRISServer 0.5.246: video only while the call has at most two people. Over
+     * that the node refuses every video frame, so none is sent, audio carries on,
+     * and the state says why. Back at two, video goes again.
+     */
+    @Test fun aCallOverTheVideoLimitSendsAudioOnlyAndSaysSo() = runTest {
+        val answer = CallJoinAnswer.parse(
+            kotlinx.serialization.json.Json.parseToJsonElement(
+                """{"call_id":"c","stream_id":"s","epoch":1,"frame_budget_bytes":244,"attendees":["alice","bob"],
+                   "video_allowed":false,"video_max_people":2}""",
+            ) as kotlinx.serialization.json.JsonObject,
+        )
+        val t = FakeTransport(answer)
+        val s = CallSession("r", t, backgroundScope)
+        s.join(video = true); runCurrent()
+        t.socket.inbox.send(CallSocketMessage.Text("""{"type":"ready","frame_budget_bytes":244,"fragmenting":true}""")); runCurrent()
+        var call = assertIs<CallState.InCall>(s.state.value)
+        assertFalse(call.videoAllowed, "the join answer already said so")
+        assertEquals(2, call.videoMaxPeople)
+        assertFalse(s.publish(OutgoingFrame(CallFrames.CODEC_AV1_SVC, Layer.BASE, ByteArray(60))), "AV1 video")
+        assertFalse(s.publish(OutgoingFrame(CallVideoCodecId, Layer.BASE, ByteArray(60))), "H.264 video")
+        assertTrue(s.publish(OutgoingFrame(CallFrames.CODEC_OPAQUE, Layer.BASE, ByteArray(60))), "audio carries on")
+        assertEquals(1, t.socket.sent.size, "only the audio frame reached the socket")
+
+        // Someone left: the node says video is allowed again.
+        t.socket.inbox.send(CallSocketMessage.Text(
+            """{"type":"video_allowed","allowed":true,"people":2,"max_people":2,"reason_id":"call.video_two_people_only"}""",
+        )); runCurrent()
+        assertTrue(assertIs<CallState.InCall>(s.state.value).videoAllowed)
+        assertTrue(s.publish(OutgoingFrame(CallFrames.CODEC_AV1_SVC, Layer.BASE, ByteArray(60))))
+
+        // A third person again, and this time the event is lost: the refusal says the same.
+        t.socket.inbox.send(CallSocketMessage.Text(
+            """{"type":"publish_refused","reason":"video_two_people_only","reason_id":"call.video_two_people_only","max_people":2}""",
+        )); runCurrent()
+        call = assertIs<CallState.InCall>(s.state.value)
+        assertFalse(call.videoAllowed)
+        assertNull(call.notice, "it is the call's size, not a fault with the frame")
+        assertFalse(s.publish(OutgoingFrame(CallFrames.CODEC_AV1_SVC, Layer.BASE, ByteArray(60))))
+    }
+
+    /** A node that says nothing about video has no limit; a value that is not true or false is not a ruling. */
+    @Test fun withoutAWordFromTheNodeVideoIsAllowed() = runTest {
+        val t = FakeTransport()
+        val s = CallSession("r", t, backgroundScope)
+        s.join(video = true); runCurrent()
+        assertTrue(assertIs<CallState.InCall>(s.state.value).videoAllowed)
+        val o = kotlinx.serialization.json.Json.parseToJsonElement(
+            """{"call_id":"c","stream_id":"s","epoch":3,"frame_budget_bytes":244,"attendees":[]}""",
+        ) as kotlinx.serialization.json.JsonObject
+        assertTrue(CallJoinAnswer.parse(o).videoAllowed)
+        assertNull(CallJoinAnswer.parse(o).videoMaxPeople)
+        assertNull(CallEvent.parse("""{"type":"video_allowed","allowed":"false","max_people":2}"""), "a string is not a boolean")
+        assertNull(CallEvent.parse("""{"type":"video_allowed","max_people":2}"""))
+        assertEquals(CallEvent.VideoAllowed(false, 2), CallEvent.parse("""{"type":"video_allowed","allowed":false,"people":3,"max_people":2}"""))
+        // Any other refusal is still a notice.
+        t.socket.inbox.send(CallSocketMessage.Text("""{"type":"publish_refused","reason":"frame_over_budget","budget":244}""")); runCurrent()
+        val call = assertIs<CallState.InCall>(s.state.value)
+        assertTrue(call.videoAllowed)
+        assertEquals(CallNotice.PublishRefused("frame_over_budget", 244), call.notice)
     }
 
     @Test fun anUnknownEventIsSkipped() {

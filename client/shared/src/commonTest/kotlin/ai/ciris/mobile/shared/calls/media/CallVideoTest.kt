@@ -234,6 +234,41 @@ class CallVideoTest {
         assertEquals(listOf(1, 6), Keyframes.av1ObuTypes(av1Key))
     }
 
+    /** Camera off takes effect on the very next frame: nothing is encoded, so nothing is sent. */
+    @Test fun withTheCameraOffNothingIsEncoded() {
+        var deliver: (VideoFrame) -> Unit = {}
+        val source = object : VideoSource {
+            override val kind = VideoKind.TEST_PATTERN
+            override fun start(onFrame: (VideoFrame) -> Unit) { deliver = onFrame }
+            override fun stop() {}
+        }
+        val encoded = mutableListOf<String>()
+        val encoder = object : VideoEncoder {
+            override val codecId = 0x01
+            override val codecName = "fake"
+            override fun encode(frame: VideoFrame, forceKeyframe: Boolean, onChunk: (EncodedChunk) -> Unit) {
+                encoded += if (forceKeyframe) "key" else "inter"
+            }
+            override fun close() {}
+        }
+        val v = CallVideo(
+            session = ai.ciris.mobile.shared.calls.CallSession("r", NoTransport, kotlinx.coroutines.GlobalScope),
+            source = source, encoder = encoder, scope = kotlinx.coroutines.GlobalScope,
+            render = { _, _, _ -> }, receive = false,
+        )
+        v.start()
+        var n = 0L
+        fun frame() = VideoFrame(2, 2, ByteArray(4), ByteArray(1), ByteArray(1), ++n * 66_000)
+        deliver(frame()); deliver(frame())
+        assertEquals(listOf("key", "inter"), encoded)
+        v.cameraOff = true
+        deliver(frame()); deliver(frame())
+        assertEquals(listOf("key", "inter"), encoded, "nothing is encoded while the camera is off")
+        v.cameraOff = false
+        deliver(frame())
+        assertEquals(listOf("key", "inter", "inter"), encoded)
+    }
+
     private object NoTransport : ai.ciris.mobile.shared.calls.CallTransport {
         override suspend fun join(room: String, video: Boolean) = error("not used")
         override suspend fun leave(room: String) = Unit

@@ -2751,6 +2751,17 @@
     "call_share_unavailable_here": "Pínpín ojú ìbòjú rẹ kò sí lórí ẹ̀rọ yìí.",
     "call_share_notification_title": "Pínpín ojú ìbòjú rẹ",
     "call_share_notification_text": "Àwọn mìíràn nínú ìpè náà lè rí ojú ìbòjú rẹ.",
+    "call_h264_off": "Fídíò H.264 wà ní pípa sórí kọ̀mpútà yìí, nítorí náà fídíò tí àwọn kan bá fi ránṣẹ́ kò níí hàn níhìín. Tí o bá tàn án, a óò gba codec H.264 sílẹ̀ láti ọ̀dọ̀ Cisco, lábẹ́ 1 MB. Tí o bá pa á, a óò yọ ọ́ kúrò.",
+    "call_h264_turn_on": "Tan fídíò H.264",
+    "call_h264_downloading": "Ń gba codec H.264 sílẹ̀ láti ọ̀dọ̀ Cisco…",
+    "call_h264_on": "Fídíò H.264 wà ní títan. Tí o bá pa á, a óò yọ codec náà kúrò nínú kọ̀mpútà yìí.",
+    "call_h264_turn_off": "Pa fídíò H.264",
+    "call_h264_failed_download": "A kò lè gba codec H.264 sílẹ̀. Ṣàyẹ̀wò ìsopọ̀ rẹ, kí o sì tún gbìyànjú.",
+    "call_h264_failed_check": "Ohun tí a gbà sílẹ̀ kì í ṣe fáìlì tí Cisco tẹ̀ jáde, nítorí náà a kò pa á mọ́. Gbìyànjú lẹ́ẹ̀kan síi nígbà mìíràn.",
+    "call_h264_failed_load": "A gba codec H.264 sílẹ̀, ṣùgbọ́n kọ̀mpútà yìí kò lè kó o. Gbìyànjú lẹ́ẹ̀kan síi, tàbí pa fídíò H.264, èyí tí yóò yọ codec náà kúrò.",
+    "call_h264_needed": "Ẹnìkan nínú ìpè yìí ń fi fídíò H.264 ránṣẹ́. Tan fídíò H.264 láti rí i.",
+    "call_h264_licence": "Fi ìwé àṣẹ hàn",
+    "call_h264_licence_hide": "Fi ìwé àṣẹ pamọ́",
     "yubikey_probe_failed": "A KÒ LÈ KA IPÒ YUBIKEY",
     "yubikey_probe_not_on_this_node": "NÓDÙ YÌÍ KÒ ṢE ÌJÁBỌ̀ NÍPA IPÒ YUBIKEY",
     "yubikey_probe_reason": "Ìdí: {detail}",
@@ -6408,6 +6419,7 @@
     "socket_already_open": "Ìpè yìí ti ní ìsopọ̀ férémù kan tí ó ṣí sílẹ̀ tẹ́lẹ̀.",
     "keep_refused": "Fífi ìpè pamọ́ kò tíì ṣetán, nítorí náà a kò ní pa ìpè yìí mọ́.",
     "share_unavailable": "Pínpín ojú ìbòjú rẹ kò tíì sí lórí nódù yìí síi.",
-    "leave_reason_unknown": "Ìdí yẹn kì í ṣe ìdí fún yíyọ kúrò nínú ìpè."
+    "leave_reason_unknown": "Ìdí yẹn kì í ṣe ìdí fún yíyọ kúrò nínú ìpè.",
+    "video_two_people_only": "Fídíò àti pínpín ojú-ìwé ń ṣiṣẹ́ nínú àwọn ìpè láàrin ènìyàn méjì fún ìsinsìnyí. Ìpè yìí ní ju bẹ́ẹ̀ lọ, nítorí náà ohùn nìkan ni. Bí kámẹ́rà rẹ bá wà ní títan, yóò tún bẹ̀rẹ̀ sí í fi ránṣẹ́ nígbà tí ìpè náà bá padà sí ènìyàn méjì."
   }
 }

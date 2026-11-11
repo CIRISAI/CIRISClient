@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -93,7 +95,8 @@ fun CallScreen(
         },
     ) { padding ->
         Column(
-            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp).testable("call_screen"),
+            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)
+                .verticalScroll(rememberScrollState()).testable("call_screen"),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             when (val s = state) {
@@ -148,6 +151,91 @@ fun CallScreen(
                 }
             }
             CallSaveState()
+            remember { ai.ciris.mobile.shared.calls.media.h264Download() }?.let { H264Control(it, call) }
+        }
+    }
+}
+
+/**
+ * The person's switch for H.264 video, on a platform where H.264 is a separate
+ * download (desktop; phones and the browser use the system's own). It is off
+ * until they turn it on: turning it on fetches Cisco's OpenH264 library onto
+ * this computer, and turning it off deletes it.
+ *
+ * Cisco's licence for that library asks for three things of this screen, and
+ * they are why it reads as it does: the person can turn the codec on and off
+ * here; Cisco's sentence is shown here, word for word and in English in every
+ * language; and the licence can be read in full.
+ */
+@Composable
+private fun H264Control(
+    h264: ai.ciris.mobile.shared.calls.media.H264Download,
+    call: ai.ciris.mobile.shared.viewmodels.CallViewModel?,
+) {
+    val state by h264.state.collectAsState()
+    var showLicence by remember { mutableStateOf(false) }
+    val needed = call?.h264Needed?.collectAsState()?.value == true
+    Column(
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth().testable("call_h264", state.name.lowercase()),
+    ) {
+        if (needed) {
+            Text(localizedString("mobile.call_h264_needed"), modifier = Modifier.testable("call_h264_needed"))
+        }
+        Text(
+            localizedString(
+                when (state) {
+                    ai.ciris.mobile.shared.calls.media.H264Download.State.OFF -> "mobile.call_h264_off"
+                    ai.ciris.mobile.shared.calls.media.H264Download.State.DOWNLOADING -> "mobile.call_h264_downloading"
+                    ai.ciris.mobile.shared.calls.media.H264Download.State.ON -> "mobile.call_h264_on"
+                    ai.ciris.mobile.shared.calls.media.H264Download.State.FAILED_DOWNLOAD -> "mobile.call_h264_failed_download"
+                    ai.ciris.mobile.shared.calls.media.H264Download.State.FAILED_CHECK -> "mobile.call_h264_failed_check"
+                    ai.ciris.mobile.shared.calls.media.H264Download.State.FAILED_LOAD -> "mobile.call_h264_failed_load"
+                }
+            ),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testable("txt_call_h264_state"),
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            when (state) {
+                ai.ciris.mobile.shared.calls.media.H264Download.State.DOWNLOADING -> Unit
+                ai.ciris.mobile.shared.calls.media.H264Download.State.ON -> OutlinedButton(
+                    onClick = { h264.turnOff() },
+                    modifier = Modifier.testableClickable("btn_call_h264_off") { h264.turnOff() },
+                ) { Text(localizedString("mobile.call_h264_turn_off")) }
+                else -> {
+                    val failed = state != ai.ciris.mobile.shared.calls.media.H264Download.State.OFF
+                    OutlinedButton(
+                        onClick = { h264.turnOn() },
+                        modifier = Modifier.testableClickable("btn_call_h264_on") { h264.turnOn() },
+                    ) { Text(localizedString(if (failed) "mobile.call_try_again" else "mobile.call_h264_turn_on")) }
+                    // Downloaded and unusable: the way to delete it is here too.
+                    if (state == ai.ciris.mobile.shared.calls.media.H264Download.State.FAILED_LOAD) {
+                        OutlinedButton(
+                            onClick = { h264.turnOff() },
+                            modifier = Modifier.testableClickable("btn_call_h264_off") { h264.turnOff() },
+                        ) { Text(localizedString("mobile.call_h264_turn_off")) }
+                    }
+                }
+            }
+            OutlinedButton(
+                onClick = { showLicence = !showLicence },
+                modifier = Modifier.testableClickable("btn_call_h264_licence") { showLicence = !showLicence },
+            ) { Text(localizedString(if (showLicence) "mobile.call_h264_licence_hide" else "mobile.call_h264_licence")) }
+        }
+        // Cisco's sentence, exactly: its licence requires these words where the switch is.
+        Text(
+            ai.ciris.mobile.shared.calls.media.H264Download.ATTRIBUTION,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testable("txt_call_h264_attribution"),
+        )
+        if (showLicence) {
+            Text(
+                h264.licence,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.testable("txt_call_h264_licence"),
+            )
         }
     }
 }
@@ -240,6 +328,12 @@ private fun LiveCall(
                     modifier = Modifier.testable("call_audio_unavailable"),
                 )
             }
+            if (!s.videoAllowed) {
+                Text(
+                    localizedString(ai.ciris.mobile.shared.calls.CallSession.VIDEO_TWO_PEOPLE_ONLY),
+                    modifier = Modifier.testable("call_video_limited", s.videoMaxPeople?.toString() ?: ""),
+                )
+            }
             val videoUnavailable by call.videoUnavailable.collectAsState()
             if (videoUnavailable) {
                 Text(
@@ -295,7 +389,8 @@ private fun LiveCall(
                     )
                 }
             }
-            ShareControls(call)
+            // Sharing is video: in a call that carries none, the line above says why there is no button.
+            if (s.videoAllowed) ShareControls(call)
             s.departed.forEach { (member, reason) ->
                 Text(
                     localizedString(memberLeftKey(reason)),

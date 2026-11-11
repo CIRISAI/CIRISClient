@@ -1214,6 +1214,17 @@
     "call_share_unavailable_here": "이 기기에서는 화면 공유를 사용할 수 없습니다.",
     "call_share_notification_title": "화면 공유 중",
     "call_share_notification_text": "통화 중인 다른 사람이 사용자의 화면을 볼 수 있습니다.",
+    "call_h264_off": "이 컴퓨터에서는 H.264 영상이 꺼져 있어, 일부 사람들이 전송하는 영상이 여기에 표시되지 않습니다. 켜면 Cisco에서 1MB 미만의 H.264 코덱을 다운로드합니다. 끄면 삭제됩니다.",
+    "call_h264_turn_on": "H.264 영상 켜기",
+    "call_h264_downloading": "Cisco에서 H.264 코덱을 다운로드하는 중…",
+    "call_h264_on": "H.264 영상이 켜져 있습니다. 끄면 이 컴퓨터에서 코덱이 삭제됩니다.",
+    "call_h264_turn_off": "H.264 영상 끄기",
+    "call_h264_failed_download": "H.264 코덱을 다운로드할 수 없습니다. 연결 상태를 확인한 후 다시 시도하세요.",
+    "call_h264_failed_check": "다운로드된 파일이 Cisco가 배포한 파일과 일치하지 않아 보관되지 않았습니다. 나중에 다시 시도하세요.",
+    "call_h264_failed_load": "H.264 코덱을 다운로드했지만, 이 컴퓨터에서 불러올 수 없습니다. 다시 시도하거나 H.264 영상을 꺼서 코덱을 삭제하세요.",
+    "call_h264_needed": "이 통화에서 누군가가 H.264 영상을 전송하고 있습니다. 영상을 보려면 H.264 영상을 켜세요.",
+    "call_h264_licence": "라이선스 보기",
+    "call_h264_licence_hide": "라이선스 숨기기",
     "claim_node_cohort_biosphere": "모든 생명체 (생물권)",
     "claim_node_cohort_federation": "전체 페더레이션 (페더레이션)",
     "claim_node_cohort_more": "옵션 더 보기",
@@ -6408,6 +6419,7 @@
     "socket_already_open": "이 통화에는 이미 프레임 연결이 열려 있습니다.",
     "keep_refused": "통화 저장 기능이 아직 준비되지 않아, 이 통화는 보관되지 않습니다.",
     "share_unavailable": "이 노드에서는 아직 화면 공유를 사용할 수 없습니다.",
-    "leave_reason_unknown": "그것은 통화를 종료할 이유가 아닙니다."
+    "leave_reason_unknown": "그것은 통화를 종료할 이유가 아닙니다.",
+    "video_two_people_only": "영상 및 화면 공유는 현재 두 사람 간의 통화에서만 작동합니다. 이 통화에는 참가자가 더 많아 음성 통화로만 진행됩니다. 카메라가 켜져 있다면, 통화 인원이 다시 두 명으로 줄어들면 전송이 재개됩니다."
   }
 }

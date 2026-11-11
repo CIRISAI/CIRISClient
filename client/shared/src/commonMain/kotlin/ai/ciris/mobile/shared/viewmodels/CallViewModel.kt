@@ -5,6 +5,8 @@ import ai.ciris.mobile.shared.calls.CallState
 import ai.ciris.mobile.shared.calls.CallTransport
 import ai.ciris.mobile.shared.calls.media.CallAudio
 import ai.ciris.mobile.shared.calls.media.CallMediaDevices
+import ai.ciris.mobile.shared.calls.media.CallVideoCodec
+import ai.ciris.mobile.shared.calls.media.H264Download
 import ai.ciris.mobile.shared.calls.media.MeasuringSink
 import ai.ciris.mobile.shared.calls.media.opusAvailable
 import ai.ciris.mobile.shared.calls.media.toImageBitmap
@@ -16,6 +18,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * One call in one room, on the screen (CSD-134): joins through [transport],
@@ -30,18 +35,37 @@ class CallViewModel(
     private val room: String,
     transport: (CoroutineScope) -> CallTransport,
     private val devices: CallMediaDevices,
+    /** The person's switch for H.264 where it is a separate download (desktop); null elsewhere. */
+    private val h264: H264Download? = ai.ciris.mobile.shared.calls.media.h264Download(),
+    /** The platform's video encoder for the camera; a test passes its own. */
+    private val newEncoder: (width: Int, height: Int, fps: Int, bitrate: Int) -> ai.ciris.mobile.shared.calls.media.VideoEncoder? =
+        { w, h, fps, bitrate -> ai.ciris.mobile.shared.calls.media.createVideoEncoder(w, h, fps, bitrate) },
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + kotlinx.coroutines.Dispatchers.Default),
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + kotlinx.coroutines.Dispatchers.Default)
     private val transportRef: CallTransport = transport(scope)
     val session = CallSession(room, transportRef, scope)
     val state: StateFlow<CallState> = session.state
 
     private var audio: CallAudio? = null
     private var starting = false
+    /** Other people's video: their decoders and tiles. It never holds this device's camera. */
     private var video: ai.ciris.mobile.shared.calls.media.CallVideo? = null
+    /**
+     * This device's camera, being sent. It exists only while its picture is going
+     * out, so the camera is held, and its light is on, only then. Set and cleared
+     * only with [videoLock] held.
+     */
+    @kotlin.concurrent.Volatile
+    private var camera: ai.ciris.mobile.shared.calls.media.CallVideo? = null
+    /** The codec this device's camera is being sent in, or null when it is not sending. */
+    private var videoCodec: Int? = null
+    /** The last try found no camera or no encoder. It is not tried again until something changes. */
+    private var cameraFailed = false
+    private val videoLock = Mutex()
     private var wantsVideo = false
     private var share: ai.ciris.mobile.shared.calls.CallShare? = null
     private var shareVideo: ai.ciris.mobile.shared.calls.media.CallVideo? = null
+    private var shareCodec: Int? = null
 
     /** The latest picture per stream (hex id), with whose it is: one tile each, camera or share. */
     data class Picture(val publisher: String, val image: androidx.compose.ui.graphics.ImageBitmap)
@@ -59,6 +83,13 @@ class CallViewModel(
     private val _videoUnavailable = MutableStateFlow(false)
     val videoUnavailable: StateFlow<Boolean> = _videoUnavailable.asStateFlow()
     private var sink: MeasuringSink? = null
+
+    /**
+     * True when someone's H.264 video arrived and this device has H.264 turned
+     * off, so their tile has no picture. The screen says so beside the switch.
+     */
+    private val _h264Needed = MutableStateFlow(false)
+    val h264Needed: StateFlow<Boolean> = _h264Needed.asStateFlow()
 
     private val _muted = MutableStateFlow(false)
     val muted: StateFlow<Boolean> = _muted.asStateFlow()
@@ -78,11 +109,40 @@ class CallViewModel(
             if (s is CallState.InCall && s.ready && audio == null && !starting) {
                 starting = true
                 startAudio()
-                startVideo()
+                videoLock.withLock { startReceiving() }
             }
-            if (s is CallState.InCall) s.departed.keys.forEach { audio?.forget(it) }
-            if (s is CallState.Left || s is CallState.Refused) stopAudio()
+            if (s is CallState.InCall) {
+                s.departed.keys.forEach { audio?.forget(it) }
+                // More people than the node carries video for: the camera is released and a
+                // share ends. Back under it, the camera sends again if the person left it on.
+                if (!s.videoAllowed && share != null) stopShare()
+                videoLock.withLock { syncCamera() }
+            }
+            if (s is CallState.Left || s is CallState.Refused) {
+                stopAudio()
+                videoLock.withLock { stopCamera(); cameraFailed = false }
+            }
         }.launchIn(scope)
+        // H.264 turned on or off during a call. Receiving needs nothing here: the next
+        // H.264 frame finds a decoder or does not. Sending does, when H.264 is what this
+        // device sends (or would, having had no encoder until now).
+        h264?.state?.onEach { st ->
+            val on = st == H264Download.State.ON
+            if (on) _h264Needed.value = false
+            videoLock.withLock {
+                if (video == null) return@withLock
+                // On, after a try that found no encoder: try again. Off, while H.264 is
+                // what the camera is sent in: stop, and send AV1 if this machine can.
+                val again = if (on) cameraFailed else videoCodec == CallVideoCodec.TEMPORAL_LAYERED
+                if (again) {
+                    stopCamera()
+                    cameraFailed = false
+                    _videoUnavailable.value = false
+                    syncCamera()
+                }
+            }
+            if (!on && shareCodec == CallVideoCodec.TEMPORAL_LAYERED) stopShare()
+        }?.launchIn(scope)
     }
 
     fun join(video: Boolean) {
@@ -92,26 +152,77 @@ class CallViewModel(
 
     fun setCameraOff(value: Boolean) {
         _cameraOff.value = value
-        video?.cameraOff = value
+        camera?.cameraOff = value // no frame after this one; releasing the camera follows
+        if (!value) cameraFailed = false // turning it on is asking again
+        scope.launch { videoLock.withLock { syncCamera() } }
     }
 
     private fun hex(id: ByteArray) = id.joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
 
-    private suspend fun startVideo() {
-        // Always decode others' video, even on a voice call: they may have their camera on.
-        val camera = if (wantsVideo) devices.camera() else null
-        val encoder = camera?.let { ai.ciris.mobile.shared.calls.media.createVideoEncoder(640, 480, 15, 400_000) }
-        if (wantsVideo && (camera == null || encoder == null)) _videoUnavailable.value = true
+    /** Always decode others' video, even on a voice call: they may have their camera on. */
+    private fun startReceiving() {
         video = ai.ciris.mobile.shared.calls.media.CallVideo(
             session = session,
-            source = if (encoder != null) camera else null,
-            encoder = encoder,
+            source = null,
+            encoder = null,
             scope = scope,
             render = { publisher, streamId, frame ->
                 val image = frame.toImageBitmapSafe() ?: return@CallVideo
                 _pictures.value = _pictures.value + (hex(streamId) to Picture(publisher, image))
             },
-        ).also { it.cameraOff = _cameraOff.value; it.start() }
+            undecodable = { _, codecId ->
+                if (codecId == CallVideoCodec.TEMPORAL_LAYERED && h264 != null && h264.state.value != H264Download.State.ON) {
+                    _h264Needed.value = true
+                }
+            },
+        ).also { it.start() }
+    }
+
+    /**
+     * The camera is held exactly while its picture is being sent: a video call,
+     * the person's camera on, and a call the node carries video for. At any other
+     * time it is released, so the device's camera light is on only when someone
+     * can see the picture. Called with [videoLock] held, whenever one of those changes.
+     */
+    private suspend fun syncCamera() {
+        if (!cameraWanted()) {
+            stopCamera()
+            return
+        }
+        if (camera != null || cameraFailed) return
+        val source = devices.camera()
+        // Getting the camera can wait on the person (the browser asks them). If the call
+        // ended, grew, or they turned the camera off meanwhile, it is let go unused.
+        if (!cameraWanted()) {
+            source?.stop()
+            return
+        }
+        val encoder = source?.let { newEncoder(640, 480, 15, 400_000) }
+        if (source == null || encoder == null) {
+            // Getting the source may already have opened the camera (desktop, the browser): let it go.
+            source?.stop()
+            cameraFailed = true
+            _videoUnavailable.value = true
+            return
+        }
+        _videoUnavailable.value = false
+        videoCodec = encoder.codecId
+        camera = ai.ciris.mobile.shared.calls.media.CallVideo(
+            session = session, source = source, encoder = encoder, scope = scope,
+            render = { _, _, _ -> }, receive = false,
+        ).also { it.start() }
+    }
+
+    private fun cameraWanted(): Boolean {
+        val call = state.value as? CallState.InCall ?: return false
+        return video != null && call.ready && call.videoAllowed && wantsVideo && !_cameraOff.value
+    }
+
+    /** With [videoLock] held. */
+    private fun stopCamera() {
+        camera?.stop()
+        camera = null
+        videoCodec = null
     }
 
     /**
@@ -128,6 +239,7 @@ class CallViewModel(
             if (st is ai.ciris.mobile.shared.calls.CallShare.State.Sharing && shareVideo == null) {
                 val enc = ai.ciris.mobile.shared.calls.media.createVideoEncoder(width, height, 5, 800_000)
                 if (enc == null) { sh.stop(); return@onEach }
+                shareCodec = enc.codecId
                 shareVideo = ai.ciris.mobile.shared.calls.media.CallVideo(
                     session = session, source = source, encoder = enc, scope = scope,
                     render = { _, _, _ -> }, publish = sh::publish, receive = false,
@@ -136,7 +248,7 @@ class CallViewModel(
             if (st is ai.ciris.mobile.shared.calls.CallShare.State.Stopped ||
                 st is ai.ciris.mobile.shared.calls.CallShare.State.Refused
             ) {
-                shareVideo?.stop(); shareVideo = null
+                shareVideo?.stop(); shareVideo = null; shareCodec = null
                 if (st is ai.ciris.mobile.shared.calls.CallShare.State.Stopped) share = null
             }
         }.launchIn(scope)
@@ -144,7 +256,7 @@ class CallViewModel(
     }
 
     fun stopShare() {
-        shareVideo?.stop(); shareVideo = null
+        shareVideo?.stop(); shareVideo = null; shareCodec = null
         share?.stop(); share = null
     }
 
@@ -172,6 +284,9 @@ class CallViewModel(
         audio = null
         video?.stop()
         video = null
+        // The camera sends nothing from here; it is released under the lock, by the
+        // state's change to Left (and by close()), since a sync may be using it now.
+        camera?.cameraOff = true
         stopShare()
     }
 
@@ -188,7 +303,8 @@ class CallViewModel(
 
     fun close() {
         leave()
-        scope.cancel()
+        // The scope ends only once the camera is let go: a sync may be holding it right now.
+        scope.launch { videoLock.withLock { stopCamera() } }.invokeOnCompletion { scope.cancel() }
     }
 }
 

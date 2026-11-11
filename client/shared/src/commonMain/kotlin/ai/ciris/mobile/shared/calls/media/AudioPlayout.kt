@@ -13,8 +13,10 @@ package ai.ciris.mobile.shared.calls.media
  * Concealment is decided by TIME, never by `chunk_seq`. A publisher's audio and
  * video share one stream and one counter (CIRISEdge seals every chunk of a stream
  * with the next `chunk_seq`, whatever its codec), so a jump in the counter between
- * two audio packets is usually a video frame, not lost sound. The frame carries no
- * media timestamp and no per-codec counter, so the clock is the only honest signal.
+ * two audio packets is usually a video frame, not lost sound. Audio has no counter
+ * of its own (`frame_seq` counts video), so this clock decides. From Edge 45 a frame
+ * also carries the publisher's capture time (`source_ts_ms`); this buffer does not
+ * read it yet, and lip sync, which needs it, is not built.
  *
  * What it is not: adaptive. NetEq stretches and compresses speech to move its
  * delay without a click; this holds a fixed target and, when it has fallen

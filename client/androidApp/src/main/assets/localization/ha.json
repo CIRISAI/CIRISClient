@@ -2125,6 +2125,17 @@
     "call_share_unavailable_here": "Raba allon ku ba ya samuwa a wannan na'ura.",
     "call_share_notification_title": "Ana raba allon ku",
     "call_share_notification_text": "Wasu a cikin kiran za su iya ganin allon ku.",
+    "call_h264_off": "Bidiyon H.264 a kashe yake a kan wannan kwamfuta, don haka bidiyon da wasu mutane suke aikawa ba zai nuna a nan ba. Kunna shi yana zazzage codec na H.264 daga Cisco, ƙasa da 1 MB. Kashe shi yana share shi.",
+    "call_h264_turn_on": "Kunna bidiyon H.264",
+    "call_h264_downloading": "Ana zazzage codec na H.264 daga Cisco…",
+    "call_h264_on": "Bidiyon H.264 a kunne yake. Kashe shi yana share codec daga wannan kwamfuta.",
+    "call_h264_turn_off": "Kashe bidiyon H.264",
+    "call_h264_failed_download": "Ba a iya zazzage codec na H.264 ba. Ku duba haɗin yanar gizonku, sannan ku sake gwadawa.",
+    "call_h264_failed_check": "Abin da aka zazzage ba fayil ɗin da Cisco ta wallafa ba ne, don haka ba a ajiye shi ba. Ku sake gwadawa daga baya.",
+    "call_h264_failed_load": "An zazzage codec na H.264, amma wannan kwamfuta ta kasa loda shi. Sake gwadawa, ko kashe bidiyon H.264, wanda zai share codec.",
+    "call_h264_needed": "Wani a cikin wannan kiran yana aikawa da bidiyon H.264. Ku kunna bidiyon H.264 don ganinsa.",
+    "call_h264_licence": "Nuna lasisin",
+    "call_h264_licence_hide": "Ɓoye lasisin",
     "federation_create_associate": "Danganta Fed ID da ke akwai",
     "federation_create_associate_button": "Danganta",
     "federation_create_associate_hint": "Id na maɓallin tarayya da ke akwai ko fedcode",
@@ -6408,6 +6419,7 @@
     "socket_already_open": "Wannan kiran yana da haɗin firam-firam a buɗe tuni.",
     "keep_refused": "Ajiye kira ba a shirya ba tukuna, don haka ba a ajiye wannan kiran ba.",
     "share_unavailable": "Raba allon ku ba ya samuwa a wannan kumburi tukuna.",
-    "leave_reason_unknown": "Wannan ba dalili ba ne na barin kiran."
+    "leave_reason_unknown": "Wannan ba dalili ba ne na barin kiran.",
+    "video_two_people_only": "Bidiyo da raba allo suna aiki ne kawai a kiraye-kiraye tsakanin mutane biyu a yanzu. Wannan kiran yana da fiye da haka, don haka murya ne kawai. Idan kyamararku a kunne take, za ta sake fara aikawa idan kiran ya koma mutane biyu."
   }
 }

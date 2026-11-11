@@ -1153,6 +1153,9 @@
     "accord_new_halt": "Mesh anhalten",
     "accord_new_remint_trust_root": "Bestehende Vertrauenswurzel neu prägen",
     "accord_new_rescrub_trust_root": "Vertrauenswurzel erneut scrubben (2-von-3-Änderung)",
+    "call_h264_needed": "Jemand in diesem Anruf sendet H.264-Video. Schalten Sie H.264-Video ein, um es zu sehen.",
+    "call_h264_licence": "Lizenz anzeigen",
+    "call_h264_licence_hide": "Lizenz ausblenden",
     "contact_requests_accepted": "Sie sind jetzt Kontakte.",
     "contact_requests_accept_pending": "Angenommen, aber dieser Knoten wartet noch auf den Schlüssel dieser Person. Sie erscheint als Kontakt, sobald er eintrifft.",
     "contact_requests_ignored_notice": "Ignoriert. Diese Person wird nicht informiert.",
@@ -2706,6 +2709,14 @@
     "call_share_unavailable_here": "Die Bildschirmfreigabe ist auf diesem Gerät nicht verfügbar.",
     "call_share_notification_title": "Bildschirm wird geteilt",
     "call_share_notification_text": "Andere im Anruf können Ihren Bildschirm sehen.",
+    "call_h264_off": "H.264-Video ist auf diesem Computer ausgeschaltet, daher wird das Video mancher Personen hier nicht angezeigt. Das Einschalten lädt den H.264-Codec von Cisco herunter, unter 1 MB. Das Ausschalten löscht ihn.",
+    "call_h264_turn_on": "H.264-Video einschalten",
+    "call_h264_downloading": "H.264-Codec wird von Cisco heruntergeladen…",
+    "call_h264_on": "H.264-Video ist eingeschaltet. Das Ausschalten löscht den Codec von diesem Computer.",
+    "call_h264_turn_off": "H.264-Video ausschalten",
+    "call_h264_failed_download": "Der H.264-Codec konnte nicht heruntergeladen werden. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
+    "call_h264_failed_check": "Der Download war nicht die von Cisco veröffentlichte Datei, daher wurde er nicht behalten. Versuchen Sie es später erneut.",
+    "call_h264_failed_load": "Der H.264-Codec wurde heruntergeladen, aber dieser Computer konnte ihn nicht laden. Versuchen Sie es erneut, oder schalten Sie das H.264-Video aus, wodurch der Codec gelöscht wird.",
     "manage_consent_open_userdata": "Nutzerdaten-Einwilligung öffnen",
     "manage_consent_ratified": "Ratifiziert — beide Gewährungen vorhanden",
     "manage_consent_replication_desc": "Eine bilaterale Gewährung zwischen zwei Knoten. Erst ratifiziert, wenn beide Richtungen gewährt sind.",
@@ -6408,6 +6419,7 @@
     "socket_already_open": "Für diesen Anruf ist bereits eine Frames-Verbindung geöffnet.",
     "keep_refused": "Das Speichern von Anrufen ist noch nicht bereit, daher wird dieser Anruf nicht aufbewahrt.",
     "share_unavailable": "Bildschirmfreigabe ist auf diesem Knoten noch nicht verfügbar.",
-    "leave_reason_unknown": "Das ist kein Grund, einen Anruf zu verlassen."
+    "leave_reason_unknown": "Das ist kein Grund, einen Anruf zu verlassen.",
+    "video_two_people_only": "Video und Bildschirmfreigabe funktionieren vorerst nur bei Anrufen zwischen zwei Personen. Dieser Anruf hat mehr Teilnehmer, daher ist es ein reiner Sprachanruf. Wenn Ihre Kamera eingeschaltet ist, sendet sie wieder, sobald der Anruf wieder zwischen zwei Personen stattfindet."
   }
 }

@@ -76,6 +76,8 @@ class CallSession(
                 frameBudgetBytes = answer.frameBudgetBytes,
                 serviceTier = answer.serviceTier,
                 attendees = answer.attendees.associateWith { Attendee(it) },
+                videoAllowed = answer.videoAllowed,
+                videoMaxPeople = answer.videoMaxPeople,
             )
             reader = scope.launch { s.incoming.collect { onMessage(it) } }
         }
@@ -97,6 +99,8 @@ class CallSession(
     fun publish(frame: OutgoingFrame): Boolean {
         val call = _state.value as? CallState.InCall ?: return false
         if (!call.ready) return false
+        // The node refuses video while the call is over its size for video; it is not sent at all.
+        if (!call.videoAllowed && frame.codecId != CallFrames.CODEC_OPAQUE) return false
         if (!call.fragmenting && frame.payload.size > call.frameBudgetBytes) {
             _state.value = call.copy(notice = CallNotice.OverBudget(call.frameBudgetBytes))
             return false
@@ -151,7 +155,14 @@ class CallSession(
                     call.copy(attendees = call.attendees + (event.member to it.copy(videoPaused = event.reason)))
                 } ?: call
                 is CallEvent.KeepRefused -> call.copy(notice = CallNotice.KeepRefused(event.reasonId))
-                is CallEvent.PublishRefused -> call.copy(notice = CallNotice.PublishRefused(event.reason, event.budget))
+                // The refusal says the same as the event, so a missed event is not a camera
+                // that goes on encoding for nobody.
+                is CallEvent.PublishRefused -> if (event.reasonId == VIDEO_TWO_PEOPLE_ONLY) {
+                    call.copy(videoAllowed = false, videoMaxPeople = event.maxPeople ?: call.videoMaxPeople)
+                } else {
+                    call.copy(notice = CallNotice.PublishRefused(event.reason, event.budget))
+                }
+                is CallEvent.VideoAllowed -> call.copy(videoAllowed = event.allowed, videoMaxPeople = event.maxPeople ?: call.videoMaxPeople)
                 // Same tile, new stream: what it was sending carries on until the new
                 // stream's frames say otherwise, so the picture never reads as "left".
                 is CallEvent.ShareStarted ->
@@ -171,6 +182,9 @@ class CallSession(
 
     companion object {
         const val PLUMBING = "call.plumbing"
+
+        /** Why video is not sent in a call of more than [CallState.InCall.videoMaxPeople] people (CIRISServer 0.5.246). */
+        const val VIDEO_TWO_PEOPLE_ONLY = "call.video_two_people_only"
 
         /**
          * An event's `stream_id` as the frames' raw 32 bytes, when it is 64 hex
@@ -205,11 +219,20 @@ sealed interface CallState {
         /** The node said `ready`. Nothing is published before it (CIRISServer d662d99a). */
         val ready: Boolean = false,
         /**
-         * The node fragments frames itself (Edge 45.1, `ready.fragmenting`): the budget
+         * The node fragments frames itself (Edge 45.0.0, `ready.fragmenting`): the budget
          * is then information, and a whole frame of any size goes. Read from the node,
          * never assumed from a version.
          */
         val fragmenting: Boolean = false,
+        /**
+         * False while the call has more people than the node carries video for: it is
+         * then audio only, the node refuses every video frame, and none is sent. The
+         * node says so on join and again each time it changes. A node that says
+         * nothing has no such limit.
+         */
+        val videoAllowed: Boolean = true,
+        /** How many people a call may have and still carry video, when the node says. */
+        val videoMaxPeople: Int? = null,
     ) : CallState
 
     /** The node said no, by id (`call.not_a_member`, `call.anonymous_mode`, …). */
@@ -268,7 +291,9 @@ sealed interface CallEvent {
     data class TierChanged(val tier: String) : CallEvent
     data class VideoPaused(val member: String, val reason: String) : CallEvent
     data class KeepRefused(val reasonId: String) : CallEvent
-    data class PublishRefused(val reason: String, val budget: Int?) : CallEvent
+    data class PublishRefused(val reason: String, val budget: Int?, val reasonId: String? = null, val maxPeople: Int? = null) : CallEvent
+    /** Whether this call carries video now: the node counts the people in it and says when that changes. */
+    data class VideoAllowed(val allowed: Boolean, val maxPeople: Int?) : CallEvent
     /**
      * A codec change (CC, 2026-11-10): the member's new stream replaces the old one
      * in the same membership, make-before-break. The tile swaps in place; nobody left.
@@ -285,6 +310,7 @@ sealed interface CallEvent {
         fun parse(text: String): CallEvent? {
             val o = runCatching { json.parseToJsonElement(text).jsonObject }.getOrNull() ?: return null
             fun str(k: String) = (o[k] as? JsonPrimitive)?.contentOrNull
+            fun int(k: String) = str(k)?.toIntOrNull()
             return when (str("type")) {
                 "ready" -> (o["frame_budget_bytes"] as? JsonPrimitive)?.contentOrNull?.toIntOrNull()?.let {
                     Ready(it, (o["fragmenting"] as? JsonPrimitive)?.contentOrNull == "true")
@@ -295,7 +321,10 @@ sealed interface CallEvent {
                 "tier_changed" -> str("tier")?.let { TierChanged(it) }
                 "video_paused" -> str("member")?.let { VideoPaused(it, str("reason") ?: "") }
                 "keep_refused" -> str("reason_id")?.let { KeepRefused(it) }
-                "publish_refused" -> PublishRefused(str("reason") ?: "", (o["budget"] as? JsonPrimitive)?.contentOrNull?.toIntOrNull())
+                "publish_refused" -> PublishRefused(str("reason") ?: "", int("budget"), str("reason_id"), int("max_people"))
+                // `allowed` must be a JSON true or false: anything else is not a ruling either way.
+                "video_allowed" -> (o["allowed"] as? JsonPrimitive)?.takeIf { !it.isString }?.contentOrNull?.toBooleanStrictOrNull()
+                    ?.let { VideoAllowed(it, int("max_people")) }
                 "stream_replaced" -> str("member")?.let { StreamReplaced(it, str("old_stream_id"), str("new_stream_id")) }
                 "share_started" -> str("member")?.let { ShareStarted(it, str("stream_id"), str("person")) }
                 "share_stopped" -> str("member")?.let { ShareStopped(it, str("stream_id")) }
@@ -313,6 +342,9 @@ data class CallJoinAnswer(
     val frameBudgetBytes: Int,
     val serviceTier: String?,
     val attendees: List<String>,
+    /** False when the call already has more people than the node carries video for. Absent from the node means no limit. */
+    val videoAllowed: Boolean = true,
+    val videoMaxPeople: Int? = null,
 ) {
     companion object {
         /**
@@ -333,6 +365,8 @@ data class CallJoinAnswer(
                 frameBudgetBytes = (o["frame_budget_bytes"] as? JsonPrimitive)?.contentOrNull?.toIntOrNull() ?: 0,
                 serviceTier = str("service_tier"),
                 attendees = attendees,
+                videoAllowed = (o["video_allowed"] as? JsonPrimitive)?.takeIf { !it.isString }?.contentOrNull?.toBooleanStrictOrNull() ?: true,
+                videoMaxPeople = str("video_max_people")?.toIntOrNull(),
             )
         }
     }
