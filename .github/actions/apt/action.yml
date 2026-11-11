@@ -22,6 +22,17 @@ runs:
         #    the change under test.
         sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' \
           /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null || true
+        #    The noble images name their mirrors in a MIRRORLIST instead
+        #    (`Get:1 file:/etc/apt/apt-mirrors.txt`), which the line above never
+        #    touched: on 2026-11-11 Azure was down and apt retried it for the
+        #    whole 300 s, twice, on two PRs (#293, #294). Drop its line there
+        #    too; the list's other line is archive.ubuntu.com.
+        if [ -f /etc/apt/apt-mirrors.txt ]; then
+          sudo sed -i '/azure\.archive\.ubuntu\.com/d' /etc/apt/apt-mirrors.txt
+          # A list left empty would be no mirror at all.
+          grep -q . /etc/apt/apt-mirrors.txt || echo 'https://archive.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt >/dev/null
+          cat /etc/apt/apt-mirrors.txt
+        fi
 
         # 2. BOUND IT. `timeout 300` so a hung mirror fails in five minutes
         #    instead of holding the runner to the job timeout, and Retries=3 so a
