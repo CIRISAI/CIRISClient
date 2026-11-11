@@ -1199,6 +1199,7 @@
     "call_camera_off": "Kamera imezimwa",
     "call_camera_on": "Kamera imewashwa",
     "call_rejoin": "Jiunge tena",
+    "call_stranded": "Simu hii imepoteza ufuatiliaji wa funguo za chumba, hivyo huenda sauti kati yako na wengine ilikatika. Jiunge tena ili kurekebisha.",
     "call_share": "Shiriki skrini",
     "call_share_stop": "Acha kushiriki",
     "call_share_starting": "Inaanza kushiriki…",
@@ -6420,6 +6421,7 @@
     "keep_refused": "Kuhifadhi simu bado hakujakamilika, hivyo simu hii haihifadhiwi.",
     "share_unavailable": "Kushiriki skrini yako hakupatikani bado kwenye nodi hii.",
     "leave_reason_unknown": "Hiyo si sababu ya kuondoka kwenye simu.",
-    "video_two_people_only": "Video na kushiriki skrini hufanya kazi kwenye simu kati ya watu wawili kwa sasa. Simu hii ina watu zaidi, hivyo ni ya sauti pekee. Ikiwa kamera yako imewashwa, itaanza kutuma tena wakati simu itakaporudi kuwa ya watu wawili."
+    "video_two_people_only": "Video na kushiriki skrini hufanya kazi kwenye simu kati ya watu wawili kwa sasa. Simu hii ina watu zaidi, hivyo ni ya sauti pekee. Ikiwa kamera yako imewashwa, itaanza kutuma tena wakati simu itakaporudi kuwa ya watu wawili.",
+    "relay_canonical_audio_only": "Video yao haiwezi kukufikia kwa sasa: njia iliyo baina yenu inabeba sauti pekee. Bado unaweza kuwasikia."
   }
 }

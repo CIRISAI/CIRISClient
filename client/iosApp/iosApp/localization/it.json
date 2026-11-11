@@ -4488,6 +4488,7 @@
     "call_camera_off": "Fotocamera spenta",
     "call_camera_on": "Fotocamera accesa",
     "call_rejoin": "Rientra",
+    "call_stranded": "Questa chiamata ha perso traccia delle chiavi della stanza, quindi l'audio tra te e gli altri potrebbe essersi interrotto. Rientra per risolvere.",
     "call_share": "Condividi schermo",
     "call_share_stop": "Interrompi condivisione",
     "call_share_starting": "Avvio della condivisione…",
@@ -6420,6 +6421,7 @@
     "keep_refused": "Il salvataggio delle chiamate non è ancora pronto, quindi questa chiamata non viene conservata.",
     "share_unavailable": "La condivisione dello schermo non è ancora disponibile su questo nodo.",
     "leave_reason_unknown": "Questo non è un motivo per lasciare la chiamata.",
-    "video_two_people_only": "Per ora, video e condivisione dello schermo funzionano nelle chiamate tra due persone. Questa chiamata ne ha di più, quindi è solo vocale. Se la tua fotocamera è attiva, riprenderà a trasmettere quando la chiamata tornerà a due persone."
+    "video_two_people_only": "Per ora, video e condivisione dello schermo funzionano nelle chiamate tra due persone. Questa chiamata ne ha di più, quindi è solo vocale. Se la tua fotocamera è attiva, riprenderà a trasmettere quando la chiamata tornerà a due persone.",
+    "relay_canonical_audio_only": "Il loro video non può raggiungerti in questo momento: il percorso tra voi trasporta solo l'audio. Puoi comunque sentirli."
   }
 }

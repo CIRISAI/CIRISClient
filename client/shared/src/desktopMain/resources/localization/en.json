@@ -4583,6 +4583,7 @@
     "call_camera_off": "Camera off",
     "call_camera_on": "Camera on",
     "call_rejoin": "Rejoin",
+    "call_stranded": "This call lost track of the room's keys, so sound between you and the others may have stopped. Rejoin to fix it.",
     "call_share": "Share screen",
     "call_share_stop": "Stop sharing",
     "call_share_starting": "Starting to share…",
@@ -6420,6 +6421,7 @@
     "keep_refused": "Saving calls isn't ready yet, so this call isn't being kept.",
     "share_unavailable": "Sharing your screen isn't available on this node yet.",
     "leave_reason_unknown": "That isn't a reason for leaving a call.",
-    "video_two_people_only": "Video and screen sharing work in calls between two people for now. This call has more, so it's voice only. If your camera is on, it starts sending again when the call is back to two."
+    "video_two_people_only": "Video and screen sharing work in calls between two people for now. This call has more, so it's voice only. If your camera is on, it starts sending again when the call is back to two.",
+    "relay_canonical_audio_only": "Their video can't reach you right now: the route between you carries sound only. You can still hear them."
   }
 }

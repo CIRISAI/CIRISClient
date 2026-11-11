@@ -151,6 +151,55 @@ class CallSessionTest {
         assertTrue(call.departed.isEmpty(), "nobody left")
     }
 
+    /** CIRISServer 0.5.246 may name the new stream `stream_id` where its vectors say `new_stream_id`: either is read. */
+    @Test fun aReplacedStreamIsReadUnderEitherName() = runTest {
+        val t = FakeTransport()
+        val s = CallSession("r", t, backgroundScope)
+        s.join(video = true); runCurrent()
+        t.socket.inbox.send(CallSocketMessage.Binary(frame("alice", CallFrames.CODEC_AV1_SVC, 1)))
+        val newHex = stream(3).joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
+        t.socket.inbox.send(CallSocketMessage.Text("""{"type":"stream_replaced","member":"alice","old_stream_id":"x","stream_id":"$newHex"}"""))
+        runCurrent()
+        assertTrue(assertIs<CallState.InCall>(s.state.value).attendees.getValue("alice").streamId!!.contentEquals(stream(3)))
+    }
+
+    /** 0.5.246: one person's video stops reaching this device, by id, and comes back. */
+    @Test fun aPersonsVideoThatStopsReachingUsSaysWhyUntilItIsBack() = runTest {
+        val t = FakeTransport()
+        val s = CallSession("r", t, backgroundScope)
+        s.join(video = true); runCurrent()
+        t.socket.inbox.send(CallSocketMessage.Binary(frame("alice", CallFrames.CODEC_AV1_SVC, 1)))
+        t.socket.inbox.send(CallSocketMessage.Text("""{"type":"video_unavailable","member":"alice","reason_id":"call.relay_canonical_audio_only"}"""))
+        runCurrent()
+        assertEquals(CallSession.RELAY_AUDIO_ONLY, assertIs<CallState.InCall>(s.state.value).attendees.getValue("alice").videoPaused)
+        t.socket.inbox.send(CallSocketMessage.Text("""{"type":"video_restored","member":"alice"}"""))
+        runCurrent()
+        assertEquals(null, assertIs<CallState.InCall>(s.state.value).attendees.getValue("alice").videoPaused)
+        // About someone not in the call: nothing changes, and nothing is invented.
+        t.socket.inbox.send(CallSocketMessage.Text("""{"type":"video_unavailable","member":"zed","reason_id":"call.relay_canonical_audio_only"}"""))
+        runCurrent()
+        assertFalse("zed" in assertIs<CallState.InCall>(s.state.value).attendees)
+    }
+
+    /** Edge v45.0.0: a share is a second stream of kind `share`; a stranded call says so until it is joined again. */
+    @Test fun aShareStreamIsAShareAndAStrandedCallSaysSo() = runTest {
+        val t = FakeTransport()
+        val s = CallSession("r", t, backgroundScope)
+        s.join(video = true); runCurrent()
+        val hex = stream(4).joinToString("") { (it.toInt() and 0xFF).toString(16).padStart(2, '0') }
+        t.socket.inbox.send(CallSocketMessage.Text("""{"type":"stream_added","member":"alice","stream_id":"$hex","kind":"share","person":"ada"}"""))
+        t.socket.inbox.send(CallSocketMessage.Text("""{"type":"stream_added","member":"alice","stream_id":"ff","kind":"media"}"""))
+        runCurrent()
+        assertEquals(setOf(hex), assertIs<CallState.InCall>(s.state.value).shares.keys, "one share; the media stream is not one")
+        t.socket.inbox.send(CallSocketMessage.Text("""{"type":"stream_ended","member":"alice","stream_id":"$hex","ended":"ended","truncated":false}"""))
+        runCurrent()
+        assertTrue(assertIs<CallState.InCall>(s.state.value).shares.isEmpty())
+        assertFalse(assertIs<CallState.InCall>(s.state.value).stranded)
+        t.socket.inbox.send(CallSocketMessage.Text("""{"type":"stranded","epoch":2,"reason":"the room's epoch could not be followed"}"""))
+        runCurrent()
+        assertTrue(assertIs<CallState.InCall>(s.state.value).stranded)
+    }
+
     /** From Edge 45.0.0 the node fragments: the budget is information, and a whole keyframe goes. */
     @Test fun aFragmentingNodeTakesAWholeFrame() = runTest {
         val t = FakeTransport()

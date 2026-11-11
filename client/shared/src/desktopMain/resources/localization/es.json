@@ -4424,6 +4424,7 @@
     "call_camera_off": "Cámara desactivada",
     "call_camera_on": "Cámara activada",
     "call_rejoin": "Volver a unirte",
+    "call_stranded": "Esta llamada perdió el rastro de las claves de la sala, así que el sonido entre tú y los demás puede haberse detenido. Vuelve a unirte para solucionarlo.",
     "call_share": "Compartir pantalla",
     "call_share_stop": "Dejar de compartir",
     "call_share_starting": "Empezando a compartir…",
@@ -6420,6 +6421,7 @@
     "keep_refused": "Guardar llamadas todavía no está listo, así que esta llamada no se está guardando.",
     "share_unavailable": "Compartir tu pantalla todavía no está disponible en este nodo.",
     "leave_reason_unknown": "Esa no es una razón para salir de la llamada.",
-    "video_two_people_only": "El video y la pantalla compartida funcionan por ahora en llamadas entre dos personas. Esta llamada tiene más personas, así que es solo de voz. Si tu cámara está activada, volverá a enviar video cuando la llamada vuelva a tener dos personas."
+    "video_two_people_only": "El video y la pantalla compartida funcionan por ahora en llamadas entre dos personas. Esta llamada tiene más personas, así que es solo de voz. Si tu cámara está activada, volverá a enviar video cuando la llamada vuelva a tener dos personas.",
+    "relay_canonical_audio_only": "Su video no puede llegarte en este momento: la ruta entre ustedes solo transporta sonido. Aún puedes oírlos."
   }
 }

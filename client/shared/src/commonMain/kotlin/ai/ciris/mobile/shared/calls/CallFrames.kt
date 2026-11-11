@@ -30,7 +30,7 @@ package ai.ciris.mobile.shared.calls
  * A node on Edge before v45 writes `source_ts_ms` 0 and no `frame_seq`.
  *
  * Pinned to CIRISServer's golden vectors (`tests/vectors/call_frames_v1.json`,
- * release/0.5.246 at b08f3eca), written by an independent generator. Each
+ * release/0.5.246 at 7b489909), written by an independent generator. Each
  * refusal carries the vectors' token, so both ends say the same thing.
  *
  * Audio is [CODEC_OPAQUE] at layer (0,0,0), and its payload is exactly one Opus

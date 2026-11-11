@@ -1465,6 +1465,7 @@
     "call_camera_off": "Caméra désactivée",
     "call_camera_on": "Caméra activée",
     "call_rejoin": "Rejoindre",
+    "call_stranded": "Cet appel a perdu la trace des clés de la salle, le son entre vous et les autres a donc peut-être cessé. Rejoignez-le pour y remédier.",
     "call_share": "Partager l'écran",
     "call_share_stop": "Arrêter le partage",
     "call_share_starting": "Démarrage du partage…",
@@ -6420,6 +6421,7 @@
     "keep_refused": "L'enregistrement des appels n'est pas encore disponible, cet appel n'est donc pas conservé.",
     "share_unavailable": "Le partage d'écran n'est pas encore disponible sur ce nœud.",
     "leave_reason_unknown": "Ce n'est pas une raison valable pour quitter un appel.",
-    "video_two_people_only": "La vidéo et le partage d'écran fonctionnent pour l'instant uniquement dans les appels entre deux personnes. Cet appel compte plus de participants, il est donc uniquement vocal. Si votre caméra est activée, elle recommencera à transmettre lorsque l'appel reviendra à deux participants."
+    "video_two_people_only": "La vidéo et le partage d'écran fonctionnent pour l'instant uniquement dans les appels entre deux personnes. Cet appel compte plus de participants, il est donc uniquement vocal. Si votre caméra est activée, elle recommencera à transmettre lorsque l'appel reviendra à deux participants.",
+    "relay_canonical_audio_only": "Leur vidéo ne peut pas vous parvenir pour le moment : la liaison entre vous ne transporte que le son. Vous pouvez toujours les entendre."
   }
 }

@@ -14,7 +14,7 @@ import kotlin.test.fail
 
 /**
  * The call frames codec against CIRISServer's golden vectors
- * (`tests/vectors/call_frames_v1.json`, release/0.5.246 at b08f3eca), copied
+ * (`tests/vectors/call_frames_v1.json`, release/0.5.246 at 7b489909), copied
  * byte for byte. Every valid frame decodes to its fields and re-encodes to the
  * same bytes, in both directions; every refusal carries its token.
  */

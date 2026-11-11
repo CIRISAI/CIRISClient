@@ -4466,6 +4466,7 @@
     "call_camera_off": "Câmera desligada",
     "call_camera_on": "Câmera ligada",
     "call_rejoin": "Entrar de novo",
+    "call_stranded": "Esta chamada perdeu o controle das chaves da sala, por isso o som entre você e os outros pode ter parado. Entre novamente para corrigir isso.",
     "call_share": "Compartilhar tela",
     "call_share_stop": "Parar de compartilhar",
     "call_share_starting": "Iniciando o compartilhamento…",
@@ -6420,6 +6421,7 @@
     "keep_refused": "Salvar chamadas ainda não está pronto, por isso esta chamada não está sendo mantida.",
     "share_unavailable": "Compartilhar sua tela ainda não está disponível neste nó.",
     "leave_reason_unknown": "Esse não é um motivo para sair de uma chamada.",
-    "video_two_people_only": "Por enquanto, o vídeo e o compartilhamento de tela funcionam em chamadas entre duas pessoas. Esta chamada tem mais pessoas, por isso é só voz. Se sua câmera estiver ligada, ela volta a enviar quando a chamada voltar a ter duas pessoas."
+    "video_two_people_only": "Por enquanto, o vídeo e o compartilhamento de tela funcionam em chamadas entre duas pessoas. Esta chamada tem mais pessoas, por isso é só voz. Se sua câmera estiver ligada, ela volta a enviar quando a chamada voltar a ter duas pessoas.",
+    "relay_canonical_audio_only": "O vídeo da outra pessoa não consegue chegar até você agora: a rota entre vocês transmite apenas som. Você ainda pode ouvi-la."
   }
 }

@@ -320,6 +320,17 @@ private fun LiveCall(
             }
         }
         is ai.ciris.mobile.shared.calls.CallState.InCall -> {
+            if (s.stranded) {
+                Text(
+                    localizedString("mobile.call_stranded"),
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.testable("txt_call_stranded"),
+                )
+                Button(
+                    onClick = { call.leave(); call.rejoin() },
+                    modifier = Modifier.testableClickable("btn_call_rejoin_stranded") { call.leave(); call.rejoin() },
+                ) { Text(localizedString("mobile.call_rejoin")) }
+            }
             val audioUnavailable by call.audioUnavailable.collectAsState()
             if (audioUnavailable) {
                 Text(
@@ -384,9 +395,17 @@ private fun LiveCall(
                         modifier = Modifier.testable(
                             tag,
                             "frames=${heard?.frames ?: 0} hz=${heard?.hz?.let { kotlin.math.round(it).toInt() } ?: 0} " +
-                                "audio=${a.sendingAudio} video=${a.sendingVideo}",
+                                "audio=${a.sendingAudio} video=${a.sendingVideo} paused=${a.videoPaused ?: ""}",
                         ),
                     )
+                    // The node's reason this person's video stopped reaching this device, by id.
+                    a.videoPaused?.takeIf { it.isNotEmpty() }?.let { reason ->
+                        Text(
+                            localizedString(reason),
+                            style = MaterialTheme.typography.bodySmall,
+                            modifier = Modifier.testable("txt_call_tile_paused_" + a.member, reason),
+                        )
+                    }
                 }
             }
             // Sharing is video: in a call that carries none, the line above says why there is no button.
