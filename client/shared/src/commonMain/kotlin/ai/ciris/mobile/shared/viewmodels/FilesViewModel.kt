@@ -33,7 +33,7 @@ data class FileGroup(val roomId: String, val entries: List<DriveEntry>)
 
 /** An author's act on one file (rename, move, withdraw), and how it ended. */
 sealed interface FileActState {
-    enum class Kind { RENAME, MOVE, WITHDRAW, REVEAL, FLAG, CLEAR_FLAG }
+    enum class Kind { RENAME, MOVE, WITHDRAW, REVEAL, FLAG, CLEAR_FLAG, APPEAL, RULE }
     data object Idle : FileActState
     data class Working(val entry: DriveEntry, val kind: Kind) : FileActState
     data class Done(val entry: DriveEntry, val kind: Kind) : FileActState
@@ -162,6 +162,18 @@ class FilesViewModel(
     fun clearFileFlag(entry: DriveEntry) {
         val item = entry.moderation?.itemAttestationId ?: return
         runAct(entry, FileActState.Kind.CLEAR_FLAG) { api.moderateItem(entry.roomId, item, null) }
+    }
+
+    /** Appeal the flag on one file. The node says who has standing: its author, or a reviewer of the room. */
+    fun appealFileFlag(entry: DriveEntry, grounds: String) {
+        val item = entry.moderation?.itemAttestationId ?: return
+        runAct(entry, FileActState.Kind.APPEAL) { api.appealItem(entry.roomId, item, grounds, null) }
+    }
+
+    /** A reviewer's ruling on a file's filed appeal. */
+    fun ruleOnFileAppeal(entry: DriveEntry, outcome: String) {
+        val item = entry.moderation?.itemAttestationId ?: return
+        runAct(entry, FileActState.Kind.RULE) { api.appealItem(entry.roomId, item, null, outcome) }
     }
 
     fun dismissAct() {

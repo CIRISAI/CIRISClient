@@ -2796,6 +2796,43 @@ class CIRISApiClient internal constructor(
         }
     }
 
+    /**
+     * An appeal of a moderator's flag (CIRISServer 0.5.246, CC 4.5.5), on the same
+     * item routes. With [grounds] (`new_evidence` | `procedural_error` |
+     * `quorum_compromise`) it FILES: the flagged item's author, or a review
+     * holder. With [outcome] (`upheld` | `partial` | `reversed`) it RULES: a
+     * review holder only. Exactly one is given. [itemId] is the version that
+     * carries the flag (`moderation.item_attestation_id`).
+     */
+    suspend fun appealRoomItem(communityId: String, itemId: String, grounds: String?, outcome: String?, nodeUrl: String = LOCAL_NODE_URL) {
+        require((grounds == null) != (outcome == null)) { "an appeal files with grounds or rules with an outcome, not both" }
+        val method = if (grounds != null) "reconsiderRoomItem" else "ruleRoomItem"
+        val room = communityId.encodeURLPathPart()
+        val item = itemId.encodeURLPathPart()
+        val client = federationHttpClient()
+        try {
+            val response = if (grounds != null) {
+                client.post("$nodeUrl/v1/chat/$room/items/$item/reconsider") {
+                    authHeader()?.let { header("Authorization", it) }
+                    contentType(ContentType.Application.Json)
+                    setBody(buildJsonObject { put("grounds", JsonPrimitive(grounds)) }.toString())
+                }
+            } else {
+                client.post("$nodeUrl/v1/chat/$room/items/$item/rule") {
+                    authHeader()?.let { header("Authorization", it) }
+                    contentType(ContentType.Application.Json)
+                    setBody(buildJsonObject { put("outcome", JsonPrimitive(outcome!!)) }.toString())
+                }
+            }
+            if (!response.status.isSuccess()) throw nodeRefusal(method, response.status, response.bodyAsText())
+        } catch (e: Exception) {
+            logException(method, e, "url=$nodeUrl")
+            throw e
+        } finally {
+            client.close()
+        }
+    }
+
     suspend fun revealRoomItem(communityId: String, itemId: String, nodeUrl: String = LOCAL_NODE_URL) {
         val method = "revealRoomItem"
         val client = federationHttpClient()

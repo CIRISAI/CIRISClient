@@ -68,6 +68,10 @@ interface DriveApi {
     suspend fun moderateItem(roomId: String, itemId: String, contentClass: String?): Unit =
         throw UnsupportedOperationException("moderateItem")
 
+    /** An appeal of a file's flag (0.5.246): `…/reconsider` with [grounds], or `…/rule` with [outcome]. */
+    suspend fun appealItem(roomId: String, itemId: String, grounds: String?, outcome: String?): Unit =
+        throw UnsupportedOperationException("appealItem")
+
     suspend fun withdrawFile(attestationId: String, cohort: String, roomId: String?): Unit =
         throw UnsupportedOperationException("withdrawFile")
 }
@@ -116,4 +120,7 @@ class ClientDrive(
 
     override suspend fun moderateItem(roomId: String, itemId: String, contentClass: String?) =
         client.moderateRoomItem(roomId, itemId, contentClass, nodeUrl = nodeUrl())
+
+    override suspend fun appealItem(roomId: String, itemId: String, grounds: String?, outcome: String?) =
+        client.appealRoomItem(roomId, itemId, grounds, outcome, nodeUrl = nodeUrl())
 }
