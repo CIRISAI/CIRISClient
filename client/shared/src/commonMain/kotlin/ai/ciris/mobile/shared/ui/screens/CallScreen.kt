@@ -177,10 +177,10 @@ private fun H264Control(
     val needed = call?.h264Needed?.collectAsState()?.value == true
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth().testable("call_h264", state.name.lowercase()),
+        modifier = Modifier.fillMaxWidth().testable("card_call_h264", state.name.lowercase()),
     ) {
         if (needed) {
-            Text(localizedString("mobile.call_h264_needed"), modifier = Modifier.testable("call_h264_needed"))
+            Text(localizedString("mobile.call_h264_needed"), modifier = Modifier.testable("txt_call_h264_needed"))
         }
         Text(
             localizedString(
@@ -299,17 +299,17 @@ private fun LiveCall(
         ai.ciris.mobile.shared.calls.CallState.Idle,
         ai.ciris.mobile.shared.calls.CallState.Joining -> Text(
             localizedString("mobile.call_joining"),
-            modifier = Modifier.testable("call_connecting"),
+            modifier = Modifier.testable("state_call_connecting"),
         )
         is ai.ciris.mobile.shared.calls.CallState.Refused -> Text(
             localizedString(s.reasonId),
             color = MaterialTheme.colorScheme.error,
-            modifier = Modifier.testable("call_refused", s.reasonId),
+            modifier = Modifier.testable("state_call_refused", s.reasonId),
         )
         is ai.ciris.mobile.shared.calls.CallState.Left -> {
             Text(
                 localizedString(youLeftKey(s.reason)),
-                modifier = Modifier.testable("call_left", s.reason.wire),
+                modifier = Modifier.testable("state_call_left", s.reason.wire),
             )
             // Removed from the room is not something a tap undoes.
             if (s.reason != ai.ciris.mobile.shared.calls.LeaveReason.REMOVED) {
@@ -325,13 +325,13 @@ private fun LiveCall(
                 Text(
                     localizedString("mobile.call_audio_unavailable_here"),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.testable("call_audio_unavailable"),
+                    modifier = Modifier.testable("txt_call_audio_unavailable"),
                 )
             }
             if (!s.videoAllowed) {
                 Text(
                     localizedString(ai.ciris.mobile.shared.calls.CallSession.VIDEO_TWO_PEOPLE_ONLY),
-                    modifier = Modifier.testable("call_video_limited", s.videoMaxPeople?.toString() ?: ""),
+                    modifier = Modifier.testable("txt_call_video_limited", s.videoMaxPeople?.toString() ?: ""),
                 )
             }
             val videoUnavailable by call.videoUnavailable.collectAsState()
@@ -339,7 +339,7 @@ private fun LiveCall(
                 Text(
                     localizedString("mobile.call_video_unavailable_here"),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.testable("call_video_unavailable"),
+                    modifier = Modifier.testable("txt_call_video_unavailable"),
                 )
             }
             // One picture per stream: a member's camera and their screen are two tiles.
@@ -348,7 +348,7 @@ private fun LiveCall(
                 val isShare = stream in s.shares
                 val owner = (s.shares[stream]?.person ?: s.attendees[picture.publisher]?.person)
                     ?.let { nameOf(it) } ?: localizedString("mobile.call_someone")
-                Column(modifier = Modifier.testable("call_video_$stream", picture.publisher)) {
+                Column(modifier = Modifier.testable("media_call_video_$stream", picture.publisher)) {
                     androidx.compose.foundation.Image(
                         bitmap = picture.image,
                         contentDescription = if (isShare) {
@@ -360,19 +360,19 @@ private fun LiveCall(
                 }
             }
             if (s.attendees.isEmpty()) {
-                Text(localizedString("mobile.call_alone"), modifier = Modifier.testable("call_alone"))
+                Text(localizedString("mobile.call_alone"), modifier = Modifier.testable("state_call_alone"))
             }
             // Re-read the measurements twice a second, so the tiles (and the runner) see sound arrive.
             var tick by remember { mutableStateOf(0) }
             androidx.compose.runtime.LaunchedEffect(Unit) {
                 while (true) { kotlinx.coroutines.delay(500); tick++ }
             }
-            Column(modifier = Modifier.testable("call_screen_tiles", s.attendees.size.toString())) {
+            Column(modifier = Modifier.testable("card_call_tiles", s.attendees.size.toString())) {
                 s.attendees.values.sortedBy { it.member }.forEach { a ->
                     val heard = call.heard(a.member).also { tick }
                     val who = a.person?.let { nameOf(it) ?: localizedString("mobile.call_someone") }
                         ?: localizedString("mobile.call_someone")
-                    val tag = "call_tile_" + a.member
+                    val tag = "row_call_tile_" + a.member
                     Text(
                         who + " · " + localizedString(
                             when {
@@ -395,7 +395,7 @@ private fun LiveCall(
                 Text(
                     localizedString(memberLeftKey(reason)),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.testable("call_departed_$member", reason.wire),
+                    modifier = Modifier.testable("row_call_departed_$member", reason.wire),
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
@@ -453,7 +453,7 @@ private fun ShareControls(call: ai.ciris.mobile.shared.viewmodels.CallViewModel)
                     if (sharedKind == ai.ciris.mobile.shared.calls.media.VideoKind.WINDOW) "mobile.call_sharing_window"
                     else "mobile.call_sharing_screen"
                 ),
-                modifier = Modifier.testable("call_sharing", sharedKind?.name?.lowercase() ?: "screen"),
+                modifier = Modifier.testable("txt_call_sharing", sharedKind?.name?.lowercase() ?: "screen"),
             )
             OutlinedButton(
                 onClick = { call.stopShare() },
@@ -466,7 +466,7 @@ private fun ShareControls(call: ai.ciris.mobile.shared.viewmodels.CallViewModel)
                 Text(
                     localizedString(st.reasonId),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.testable("call_share_refused", st.reasonId),
+                    modifier = Modifier.testable("txt_call_share_refused", st.reasonId),
                 )
             }
             val start: (ai.ciris.mobile.shared.calls.media.ShareChoice?) -> Unit = { choice ->
@@ -482,7 +482,7 @@ private fun ShareControls(call: ai.ciris.mobile.shared.viewmodels.CallViewModel)
                 Text(
                     localizedString("mobile.call_share_unavailable_here"),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.testable("call_share_unavailable_here"),
+                    modifier = Modifier.testable("txt_call_share_unavailable_here"),
                 )
             } else {
                 OutlinedButton(
