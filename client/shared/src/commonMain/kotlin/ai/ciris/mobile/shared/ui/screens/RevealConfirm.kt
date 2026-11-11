@@ -31,6 +31,33 @@ internal fun moderationNote(m: RoomModeration): String? {
     return listOfNotNull(stance, appeal).joinToString(" ").ifEmpty { null }
 }
 
+/**
+ * A room moderator flags one message or file (CIRISServer 0.5.246). The row is
+ * signed by the moderator's own key and holds the item back from every reader
+ * until each one reveals it, so it is confirmed: the sheet says the class, what
+ * changes and whose key signs.
+ */
+@Composable
+internal fun FlagConfirm(contentClass: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    ConfirmSheet(
+        title = localizedString("mobile.moderation_flag_title"),
+        facts = listOf(
+            ConfirmFact(localizedString("mobile.moderation_reveal_fact_flag"), flagWord(contentClass)),
+            ConfirmFact(localizedString("mobile.moderation_reveal_fact_effect"), localizedString("mobile.moderation_flag_effect")),
+            ConfirmFact(localizedString("mobile.moderation_reveal_fact_signer"), localizedString("mobile.moderation_flag_signer")),
+        ),
+        confirmLabel = localizedString("mobile.moderation_flag_action_flag"),
+        onConfirm = onConfirm,
+        onDismiss = onDismiss,
+        tagPrefix = "moderation_flag",
+    )
+}
+
+/** The menu label for flagging as one class: "Flag as reported…". */
+@Composable
+internal fun flagAsLabel(contentClass: String): String =
+    localizedString("mobile.moderation_flag_as", "flag", flagWord(contentClass))
+
 /** See one flagged item. It is this viewer's own signed consent, so it says what it does and does not change. */
 @Composable
 internal fun RevealConfirm(moderation: RoomModeration, onConfirm: () -> Unit, onDismiss: () -> Unit) {

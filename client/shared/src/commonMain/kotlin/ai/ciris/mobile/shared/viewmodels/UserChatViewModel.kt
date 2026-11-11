@@ -340,6 +340,28 @@ class UserChatViewModel(
     }
 
     /**
+     * A moderator's flag on one message, signed by the person's own key: every
+     * reader then sees a notice in its place until they reveal it. The transcript
+     * is read again, so the note under the message is the node's.
+     */
+    fun flagItem(itemId: String, contentClass: String) = moderate(itemId, contentClass)
+
+    /** Lift the live flag, by the version that carries it (`moderation.item_attestation_id`). Its history stays. */
+    fun clearFlag(itemId: String) = moderate(itemId, null)
+
+    private fun moderate(itemId: String, contentClass: String?) {
+        val id = _community.value?.communityId ?: return
+        val node = roomNodeUrl ?: return
+        val epoch = entryEpoch
+        viewModelScope.launch {
+            callTyped(if (contentClass == null) "clearFlag" else "flagItem") {
+                chat.moderateItem(node, id, itemId, contentClass)
+            } ?: return@launch
+            loadMessages(node, id, epoch)
+        }
+    }
+
+    /**
      * Send the draft.
      *
      * A `null` `message` in the response is a SUCCESS — the row landed and only

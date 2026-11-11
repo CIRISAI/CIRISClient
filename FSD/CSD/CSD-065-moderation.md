@@ -282,12 +282,48 @@ recorded and hides nothing yet**: no listing, file read or transcript honours it
 before ciris-server 0.5.243, and the card says so.
 
 **From an item's menu.** A chat message's ⋮ (CSD-091) and a room file's receipt
-(CSD-007) offer *Moderate the author* and *Flag the author*. Both open this
-screen with the report and flag forms prefilled (`SafetyViewModel.prefillFromItem`):
-the community is the room, the target and the flag subject are the item's
-AUTHOR key, because moderation events and flags are about keys. For a viewer who
-does not hold `moderate` in the room they are drawn unavailable, "only a
-moderator of this room". Moderating another member's room file (withdrawing or
+(CSD-007) offer *Moderate the author*, which opens this screen with the report
+form prefilled (`SafetyViewModel.prefillFromItem`): the community is the room
+and the target is the item's AUTHOR key, because a moderation event is about a
+key. For a viewer who does not hold `moderate` in the room it is drawn
+unavailable, "only a moderator of this room".
+
+**Flag and clear an item (server 0.5.246).** The same menu and receipt let a
+holder of the room's `moderate` duty flag THE ITEM, a message or a room file,
+and clear a live flag:
+
+- *Flag as reported…* and *Flag as potentially harmful…*
+  (`mi_chat_flag_reported_{id}`, `mi_chat_flag_infohazard_{id}`;
+  `btn_file_act_flag_reported_{id}`, `btn_file_act_flag_infohazard_{id}`). Each
+  opens a confirm (`sheet_moderation_flag`) with three facts: the class, that
+  every reader (the moderator and the author included) sees a notice in its
+  place until they choose to see it and nothing is deleted, and that the moderator's own key signs it. Confirm sends
+  `POST /v1/chat/{room}/items/{attestation_id}/flag {"class": "reported" | "infohazard"}`.
+  It is confirmed because it widens: it changes what every member reads.
+- *Clear the flag* (`mi_chat_clear_flag_{id}`, `btn_file_act_clear_flag_{id}`),
+  drawn while the item's `moderation.flag` is set, sends
+  `POST /v1/chat/{room}/items/{item_attestation_id}/clear` in one step. A clear
+  narrows, so no confirm stands in front of it. The flag's history stays. The id
+  is `moderation.item_attestation_id`, the version that carries the flag, since a
+  flag on an earlier version of an edited message holds every later one; the
+  current id there answers 409 `moderation.nothing_to_clear`.
+
+They are drawn only for a moderator and never on the viewer's own message: the
+node refuses anyone else (`moderation.not_a_moderator`), and a list of acts a
+member may not take helps nobody. A class is offered only where flagging it
+changes what readers see: the live class is not offered again, since flagging
+it twice signs nothing, and *reported* is not offered under a live
+*potentially harmful*, because the more severe class leads and the row would
+change nothing. To move down, a moderator clears and then flags. After either act the screen reads the
+transcript or the listing again and draws the node's `moderation` view; it
+keeps nothing from the response. A refusal is drawn by its id:
+`moderation.not_a_moderator`, `moderation.nothing_to_clear`,
+`moderation.unknown_class`, `moderation.flag_failed`,
+`moderation.delegate_may_not_moderate` (a delegate session may do neither).
+**Not observed on a node**: read from CIRISServer `adopt/edge-v45` `05cbe665`
+(`src/contacts_chat.rs`) and checked by view-model tests against a fake.
+Until 0.5.246 this menu's flag item went to `POST /v1/safety/flag` on the
+author's key, signed by the node, which a room's readers ignore. Moderating another member's room file (withdrawing or
 hiding it) **does not work yet**: no route lets a moderator withdraw a file they
 did not author, and no read consults moderation events (§3).
 
@@ -298,8 +334,9 @@ did not author, and no read consults moderation events (§3).
 on their own devices, and nobody else, signed as their own consent to this one
 item, `POST /v1/chat/{room}/items/{item_attestation_id}/reveal`. The note beneath
 (`chat_moderation_note_{id}`) gives the flag, or that it was cleared, and any
-appeal's standing. Delegates are refused. Flag, clear, appeal and ruling have no
-route yet (CIRISPersist#1161), so nothing here offers them.
+appeal's standing. Delegates are refused. Appeal and ruling have no route the
+client calls yet (the server plans `…/reconsider` and `…/rule` for 0.5.246), so
+nothing here offers them.
 
 ## 3. Contracts (who)
 
@@ -334,6 +371,7 @@ byte-identical.
 | the candidate's track record | **missing** — the verdict body carries `candidate_key_id`, not `moderation_track_record` | CIRISServer | blocks `row_named_moderator_candidate` |
 | **anyone-may-propose** (CC 4.5.13) | `POST /v1/safety/reports` — **missing** | CIRISServer | `blocked_by: CIRISServer#665`. The client calls it (`CIRISApiClient.proposeModeration`, on the NODE url); `src/safety/report.rs` is specified in CIRISServer `FSD/MODERATION_CHILD_SAFETY.md` §4.4 and does not exist on `origin/main` or `integ/0.5.218` (`src/safety/` is six files, no `report.rs`; no route literal). The sheet says so in words (§2.2) |
 | flag or clear a subject | `POST /v1/safety/flag {signer_key_id, community_key_id, subject_key_id, content_class: infohazard\|reported, action: flag\|clear}` | CIRISServer `src/safety/infohazard.rs` `flag` | **live, recorded only** (CC 4.5.13): duty-gated, a non-moderator is refused 403. The row is written, but no reader honours it yet: `GET /v1/drive`, `GET /v1/files/{id}` and the chat transcript still list, serve and show flagged content (the read side is planned for 0.5.243: a `moderation` object on flagged entries, the bytes or body behind a reveal). The card says it does not hide anything. `card_moderation_flag`; reached also from a chat message's or room file's menu, prefilled with the room and the author (`SafetyViewModel.prefillFromItem`) |
+| flag or clear one room item | `POST /v1/chat/{room}/items/{attestation_id}/flag {class?: reported\|infohazard}` · `POST /v1/chat/{room}/items/{item_attestation_id}/clear` | CIRISServer `src/contacts_chat.rs` (`adopt/edge-v45` `05cbe665`, for 0.5.246) | **live on that commit, not yet on a tag**. Signed by the person's own key after `is_named_moderator(room, moderate)`; a non-holder is 403 `moderation.not_a_moderator`. Answers `{attestation_id, decision_attestation_id?, moderation}`. The read side withholds the item from every reader until each reveals it |
 | moderate another member's room file (withdraw / hide) | the moderation event above, on the file's author | CIRISServer | **does not work yet**: no route lets a moderator withdraw or hide a file they did not author (withdraw is author-only), and moderation events are not consulted by any read. Planned for 0.5.243 with the flag read side |
 | take down a file by legal basis (withheld or destroyed on every node, counter-notice, then delete) | none yet | CIRISPersist · CIRISServer | **blocked_by CIRISPersist#1160**; `txt_file_takedown_unavailable` says so on the card |
 

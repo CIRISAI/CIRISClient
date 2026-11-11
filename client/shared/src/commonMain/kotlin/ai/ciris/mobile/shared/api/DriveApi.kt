@@ -64,6 +64,10 @@ interface DriveApi {
     suspend fun revealItem(roomId: String, itemId: String): Unit =
         throw UnsupportedOperationException("revealItem")
 
+    /** `POST /v1/chat/{room}/items/{id}/flag` with the class, or `…/clear` when [contentClass] is null (0.5.246). */
+    suspend fun moderateItem(roomId: String, itemId: String, contentClass: String?): Unit =
+        throw UnsupportedOperationException("moderateItem")
+
     suspend fun withdrawFile(attestationId: String, cohort: String, roomId: String?): Unit =
         throw UnsupportedOperationException("withdrawFile")
 }
@@ -109,4 +113,7 @@ class ClientDrive(
         client.fileAct(attestationId, "withdraw", cohort, roomId, null, nodeUrl())
     override suspend fun revealItem(roomId: String, itemId: String) =
         client.revealRoomItem(roomId, itemId, nodeUrl = nodeUrl())
+
+    override suspend fun moderateItem(roomId: String, itemId: String, contentClass: String?) =
+        client.moderateRoomItem(roomId, itemId, contentClass, nodeUrl = nodeUrl())
 }

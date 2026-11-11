@@ -105,24 +105,60 @@ class RoomFilesAndModerationTest {
         assertEquals("drive.not_author", s.refusal.reasonId)
     }
 
-    private val labels = ModerationLabels("Moderate", "Flag", "Report", "Only a moderator", "No route yet")
-    private fun msg(mine: Boolean, author: String = "bob-key", duties: List<String> = emptyList()) =
-        CegChatMessage(attestationId = "m1", communityId = "room-7", author = author, mine = mine, authorDuties = duties)
+    private val labels = ModerationLabels("Moderate", "Flag reported", "Flag harmful", "Clear", "Report", "Only a moderator", "No route yet")
+    private fun msg(mine: Boolean, author: String = "bob-key", duties: List<String> = emptyList(), flag: String? = null, flagged: Boolean = false) =
+        CegChatMessage(
+            attestationId = "m1", communityId = "room-7", author = author, mine = mine, authorDuties = duties,
+            moderation = if (!flagged) null else ai.ciris.mobile.shared.models.chat.RoomModeration(flag = flag, itemAttestationId = "m1"),
+        )
 
     @Test
-    fun moderationActsOnTheAuthorAndOnlyForAModerator() {
+    fun aModeratorModeratesTheAuthorAndFlagsTheMessage() {
         val opened = mutableListOf<Pair<String, String>>()
-        val asModerator = chatModerationOps(msg(mine = false), isModerator = true, onModerate = { r, a -> opened += r to a }, labels = labels)
-        assertEquals(listOf("Moderate", "Flag", "Report"), asModerator.map { it.label })
-        assertNull(asModerator[0].unavailable)
+        val flagged = mutableListOf<Pair<String, String>>()
+        val asModerator = chatModerationOps(
+            msg(mine = false), isModerator = true, onModerate = { r, a -> opened += r to a }, labels = labels,
+            onFlag = { m, c -> flagged += m.attestationId to c }, onClearFlag = { error("nothing is flagged") },
+        )
+        assertEquals(listOf("Moderate", "Flag reported", "Flag harmful", "Report"), asModerator.map { it.label })
+        assertEquals(
+            listOf("mi_chat_moderate_m1", "mi_chat_flag_reported_m1", "mi_chat_flag_infohazard_m1", "mi_chat_report_m1"),
+            asModerator.map { it.tag },
+        )
         asModerator[0].onClick()
-        assertEquals(listOf("room-7" to "bob-key"), opened, "the room and the AUTHOR, never the message id")
-        assertNotNull(asModerator[2].unavailable, "reporting has no route yet (CIRISServer#665)")
-
-        val asMember = chatModerationOps(msg(mine = false), isModerator = false, onModerate = { _, _ -> }, labels = labels)
-        assertEquals("Only a moderator", asMember[0].unavailable)
-        assertTrue(chatModerationOps(msg(mine = true), isModerator = true, onModerate = { _, _ -> }, labels = labels).isEmpty(),
+        assertEquals(listOf("room-7" to "bob-key"), opened, "moderating is on the room and the AUTHOR")
+        asModerator[1].onClick()
+        asModerator[2].onClick()
+        assertEquals(listOf("m1" to "reported", "m1" to "infohazard"), flagged, "a flag is on the MESSAGE, with its class")
+        assertNotNull(asModerator[3].unavailable, "reporting has no route yet (CIRISServer#665)")
+        assertTrue(chatModerationOps(msg(mine = true), isModerator = true, onModerate = { _, _ -> }, labels = labels, onFlag = { _, _ -> }, onClearFlag = {}).isEmpty(),
             "no moderation items on your own message")
+    }
+
+    @Test
+    fun aMemberIsOfferedNoFlagAndNoClear() {
+        val asMember = chatModerationOps(
+            msg(mine = false, flag = "reported", flagged = true), isModerator = false, onModerate = { _, _ -> }, labels = labels,
+            onFlag = { _, _ -> error("not a moderator") }, onClearFlag = { error("not a moderator") },
+        )
+        assertEquals(listOf("Moderate", "Report"), asMember.map { it.label }, "flag and clear are drawn for a moderator only")
+        assertEquals("Only a moderator", asMember[0].unavailable)
+    }
+
+    @Test
+    fun aLiveFlagOffersClearAndOnlyTheOtherClass() {
+        val cleared = mutableListOf<String>()
+        fun ops(flag: String?, flagged: Boolean) = chatModerationOps(
+            msg(mine = false, flag = flag, flagged = flagged), isModerator = true, onModerate = null, labels = labels,
+            onFlag = { _, _ -> }, onClearFlag = { cleared += it.attestationId },
+        )
+        val live = ops("reported", true)
+        assertEquals(listOf("Flag harmful", "Clear", "Report"), live.map { it.label }, "flagging the same class again signs nothing, so it is not offered")
+        live[1].onClick()
+        assertEquals(listOf("m1"), cleared)
+        assertEquals(listOf("Flag reported", "Flag harmful", "Report"), ops(null, true).map { it.label }, "a cleared flag has nothing left to clear")
+        assertEquals(listOf("Clear", "Report"), ops("infohazard", true).map { it.label },
+            "under a live infohazard a reported flag changes nothing anyone sees: clear first, then flag")
     }
 
     @Test

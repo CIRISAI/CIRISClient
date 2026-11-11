@@ -59,6 +59,11 @@ private class AttachChat(private val accepts: Boolean, private val refuse: NodeR
         refuse?.let { throw it }
         reveals += itemId
     }
+    val decisions = mutableListOf<String>()
+    override suspend fun moderateItem(nodeUrl: String, communityId: String, itemId: String, contentClass: String?) {
+        refuse?.let { throw it }
+        decisions += "$communityId $itemId ${contentClass ?: "clear"}"
+    }
 }
 
 private class RevealDrive : DriveApi {
@@ -72,6 +77,12 @@ private class RevealDrive : DriveApi {
     override suspend fun readMediaPolicy(): MediaPolicy = throw NodeRefusal(null, null, 404)
     override suspend fun readCustody(attestationId: String, cohort: String, roomId: String?) = error("unused")
     override suspend fun revealItem(roomId: String, itemId: String) { reveals += "$roomId $itemId" }
+    val decisions = mutableListOf<String>()
+    var refuse: NodeRefusal? = null
+    override suspend fun moderateItem(roomId: String, itemId: String, contentClass: String?) {
+        refuse?.let { throw it }
+        decisions += "$roomId $itemId ${contentClass ?: "clear"}"
+    }
 }
 
 class ChatAttachmentsAndRevealTest {
@@ -129,6 +140,27 @@ class ChatAttachmentsAndRevealTest {
     }
 
     @Test
+    fun aModeratorFlagsAndClearsARoomFileByItsOwnId() {
+        val drive = RevealDrive()
+        val vm = FilesViewModel(drive, FilesCohort.COMMUNITY, room = "room-7").also { made += it }
+        val file = DriveEntry("community", "room-7", "row-2", "a", "2026-11-01T00:00:00Z", bytes = "here")
+        vm.flagFile(file, "reported")
+        assertEquals(FileActState.Kind.FLAG, assertIs<FileActState.Done>(vm.act.value).kind)
+        vm.dismissAct()
+        vm.clearFileFlag(file)
+        assertIs<FileActState.Idle>(vm.act.value, "a file the node shows no flag on has nothing to clear, so nothing is sent")
+        // The flag sits on an earlier version: clear names THAT version, or the node answers nothing_to_clear.
+        val flagged = file.copy(moderation = RoomModeration(flag = "reported", itemAttestationId = "row-1", withheld = true))
+        vm.clearFileFlag(flagged)
+        assertEquals(FileActState.Kind.CLEAR_FLAG, assertIs<FileActState.Done>(vm.act.value).kind)
+        assertEquals(listOf("room-7 row-2 reported", "room-7 row-1 clear"), drive.decisions)
+        vm.dismissAct()
+        drive.refuse = NodeRefusal("moderation.nothing_to_clear", "nothing to clear", 409)
+        vm.clearFileFlag(flagged)
+        assertEquals("moderation.nothing_to_clear", assertIs<FileActState.Refused>(vm.act.value).refusal.reasonId)
+    }
+
+    @Test
     fun aRoomFileRevealGoesToTheRoomByItsFlaggedItem() {
         val drive = RevealDrive()
         val vm = FilesViewModel(drive, FilesCohort.COMMUNITY, room = "room-7").also { made += it }
@@ -156,5 +188,31 @@ class ChatAttachmentsAndRevealTest {
         assertEquals("mobile.chat_unopened_withheld_by_moderation", unopenedText(m)?.key)
         assertEquals("filed", m.moderation?.reconsideration)
         assertTrue(m.moderation?.withheld == true)
+    }
+
+    /** 0.5.246: a moderator's flag and clear go to the item's own routes, and the transcript is read again for the node's view. */
+    @Test
+    fun aModeratorsFlagAndClearGoToTheItemAndTheTranscriptIsReadAgain() {
+        val chat = AttachChat(accepts = true)
+        val vm = room(chat)
+        val before = chat.reads
+        vm.flagItem("msg-9", "infohazard")
+        assertEquals(listOf("room-1 msg-9 infohazard"), chat.decisions)
+        assertEquals(before + 1, chat.reads, "the note under the message is the node's, so it is read again")
+        vm.clearFlag("msg-9")
+        assertEquals(listOf("room-1 msg-9 infohazard", "room-1 msg-9 clear"), chat.decisions)
+        assertEquals(before + 2, chat.reads)
+        assertNull(vm.refusalReasonId.value)
+    }
+
+    @Test
+    fun aRefusedFlagIsNamedAndNothingIsReadAgain() {
+        val chat = AttachChat(accepts = true, refuse = NodeRefusal("moderation.not_a_moderator", "only a moderator", 403))
+        val vm = room(chat)
+        val before = chat.reads
+        vm.flagItem("msg-9", "reported")
+        assertEquals("moderation.not_a_moderator", vm.refusalReasonId.value)
+        assertTrue(chat.decisions.isEmpty())
+        assertEquals(before, chat.reads, "a refusal changed nothing, so there is nothing new to read")
     }
 }
