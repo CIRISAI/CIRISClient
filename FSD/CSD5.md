@@ -6,6 +6,7 @@ registry is CIRISConstitution (`manifests/ui_primitives.json`, beside
 `packaging/csd5/ui_primitives.json` is the only copy and that is a row in
 `evidence/blocked_upstream.tsv`. Draft 1 keys L6 on the `confirm` cell of CC's
 `manifests/transitions.json` (rc19 `63b2f06`) and adds L12.
+**To write, update or review a card**: [`CSD5_GUIDE.md`](CSD5_GUIDE.md).
 **Builds on**: CSD/3 (`CSD.md`: stage, surface, shows, states) and CSD/4
 (`FSD/CSD4_EVALUATION.md`, `packaging/csd4/`: what the node holds at one instant).
 **Adopted by**: one card, CSD-070 Commons (`FSD/CSD/CSD-070-commons.md` §2.3).
@@ -131,20 +132,60 @@ those tags; a card's `was:` entries are the list of what that rename touches.
 | L11 | **An answer is about its question.** A read's answer, and a preview, are held only while every input they were taken over still has the value it had when asked | a standing drawn beside a cohort key it was not read for |
 | L12 | **Shown is sent.** A write is sent only from something the person answered, a ConfirmSheet's confirm or an Action, and at that moment every value it sends is drawn: by a present Field or Choice bound to it, or by the sheet or Action, which lists it under `shows:` | a write that carries a value the person could not see when they pressed |
 
-L6, L7 and L12 are not new. CIRISConstitution `formal/event_lifecycle` proves
-them over the view and the queue of CC 4.5.13 (`manifests/view.cddl`,
-`manifests/choice_item.cddl`), and CSD/5 carries them from the row to the pixels:
+Where the laws come from. CIRISConstitution `formal/event_lifecycle` proves that
+the queue, the preview and the door are one function over the rows a node holds,
+over a view whose only moving part is the object's state (CC 4.5.13,
+`manifests/view.cddl`, `manifests/choice_item.cddl`). It says nothing about
+values, about an answer going stale, or about what was drawn. The laws sort by
+how much of each that work carries. This is the CC session's reading at rc19
+`7f79649`, agreed with this repo; it is not a ruling, and no Part states the
+laws.
 
-* **L6** is `confirm_is_lookup` and `exit_is_one_step`. Which writes are
-  confirmed is not decided here. CC's `manifests/transitions.json` gives every
-  transition a `confirm` cell, true when the row widens or the table offers no
-  way back, and a card copies that cell for the row its write puts down. The law
-  runs both ways on purpose: a confirm in front of an exit is friction on the
-  way out, and the gate refuses it as it refuses a missing one.
-* **L7** is `preview_is_execution`: the kernel says the node will not execute
-  what was not previewed, and L7 says the screen will not ask it to.
-* **L12** is the screen's half of `answer.shown_digest` in `choice_item.cddl`:
-  an answer covers what was shown, so what is sent has to have been shown.
+* **L6 is carried and proved.** It is `confirm_is_lookup`, with its halves
+  `widening_is_confirmed` and `no_way_back_is_confirmed`, and `exit_is_one_step`.
+  Which writes are confirmed is not decided here. CC's
+  `manifests/transitions.json` gives every transition a `confirm` cell, true
+  when the row widens or the table offers no way back, and a card copies that
+  cell for the row its write puts down. The law runs both ways on purpose: a
+  confirm in front of an exit is friction on the way out, and the gate refuses
+  it as it refuses a missing one. Where a transition's `undo` cell is `gap`, the
+  `confirm` value is provisional.
+* **L7 is half carried.** `preview_is_execution` proves that the view an item
+  previews is the view the door produces when the row arrives. It does not prove
+  that a write is sent only while its preview is held, or that it sends only
+  what the preview covered: the kernel has no held preview and no values. That
+  half is this standard's own, and it is the half CSD-070 broke (§8).
+* **L5 is carried, in part proved.** `queue_sound`, `queue_complete` and
+  `door_is_queue` give "offered if and only if admitted";
+  `stranger_sees_nothing` gives absence for a reader with no standing;
+  `refused_previews_nothing` says a transition not offered produces nothing at
+  the door. That an Action is disabled with a reason and not absent is data,
+  `option.available` and `option.unavailable` in `choice_item.cddl`, and no
+  theorem.
+* **L3 and L4 are carried from data, in part.** `fact.provenance` in
+  `choice_item.cddl` and `kind` in `view.cddl` say a fact is `wire`, `by_rule`
+  or `not_sent`, and a `not_sent` fact is not a value. The read-outcome half of
+  L3 (`error`, `loading`, `empty` only when the node answered) has no CC source:
+  a read's transport outcome is the client's.
+* **L10 is carried from text**: CC 3.4.14, the AI-generation disclosure, which
+  is mandatory and has its own fail rule, and CC 3.3.13, the Source struct. The
+  alt text has no CC source found.
+* **L12 is carried from data and no theorem.** `answer.shown_digest` in
+  `choice_item.cddl` is the hash of the item as the node served it: it binds an
+  answer to that item, not to what was drawn. "Every value it sends is drawn" is
+  this standard's claim on top of the digest, and no CC text says who checks
+  the digest.
+* **L1, L2, L8, L9 and L11 are method.** No promise requires them. They are
+  what lets a screen be checked at all, as "state is a fold over the held rows
+  and nothing else" lets a node be. L11 is what makes L7 and L12 mean anything
+  on a screen, and `shown_digest` is its natural anchor, since an answer to a
+  stale item carries another digest.
+
+The two models are **not composed**. CC plans a refinement from a card to its
+kernel (an Action that is present and enabled is a transition in the queue; a
+card's `issue` is the door's step; a ConfirmSheet is the item's confirm) and
+has not started it. Until it exists nothing checks one model against the other.
+[`CSD5_GUIDE.md`](CSD5_GUIDE.md) has the same table for a card's author.
 
 The gate checks that a write's `row:` names a family in the namespace registry
 pinned at `client/ceg/namespace_registry.json` and one of the five verbs. It
