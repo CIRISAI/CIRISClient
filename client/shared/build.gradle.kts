@@ -112,6 +112,26 @@ val generateBuildFlavor by tasks.registering {
     }
 }
 
+// The JavaCPP classifier of the machine running this build: the desktop uber-jar
+// carries only this OS's FFmpeg natives (call video, CSD-134), so Linux, Windows
+// and macOS CI each package their own. Fails loudly on a host with no FFmpeg build
+// rather than producing a jar that has no video.
+val bytedecoHostClassifier: String = run {
+    val os = System.getProperty("os.name").lowercase()
+    val arch = System.getProperty("os.arch").lowercase()
+    val a = when (arch) {
+        "amd64", "x86_64" -> "x86_64"
+        "aarch64", "arm64" -> "arm64"
+        else -> throw GradleException("no bytedeco FFmpeg build for arch $arch")
+    }
+    when {
+        os.startsWith("linux") -> "linux-$a"
+        os.startsWith("windows") -> "windows-$a"
+        os.startsWith("mac") -> "macosx-$a"
+        else -> throw GradleException("no bytedeco FFmpeg build for OS $os")
+    }
+}
+
 kotlin {
     // Suppress expect/actual beta warnings - feature is stable enough for production use
     targets.all {
@@ -257,6 +277,9 @@ kotlin {
 
         val androidMain by getting {
             dependencies {
+                // Call audio's Opus (CSD-134): Concentus, a pure-Java libopus port
+                // (BSD-3-Clause, as libopus), ~0.4 MB, no native library.
+                implementation("io.github.jaredmdobson:concentus:1.0.2")
                 // Ktor Android engine
                 implementation("io.ktor:ktor-client-okhttp:3.0.3")
 
@@ -330,6 +353,23 @@ kotlin {
 
         val desktopMain by getting {
             dependencies {
+                // Call audio's Opus (CSD-134): Concentus, a pure-Java libopus port
+                // (BSD-3-Clause, as libopus), ~0.4 MB, no native library.
+                implementation("io.github.jaredmdobson:concentus:1.0.2")
+                // Call video, camera and screen share (CSD-134): FFmpeg via JavaCPP,
+                // the LGPL build (no -gpl classifier): openh264, libaom (AV1 decode),
+                // SVT-AV1 (AV1 encode), and avdevice for capture. Natives for the
+                // BUILD HOST's OS only, so each OS's uber-jar carries its own and no
+                // other's (~18-24 MiB each); CI builds each OS on that OS.
+                implementation("org.bytedeco:javacpp:1.5.11")
+                implementation("org.bytedeco:ffmpeg:7.1-1.5.11")
+                implementation("org.bytedeco:javacpp:1.5.11:$bytedecoHostClassifier")
+                implementation("org.bytedeco:ffmpeg:7.1-1.5.11:$bytedecoHostClassifier")
+                // Call video's H.264 (CSD-134): JNA calls Cisco's OpenH264 library, which
+                // is NOT a dependency. The person turns it on and it is downloaded from
+                // Cisco onto their machine (calls/media/OpenH264.desktop.kt). JNA is
+                // Apache-2.0 or LGPL-2.1+, ~1.9 MB with its natives for every desktop OS.
+                implementation("net.java.dev.jna:jna:5.15.0")
                 implementation(compose.desktop.currentOs)
                 implementation("io.ktor:ktor-client-cio:3.0.3")
                 // NOTE: federation crypto (JCS canonicalization + hybrid signing)
@@ -353,6 +393,16 @@ kotlin {
             }
         }
 
+        // On-device tests (connectedDebugAndroidTest): MediaCodec exists only on a
+        // device or emulator, so call video's encode/decode round trip runs here.
+        val androidInstrumentedTest by getting {
+            dependencies {
+                implementation(kotlin("test"))
+                implementation("androidx.test:runner:1.6.2")
+                implementation("androidx.test.ext:junit:1.2.1")
+            }
+        }
+
         val desktopTest by getting {
             dependencies {
                 implementation(kotlin("test"))
@@ -360,6 +410,10 @@ kotlin {
                 // An INDEPENDENT QR decoder, test-only: QrEncoderTest decodes
                 // what platform/util/QrEncoder draws. Apache-2.0, pure Java.
                 implementation("com.google.zxing:core:3.5.4")
+                // A real WebSocket server for CallRoutesWireTest, test-only: the
+                // call frames socket is checked over a socket, not a mock.
+                implementation("io.ktor:ktor-server-cio:3.0.3")
+                implementation("io.ktor:ktor-server-websockets:3.0.3")
             }
         }
     }
@@ -371,6 +425,7 @@ android {
 
     defaultConfig {
         minSdk = 24
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     compileOptions {
@@ -409,8 +464,22 @@ android {
  * lazy `from {}` forms resolve at configuration time and cannot see an AAR that
  * does not exist yet. This is longer and it is deterministic.
  */
+/**
+ * Third-party jars the AAR must CARRY, for the same reason as :generated-api: it
+ * is consumed as a bare file through flatDir, so a dependency it does not carry
+ * is a NoClassDefFoundError on the device. Concentus is call audio's Opus
+ * (CSD-134); without it the first call crashes. Its BSD notice ships in the
+ * wheel's THIRD_PARTY_NOTICES.txt and the AAR's META-INF.
+ */
+val aarEmbedded by configurations.creating {
+    isTransitive = false
+}
+dependencies { add("aarEmbedded", "io.github.jaredmdobson:concentus:1.0.2") }
+
 val fatReleaseAar by tasks.registering {
     dependsOn("bundleReleaseAar", ":generated-api:bundleReleaseAar")
+    val embeddedJars = aarEmbedded
+    inputs.files(embeddedJars)
 
     val sharedAar = layout.buildDirectory.file("outputs/aar/shared-release.aar")
     val genAar = project(":generated-api").layout.buildDirectory
@@ -458,9 +527,21 @@ val fatReleaseAar by tasks.registering {
         for ((name, bytes) in classesOf(gen)) {
             if (merged.putIfAbsent(name, bytes) != null) collisions++
         }
+        for (jar in embeddedJars.files) {
+            ZipFile(jar).use { j ->
+                for (e in j.entries()) {
+                    if (e.isDirectory || e.name.startsWith("META-INF/")) continue
+                    if (merged.putIfAbsent(e.name, j.getInputStream(e).readBytes()) != null) collisions++
+                }
+            }
+        }
         if (collisions > 0) {
             logger.lifecycle("[fat-aar] $collisions duplicate entry(ies); :shared kept")
         }
+        if (!merged.containsKey("io/github/jaredmdobson/concentus/OpusDecoder.class")) error(
+            "fat AAR carries no Concentus — the first call on Android would die with NoClassDefFoundError"
+        )
+        merged["META-INF/THIRD_PARTY_NOTICES.txt"] = rootProject.file("../THIRD_PARTY_NOTICES.txt").readBytes()
 
         val mobile = merged.keys.count { it.startsWith("ai/ciris/mobile/") && it.endsWith(".class") }
         val api = merged.keys.count { it.startsWith("ai/ciris/api/") && it.endsWith(".class") }

@@ -22,4 +22,20 @@
     <uses-feature
         android:name="android.hardware.camera.any"
         android:required="false" />
+
+    <!--
+      Screen sharing in a call (calls/media/AndroidScreenShare.kt). Android 14
+      requires a running foreground service of type mediaProjection before the
+      projection is taken; the person still consents through the system prompt
+      every time. Video only: no system audio is captured.
+    -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
+
+    <application>
+        <service
+            android:name="ai.ciris.mobile.shared.calls.media.CallScreenShareService"
+            android:exported="false"
+            android:foregroundServiceType="mediaProjection" />
+    </application>
 </manifest>

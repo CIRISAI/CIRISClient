@@ -10,8 +10,9 @@ import androidx.compose.runtime.Composable
  *  - Android: RECORD_AUDIO and CAMERA, asked at the moment of the call.
  *  - iOS: AVCaptureDevice authorisation for audio and video; the Info.plist
  *    carries NSMicrophoneUsageDescription and NSCameraUsageDescription.
- *  - Desktop and web: no capture yet. [MediaAccess.Unavailable] says so as data,
- *    and the screen renders it as a sentence.
+ *  - Desktop and web: there is no permission to ask for apart from opening the
+ *    device, so the microphone is opened once before the call
+ *    ([OpenToAskMediaPlatform]).
  *
  * Asked only when the person starts a call, never at launch: a permission asked
  * with no reason on screen is one people refuse.
@@ -22,7 +23,7 @@ enum class MediaSource { MICROPHONE, CAMERA }
 
 /** Why a source cannot be used at all. Each has its own sentence. */
 enum class MediaUnavailable {
-    /** Desktop and web: this platform has no capture yet. */
+    /** A build with no capture at all. No platform is one today. */
     PLATFORM,
 
     /** This device has no such hardware. */
@@ -54,11 +55,45 @@ interface CallMediaPlatform {
 @Composable
 expect fun rememberCallMediaPlatform(): CallMediaPlatform
 
-/** Desktop and web, and any build without capture. */
-internal object NoCallMediaPlatform : CallMediaPlatform {
-    override fun access(source: MediaSource): MediaAccess = MediaAccess.Unavailable(MediaUnavailable.PLATFORM)
+/** How opening a device to ask for it went. */
+enum class MediaOpened { OPENED, REFUSED, NO_DEVICE }
 
-    override fun requestAccess(source: MediaSource, onResult: (granted: Boolean) -> Unit) = onResult(false)
+/**
+ * Desktop and the browser: there is no permission to ask for apart from opening
+ * the device. The JVM has no permission API (macOS asks when the device is first
+ * opened), and in the browser opening the device is the prompt.
+ *
+ * The microphone is opened once before the call and let go, because a call
+ * cannot happen without it and the person should learn that before they join.
+ * The camera is not opened here: it is opened only while its picture is sent,
+ * and a refusal then is said on the call.
+ *
+ * [openMicrophone] opens the microphone, lets it go, and answers how it went.
+ * A refusal is not remembered, so trying again asks again. In [testMode] the
+ * call captures a tone and a test pattern, and nothing is opened.
+ */
+class OpenToAskMediaPlatform(
+    private val testMode: () -> Boolean,
+    private val openMicrophone: (onResult: (MediaOpened) -> Unit) -> Unit,
+) : CallMediaPlatform {
+    private var microphone: MediaAccess = MediaAccess.Askable
+
+    override fun access(source: MediaSource): MediaAccess = when {
+        testMode() || source == MediaSource.CAMERA -> MediaAccess.Granted
+        else -> microphone
+    }
+
+    override fun requestAccess(source: MediaSource, onResult: (granted: Boolean) -> Unit) {
+        if (testMode() || source == MediaSource.CAMERA) return onResult(true)
+        openMicrophone { opened ->
+            microphone = when (opened) {
+                MediaOpened.OPENED -> MediaAccess.Granted
+                MediaOpened.REFUSED -> MediaAccess.Askable
+                MediaOpened.NO_DEVICE -> MediaAccess.Unavailable(MediaUnavailable.NO_DEVICE)
+            }
+            onResult(opened == MediaOpened.OPENED)
+        }
+    }
 }
 
 /** Where getting ready for a call stands. */

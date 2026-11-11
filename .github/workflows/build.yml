@@ -335,7 +335,9 @@ jobs:
         with:
           # The Compose desktop distribution tasks shell out to these; installing
           # them through the hardened path is the point, not the package list.
-          packages: zip unzip
+          # pulseaudio + pulseaudio-utils + alsa plugins: the call tests' virtual
+          # microphone (packaging/virtual_audio.sh). The runner has no sound hardware.
+          packages: zip unzip pulseaudio pulseaudio-utils libasound2-plugins
 
       - uses: actions/setup-java@v4
         with:
@@ -394,6 +396,69 @@ jobs:
       - name: Test :shared (desktop target)
         working-directory: client
         run: ./gradlew --no-daemon :shared:desktopTest
+
+      - name: Call audio through a virtual microphone
+        # CSD-134: a 440 Hz tone through Opus, out the speaker, back in through a
+        # PulseAudio null sink's monitor, at the right pitch. The test skips without
+        # CIRIS_AUDIO_LOOPBACK=1, so this step is where it actually runs.
+        working-directory: client
+        run: |
+          # The runner has plain PulseAudio and no ALSA config, so ALSA's default is
+          # not Pulse and Java Sound opens nothing useful. Point it at the pulse
+          # plugin here, on the runner only (never on a desktop, where PipeWire owns it).
+          printf 'pcm.!default { type pulse }\nctl.!default { type pulse }\n' > ~/.asoundrc
+          eval "$(bash ../packaging/virtual_audio.sh up)"
+          pactl info | grep -E "Default (Sink|Source)"
+          CIRIS_AUDIO_LOOPBACK=1 ./gradlew --no-daemon :shared:desktopTest --tests '*DesktopAudioLoopbackTest*'
+          python3 - <<'PY'
+          import glob, re, sys
+          s = open(glob.glob('shared/build/test-results/desktopTest/TEST-*DesktopAudioLoopbackTest.xml')[0]).read()
+          m = re.search(r'tests="(\d+)" skipped="(\d+)" failures="(\d+)"', s)
+          print(m.group(0))
+          sys.exit(0 if m and m.group(3) == '0' and 'aToneGoesOutTheSpeakerAndBackInTheMicrophone' in s else 1)
+          PY
+
+      - name: Cisco's OpenH264 library, for the call video tests
+        # Desktop H.264 is Cisco's binary, downloaded by the person who turns it
+        # on and never bundled (client/shared/.../calls/media/OpenH264.desktop.kt).
+        # The tests that encode and decode with it skip without the file, so this
+        # is where they get it. Cached by file name: Cisco's server is asked once
+        # per version, not once per run. The file is not trusted because it came:
+        # the tests install it through the same SHA-256 check a person's download gets.
+        id: openh264
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/openh264
+          key: openh264-libopenh264-2.7.0-linux64.8.so.bz2
+
+      - name: Call video through Cisco's OpenH264
+        working-directory: client
+        env:
+          OPENH264_DIR: ${{ runner.temp }}/openh264
+          OPENH264_FILE: libopenh264-2.7.0-linux64.8.so.bz2
+        run: |
+          mkdir -p "$OPENH264_DIR"
+          if [ ! -s "$OPENH264_DIR/$OPENH264_FILE" ]; then
+            curl --fail --silent --show-error --location --retry 5 --retry-all-errors \
+              --connect-timeout 15 --max-time 120 --user-agent ciris-client-ci \
+              -o "$OPENH264_DIR/$OPENH264_FILE" "https://ciscobinary.openh264.org/$OPENH264_FILE"
+          fi
+          # The file name is pinned in OpenH264Builds; a new version there without
+          # this step following is a file the tests cannot install, which is red.
+          grep -q "\"${OPENH264_FILE%.bz2}\"" shared/src/desktopMain/kotlin/ai/ciris/mobile/shared/calls/media/OpenH264.desktop.kt
+          CIRIS_OPENH264_BZ2="$OPENH264_DIR/$OPENH264_FILE" ./gradlew --no-daemon :shared:desktopTest --rerun --tests '*DesktopCallVideoTest*'
+          python3 - <<'PY'
+          import glob, re, sys
+          s = open(glob.glob('shared/build/test-results/desktopTest/TEST-*DesktopCallVideoTest.xml')[0]).read()
+          m = re.search(r'tests="(\d+)" skipped="(\d+)" failures="(\d+)" errors="(\d+)"', s)
+          print(m.group(0))
+          # A skip here is a println, not a JUnit skip, so green alone says nothing.
+          missed = re.findall(r'\[call video\] (.+?) skipped: set CIRIS_OPENH264_BZ2', s)
+          ran = [t for t in ('h264EncodesTheAgreedFormatAndRoundTrips', 'theServersH264VectorDecodes',
+                             'turningH264OnDownloadsItAndTurningItOffStopsItAndDeletesIt') if t in s]
+          print('ran:', ran, 'skipped for want of the file:', missed)
+          sys.exit(0 if m and m.group(3) == '0' and m.group(4) == '0' and len(ran) == 3 and not missed else 1)
+          PY
 
       - name: Keep the desktop test results when a test fails
         # UncaughtExceptionsBeforeTest names only the test that RECEIVED a stray
