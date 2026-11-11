@@ -1,6 +1,6 @@
 # CSD-070 — Commons (1-of-N to protect, m-of-n to undo — and eight distinct zeroes)
 
-**CSD**: CSD-070 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the Locked Spec, wave 1
+**CSD**: CSD-070 · **Standard**: CSD/3 (`CSD.md`), CSD/5 (`CSD5.md`, §2.3) · **Origin**: the Locked Spec, wave 1
 **Flow**: unwritten
 
 ```yaml csd:stage
@@ -152,7 +152,7 @@ most carefully built zero-discipline in the client.
 button's automation handler runs the same act as a tap.
 
 **One tag says which state the block is in.** `state_commons_standing` wraps
-whatever the standing draws and its value is the state token: `idle`,
+whatever the standing draws and its value is the state token of §2.3: `idle`,
 `loading`, `error`, `refused`, `unknown`, `not_on_this_node`, `empty` or
 `populated` (`standingState()`, pure, `CommonsStandingStateTest`). A write or a
 dry run that did not arrive is `txt_commons_write_error`, apart from
@@ -242,6 +242,182 @@ What ends a held dry run, and only this:
 | a re-read that is in flight, fails or is refused | **kept**: none of those says the objection is gone |
 | a re-read that answers and no longer names the objection | let go |
 
+### 2.3 The screen as a function of its inputs (CSD/5)
+
+The three blocks below are the whole screen: what it holds, what it draws from
+that, and what the person can do. `packaging/check_csd5.py` derives every tag
+from them, walks every state they allow, and checks the twelve laws of
+`packaging/csd5/ui_primitives.json` in each one (`FSD/CSD5.md`). The same model
+is `formal/csd5/CSD070.tla`, and TLC reaches the same 134,928 states on it and
+finds no invariant violated. Each write says the row it puts on the node and
+whether that row is confirmed; all three here attest an `objection:{state}` row,
+which widens, so all three are behind a sheet (L6). `shows:` on a sheet is what
+the sheet itself draws of what it sends (L12); the grounds are not on any sheet
+and are drawn by the field under it. Where a tag is derived and the Kotlin still carries
+an older one, `was:` records the old tag; the Kotlin is renamed card by card,
+with the flows and the other repos that drive those tags.
+
+```yaml csd:inputs
+context: [window]
+local:
+  cohort:             {type: enum, values: [family, community, affiliations]}
+  cohort_key:         {type: text}
+  action:             {type: text}
+  raise_grounds:      {type: text, lives_while: "standing = ok"}
+  ballot_grounds:     {type: text, lives_while: has_objections}
+  ballot:             {type: enum, values: [unset, uphold, overrule], lives_while: "sheet = ballot"}
+  lifting:            {type: bool, lives_while: "has_objections or dry_run = taken"}
+  dismiss_grounds:    {type: text, lives_while: "lifting or dry_run = taken"}
+  cosigner_key:       {type: text, lives_while: "lifting and has_objections and dry_run = taken"}
+  cosigner_classical: {type: text, lives_while: "lifting and has_objections and dry_run = taken"}
+  cosigners:          {type: enum, values: [none, some], lives_while: "dry_run = taken"}
+  result:             {type: enum, values: [none, answer, preview], lives_while: "result != preview or dry_run = taken"}
+  write_error:        {type: bool, lives_while: "standing = ok"}
+reads:
+  standing:
+    of: [cohort, cohort_key, action]
+    carries:
+      refused:    {type: bool}
+      arm:        {type: enum, values: [unreadable, action_unknown, cohort_unknown, not_governed, quiet, objected, stood, reversed]}
+      fold:       {type: bool}
+      escalation: {type: bool}
+      objections: {type: bool}
+      prices:     {type: bool}
+    where:
+      # A refusal carries its token and sentence and nothing else (`err()` in commons_surface.rs).
+      - "not standing.refused or (standing.arm = unreadable and not standing.fold and not standing.escalation and not standing.objections and not standing.prices)"
+      # The four absences send `fold: null` and `escalation: null`.
+      - "standing.arm in [quiet, objected, stood, reversed] or (not standing.fold and not standing.escalation)"
+      # An objection is named by the fold or by an escalation record.
+      - "not standing.objections or standing.fold or standing.escalation"
+previews:
+  dry_run:
+    covers: [cohort, cohort_key, action, dismiss_grounds]
+    # A re-read in flight, failed or refused says nothing about the objection; only an answer that no longer names it ends the draft.
+    lives_while: "standing != ok or standing.refused or has_objections"
+writes:
+  # Each lands one new signed row (`objection:raised:v1`, `objection:upheld:v1` or
+  # `objection:overruled:v1`, `objection:dismissed:v1`): an attest, which widens, so it is confirmed.
+  raise:   {sends: [cohort, cohort_key, action, raise_grounds], row: {family: "objection:{state}", verb: attest}, confirm: true}
+  ballot:  {sends: [cohort, cohort_key, action, ballot_grounds, ballot], row: {family: "objection:{state}", verb: attest}, confirm: true}
+  dismiss: {sends: [cohort, cohort_key, action, dismiss_grounds], adds: [cosigners], previewed_by: dry_run, row: {family: "objection:{state}", verb: attest}, confirm: true}
+defs:
+  answered:        "standing = ok and not standing.refused"
+  has_objections:  "standing = ok and not standing.refused and standing.objections"
+  counted:         "standing = ok and not standing.refused and standing.fold and standing.arm in [quiet, objected, stood, reversed]"
+  question_filled: "cohort_key != blank and action != blank"
+```
+
+`standing.arm` under a refusal is pinned to one value only so the model does not
+count eight copies of one screen; a refusal sends no arm. `standing.prices` is
+whether `objection_threshold` and `escalation_respondent_floor` arrived: the node
+names them on every answer that is not a refusal, and the model lets them be
+absent anyway, because the client must not print a `0` for a number it was not
+sent. `quiet` without a fold is allowed for the same reason.
+
+```yaml csd:view
+kotlin:
+  - client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/commons/CommonsScreen.kt
+instances:
+  - id: standing
+    primitive: StateBlock
+    of: standing
+    states:
+      idle:             "standing = idle"
+      loading:          "standing = pending"
+      error:            "standing = failed"
+      refused:          "standing = ok and standing.refused"
+      unknown:          "answered and (standing.arm = unreadable or (standing.arm in [quiet, objected, stood, reversed] and not standing.fold))"
+      not_on_this_node: "answered and standing.arm in [action_unknown, cohort_unknown]"
+      empty:            "answered and standing.arm = quiet and standing.fold"
+      populated:        "answered and (standing.arm = not_governed or (standing.arm in [objected, stood, reversed] and standing.fold))"
+    was: {loading: spinner_commons_read, error: txt_commons_error, refused: txt_commons_refusal, empty: txt_commons_quiet}
+  - {id: arm, primitive: Chip, of: standing, present: answered, was: txt_commons_standing}
+  - {id: no_counts, primitive: FieldRow, of: standing, present: "answered and not counted"}
+  - {id: objectors, primitive: FieldRow, of: standing, present: counted}
+  - {id: escalation, primitive: FieldRow, of: standing, present: "answered and standing.escalation"}
+  - {id: ballot_tally, primitive: FieldRow, of: standing, per: objection, present: "has_objections and standing.escalation", was: txt_commons_ballot_tally}
+  - {id: dry_run_hash, primitive: FieldRow, of: dry_run, per: objection, present: "lifting and has_objections and dry_run = taken", was: txt_commons_dry_run_hash}
+  - {id: write_error, primitive: FieldRow, present: write_error}
+  - {id: result, primitive: CardShell, present: "result != none"}
+
+  - {id: raise_price, primitive: Metric, of: standing, shown: "standing = ok and standing.prices", sent: standing.prices, was: txt_commons_raise_price}
+  - {id: lift_price, primitive: Metric, of: standing, shown: "answered and standing.fold", sent: standing.fold, was: txt_commons_lift_price}
+  - {id: floor, primitive: Metric, of: standing, present: "standing = ok and standing.prices", shown: "standing = ok and standing.prices", sent: standing.prices, was: txt_commons_floor}
+
+  - id: cohort
+    primitive: Choice
+    var: cohort
+    on_change: [{drop: [standing, dry_run]}]
+    was: "chip_commons_cohort_$c"
+  - {id: cohort_key, primitive: Field, var: cohort_key, on_change: [{drop: [standing, dry_run]}]}
+  - {id: action, primitive: Field, var: action, on_change: [{drop: [standing, dry_run]}]}
+  - {id: objection_grounds, primitive: Field, var: raise_grounds, present: "standing = ok"}
+  - {id: ballot_grounds, primitive: Field, var: ballot_grounds, per: objection, present: has_objections, was: input_commons_ballot_grounds}
+  - {id: dismiss_grounds, primitive: Field, var: dismiss_grounds, per: objection, present: "lifting and has_objections", on_change: [{drop: [dry_run]}], was: input_commons_dismiss_grounds}
+  - {id: cosigner_key, primitive: Field, var: cosigner_key, per: objection, present: "lifting and has_objections", enabled: "dry_run = taken", was: input_commons_cosigner_key}
+  - {id: cosigner_classical, primitive: Field, var: cosigner_classical, per: objection, present: "lifting and has_objections", enabled: "dry_run = taken", was: input_commons_cosigner_classical}
+  - {id: cosigner_pqc, primitive: Field, untracked: true, per: objection, present: "lifting and has_objections", enabled: "dry_run = taken", was: input_commons_cosigner_pqc}
+
+  - id: raise
+    primitive: ConfirmSheet
+    while: "standing = ok and raise_grounds != blank"
+    shows: [action, cohort_key]
+    confirm:
+      - issue: raise
+        on_ok: [{set: {raise_grounds: blank, result: answer}}, {ask: standing}]
+        on_refused: [{set: {result: answer, write_error: false}}]
+        on_fail: [{set: {write_error: true}}]
+    was: {fact_1: commons_raise_fact_1, fact_2: commons_raise_fact_2, fact_3: commons_raise_fact_3, note: commons_raise_note, confirm: btn_commons_raise_confirm, cancel: btn_commons_raise_cancel}
+  - id: ballot
+    primitive: ConfirmSheet
+    while: "has_objections and ballot_grounds != blank"
+    shows: [action, cohort_key, ballot]
+    confirm:
+      - issue: ballot
+        on_ok: [{set: {result: answer}}, {ask: standing}]
+        on_refused: [{set: {result: answer, write_error: false}}]
+        on_fail: [{set: {write_error: true}}]
+    was: {fact_1: commons_ballot_fact_1, fact_2: commons_ballot_fact_2, fact_3: commons_ballot_fact_3, note: commons_ballot_note, confirm: btn_commons_ballot_confirm, cancel: btn_commons_ballot_cancel}
+  - id: dismiss
+    primitive: ConfirmSheet
+    while: has_objections
+    shows: [action, cohort_key, cosigners]
+    confirm:
+      - issue: dismiss
+        on_ok: [{drop: [dry_run]}, {set: {result: answer}}, {ask: standing}]
+        on_refused: [{set: {result: answer, write_error: false}}]
+        on_fail: [{set: {write_error: true}}]
+    was: {fact_1: commons_dismiss_fact_1, fact_2: commons_dismiss_fact_2, fact_3: commons_dismiss_fact_3, note: commons_dismiss_note, confirm: btn_commons_dismiss_confirm, cancel: btn_commons_dismiss_cancel}
+```
+
+```yaml csd:acts
+acts:
+  - {id: back, present: "window = wide", effect: [{leave: true}]}
+  - {id: read, enabled: "question_filled and standing != pending", reason: null, effect: [{ask: standing}]}
+  - {id: object, present: "standing = ok", enabled: "raise_grounds != blank", reason: null, effect: [{open: raise}]}
+  - {id: uphold, per: objection, present: has_objections, enabled: "ballot_grounds != blank", reason: null, effect: [{set: {ballot: uphold}}, {open: ballot}], was: btn_commons_uphold}
+  - {id: overrule, per: objection, present: has_objections, enabled: "ballot_grounds != blank", reason: null, effect: [{set: {ballot: overrule}}, {open: ballot}], was: btn_commons_overrule}
+  - {id: lift_disclose, per: objection, present: has_objections, effect: [{toggle: lifting}], was: btn_commons_lift_disclose}
+  - id: dismiss_dry_run
+    per: objection
+    present: "lifting and has_objections"
+    enabled: "dismiss_grounds != blank"
+    reason: null
+    effect:
+      - set: {cosigners: none, cosigner_key: blank, cosigner_classical: blank}
+      - call: dry_run
+        on_ok: [{set: {result: preview, write_error: false}}]
+        on_refused: [{set: {result: answer, write_error: false}}]
+        on_fail: [{set: {write_error: true}}]
+    was: btn_commons_dismiss_dry_run
+  - {id: add_cosigner, per: objection, present: "lifting and has_objections", enabled: "dry_run = taken and cosigner_key != blank and cosigner_classical != blank", reason: null, effect: [{set: {cosigners: some, cosigner_key: blank, cosigner_classical: blank}}], was: btn_commons_add_cosigner}
+  - {id: remove_cosigner, per: objection, present: "lifting and has_objections and cosigners = some", effect: [{set: {cosigners: none}}], was: btn_commons_remove_cosigner}
+  - {id: dismiss_submit, per: objection, present: "lifting and has_objections", enabled: "dry_run = taken", reason: surfaces.commons.dismiss_gate, effect: [{open: dismiss}], was: btn_commons_dismiss_submit}
+  - {id: dismiss_abandon, per: objection, present: "lifting and has_objections", effect: [{drop: [dry_run]}], was: btn_commons_dismiss_abandon}
+  - {id: clear_result, present: "result != none", effect: [{set: {result: none}}]}
+```
+
 ## 3. Contracts (who)
 
 Verified against ciris-server 0.5.217, route constants in
@@ -330,11 +506,14 @@ submit sends.
 
 **Status.** Card, CSD and API agree: the tags and eight arms, all four routes
 live at the node URL, the non-2xx-with-body contract honoured, and
-irreversible writes behind a three-fact ConfirmSheet (§2.0.1). `CommonsViewModelTest`
-(16) and `CommonsStandingStateTest` (7) pin the rules of §2.2 and the state
-tag in the Kotlin. Open: the six
+irreversible writes behind a three-fact ConfirmSheet (§2.0.1). §2.3 is the
+screen as a model: `packaging/check_csd5.py` walks 134,928 states of it and the
+twelve laws hold in each, and TLC agrees on the generated module; `CommonsViewModelTest` (16) and
+`CommonsStandingStateTest` (7) hold the Kotlin to the same rules. Open: the six
 `x_private:` prices have no registry family (the ask in §2,
-CIRISConstitution#110); the raise/lift visual asymmetry has no test; the tags inside an objection's card are not
+CIRISConstitution#110); the raise/lift visual asymmetry has no test; six
+buttons can be disabled and draw no reason (`reason: null` in §2.3, counted in
+`packaging/csd5/baseline.json`); the tags inside an objection's card are not
 yet keyed by its id, so two objections on screen share them; a dismissal with
 no co-signer lands a different hash than its dry run showed (CIRISServer#872);
 and no co-signed dismissal has been run against a node from this client. Stage: `building` (the
