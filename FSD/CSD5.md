@@ -185,7 +185,7 @@ writes:
     sends: [cohort, cohort_key, action, dismiss_grounds]
     adds: [cosigners]
     previewed_by: dry_run
-    row: {family: "objection:{state}", verb: attest}   # the row this write puts on the node
+    row: {family: "objection:{state}", verb: attest, scope: cohort}   # the row this write puts on the node
     confirm: true                                      # CC transitions.json, that family and verb
 defs:
   has_objections: "standing = ok and not standing.refused and standing.objections"
@@ -195,7 +195,11 @@ defs:
 written down: when the guard is false the value returns to its initial value.
 `adds:` names values a write carries that the preview did not need to cover,
 because they do not change what is signed (co-signatures over the previewed
-bytes). Every write declares `confirm:` and `row:`. `row: null` is for a write
+bytes). Every write declares `confirm:` and `row:`. A row names its family, its verb
+and its `scope:`, which is one circle of the registry or the enum local the
+person picks the circle with (that local's values are all circles, and the
+write sends it). The door judges a row at one scope, and a wider scope can
+change whether it is confirmed. `row: null` is for a write
 that puts no row on the node, and says so.
 
 ### 5.2 `csd:view`
@@ -314,7 +318,8 @@ What the gate fails on:
   one word, a primitive that owns no prefix, a state tied to no read outcome,
   a missing law, no `write_verbs`);
 * a write that does not say `confirm:` and `row:`, or whose row names a family
-  the pinned namespace registry does not have or a verb outside the five;
+  the pinned namespace registry does not have, a verb outside the five, or a
+  scope that is neither a circle nor a local whose values are circles;
 * a CSD/5 card breaks any law in any reachable state. The failure prints the
   shortest sequence of edits, presses and answers that reaches it;
 * a tag literal in the card's Kotlin files that the model does not account for,
@@ -331,11 +336,11 @@ What the gate fails on:
   when one has, the gate says how many can be lowered and `--write-baseline`
   re-records them.
 
-`--self-test` plants 29 defects, one or more per law plus the Kotlin, TLA+ and
+`--self-test` plants 30 defects, one or more per law plus the Kotlin, TLA+ and
 ratchet checks, and fails unless every one goes red. It also plants one thing
 that must stay green: an exit sent in one step from an Action, with no sheet.
 The first planted defect is the one that shipped: editing the dismissal grounds
-while the dry run stays held. With `--tlc` it plants five more, 34 in all: four
+while the dry run stays held. With `--tlc` it plants five more, 35 in all: four
 modules, each generated from the card with one defect planted (L2, L7, L11,
 L12), where TLC must name an invariant of that law as violated; and the clean
 module held against a state count that is off by one.
@@ -352,7 +357,7 @@ covers it, and every sender: the ConfirmSheet or Action that issues it, the
 guards under which it can, the Actions that open the sheet, the tags a flow
 presses, and what the sender itself `shows:`. It also lists every drawn
 instance with the read, preview or local value it is bound to. Guards are the
-card's own text. `scope` is `null`: the card grammar puts no scope on a row.
+card's own text. `scope` is one circle, or the local that carries it with the circles it can hold.
 
 It is an export, not a proof. Nothing reads it yet. CC asked for this data to
 build the join, and the gate holds it to the card so that it cannot go stale

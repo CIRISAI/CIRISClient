@@ -149,7 +149,14 @@
   "raise": {
    "family": "objection:{state}",
    "verb": "attest",
-   "scope": null,
+   "scope": {
+    "local": "cohort",
+    "values": [
+     "family",
+     "community",
+     "affiliations"
+    ]
+   },
    "confirm": true,
    "sends": [
     "cohort",
@@ -196,7 +203,14 @@
   "ballot": {
    "family": "objection:{state}",
    "verb": "attest",
-   "scope": null,
+   "scope": {
+    "local": "cohort",
+    "values": [
+     "family",
+     "community",
+     "affiliations"
+    ]
+   },
    "confirm": true,
    "sends": [
     "cohort",
@@ -254,7 +268,14 @@
   "dismiss": {
    "family": "objection:{state}",
    "verb": "attest",
-   "scope": null,
+   "scope": {
+    "local": "cohort",
+    "values": [
+     "family",
+     "community",
+     "affiliations"
+    ]
+   },
    "confirm": true,
    "sends": [
     "cohort",

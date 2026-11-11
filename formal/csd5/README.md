@@ -38,7 +38,7 @@ CIRISConstitution `formal/event_lifecycle`, which CC plans and has not built.
   from them. The same number of distinct states from both is the cross-check.
   A different number means the generator and the explorer disagree about the
   card, and that is a defect in `check_csd5.py`, not in the card.
-* **`--self-test`**, which plants 29 defects and requires each to go red,
+* **`--self-test`**, which plants 30 defects and requires each to go red,
   including one that removes the L7 invariant from a generated module and
   requires the drift check to notice. It also plants one thing that must stay
   green: a one-step write sent by an Action with no sheet.

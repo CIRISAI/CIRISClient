@@ -663,8 +663,23 @@ class Model:
                                 "lands, or `null` for a write that lands none)")
             row = w["row"]
             if row is not None:
-                if not isinstance(row, dict) or set(row) != {"family", "verb"}:
-                    raise CardError(f"L6 {card}: write `{name}` `row:` must be {{family, verb}} or null")
+                if not isinstance(row, dict) or set(row) != {"family", "verb", "scope"}:
+                    raise CardError(f"L6 {card}: write `{name}` `row:` must be {{family, verb, scope}} or null")
+                # The door judges a row at one scope, and a wider scope can change whether it is
+                # confirmed. A row says its scope: one circle, or the local value the person picks it with.
+                circles = self.reg["context"]["circle"]
+                sc = row["scope"]
+                if sc in self.locals:
+                    body = self.locals[sc]
+                    vals = [str(v) for v in body.get("values") or []]
+                    if body["type"] != "enum" or not vals or any(v not in circles for v in vals):
+                        raise CardError(f"L6 {card}: write `{name}` takes its scope from `{sc}`, "
+                                        f"whose values are not all circles of the registry {circles}")
+                    if sc not in (w.get("sends") or []):
+                        raise CardError(f"L6 {card}: write `{name}` takes its scope from `{sc}` and does not send it")
+                elif sc not in circles:
+                    raise CardError(f"L6 {card}: write `{name}` has scope `{sc}`, which is neither a circle "
+                                    f"of the registry {circles} nor a local value")
                 if row["family"] not in families():
                     raise CardError(f"L6 {card}: write `{name}` lands a row in `{row['family']}`, "
                                     f"which is not a family in {NAMESPACES.name}")
@@ -1560,8 +1575,9 @@ def join_export(m: "Model", n: int) -> str:
         writes[name] = {
             "family": (row or {}).get("family"),
             "verb": (row or {}).get("verb"),
-            # The card grammar has no scope on a row. null says the card does not declare it.
-            "scope": (row or {}).get("scope"),
+            # One circle, or the local the person picks it with and the circles that local can hold.
+            "scope": (None if not row else row["scope"] if row["scope"] not in m.locals else
+                      {"local": row["scope"], "values": [str(v) for v in m.locals[row["scope"]]["values"]]}),
             "confirm": w.get("confirm"),
             "sends": list(w.get("sends") or []),
             "adds": list(w.get("adds") or []),
@@ -1871,6 +1887,9 @@ def self_test(tlc: str | None = None) -> int:
     def row_in_no_family(b):
         b["inputs"]["writes"]["raise"]["row"]["family"] = "objection:{mood}"
 
+    def scope_is_no_circle(b):
+        b["inputs"]["writes"]["raise"]["row"]["scope"] = "planet"
+
     def ballot_way_not_shown(b):
         inst(b, "ballot")["shows"].remove("ballot")
 
@@ -1890,7 +1909,7 @@ def self_test(tlc: str | None = None) -> int:
         # step (L6), and everything it sends is in a field that is on screen (L12).
         b["inputs"]["writes"]["withdraw"] = {
             "sends": ["cohort", "cohort_key", "action"],
-            "row": {"family": "objection:{state}", "verb": "withdraw"}, "confirm": False}
+            "row": {"family": "objection:{state}", "verb": "withdraw", "scope": "cohort"}, "confirm": False}
         b["acts"]["acts"].append({"id": "withdraw", "present": "has_objections", "effect": [
             {"issue": "withdraw", "on_ok": [{"ask": "standing"}]}]})
 
@@ -1918,6 +1937,7 @@ def self_test(tlc: str | None = None) -> int:
         ("L6", "an exit is put behind a confirm", exit_behind_a_confirm, None),
         ("L6", "a write that does not say whether it is confirmed", confirm_unsaid, None),
         ("L6", "a write whose row is in no family of the pinned registry", row_in_no_family, None),
+        ("L6", "a write whose row is at a scope that is no circle", scope_is_no_circle, None),
         ("L12", "the ballot confirm no longer says which way the ballot goes", ballot_way_not_shown, None),
         ("L12", "the dismissal confirm no longer says how many co-signed", cosigners_not_shown, None),
         ("L12", "the dismissal grounds are off screen when the dismissal is confirmed", grounds_hidden_at_confirm, None),
