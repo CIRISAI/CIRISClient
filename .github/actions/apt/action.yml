@@ -22,6 +22,19 @@ runs:
         #    the change under test.
         sudo sed -i 's|azure.archive.ubuntu.com|archive.ubuntu.com|g' \
           /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null || true
+        #    The noble images name their mirrors in a MIRRORLIST instead
+        #    (`Get:1 file:/etc/apt/apt-mirrors.txt`), which the line above never
+        #    touched. On 2026-11-11 the runners could reach neither Azure nor,
+        #    with Azure deleted, archive.ubuntu.com: apt retried for the whole
+        #    300 s, five jobs running (#293, #294, #295). One mirror is one point
+        #    of failure whichever it is, so the list is three, and apt's mirror
+        #    method falls through them in order. Azure is last, not gone.
+        if [ -f /etc/apt/apt-mirrors.txt ]; then
+          printf '%s\n' \
+            'https://archive.ubuntu.com/ubuntu/' \
+            'https://mirrors.edge.kernel.org/ubuntu/' \
+            'http://azure.archive.ubuntu.com/ubuntu/' | sudo tee /etc/apt/apt-mirrors.txt
+        fi
 
         # 2. BOUND IT. `timeout 300` so a hung mirror fails in five minutes
         #    instead of holding the runner to the job timeout, and Retries=3 so a
@@ -29,10 +42,12 @@ runs:
         #    retries without a timeout just makes the hang three times longer.
         sudo timeout 300 apt-get \
           -o Acquire::Retries=3 \
-          -o Acquire::http::Timeout=30 \
-          -o Acquire::https::Timeout=30 \
+          -o Acquire::http::Timeout=10 \
+          -o Acquire::https::Timeout=10 \
           update
 
         sudo timeout 300 apt-get install -y --no-install-recommends \
           -o Acquire::Retries=3 \
+          -o Acquire::http::Timeout=10 \
+          -o Acquire::https::Timeout=10 \
           ${{ inputs.packages }}
