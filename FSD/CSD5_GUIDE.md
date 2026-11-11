@@ -75,7 +75,9 @@ join and for anyone checking `shown_digest`.
   when a cell is provisional.
 - Keep each write exportable as (family, verb, scope, confirm, sends, shows),
   with the guard that enables it and the read or choice item each drawn value is
-  bound to. That is the data CC needs to build the join.
+  bound to. That is the data CC needs to build the join, and the gate writes it
+  for you: `--write-tla` also generates `formal/csd5/<card>.join.json`
+  (`CSD5.md` §7.0) and holds the committed file to the card.
 - Mark every node-side claim **observed on a node** or **read from source**.
 
 ## What you need open
@@ -166,10 +168,14 @@ A screen is decided by three kinds of input and nothing else (L8).
    - `sends:` the local values it carries; `adds:` values that ride along without
      changing what was previewed.
    - `previewed_by:` if a dry run stands in front of it.
-   - `row: {family, verb}` the row it puts on the node. The family must exist in
-     the pinned namespace registry; the verb is one of `attest`, `authorize`,
-     `recant`, `supersede`, `withdraw`. `row: null` only for a write that puts
-     down no row.
+   - `row: {family, verb, scope}` the row it puts on the node. The family must
+     exist in the pinned namespace registry; the verb is one of `attest`,
+     `authorize`, `recant`, `supersede`, `withdraw`. `scope` is the circle the
+     row is put down at: one of `self`, `family`, `community`, `affiliations`,
+     `federation`, or the name of the enum local the person picks it with (its
+     values must all be circles, and the write must send it). The door judges a
+     row at one scope, and a wider scope can change whether it is confirmed.
+     `row: null` only for a write that puts down no row.
    - `confirm:` **copied from CC's `transitions.json` for that family and verb.**
      True when the row widens or has no way back. Nothing checks your copy
      against the manifest yet, so a reviewer must.
@@ -255,12 +261,12 @@ screen that is wrong.
 
 ```
 python3 packaging/check_csd5.py --tags CSD-NNN      # old tag -> derived tag; this is the rename list
-python3 packaging/check_csd5.py --write-tla         # writes formal/csd5/CSDNNN.tla and .cfg
+python3 packaging/check_csd5.py --write-tla         # writes formal/csd5/CSDNNN.tla, .cfg and .join.json
 python3 packaging/check_csd5.py                     # everything, as CI runs it
 bash packaging/gates.sh                             # every release gate
 ```
 
-Commit the card, `formal/csd5/CSDNNN.tla` and `.cfg` together, and add the
+Commit the card, `formal/csd5/CSDNNN.tla`, `.cfg` and `.join.json` together, and add the
 module's row to `formal/csd5/README.md`. Never edit a `.tla` by hand. CI's
 `csd5 (TLC)` job runs TLC on the committed module and requires the same number
 of distinct states the explorer counted.
@@ -273,7 +279,7 @@ has seen it.
 
 | you changed | you must also |
 |---|---|
-| anything in the three blocks | re-run the check, then `--write-tla`, and commit the regenerated module |
+| anything in the three blocks | re-run the check, then `--write-tla`, and commit the regenerated module and join export |
 | the Kotlin screen (a control, a guard, a tag) | change the card in the same commit; the tag scan fails otherwise |
 | a route's answer shape on the server | re-read the source and correct `carries:` and `where:` |
 | the namespace pin moved (rc6 today) | re-check every adopted card's `row:` against the new families |
@@ -318,7 +324,7 @@ cannot.
 
 **Is it finished?**
 - [ ] `check_csd5.py` and `gates.sh` pass, and the PR records their output.
-- [ ] The `.tla` and `.cfg` are regenerated, and `csd5 (TLC)` is green on the head commit.
+- [ ] The `.tla`, `.cfg` and `.join.json` are regenerated, and `csd5 (TLC)` is green on the head commit.
 - [ ] The card says what was observed on a node and what was read from source.
 - [ ] A rename lists the flows and repos it touches.
 
