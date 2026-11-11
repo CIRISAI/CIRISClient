@@ -298,6 +298,11 @@ jobs:
           distribution: temurin
           java-version: '21'
 
+      - name: PyYAML, which check_csd5.py reads the cards with
+        # The checks job installs it beside pytest. This job is its own runner
+        # and has to say so too: its first run died in 11 s on the import.
+        run: python3 -m pip install --quiet pyyaml
+
       - name: Fetch tla2tools v1.7.4, by hash
         # The release CIRISConstitution's formal/ uses. A release asset can be
         # replaced under its URL; the sha256 is what is trusted. The jar gets a
