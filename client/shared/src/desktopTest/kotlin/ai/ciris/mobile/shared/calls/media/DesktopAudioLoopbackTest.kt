@@ -69,4 +69,66 @@ class DesktopAudioLoopbackTest {
         val hz = pitches[pitches.size / 2]
         assertTrue(abs(hz - 440) < 30, "heard $hz Hz through the virtual microphone, played 440 Hz")
     }
+
+    /**
+     * The echo canceller on real lines: the virtual microphone hears exactly what the
+     * speaker plays, a few buffers later, so what the call would send back is all
+     * echo. With the canceller between them it should be mostly gone. The canceller
+     * runs on the raw frames here (the source is opened without it), so the test
+     * sees both what the microphone heard and what would be sent.
+     */
+    @Test fun theSpeakerIsNotSentBackThroughTheMicrophone() {
+        if (System.getenv("CIRIS_AUDIO_LOOPBACK") != "1") return
+        assertTrue(desktopMicrophoneAvailable() && desktopSpeakerAvailable(), "no audio line: is the virtual device up?")
+        val echo = EchoCanceller()
+        val sink = DesktopSpeakerSink(echo)
+        val mic = DesktopMicrophoneSource()
+        val heard = java.util.concurrent.ConcurrentLinkedQueue<Pair<Long, Pair<Double, Double>>>() // ms, (raw, sent) energy
+        val trace = java.util.concurrent.ConcurrentLinkedQueue<String>()
+        val t0 = System.nanoTime()
+        mic.start { raw ->
+            val sent = echo.capture(raw)
+            val ms = (System.nanoTime() - t0) / 1_000_000
+            heard += ms to (raw.sumOf { it.toDouble() * it } to sent.sumOf { it.toDouble() * it })
+            val (rawOff, applied) = echo.offsets
+            trace += "$ms:$rawOff/$applied/${echo.measuredDelayMs}"
+        }
+        val voice = TestVoice.voice(10.0, seed = 7, pitchHz = 150.0, level = -12.0)
+        try {
+            val warm = System.nanoTime() + 10_000_000_000L
+            while (heard.isEmpty() && System.nanoTime() < warm) Thread.sleep(50)
+            assertTrue(heard.isNotEmpty(), "the microphone delivered nothing in 10 s")
+            val start = System.nanoTime()
+            val frames = voice.size / CallAudioFormat.FRAME_SAMPLES
+            for (i in 0 until frames) {
+                val o = i * CallAudioFormat.FRAME_SAMPLES
+                sink.play("ada", ShortArray(CallAudioFormat.FRAME_SAMPLES) { voice[o + it].toInt().coerceIn(-32768, 32767).toShort() })
+                val due = start + (i + 1) * CallAudioFormat.FRAME_MS * 1_000_000L
+                val wait = (due - System.nanoTime()) / 1_000_000L
+                if (wait > 0) Thread.sleep(wait)
+            }
+            Thread.sleep(300)
+        } finally {
+            mic.stop()
+            sink.stop()
+        }
+        val playedFrom = heard.first().first
+        // The last five seconds of the ten, once the canceller has had time to learn.
+        val late = heard.filter { it.first > playedFrom + 5_500 && it.first < playedFrom + 10_000 }
+        val raw = late.sumOf { it.second.first }
+        val sent = late.sumOf { it.second.second }
+        val erle = 10 * kotlin.math.log10(raw / sent.coerceAtLeast(1.0))
+        val facts = "${late.size} frames; heard ${"%.1f".format(10 * kotlin.math.log10(raw / late.size.coerceAtLeast(1) / 960 / 32768.0 / 32768.0))} dBFS; " +
+            "${"%.1f".format(erle)} dB less sent than heard; delay measured ${echo.measuredDelayMs} ms"
+        // Per second: dB taken off, so a test that fails says whether it never learned or lost it.
+        val perSecond = heard.groupBy { (it.first - playedFrom) / 1000 }.toSortedMap().map { (sec, fs) ->
+            val r = fs.sumOf { it.second.first }; val o = fs.sumOf { it.second.second }
+            "$sec:${"%.0f".format(10 * kotlin.math.log10(r / o.coerceAtLeast(1.0)))}"
+        }
+        val offs = trace.toList().filterIndexed { i, _ -> i % 25 == 0 }
+        println("[aec loopback] $facts; per second $perSecond; offsets (ms:raw/applied/delay) $offs")
+        assertTrue(late.size > 100, "the microphone kept delivering. $facts")
+        assertTrue(raw > 0.0, "the microphone heard the speaker. $facts")
+        assertTrue(erle >= 25.0, "what would be sent is at least 25 dB quieter than the echo heard. $facts; per second $perSecond; offsets $offs")
+    }
 }
