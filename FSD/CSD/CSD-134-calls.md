@@ -200,7 +200,7 @@ shown at `txt_call_share_refused`) until Edge 45.1. Where this device cannot sha
 **Not built.** The participants list as its own element, receive quality per member
 (`…/call/layers`), the two facts before joining, an active-speaker view, and saving
 (`opt_call_save_mine` disabled, `txt_call_save_unavailable`, until CIRISPersist#1067).
-Desktop has no echo cancellation: Java Sound has none, so headphones are needed.
+Desktop brings its own echo cancellation, since Java Sound has none: a partitioned frequency-domain adaptive filter with Valin's double-talk step (the filter SpeexDSP and Mumble use), a per-bin residual-echo suppressor that never sends a bin louder than the microphone heard it, and a delay estimator that finds the speaker-to-microphone lag from the two energy envelopes (`EchoCanceller.kt`). The speaker is one line the app mixes, so the canceller knows exactly what was played. Measured on a simulated room (`EchoCancellerTest`): 41.5 dB of echo removed after 6 s, 26.4 dB by the third second, the near end kept at 0.85 of its amplitude while both talk. On the Linux runner's virtual device (`DesktopAudioLoopbackTest`) it must take 25 dB off. Not measured: real rooms, real laptop speakers, Bluetooth latency. Headphones still beat any canceller.
 
 ## 3. Contracts (who)
 
@@ -297,7 +297,7 @@ so Edge's `is_base_or_audio` must agree. Device coverage is unmeasured.
 | 8 | **Frame budget per call.** 244 B on Edge v44.1.1; about 1,140 B on a punched direct link at v45, only if every member runs v45. Read `frame_budget_bytes` per call, never assume | CIRISEdge |
 | 11 | **A codec change mid-call.** CC is writing "one codec per stream" (Edge 45.1's v2 binding names a codec per class: `opus` under `0xFF`; `av1`; `h264`, `vp8`, `vp9`). One stream per publisher carries audio and video. Agreed by CC 2026-11-10: a codec change is an in-call stream replacement, the publisher signing which stream it replaces; a second stream that replaces nothing (screen share) stays separate. A codec change is an in-call stream replacement (make-before-break, `Call::replace_stream`), with `stream_replaced {member, old_stream_id, new_stream_id}` on the frames socket, so the tile swaps in place and nobody sees "left" | CC, CIRISEdge 45.1, CIRISServer |
 | 10 | **The video codec.** Edge has no `0x04`, H.264 or VP8 id; the CC names `0x04`. Which ids, and their layer rule | Eric, CC, CIRISEdge |
-| 9 | **Capture on desktop.** Closed: Java Sound for audio, the bundled FFmpeg for the camera and the screen. Open: echo cancellation, and screen share on Wayland (needs the PipeWire portal) | CIRISClient |
+| 9 | **Capture on desktop.** Closed: Java Sound for audio, the bundled FFmpeg for the camera and the screen. Echo cancellation: built in the client (above). Open: screen share on Wayland (needs the PipeWire portal), which waits with share for 45.1 | CIRISClient |
 | 2 | Does a saved call count against the room's files and quota, and where does it show? | CIRISServer |
 | 3 | Screen sharing is the same wire (CC 5.3.3.2) | Built in the client; refused by CIRISServer 0.5.246 until Edge 45.1 |
 | 4 | No ad-hoc call outside a room: `Edge::ring` is documented but not in the code | Later |
