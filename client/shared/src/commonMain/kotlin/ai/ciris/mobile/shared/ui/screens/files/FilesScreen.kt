@@ -191,6 +191,10 @@ fun FilesScreen(
     var moving by remember { mutableStateOf<DriveEntry?>(null) }
     var withdrawing by remember { mutableStateOf<DriveEntry?>(null) }
     var revealing by remember { mutableStateOf<DriveEntry?>(null) }
+    // A flag awaiting its confirm: (file, class); an appeal: (file, grounds); a ruling: (file, outcome).
+    var flagging by remember { mutableStateOf<Pair<DriveEntry, String>?>(null) }
+    var appealing by remember { mutableStateOf<Pair<DriveEntry, String>?>(null) }
+    var ruling by remember { mutableStateOf<Pair<DriveEntry, String>?>(null) }
 
     // Which household, for a family tab: the one the hub's switcher picked.
     val family = viewModel.cohort == FilesCohort.FAMILY
@@ -371,7 +375,10 @@ fun FilesScreen(
                                             onMove = { receiptFor = null; moving = entry },
                                             onWithdraw = { receiptFor = null; withdrawing = entry },
                                             onModerate = { receiptFor = null; moderation?.onModerateAuthor?.invoke(entry) },
-                                            onFlag = { receiptFor = null; moderation?.onFlagAuthor?.invoke(entry) },
+                                            onFlag = { c -> receiptFor = null; flagging = entry to c },
+                                            onClearFlag = { receiptFor = null; viewModel.clearFileFlag(entry) },
+                                            onAppeal = { g -> receiptFor = null; appealing = entry to g },
+                                            onRule = { o -> receiptFor = null; ruling = entry to o },
                                             onReveal = { receiptFor = null; revealing = entry },
                                         ),
                                     ),
@@ -392,6 +399,18 @@ fun FilesScreen(
         }
     }
 
+    appealing?.let { (entry, g) ->
+        ai.ciris.mobile.shared.ui.screens.AppealConfirm(g, onConfirm = { appealing = null; viewModel.appealFileFlag(entry, g) }, onDismiss = { appealing = null })
+    }
+    ruling?.let { (entry, o) ->
+        ai.ciris.mobile.shared.ui.screens.RuleConfirm(
+            o, alsoModerates = moderation?.isModerator == true,
+            onConfirm = { ruling = null; viewModel.ruleOnFileAppeal(entry, o) }, onDismiss = { ruling = null },
+        )
+    }
+    flagging?.let { (entry, c) ->
+        ai.ciris.mobile.shared.ui.screens.FlagConfirm(c, onConfirm = { flagging = null; viewModel.flagFile(entry, c) }, onDismiss = { flagging = null })
+    }
     revealing?.let { entry ->
         entry.moderation?.let { m ->
             RevealConfirm(m, onConfirm = { revealing = null; viewModel.revealFile(entry) }, onDismiss = { revealing = null })
@@ -661,14 +680,16 @@ internal fun humanBytes(n: Long): String = when {
 }
 
 /**
- * A room moderator's acts on a file's author (CSD-065). Moderation events and
- * flags are on KEYS: the author's, not the file's.
+ * A room moderator's acts on a room file (CSD-065). A moderation event is on a
+ * KEY, the author's. A flag is on the FILE (0.5.246) and the screen sends it
+ * itself, so it needs no callback here.
  */
 data class FileModeration(
-    /** The viewer holds `moderate` in this room; false leaves the acts shown and unavailable. */
+    /** The viewer holds `moderate` in this room; false hides flag and clear and leaves "moderate the author" unavailable. */
     val isModerator: Boolean,
     val onModerateAuthor: (DriveEntry) -> Unit,
-    val onFlagAuthor: (DriveEntry) -> Unit,
+    /** The viewer holds `review` in this room: they rule on a filed appeal. */
+    val isReviewer: Boolean = false,
 )
 
 /**
@@ -685,8 +706,11 @@ internal fun fileActs(
     onMove: () -> Unit,
     onWithdraw: () -> Unit,
     onModerate: () -> Unit,
-    onFlag: () -> Unit,
+    onFlag: (String) -> Unit,
+    onClearFlag: () -> Unit,
     onReveal: () -> Unit,
+    onAppeal: (String) -> Unit = {},
+    onRule: (String) -> Unit = {},
 ): List<ReceiptAct> = buildList {
     val id = entry.attestationId
     if (entry.moderation?.withheld == true) {
@@ -698,7 +722,30 @@ internal fun fileActs(
     if (moderation != null) {
         val notModerator = if (moderation.isModerator) null else localizedString("mobile.files_act_only_moderator")
         add(ReceiptAct(localizedString("mobile.files_act_moderate_author"), "btn_file_act_moderate_$id", unavailable = notModerator, onAct = onModerate))
-        add(ReceiptAct(localizedString("mobile.files_act_flag_author"), "btn_file_act_flag_$id", unavailable = notModerator, onAct = onFlag))
+        // Flag and clear are the moderator's alone and are drawn for nobody else, and
+        // a class is offered only where flagging it changes what readers see.
+        if (moderation.isModerator && entry.cohort != FilesCohort.SELF.wire) {
+            val live = entry.moderation?.flag
+            for (c in ai.ciris.mobile.shared.ui.screens.flagClassesOffered(live)) {
+                add(ReceiptAct(ai.ciris.mobile.shared.ui.screens.flagAsLabel(c), "btn_file_act_flag_${c}_$id") { onFlag(c) })
+            }
+            if (live != null) add(ReceiptAct(localizedString("mobile.moderation_clear_flag"), "btn_file_act_clear_flag_$id", onAct = onClearFlag))
+        }
+        // Appeals (0.5.246). This screen does not know whose file it is, so an appeal
+        // is offered on any flagged file and the node names who has standing, as it
+        // does for rename and withdraw. A ruling is a reviewer's and drawn for no one else.
+        val flagged = entry.moderation?.flag != null
+        val filed = entry.moderation?.reconsideration == "filed"
+        if (flagged && !filed) {
+            for (g in ai.ciris.mobile.shared.ui.screens.APPEAL_GROUNDS) {
+                add(ReceiptAct(localizedString("mobile.moderation_appeal_$g"), "btn_file_act_appeal_${g}_$id") { onAppeal(g) })
+            }
+        }
+        if (flagged && filed && moderation.isReviewer) {
+            for (o in ai.ciris.mobile.shared.ui.screens.APPEAL_OUTCOMES) {
+                add(ReceiptAct(localizedString("mobile.moderation_rule_$o"), "btn_file_act_rule_${o}_$id") { onRule(o) })
+            }
+        }
         add(ReceiptAct(localizedString("mobile.files_act_takedown"), "btn_file_act_takedown_$id",
             unavailable = localizedString("mobile.files_act_takedown_unavailable")))
     }
@@ -774,6 +821,10 @@ private fun FileActDialogs(
             FileActState.Kind.MOVE -> "mobile.files_act_moved"
             FileActState.Kind.WITHDRAW -> "mobile.files_act_withdrawn"
             FileActState.Kind.REVEAL -> "mobile.files_act_revealed"
+            FileActState.Kind.FLAG -> "mobile.files_act_flagged"
+            FileActState.Kind.CLEAR_FLAG -> "mobile.files_act_flag_cleared"
+            FileActState.Kind.APPEAL -> "mobile.files_act_appealed"
+            FileActState.Kind.RULE -> "mobile.files_act_ruled"
         })
         is FileActState.Refused -> refusalText(state.refusal)
         FileActState.Idle -> null

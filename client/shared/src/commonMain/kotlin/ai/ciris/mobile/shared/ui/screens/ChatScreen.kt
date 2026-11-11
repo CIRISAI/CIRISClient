@@ -205,9 +205,18 @@ fun ChatScreen(
     var confirmRevision by remember { mutableStateOf<Pair<CegChatMessage, String>?>(null) }
     val history by viewModel.history.collectAsState()
     val editing by viewModel.editing.collectAsState()
+    // A flag awaiting its confirm: (message, class).
+    var flagging by remember { mutableStateOf<Pair<CegChatMessage, String>?>(null) }
+    // An appeal awaiting its confirm: (message, grounds), and a ruling: (message, outcome).
+    var appealing by remember { mutableStateOf<Pair<CegChatMessage, String>?>(null) }
+    var ruling by remember { mutableStateOf<Pair<CegChatMessage, String>?>(null) }
     val moderationLabels = ModerationLabels(
         moderate = localizedString("mobile.chat_moderate_author"),
-        flag = localizedString("mobile.chat_flag_author"),
+        flagReported = flagAsLabel(FLAG_REPORTED),
+        flagInfohazard = flagAsLabel(FLAG_INFOHAZARD),
+        clearFlag = localizedString("mobile.moderation_clear_flag"),
+        appeal = APPEAL_GROUNDS.map { localizedString("mobile.moderation_appeal_$it") },
+        rule = APPEAL_OUTCOMES.map { localizedString("mobile.moderation_rule_$it") },
         report = localizedString("mobile.chat_report_message"),
         onlyModerator = localizedString("mobile.files_act_only_moderator"),
         reportUnavailable = localizedString("mobile.files_act_report_unavailable"),
@@ -389,6 +398,12 @@ fun ChatScreen(
                                     isModerator = isModerator(viewerDuties, messages),
                                     onModerate = onModerateItem,
                                     labels = moderationLabels,
+                                    onFlag = { m, c -> flagging = m to c },
+                                    isReviewer = holdsDuty("review", viewerDuties, messages),
+                                    onAppeal = { m, g -> appealing = m to g },
+                                    onRule = { m, o -> ruling = m to o },
+                                    // The flag may sit on an earlier version of an edited message: the node's view names it.
+                                    onClearFlag = { m -> viewModel.clearFlag(m.moderation?.itemAttestationId ?: m.attestationId) },
                                 ),
                                 onOp = { op ->
                                     // Replace / Withdraw / Recant are enabled
@@ -541,8 +556,8 @@ fun ChatScreen(
                     custody = custody,
                     moderation = if (onModerateItem == null) null else ai.ciris.mobile.shared.ui.screens.files.FileModeration(
                         isModerator = isModerator(listingDuties ?: viewerDuties, viewModel.messages.value),
+                        isReviewer = holdsDuty("review", listingDuties ?: viewerDuties, viewModel.messages.value),
                         onModerateAuthor = { e -> closePanel(); onModerateItem(room, e.authorKeyId) },
-                        onFlagAuthor = { e -> closePanel(); onModerateItem(room, e.authorKeyId) },
                     ),
                     onPick = if (!attaching) null else ({ e ->
                         viewModel.attach(ai.ciris.mobile.shared.viewmodels.AttachedFile(e.attestationId, e.filename))
@@ -554,6 +569,20 @@ fun ChatScreen(
     }
     revealing?.let { m ->
         RevealConfirm(m, onConfirm = { revealing = null; viewModel.reveal(m.itemAttestationId) }, onDismiss = { revealing = null })
+    }
+    flagging?.let { (m, c) ->
+        FlagConfirm(c, onConfirm = { flagging = null; viewModel.flagItem(m.attestationId, c) }, onDismiss = { flagging = null })
+    }
+    appealing?.let { (m, g) ->
+        val item = m.moderation?.itemAttestationId ?: m.attestationId
+        AppealConfirm(g, onConfirm = { appealing = null; viewModel.appealFlag(item, g) }, onDismiss = { appealing = null })
+    }
+    ruling?.let { (m, o) ->
+        val item = m.moderation?.itemAttestationId ?: m.attestationId
+        RuleConfirm(
+            o, alsoModerates = isModerator(viewerDuties, messages),
+            onConfirm = { ruling = null; viewModel.ruleOnAppeal(item, o) }, onDismiss = { ruling = null },
+        )
     }
     history?.let { h ->
         AttestationHistoryDialog(localizedString("mobile.accord_op_history"), h, viewModel::closeHistory)
@@ -935,20 +964,63 @@ private fun String.toAttStatus(): AttStatus = when (this) {
 
 /** The viewer's moderation standing in this room: the node's word when it gives one, else the viewer's own messages. */
 internal fun isModerator(viewerDuties: List<String>?, messages: List<CegChatMessage>): Boolean =
-    viewerDuties?.contains("moderate") ?: messages.any { it.mine && "moderate" in it.authorDuties }
+    holdsDuty("moderate", viewerDuties, messages)
+
+/** Whether the viewer holds [duty] in this room: the node's word when it gives one, else the viewer's own messages. */
+internal fun holdsDuty(duty: String, viewerDuties: List<String>?, messages: List<CegChatMessage>): Boolean =
+    viewerDuties?.contains(duty) ?: messages.any { it.mine && duty in it.authorDuties }
+
+/** The two classes a room moderator flags an item with (CIRISServer `content_class`). */
+internal const val FLAG_REPORTED = "reported"
+internal const val FLAG_INFOHAZARD = "infohazard"
+
+/**
+ * The classes a moderator may still flag an item with, given the flag that is
+ * live on it. A class is offered only where flagging it changes what readers
+ * see: the live class again signs nothing, and `reported` under a live
+ * `infohazard` signs a row nobody sees, because the more severe class leads
+ * (CIRISServer 0.5.246). To move down a moderator clears, then flags.
+ */
+internal fun flagClassesOffered(live: String?): List<String> = when (live) {
+    null -> listOf(FLAG_REPORTED, FLAG_INFOHAZARD)
+    FLAG_INFOHAZARD -> emptyList()
+    else -> listOf(FLAG_INFOHAZARD)
+}
 
 internal data class ModerationLabels(
     val moderate: String,
-    val flag: String,
+    val flagReported: String,
+    val flagInfohazard: String,
+    val clearFlag: String,
     val report: String,
     val onlyModerator: String,
     val reportUnavailable: String,
+    /** One label per [APPEAL_GROUNDS], in that order; empty where appeals are not offered. */
+    val appeal: List<String> = emptyList(),
+    /** One label per [APPEAL_OUTCOMES], in that order. */
+    val rule: List<String> = emptyList(),
 )
 
 /**
- * A message's moderation items (CSD-065), on someone else's message: a room
- * moderator moderates or flags the AUTHOR (moderation acts on keys), from the
- * Moderation screen's forms; anyone could report the message to the room's
+ * A message's moderation items (CSD-065), on someone else's message.
+ *
+ * A room moderator FLAGS THE MESSAGE (0.5.246, `…/items/{id}/flag`): as
+ * `reported` or `infohazard`, each behind a confirm, and clears a live flag in
+ * one step. Those are drawn only for a holder of `moderate`: the node refuses
+ * anyone else, and a member has no use for a list of what they may not do. The
+ * class that is already live is not offered again, since flagging it twice
+ * signs nothing. Before 0.5.246 "flag" went to `/v1/safety/flag` on the
+ * author's key, signed by the node, which a room's readers ignore.
+ *
+ * APPEALS (0.5.246, CC 4.5.5). The AUTHOR of a flagged message, or a reviewer of
+ * the room, appeals the flag under one of three grounds; that is the one thing
+ * drawn on the viewer's own message. It is hidden while an appeal is already
+ * filed and offered again after a ruling that left the flag. While one is filed,
+ * a holder of `review` rules on it: the flag stays, stays with the appeal right
+ * in part, or is lifted. Each is behind a confirm.
+ *
+ * A moderator also moderates the AUTHOR (a ModerationEvent acts on a key), from
+ * the Moderation screen's form. Anyone could report the message to the room's
  * moderators once the route exists (CIRISServer#665), so that item is drawn
  * unavailable with its blocker.
  */
@@ -957,15 +1029,44 @@ internal fun chatModerationOps(
     isModerator: Boolean,
     onModerate: ((String, String) -> Unit)?,
     labels: ModerationLabels,
+    onFlag: ((CegChatMessage, String) -> Unit)? = null,
+    onClearFlag: ((CegChatMessage) -> Unit)? = null,
+    isReviewer: Boolean = false,
+    onAppeal: ((CegChatMessage, String) -> Unit)? = null,
+    onRule: ((CegChatMessage, String) -> Unit)? = null,
 ): List<ExtraOp> {
-    if (message.mine || message.isSystemEntry) return emptyList()
+    if (message.isSystemEntry) return emptyList()
+    val id = message.attestationId
+    val live = message.moderation?.flag
+    val filed = message.moderation?.reconsideration == "filed"
+    val appeals = buildList {
+        if (live != null && !filed && onAppeal != null && (message.mine || isReviewer)) {
+            APPEAL_GROUNDS.zip(labels.appeal).forEach { (g, label) ->
+                add(ExtraOp(label, "mi_chat_appeal_${g}_$id") { onAppeal(message, g) })
+            }
+        }
+        if (live != null && filed && isReviewer && onRule != null) {
+            APPEAL_OUTCOMES.zip(labels.rule).forEach { (o, label) ->
+                add(ExtraOp(label, "mi_chat_rule_${o}_$id") { onRule(message, o) })
+            }
+        }
+    }
+    if (message.mine) return appeals
     val author = message.author?.takeIf { it.isNotBlank() } ?: message.attestingKeyId
     val room = message.communityId
-    return buildList {
+    return appeals + buildList {
         if (onModerate != null) {
             val why = if (isModerator) null else labels.onlyModerator
-            add(ExtraOp(labels.moderate, "mi_chat_moderate_${message.attestationId}", unavailable = why) { onModerate(room, author) })
-            add(ExtraOp(labels.flag, "mi_chat_flag_${message.attestationId}", unavailable = why) { onModerate(room, author) })
+            add(ExtraOp(labels.moderate, "mi_chat_moderate_$id", unavailable = why) { onModerate(room, author) })
+        }
+        if (isModerator && onFlag != null) {
+            for (c in flagClassesOffered(live)) {
+                val label = if (c == FLAG_REPORTED) labels.flagReported else labels.flagInfohazard
+                add(ExtraOp(label, "mi_chat_flag_${c}_$id") { onFlag(message, c) })
+            }
+        }
+        if (isModerator && onClearFlag != null && live != null) {
+            add(ExtraOp(labels.clearFlag, "mi_chat_clear_flag_$id") { onClearFlag(message) })
         }
         add(ExtraOp(labels.report, "mi_chat_report_${message.attestationId}", unavailable = labels.reportUnavailable) {})
     }

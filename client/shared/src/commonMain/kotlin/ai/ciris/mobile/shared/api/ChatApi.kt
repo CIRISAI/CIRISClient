@@ -38,6 +38,17 @@ interface ChatApi {
         throw UnsupportedOperationException("reveal")
 
     /**
+     * A room moderator's decision on one item (0.5.246): `…/items/{itemId}/flag`
+     * with [contentClass] `reported` or `infohazard`, or `…/clear` when it is null.
+     */
+    suspend fun moderateItem(nodeUrl: String, communityId: String, itemId: String, contentClass: String?): Unit =
+        throw UnsupportedOperationException("moderateItem")
+
+    /** An appeal of a flag (0.5.246): `…/reconsider` with [grounds], or `…/rule` with [outcome]. Exactly one is given. */
+    suspend fun appealItem(nodeUrl: String, communityId: String, itemId: String, grounds: String?, outcome: String?): Unit =
+        throw UnsupportedOperationException("appealItem")
+
+    /**
      * `GET {nodeUrl}/v1/chat/{id}/messages/{attestationId}/history`, oldest first;
      * null when the node predates the route (a bare 404).
      */
@@ -70,6 +81,12 @@ class ClientChatApi(private val client: CIRISApiClient) : ChatApi {
         client.sendChatMessage(communityId, body, attachmentId = attachmentId, nodeUrl = nodeUrl)
     override suspend fun reveal(nodeUrl: String, communityId: String, itemId: String) =
         client.revealRoomItem(communityId, itemId, nodeUrl = nodeUrl)
+
+    override suspend fun moderateItem(nodeUrl: String, communityId: String, itemId: String, contentClass: String?) =
+        client.moderateRoomItem(communityId, itemId, contentClass, nodeUrl = nodeUrl)
+
+    override suspend fun appealItem(nodeUrl: String, communityId: String, itemId: String, grounds: String?, outcome: String?) =
+        client.appealRoomItem(communityId, itemId, grounds, outcome, nodeUrl = nodeUrl)
     override suspend fun history(nodeUrl: String, communityId: String, attestationId: String): ChatMessageHistory? =
         client.getChatMessageHistory(communityId, attestationId, nodeUrl = nodeUrl)
     override suspend fun revise(
