@@ -348,7 +348,10 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
      *
      * The node is started as:
      *
-     *     ciris-server --home <appDataDir>/ciris --key-id ciris-client
+     *     ciris-server --home <appDataDir>/ciris                          (ciris-server 0.5.246 or later)
+     *     ciris-server --home <appDataDir>/ciris --key-id ciris-client    (older, or version unknown)
+     *
+     * which of the two is decided by [NodeLaunchArgs] from `ciris-server --version`.
      *
      * The node listens on its base port (default :4242) and serves its read API
      * at base+1 (:4243), which is the URL this runtime reports/probes. If the
@@ -412,11 +415,10 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
             )
         }
 
-        _serverProcess = ProcessBuilder(
-            cirisServer,
-            "--home", home,
-            "--key-id", "ciris-client",
-        )
+        val probe = NodeLaunchArgs.probe(cirisServer)
+        val args = NodeLaunchArgs.forNode(home, probe)
+        println("[PythonRuntime.desktop] ciris-server --version: ${probe ?: "no answer"} -> ${args.drop(2).ifEmpty { listOf("(the home's own key)") }}")
+        _serverProcess = ProcessBuilder(listOf(cirisServer) + args)
             .redirectErrorStream(true)  // Merge stderr into stdout
             .also { pb ->
                 // A node this app starts on a desktop is a LAPTOP, not a server:
@@ -653,6 +655,77 @@ actual class PythonRuntime actual constructor() : PythonRuntimeProtocol {
 }
 
 actual fun createPythonRuntime(): PythonRuntime = PythonRuntime()
+
+/**
+ * The arguments a desktop passes the node it starts, decided by the node's own
+ * version.
+ *
+ * From ciris-server 0.5.246 a home picks its own key: the one it recorded, else
+ * an existing `ciris-client` key, else `ciris-server`, and only a home with none
+ * mints a new, descriptively named one. So such a node is started with `--home`
+ * alone. Before 0.5.246 there is no such rule: with no `--key-id` the node boots
+ * as `ciris-server` WHATEVER keys the home holds, and a desktop home, whose key
+ * is `ciris-client`, would come up as a second node identity. `ciris-client` does
+ * not depend on `ciris-server`, so a person who upgrades only this app really
+ * can have an old server on PATH. An older node is therefore started exactly as
+ * before, and so is one whose version cannot be read: the wrong guess one way
+ * costs a descriptive name on a fresh home, the other way costs an identity.
+ *
+ * `ciris-server --version` prints one line, `ciris-server 0.5.246`, and exits 0
+ * before anything else, from 0.5.246 (CIRISServer `93d52612`). It counts only as
+ * the ONLY argument, so the probe passes nothing else. Older servers (checked by
+ * the server session at every tag from 0.5.230 to 0.5.245) answer "unknown serve
+ * arg: --version" and exit nonzero before they bind a port or open a home. They
+ * set up file logging first, under `--home` or `/var/lib/ciris`; with no `--home`
+ * that is at most a logs directory a desktop user usually cannot write, and
+ * never the person's home. That is the other reason the probe passes no home.
+ */
+internal object NodeLaunchArgs {
+    const val LEGACY_KEY_ID = "ciris-client"
+    private val HOME_PICKS_ITS_KEY = listOf(0, 5, 246)
+    private val VERSION = Regex("""(\d+)\.(\d+)\.(\d+)""")
+
+    /** The first `x.y.z` in what `--version` printed, or null. */
+    fun parseVersion(output: String): List<Int>? =
+        VERSION.find(output)?.groupValues?.drop(1)?.map { it.toInt() }
+
+    /** [version] is what [probe] returned: null when the node did not say. */
+    fun forNode(home: String, version: List<Int>?): List<String> {
+        val picksItsKey = version != null && compare(version, HOME_PICKS_ITS_KEY) >= 0
+        return if (picksItsKey) listOf("--home", home) else listOf("--home", home, "--key-id", LEGACY_KEY_ID)
+    }
+
+    private fun compare(a: List<Int>, b: List<Int>): Int {
+        for (i in 0 until 3) {
+            val d = a[i].compareTo(b[i])
+            if (d != 0) return d
+        }
+        return 0
+    }
+
+    /**
+     * Ask the binary its version. Null on a nonzero exit, a timeout, an error or
+     * output with no version in it: every one of those is "not known to be
+     * 0.5.246 or later".
+     */
+    fun probe(executable: String, timeoutSeconds: Long = 5): List<Int>? = try {
+        val p = ProcessBuilder(executable, "--version").redirectErrorStream(true).start()
+        p.outputStream.close()
+        // Read on another thread: a process that prints nothing and never exits must not hold the launch.
+        val out = StringBuilder()
+        val reader = Thread { runCatching { p.inputStream.bufferedReader().use { out.append(it.readText().take(4096)) } } }
+            .apply { isDaemon = true; start() }
+        if (!p.waitFor(timeoutSeconds, java.util.concurrent.TimeUnit.SECONDS)) {
+            p.destroyForcibly()
+            null
+        } else {
+            reader.join(1000)
+            if (p.exitValue() == 0) parseVersion(out.toString()) else null
+        }
+    } catch (e: Exception) {
+        null
+    }
+}
 
 /**
  * The `device_class` this app gives a node it starts on a desktop. ciris-server
