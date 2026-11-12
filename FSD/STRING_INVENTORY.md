@@ -13,10 +13,10 @@ Agent usage recorded at CIRISAgent `f0a079953`. CI carries it forward.
 
 | Owner | Keys |
 |---|---|
-| client | 4789 |
-| server | 552 |
+| client | 4785 |
+| server | 585 |
 | agent | 216 |
-| unclaimed | 437 |
+| unclaimed | 408 |
 
 ## Held in the app
 
@@ -63,15 +63,12 @@ back to them, so they are unreachable and still translated. Marked `dead_root`.
 | `commons_surface` | 24 |
 | `duty` | 21 |
 | `errors` | 20 |
-| `call` | 15 |
-| `moderation` | 12 |
 | `agent` | 11 |
 | `conscience` | 7 |
 | `mesh` | 7 |
 | `startup` | 6 |
 | `mesh_config` | 4 |
 | `system` | 3 |
-| `decisions` | 2 |
 | `chat` | 1 |
 | `custody` | 1 |
 | `family` | 1 |

@@ -21,7 +21,7 @@ upstream's last merged state** — the branch point the next pull starts from:
 
 | Upstream | Last merged state | Input commit | Pulled |
 |---|---|---|---|
-| `CIRISAI/CIRISServer` | `v0.5.245` (`7af5d4ebc56a2f092f9c22cfef4bbc7f6c67ce3d`) | `feat/0.5.239` (the release tag: streamed drive uploads and `streamed_max_bytes`, relayable remote-admin reads, owner-gated telemetry and federation reads, and the ids `mesh.announce_costs` and `add_device.node_proof`. Previous: `v0.5.244` `eaf2e67c`, `feat/0.5.238`) | 2026-11-09 |
+| `CIRISAI/CIRISServer` | `release/0.5.246` (`d892af0416520137b7cf77ab651b9e1b4bb9103f`) | `chore/pin-server-0.5.246` (the commit the CIRISServer session named final for 0.5.246, NOT YET A TAG: the edge v45.0.0 adopt; calls with video for two people; the frames-socket events of `7b489909`; a room moderator's flag and clear, the author's appeal and a reviewer's ruling; `ciris-server --version`; the pending-decision ids; and the moderation refusals in this repo's own sentences. Move this to the `v0.5.246` tag when it is cut. Previous: `v0.5.245` `7af5d4ebc56a2f092f9c22cfef4bbc7f6c67ce3d`, `feat/0.5.239`) | 2026-11-11 |
 | `CIRISAI/CIRISAgent` | `v2.9.36-stable` (`c211a9ff330ab5821002a159c13741cdd74609bb`) | `merge/agent-v2.9.36` | 2026-08-24 |
 
 The §2 exclusion set (extended: `.ciris_keys/`, `__pycache__/`, `*.pyc`,
