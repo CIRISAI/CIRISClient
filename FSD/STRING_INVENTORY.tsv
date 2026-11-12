@@ -507,8 +507,8 @@ commons_surface.refusal.cohort_not_a_commons	server	server	-	-	-	-	-
 commons_surface.refusal.cohort_unknown	unclaimed	-	-	-	-	-	-
 commons_surface.refusal.cohort_unrecognized	server	server	-	-	-	-	-
 commons_surface.refusal.dimension_mismatch	unclaimed	-	-	-	-	-	-
-commons_surface.refusal.dismissal_quorum_short	unclaimed	-	-	-	-	-	-
-commons_surface.refusal.duplicate_objection	unclaimed	-	-	-	-	-	-
+commons_surface.refusal.dismissal_quorum_short	server	server	-	-	-	-	-
+commons_surface.refusal.duplicate_objection	server	server	-	-	-	-	-
 commons_surface.refusal.grounds_absent	server	server	-	-	-	-	-
 commons_surface.refusal.malformed_envelope	unclaimed	-	-	-	-	-	-
 commons_surface.refusal.node_unowned	server	server	-	-	-	-	-
