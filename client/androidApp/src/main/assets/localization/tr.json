@@ -6467,5 +6467,9 @@
     "bad_layer_policy": "Bu kalite ayarı, bu cihazın anladığı bir ayar değil.",
     "cross_origin": "Bu arama yalnızca bu cihazın kendi sayfasından açılabilir.",
     "socket_already_open": "Bu arama için zaten açık bir akış bağlantısı var."
+  },
+  "decisions": {
+    "not_found": "Bu karar artık sizin için açık değil.",
+    "awaiting_members": "Yanıtınız kaydedildi. Bunun yürürlüğe girmesi için diğer üyelerin hâlâ onaylaması gerekiyor."
   }
 }

@@ -9,14 +9,14 @@ not a key to delete.
 
 Agent usage recorded at CIRISAgent `f0a079953`. CI carries it forward.
 
-**5992 keys in 29 languages.**
+**5994 keys in 29 languages.**
 
 | Owner | Keys |
 |---|---|
 | client | 4789 |
 | server | 552 |
 | agent | 216 |
-| unclaimed | 435 |
+| unclaimed | 437 |
 
 ## Held in the app
 
@@ -71,6 +71,7 @@ back to them, so they are unreachable and still translated. Marked `dead_root`.
 | `startup` | 6 |
 | `mesh_config` | 4 |
 | `system` | 3 |
+| `decisions` | 2 |
 | `chat` | 1 |
 | `custody` | 1 |
 | `family` | 1 |

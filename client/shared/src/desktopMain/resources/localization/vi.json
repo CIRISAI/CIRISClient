@@ -6467,5 +6467,9 @@
     "leave_reason_unknown": "Đó không phải là lý do để rời khỏi cuộc gọi.",
     "video_two_people_only": "Video và chia sẻ màn hình hiện chỉ hoạt động trong cuộc gọi giữa hai người. Cuộc gọi này có nhiều người hơn, nên đây là cuộc gọi chỉ có thoại. Nếu camera của bạn đang bật, nó sẽ bắt đầu gửi lại khi cuộc gọi trở về còn hai người.",
     "relay_canonical_audio_only": "Video của họ hiện không thể đến được với bạn: tuyến đường giữa hai bên chỉ mang âm thanh. Bạn vẫn có thể nghe thấy họ."
+  },
+  "decisions": {
+    "not_found": "Quyết định đó không còn mở cho bạn nữa.",
+    "awaiting_members": "Câu trả lời của bạn đã được ghi lại. Các thành viên khác vẫn cần chấp thuận trước khi điều này có hiệu lực."
   }
 }

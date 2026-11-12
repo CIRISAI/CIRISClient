@@ -6467,5 +6467,9 @@
     "leave_reason_unknown": "Das ist kein Grund, einen Anruf zu verlassen.",
     "video_two_people_only": "Video und Bildschirmfreigabe funktionieren vorerst nur bei Anrufen zwischen zwei Personen. Dieser Anruf hat mehr Teilnehmer, daher ist es ein reiner Sprachanruf. Wenn Ihre Kamera eingeschaltet ist, sendet sie wieder, sobald der Anruf wieder zwischen zwei Personen stattfindet.",
     "relay_canonical_audio_only": "Ihr Video erreicht Sie gerade nicht: Die Verbindung zwischen Ihnen überträgt nur Ton. Sie können die andere Person weiterhin hören."
+  },
+  "decisions": {
+    "not_found": "Diese Entscheidung steht für Sie nicht mehr offen.",
+    "awaiting_members": "Ihre Antwort ist erfasst. Die anderen Mitglieder müssen noch zustimmen, bevor dies wirksam wird."
   }
 }

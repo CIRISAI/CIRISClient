@@ -6467,5 +6467,9 @@
     "leave_reason_unknown": "Itu bukan alasan untuk meninggalkan panggilan.",
     "video_two_people_only": "Video dan berbagi layar untuk saat ini hanya berfungsi dalam panggilan antara dua orang. Panggilan ini memiliki lebih dari itu, sehingga hanya suara. Jika kamera Anda aktif, pengiriman video akan dimulai lagi saat panggilan kembali menjadi dua orang.",
     "relay_canonical_audio_only": "Video mereka tidak dapat menjangkau Anda saat ini: jalur antara Anda dan mereka hanya membawa suara. Anda tetap dapat mendengar mereka."
+  },
+  "decisions": {
+    "not_found": "Keputusan itu tidak lagi terbuka untuk Anda.",
+    "awaiting_members": "Jawaban Anda telah tercatat. Anggota lain masih perlu menyetujui sebelum ini berlaku."
   }
 }
