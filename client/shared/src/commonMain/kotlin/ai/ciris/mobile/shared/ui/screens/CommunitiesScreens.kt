@@ -861,6 +861,7 @@ fun CommunityRosterScreen(viewModel: CommunitiesViewModel) {
     val invites by viewModel.invites.collectAsState()
     val inviteSupport by viewModel.inviteSupport.collectAsState()
     val inviteNotice by viewModel.inviteNotice.collectAsState()
+    val peopleLimit by viewModel.peopleLimit.collectAsState()
     val myKeyId by viewModel.myKeyId.collectAsState()
     val localMarks by viewModel.localMarks.ids.collectAsState()
     var addFor by remember { mutableStateOf<String?>(null) }
@@ -953,7 +954,14 @@ fun CommunityRosterScreen(viewModel: CommunitiesViewModel) {
                     seatLimit = s("invites_community_seat_limit"),
                 )
                 val legacy = inviteSupport == InviteSupport.LEGACY
-                if (addFor == room.communityId) {
+                val openInvitations = (roomInvites as? GroupInvitesRead.Loaded)?.invites.orEmpty()
+                    .count { it.state == InviteState.PENDING || it.state == InviteState.ACCEPTED }
+                val full = CommunitiesViewModel.roomIsFull(room, openInvitations, peopleLimit)
+                if (full) {
+                    // A full room offers no Invite: the node would refuse it, and the line says why.
+                    val text = localizedString(CommunitiesViewModel.TWO_PEOPLE_ONLY)
+                    Text(text, style = type.body, color = t.dim, modifier = Modifier.testable("txt_community_room_full_" + room.communityId, text))
+                } else if (addFor == room.communityId) {
                     FieldRow(
                         label = s("community_add_key"),
                         divider = false,

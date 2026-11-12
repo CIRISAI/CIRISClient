@@ -6287,7 +6287,8 @@
     "pair_room_fixed": "Une discussion entre deux personnes ne peut pas changer ses membres. Fondez une pièce pour parler avec plus de personnes.",
     "quorum_pending": "La règle de la pièce exige davantage de signatures avant que cette modification prenne effet.",
     "store_unavailable": "Le nœud n'a pas pu lire ni écrire son répertoire.",
-    "write_failed": "Le nœud n'a pas pu écrire la modification."
+    "write_failed": "Le nœud n'a pas pu écrire la modification.",
+    "two_people_only": "Une pièce accueille deux personnes pour le moment."
   },
   "partnership_queue": {
     "title": "Partenariat avec cet agent",

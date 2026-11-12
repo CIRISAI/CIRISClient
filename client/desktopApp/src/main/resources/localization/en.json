@@ -6349,7 +6349,8 @@
     "pair_room_fixed": "A chat between two people cannot change its members. Found a room to talk with more people.",
     "quorum_pending": "The room's rule needs more signatures before this change takes effect.",
     "store_unavailable": "The node could not read or write its directory.",
-    "write_failed": "The node could not write the change."
+    "write_failed": "The node could not write the change.",
+    "two_people_only": "A room holds two people for now."
   },
   "membership": {
     "consent_required": "Someone has to accept an invitation before they join. Nobody is added to a household or a community without their own yes.",

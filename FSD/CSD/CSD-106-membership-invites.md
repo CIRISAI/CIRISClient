@@ -217,6 +217,25 @@ cannot observe.
   the invitee's node may not hold the room's record. 0.5.219 adds `tier` to
   each row (§3.1); the client filters by it when present, and draws an
   untiered community invitation on both community hubs.
+* **A room holds two people for now (server 0.5.246; Eric, 2026-11-11).**
+  Two members' approvals given on their own nodes do not combine until quorum
+  rooms land in 0.6 (CIRISPersist#1252), so a third person could be invited,
+  accept, and never be seated. The node therefore refuses a third:
+  `POST /v1/communities/{id}/invites` (and its `/members` alias) answers 409
+  `community.two_people_only` once members plus open invitations (pending or
+  accepted, not yet seated) make two; a declined or expired invitation frees
+  the seat. Each room then carries `max_people: 2`. The roster hides Invite on
+  a full room and draws the node's sentence in its place
+  (`txt_community_room_full_{id}`): full is `member_count` + open invitations
+  >= `max_people`, with the open invitations counted from
+  `GET /v1/communities/{id}/invites`. A node that sends no `max_people` and
+  has refused nothing keeps Invite, because an older node's rooms take more;
+  after one `community.two_people_only` the limit is remembered for the
+  session. **Households are not limited** (a household defaults to
+  `founder_only`, where the founder alone seats a member), and a pair room is
+  two people by construction. Read from the CIRISServer session's account of
+  `release/0.5.246` `8be814f9`; the refusal was not provoked on a node from
+  this client.
 * **A quorum ROOM cannot seat an accepted invitee from this client.** The
   server seats them through `…/changes/envelope {op: add}` → cosign →
   assemble; this client does not call the community envelope route. The

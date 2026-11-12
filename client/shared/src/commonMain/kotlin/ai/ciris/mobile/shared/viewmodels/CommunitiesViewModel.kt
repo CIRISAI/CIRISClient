@@ -77,6 +77,14 @@ class CommunitiesViewModel(
     private val _busy = MutableStateFlow(false)
     val busy: StateFlow<Boolean> = _busy.asStateFlow()
 
+    private val _peopleLimit = MutableStateFlow<Int?>(null)
+    /**
+     * The room size this node enforces, learned from its refusal
+     * (`community.two_people_only`, CIRISServer 0.5.246). Null until the node has
+     * said so, and a room that carries its own `max_people` does not need it.
+     */
+    val peopleLimit: StateFlow<Int?> = _peopleLimit.asStateFlow()
+
     private val _refusal = MutableStateFlow<CommunityActRefusal?>(null)
     /** The last act the node refused, with its id — never folded into the list's error. */
     val refusal: StateFlow<CommunityActRefusal?> = _refusal.asStateFlow()
@@ -368,6 +376,8 @@ class CommunitiesViewModel(
                 block()
             } catch (e: NodeRefusal) {
                 if (epoch != sessionEpoch) return@launch
+                // The node said its rooms hold two people: every full room on it stops offering Invite.
+                if (e.reasonId == TWO_PEOPLE_ONLY) _peopleLimit.value = TWO_PEOPLE
                 _refusal.value = CommunityActRefusal(op, e.reasonId, e.detail, e.statusCode)
                 PlatformLogger.w(tag, "[$op] refused reason_id=${e.reasonId ?: "<none>"} status=${e.statusCode}")
             } catch (e: Exception) {
@@ -405,6 +415,23 @@ class CommunitiesViewModel(
         /** A paste that is not JSON of the expected shape. The client's own id, never the node's. */
         const val MALFORMED_PASTE = "mobile.community_paste_malformed"
         const val NOT_FOUND = "community.not_found"
+
+        /** CIRISServer 0.5.246: "A room holds two people for now." (Eric, 2026-11-11; quorum rooms are 0.6). */
+        const val TWO_PEOPLE_ONLY = "community.two_people_only"
+        const val TWO_PEOPLE = 2
+
+        /**
+         * Whether [room] can take nobody else: its members plus its open
+         * invitations (pending or accepted, not yet seated) already make the
+         * limit. The limit is the room's own `max_people` when the node sends
+         * it, else [learnedLimit] from this node's refusal. With neither, the
+         * answer is "not known to be full" and Invite stays: an older node's
+         * rooms can take more, and the node refuses for itself when it will not.
+         */
+        fun roomIsFull(room: CommunityRoom, openInvitations: Int, learnedLimit: Int?): Boolean {
+            val limit = room.maxPeople ?: learnedLimit ?: return false
+            return maxOf(room.members.size, room.memberCount) + openInvitations >= limit
+        }
 
         private val sigJson = Json { prettyPrint = false }
         private val lenient = Json { ignoreUnknownKeys = true; isLenient = true }
