@@ -6287,6 +6287,7 @@
     "quorum_pending": "La regla de la sala necesita más firmas antes de que este cambio surta efecto.",
     "store_unavailable": "El nodo no pudo leer ni escribir su directorio.",
     "write_failed": "El nodo no pudo escribir el cambio.",
+    "two_people_only": "Por ahora, una sala tiene espacio para dos personas.",
     "pair_room_fixed": "Un chat entre dos personas no puede cambiar sus miembros. Crea una sala para hablar con más personas."
   },
   "partnership_queue": {

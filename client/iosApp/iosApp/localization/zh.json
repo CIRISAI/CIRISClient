@@ -6287,6 +6287,7 @@
     "quorum_pending": "此聊天室的规则要求在此更改生效前收集更多签名。",
     "store_unavailable": "本节点无法读取或写入其目录。",
     "write_failed": "本节点无法写入此更改。",
+    "two_people_only": "聊天室目前仅支持两人。",
     "pair_room_fixed": "两人之间的聊天无法更改成员。请创建一个聊天室与更多人交谈。"
   },
   "partnership_queue": {

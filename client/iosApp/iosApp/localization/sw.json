@@ -6287,7 +6287,8 @@
     "pair_room_fixed": "Gumzo kati ya watu wawili haliwezi kubadilisha wanachama wake. Anzisha chumba ili kuzungumza na watu wengi zaidi.",
     "quorum_pending": "Kanuni ya chumba inahitaji saini zaidi kabla mabadiliko haya kuanza kutumika.",
     "store_unavailable": "Nodi haikuweza kusoma au kuandika saraka yake.",
-    "write_failed": "Nodi haikuweza kuandika mabadiliko hayo."
+    "write_failed": "Nodi haikuweza kuandika mabadiliko hayo.",
+    "two_people_only": "Kwa sasa, chumba kinashikilia watu wawili."
   },
   "partnership_queue": {
     "title": "Kushirikiana na wakala huyu",

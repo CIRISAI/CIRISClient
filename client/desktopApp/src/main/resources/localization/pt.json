@@ -6287,7 +6287,8 @@
     "pair_room_fixed": "Uma conversa entre duas pessoas não pode alterar seus membros. Crie uma sala para falar com mais pessoas.",
     "quorum_pending": "A regra da sala precisa de mais assinaturas antes que esta alteração entre em vigor.",
     "store_unavailable": "O nó não conseguiu ler ou escrever no seu diretório.",
-    "write_failed": "O nó não conseguiu escrever a alteração."
+    "write_failed": "O nó não conseguiu escrever a alteração.",
+    "two_people_only": "Por enquanto, uma sala comporta duas pessoas."
   },
   "partnership_queue": {
     "title": "Parceria com este agente",

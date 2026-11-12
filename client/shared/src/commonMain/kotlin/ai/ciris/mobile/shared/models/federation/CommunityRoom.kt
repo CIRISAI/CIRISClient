@@ -41,6 +41,13 @@ data class CommunityRoom(
     /** The caller's own role, or null when the caller is not on the roster (never, on a served row). */
     @SerialName("my_role")
     val myRole: String? = null,
+    /**
+     * How many people the node lets this room hold, when it says (CIRISServer
+     * 0.5.246: 2). Null on a node that sends none, which is not a claim that
+     * there is no limit.
+     */
+    @SerialName("max_people")
+    val maxPeople: Int? = null,
     val members: List<CommunityRoomMember> = emptyList(),
     /** role → key ids, the same roster grouped. */
     val roles: Map<String, List<String>> = emptyMap(),

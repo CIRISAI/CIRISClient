@@ -14,6 +14,8 @@ import ai.ciris.mobile.shared.ui.nav.CohortScope
 import ai.ciris.mobile.shared.ui.nav.NavSurface
 import ai.ciris.mobile.shared.ui.nav.Tab
 import kotlin.test.Test
+import kotlin.test.assertTrue
+import kotlin.test.assertFalse
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
@@ -24,6 +26,32 @@ import kotlin.test.assertNull
  * with, who joined late, and what a paste is.
  */
 class CommunitiesLogicTest {
+
+    /**
+     * CIRISServer 0.5.246: a room holds two people for now, counting open
+     * invitations. Invite is hidden only where the node has said so, on the room
+     * or by its refusal; an older node's rooms keep it.
+     */
+    @Test
+    fun aRoomIsFullOnlyWhereTheNodeSaysItsLimit() {
+        fun members(n: Int) = (1..n).map { ai.ciris.mobile.shared.models.federation.CommunityRoomMember(keyId = "k$it") }
+        val one = CommunityRoom(communityId = "r", members = members(1), memberCount = 1)
+        val two = CommunityRoom(communityId = "r", members = members(2), memberCount = 2)
+        // No limit said, on the room or by a refusal: never "full", whatever its size.
+        assertFalse(CommunitiesViewModel.roomIsFull(two, openInvitations = 3, learnedLimit = null))
+        // The room carries its limit.
+        assertFalse(CommunitiesViewModel.roomIsFull(one.copy(maxPeople = 2), 0, null), "one person, nobody invited: room for one more")
+        assertTrue(CommunitiesViewModel.roomIsFull(one.copy(maxPeople = 2), 1, null), "one member plus an open invitation is two")
+        assertTrue(CommunitiesViewModel.roomIsFull(two.copy(maxPeople = 2), 0, null))
+        // The node said so by refusing once.
+        assertFalse(CommunitiesViewModel.roomIsFull(one, 0, CommunitiesViewModel.TWO_PEOPLE))
+        assertTrue(CommunitiesViewModel.roomIsFull(one, 1, CommunitiesViewModel.TWO_PEOPLE))
+        assertTrue(CommunitiesViewModel.roomIsFull(two, 0, CommunitiesViewModel.TWO_PEOPLE))
+        // The room's own word wins over what was learned.
+        assertFalse(CommunitiesViewModel.roomIsFull(two.copy(maxPeople = 5), 0, CommunitiesViewModel.TWO_PEOPLE))
+        // A listing that carries only a count, not the roster.
+        assertTrue(CommunitiesViewModel.roomIsFull(CommunityRoom(communityId = "r", memberCount = 2, maxPeople = 2), 0, null))
+    }
 
     private fun room(id: String, tier: String, kind: String = "room", name: String = id) =
         CommunityRoom(communityId = id, name = name, kind = kind, tier = tier)

@@ -6287,7 +6287,8 @@
     "pair_room_fixed": "Ìfọ̀rọ̀wérọ̀ láàrin ẹnìkan méjì kò lè yí àwọn ọmọ ẹgbẹ́ rẹ̀ padà. Dá yàrá kan sílẹ̀ láti bá ọ̀pọ̀lọpọ̀ ènìyàn sọ̀rọ̀.",
     "quorum_pending": "Òfin yàrá náà nílò àwọn ìfọwọ́sí mìíràn kí àyípadà yìí tó bẹ̀rẹ̀ sí í ṣiṣẹ́.",
     "store_unavailable": "Nódù náà kò lè ka tàbí kọ sínú àkọsílẹ̀ rẹ̀.",
-    "write_failed": "Nódù náà kò lè kọ àyípadà náà."
+    "write_failed": "Nódù náà kò lè kọ àyípadà náà.",
+    "two_people_only": "Yàrá kan lè gba ènìyàn méjì fún ìsinsìnyí."
   },
   "partnership_queue": {
     "title": "Ṣíṣe àjọṣepọ̀ pẹ̀lú aṣojú yìí",

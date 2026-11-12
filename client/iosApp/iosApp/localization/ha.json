@@ -6287,7 +6287,8 @@
     "pair_room_fixed": "Hirar tsakanin mutum biyu ba za ta iya canza mambobinta ba. Ku kafa ɗaki don yin magana da mutane fiye da haka.",
     "quorum_pending": "Ka'idar ɗakin na buƙatar ƙarin sa hannu kafin wannan canjin ya fara aiki.",
     "store_unavailable": "Kumburin bai iya karanta ko rubuta kundin adireshinsa ba.",
-    "write_failed": "Kumburin bai iya rubuta canjin ba."
+    "write_failed": "Kumburin bai iya rubuta canjin ba.",
+    "two_people_only": "Ɗaki yana riƙe da mutum biyu a yanzu."
   },
   "partnership_queue": {
     "title": "Haɗin gwiwa da wannan wakili",
