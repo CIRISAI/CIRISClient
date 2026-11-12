@@ -186,6 +186,40 @@ class WipeForgetsNodeTest {
         assertTrue(vm.profiles.value.any { it.isLocal }, "the local node is always listed")
     }
 
+    /**
+     * A reload reads the session-added nodes on one thread while a person adds,
+     * removes or wipes on another. That list was a plain mutable list, and the
+     * reader threw ConcurrentModificationException: in the app a crash of the
+     * switcher, in CI a stray exception charged to whichever test ran next
+     * (WiseAuthorityViewModelTest, CIRISClient PR #306). Many nodes are held so
+     * the read is long enough to be caught mid-change.
+     */
+    @Test
+    fun aReloadDuringAddsAndRemovesNeverBreaks() = runBlocking {
+        val vm = NodeSwitcherViewModel(CIRISApiClient(baseUrl = DEAD_LOCAL)).also { made += it }
+        repeat(3000) { vm.saveProfile("Held $it", "http://10.1.${it / 250}.${it % 250}:8080") }
+        val failures = java.util.concurrent.ConcurrentLinkedQueue<Throwable>()
+        val stop = java.util.concurrent.atomic.AtomicBoolean(false)
+        val writer = Thread {
+            var i = 0
+            while (!stop.get()) {
+                runCatching {
+                    vm.saveProfile("Churn $i", "http://10.9.9.${i % 200}:9000")
+                    vm.removeProfile(NodeProfile.idFor("http://10.9.9.${i % 200}:9000"))
+                }.onFailure { failures += it }
+                i++
+            }
+        }.apply { isDaemon = true; start() }
+        try {
+            repeat(60) { runCatching { vm.reload() }.onFailure { failures += it } }
+        } finally {
+            stop.set(true)
+            writer.join(5_000)
+        }
+        assertTrue(failures.isEmpty(), "a reload beside adds and removes threw: ${failures.firstOrNull()}")
+        assertTrue(vm.profiles.value.any { it.name == "Held 0" }, "the nodes held all along are still listed")
+    }
+
     private companion object {
         const val WIPED_URL = "http://10.0.0.1:8080"
         const val WIPED_KEY = "ciris-canonical-1-wiped"

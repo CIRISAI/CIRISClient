@@ -18,6 +18,7 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
@@ -115,8 +116,16 @@ class NodeSwitcherViewModel(
      * Session-scoped, in-memory nodes the user added by URL or NodeCode this run
      * (NOT persisted — #125). Carried across [reload] so a live owned-nodes refresh
      * doesn't drop a node the user just typed in. Keyed/de-duped by [NodeProfile.id].
+     *
+     * AN IMMUTABLE LIST IN A STATE FLOW, replaced whole and atomically. It was a
+     * plain mutable list: [reload] reads it on a background dispatcher while
+     * [forgetWipedNode], [removeProfile] and an add change it from another
+     * thread, and the reader threw `ConcurrentModificationException` (seen in CI
+     * as a stray exception charged to the next test, CIRISClient PR #306; in the
+     * app it is a crash of the switcher's reload). A reader now takes whichever
+     * whole list is current.
      */
-    private val sessionProfiles = mutableListOf<NodeProfile>()
+    private val sessionProfiles = MutableStateFlow<List<NodeProfile>>(emptyList())
 
     /**
      * Whether the owned-nodes projection was READ (CSD-035 §2.2). A failed read
@@ -190,7 +199,7 @@ class NodeSwitcherViewModel(
         // (de-dup by id, then by pinned key_id).
         val projectedIds = projected.map { it.id }.toSet()
         val projectedKeys = projected.mapNotNull { it.pinnedKeyId }.toSet()
-        val extra = sessionProfiles.filter { sp ->
+        val extra = sessionProfiles.value.filter { sp ->
             sp.id !in projectedIds && (sp.pinnedKeyId == null || sp.pinnedKeyId !in projectedKeys)
         }
         _profiles.value = projected + extra
@@ -219,8 +228,9 @@ class NodeSwitcherViewModel(
 
     /** Insert or replace a session profile in both the in-memory list and the UI flow. */
     private fun upsertSessionProfile(profile: NodeProfile) {
-        val idx = sessionProfiles.indexOfFirst { it.id == profile.id }
-        if (idx >= 0) sessionProfiles[idx] = profile else sessionProfiles.add(profile)
+        sessionProfiles.update { held ->
+            if (held.any { it.id == profile.id }) held.map { if (it.id == profile.id) profile else it } else held + profile
+        }
         val cur = _profiles.value.toMutableList()
         val ci = cur.indexOfFirst { it.id == profile.id }
         if (ci >= 0) cur[ci] = profile else cur.add(profile)
@@ -246,7 +256,7 @@ class NodeSwitcherViewModel(
     }
 
     fun removeProfile(id: String) {
-        sessionProfiles.removeAll { it.id == id }
+        sessionProfiles.update { held -> held.filterNot { it.id == id } }
         _profiles.value = _profiles.value.filterNot { it.id == id }
         // A live owned/local node reappears on the next reload — only session-added
         // nodes are truly removable. That is by design: the graph is the truth.
@@ -259,9 +269,7 @@ class NodeSwitcherViewModel(
      * so a later [reload] cannot merge the dead node (or its token) back.
      */
     fun forgetWipedNode(wiped: ai.ciris.mobile.shared.auth.WipedNode) {
-        val keptSession = ai.ciris.mobile.shared.auth.profilesAfterWipe(sessionProfiles, wiped)
-        sessionProfiles.clear()
-        sessionProfiles.addAll(keptSession)
+        sessionProfiles.update { held -> ai.ciris.mobile.shared.auth.profilesAfterWipe(held, wiped) }
         val kept = ai.ciris.mobile.shared.auth.profilesAfterWipe(_profiles.value, wiped)
         _profiles.value = if (kept.any { it.isLocal }) kept else listOf(localNodeProfile(null)) + kept
         // Same selection rule as [reload]: keep it if it survived, else local.
