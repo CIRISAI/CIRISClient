@@ -2733,6 +2733,7 @@
     "call_camera_off": "Kamera aus",
     "call_camera_on": "Kamera an",
     "call_rejoin": "Wieder beitreten",
+    "call_stranded": "Dieser Anruf hat den Überblick über die Schlüssel des Raums verloren, daher könnte der Ton zwischen Ihnen und den anderen unterbrochen sein. Treten Sie erneut bei, um dies zu beheben.",
     "call_share": "Bildschirm teilen",
     "call_share_stop": "Freigabe beenden",
     "call_share_starting": "Freigabe wird gestartet…",
@@ -6464,6 +6465,7 @@
     "keep_refused": "Das Speichern von Anrufen ist noch nicht bereit, daher wird dieser Anruf nicht aufbewahrt.",
     "share_unavailable": "Bildschirmfreigabe ist auf diesem Knoten noch nicht verfügbar.",
     "leave_reason_unknown": "Das ist kein Grund, einen Anruf zu verlassen.",
-    "video_two_people_only": "Video und Bildschirmfreigabe funktionieren vorerst nur bei Anrufen zwischen zwei Personen. Dieser Anruf hat mehr Teilnehmer, daher ist es ein reiner Sprachanruf. Wenn Ihre Kamera eingeschaltet ist, sendet sie wieder, sobald der Anruf wieder zwischen zwei Personen stattfindet."
+    "video_two_people_only": "Video und Bildschirmfreigabe funktionieren vorerst nur bei Anrufen zwischen zwei Personen. Dieser Anruf hat mehr Teilnehmer, daher ist es ein reiner Sprachanruf. Wenn Ihre Kamera eingeschaltet ist, sendet sie wieder, sobald der Anruf wieder zwischen zwei Personen stattfindet.",
+    "relay_canonical_audio_only": "Ihr Video erreicht Sie gerade nicht: Die Verbindung zwischen Ihnen überträgt nur Ton. Sie können die andere Person weiterhin hören."
   }
 }

@@ -154,6 +154,11 @@ class CallSession(
                 is CallEvent.VideoPaused -> call.attendees[event.member]?.let {
                     call.copy(attendees = call.attendees + (event.member to it.copy(videoPaused = event.reason)))
                 } ?: call
+                is CallEvent.StreamAdded -> call
+                is CallEvent.Stranded -> call.copy(stranded = true)
+                is CallEvent.VideoRestored -> call.attendees[event.member]?.let {
+                    call.copy(attendees = call.attendees + (event.member to it.copy(videoPaused = null)))
+                } ?: call
                 is CallEvent.KeepRefused -> call.copy(notice = CallNotice.KeepRefused(event.reasonId))
                 // The refusal says the same as the event, so a missed event is not a camera
                 // that goes on encoding for nobody.
@@ -186,6 +191,9 @@ class CallSession(
         /** Why video is not sent in a call of more than [CallState.InCall.videoMaxPeople] people (CIRISServer 0.5.246). */
         const val VIDEO_TWO_PEOPLE_ONLY = "call.video_two_people_only"
 
+        /** Why one member's video does not reach this device: the route to them carries audio only (CIRISServer 0.5.246). */
+        const val RELAY_AUDIO_ONLY = "call.relay_canonical_audio_only"
+
         /**
          * An event's `stream_id` as the frames' raw 32 bytes, when it is 64 hex
          * characters. Anything else leaves the tile's stream unset until its first
@@ -213,6 +221,8 @@ sealed interface CallState {
         /** Members who left, and why, so their tile can say it. */
         val departed: Map<String, LeaveReason> = emptyMap(),
         val notice: CallNotice? = null,
+        /** The node said the call could not follow the room's keys: say so, and offer to join again. */
+        val stranded: Boolean = false,
         val lastFrame: ReceivedFrame? = null,
         /** Screens and windows being shared, by their stream id (hex): one tile each. */
         val shares: Map<String, Share> = emptyMap(),
@@ -288,6 +298,16 @@ sealed interface CallEvent {
     data class AttendeeJoined(val member: String, val streamId: String?, val person: String? = null) : CallEvent
     data class AttendeeLeft(val member: String, val streamId: String?, val left: LeaveReason, val person: String? = null) : CallEvent
     data class EpochRolled(val epoch: Long) : CallEvent
+    /** The node says [member]'s video reaches this device again. */
+    data class VideoRestored(val member: String) : CallEvent
+    /** A member's media stream started: their frames carry what it is, so nothing changes. */
+    data class StreamAdded(val member: String, val streamId: String?) : CallEvent
+    /**
+     * The call could not follow the room's change of keys ([epoch]): this device may
+     * neither hear nor be heard until it joins again. [reason] is the node's
+     * diagnostic, never shown.
+     */
+    data class Stranded(val epoch: Long?, val reason: String?) : CallEvent
     data class TierChanged(val tier: String) : CallEvent
     data class VideoPaused(val member: String, val reason: String) : CallEvent
     data class KeepRefused(val reasonId: String) : CallEvent
@@ -319,14 +339,27 @@ sealed interface CallEvent {
                 "attendee_left" -> str("member")?.let { AttendeeLeft(it, str("stream_id"), LeaveReason.of(str("left")), str("person")) }
                 "epoch_rolled" -> (o["epoch"] as? JsonPrimitive)?.longOrNull?.let { EpochRolled(it) }
                 "tier_changed" -> str("tier")?.let { TierChanged(it) }
-                "video_paused" -> str("member")?.let { VideoPaused(it, str("reason") ?: "") }
                 "keep_refused" -> str("reason_id")?.let { KeepRefused(it) }
                 "publish_refused" -> PublishRefused(str("reason") ?: "", int("budget"), str("reason_id"), int("max_people"))
                 // `allowed` must be a JSON true or false: anything else is not a ruling either way.
                 "video_allowed" -> (o["allowed"] as? JsonPrimitive)?.takeIf { !it.isString }?.contentOrNull?.toBooleanStrictOrNull()
                     ?.let { VideoAllowed(it, int("max_people")) }
-                "stream_replaced" -> str("member")?.let { StreamReplaced(it, str("old_stream_id"), str("new_stream_id")) }
+                // The server's vectors (b08f3eca) name the new stream `new_stream_id`; its
+                // 0.5.246 socket was described as sending `stream_id`. Either is read.
+                "stream_replaced" -> str("member")?.let { StreamReplaced(it, str("old_stream_id"), str("new_stream_id") ?: str("stream_id")) }
+                // 0.5.246: one member's video stopped reaching this device, by id
+                // (call.relay_canonical_audio_only: the route carries audio only).
+                "video_unavailable" -> str("member")?.let { VideoPaused(it, str("reason_id") ?: "") }
+                "video_restored" -> str("member")?.let { VideoRestored(it) }
                 "share_started" -> str("member")?.let { ShareStarted(it, str("stream_id"), str("person")) }
+                // Edge v45.0.0's names: a second stream (kind `share`) is a shared screen; any
+                // other kind is a member's media, which their frames already say (CC rc18:
+                // an unknown kind renders as media).
+                "stream_added" -> str("member")?.let { m ->
+                    if (str("kind") == "share") ShareStarted(m, str("stream_id"), str("person")) else StreamAdded(m, str("stream_id"))
+                }
+                "stream_ended" -> str("member")?.let { ShareStopped(it, str("stream_id")) }
+                "stranded" -> Stranded((o["epoch"] as? JsonPrimitive)?.longOrNull, str("reason"))
                 "share_stopped" -> str("member")?.let { ShareStopped(it, str("stream_id")) }
                 else -> null
             }

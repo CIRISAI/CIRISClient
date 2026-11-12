@@ -4520,6 +4520,7 @@
     "call_camera_off": "Camera tắt",
     "call_camera_on": "Camera bật",
     "call_rejoin": "Tham gia lại",
+    "call_stranded": "Cuộc gọi này đã mất dấu các khóa của phòng, nên âm thanh giữa bạn và những người khác có thể đã dừng lại. Hãy tham gia lại để khắc phục.",
     "call_share": "Chia sẻ màn hình",
     "call_share_stop": "Dừng chia sẻ",
     "call_share_starting": "Đang bắt đầu chia sẻ…",
@@ -6464,6 +6465,7 @@
     "keep_refused": "Tính năng lưu cuộc gọi chưa sẵn sàng, nên cuộc gọi này sẽ không được lưu lại.",
     "share_unavailable": "Chia sẻ màn hình chưa khả dụng trên nút này.",
     "leave_reason_unknown": "Đó không phải là lý do để rời khỏi cuộc gọi.",
-    "video_two_people_only": "Video và chia sẻ màn hình hiện chỉ hoạt động trong cuộc gọi giữa hai người. Cuộc gọi này có nhiều người hơn, nên đây là cuộc gọi chỉ có thoại. Nếu camera của bạn đang bật, nó sẽ bắt đầu gửi lại khi cuộc gọi trở về còn hai người."
+    "video_two_people_only": "Video và chia sẻ màn hình hiện chỉ hoạt động trong cuộc gọi giữa hai người. Cuộc gọi này có nhiều người hơn, nên đây là cuộc gọi chỉ có thoại. Nếu camera của bạn đang bật, nó sẽ bắt đầu gửi lại khi cuộc gọi trở về còn hai người.",
+    "relay_canonical_audio_only": "Video của họ hiện không thể đến được với bạn: tuyến đường giữa hai bên chỉ mang âm thanh. Bạn vẫn có thể nghe thấy họ."
   }
 }

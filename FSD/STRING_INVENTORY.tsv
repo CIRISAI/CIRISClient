@@ -356,6 +356,7 @@ call.not_joined	unclaimed	-	-	-	-	-	-
 call.not_owner	unclaimed	-	-	-	-	-	-
 call.owner_pen_unavailable	unclaimed	-	-	-	-	-	-
 call.plumbing	client	client	literal	-	-	-	-
+call.relay_canonical_audio_only	client	client	literal	-	-	-	-
 call.room_may_keep.not_yet	unclaimed	-	-	-	-	-	-
 call.session_absent	unclaimed	-	-	-	-	-	-
 call.share_unavailable	client	client	literal	-	-	-	-
@@ -1692,6 +1693,7 @@ mobile.call_sharing_screen	client	client	literal	-	-	-	-
 mobile.call_sharing_window	client	client	literal	-	-	-	-
 mobile.call_someone	client	client	literal	-	-	-	-
 mobile.call_someones_screen	client	client	literal	-	-	-	-
+mobile.call_stranded	client	client	literal	-	-	-	-
 mobile.call_tile_audio	client	client	literal	-	-	-	-
 mobile.call_tile_quiet	client	client	literal	-	-	-	-
 mobile.call_tile_video	client	client	literal	-	150	differs:7	-

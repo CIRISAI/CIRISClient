@@ -2743,6 +2743,7 @@
     "call_camera_off": "Kámẹ́rà ti pa",
     "call_camera_on": "Kámẹ́rà ti ṣí",
     "call_rejoin": "Tún Darapọ̀ Mọ́",
+    "call_stranded": "Ìpè yìí kò lè tẹ̀lé àwọn kọ́kọ́rọ́ yàrá náà mọ́, nítorí náà ohùn láàrín ìwọ àti àwọn yòókù lè ti dáwọ́dúró. Tún darapọ̀ mọ́ láti ṣàtúnṣe rẹ̀.",
     "call_share": "Pín ojú ìbòjú",
     "call_share_stop": "Dáwọ́ pínpín dúró",
     "call_share_starting": "Ń bẹ̀rẹ̀ sí í pín…",
@@ -6464,6 +6465,7 @@
     "keep_refused": "Fífi ìpè pamọ́ kò tíì ṣetán, nítorí náà a kò ní pa ìpè yìí mọ́.",
     "share_unavailable": "Pínpín ojú ìbòjú rẹ kò tíì sí lórí nódù yìí síi.",
     "leave_reason_unknown": "Ìdí yẹn kì í ṣe ìdí fún yíyọ kúrò nínú ìpè.",
-    "video_two_people_only": "Fídíò àti pínpín ojú-ìwé ń ṣiṣẹ́ nínú àwọn ìpè láàrin ènìyàn méjì fún ìsinsìnyí. Ìpè yìí ní ju bẹ́ẹ̀ lọ, nítorí náà ohùn nìkan ni. Bí kámẹ́rà rẹ bá wà ní títan, yóò tún bẹ̀rẹ̀ sí í fi ránṣẹ́ nígbà tí ìpè náà bá padà sí ènìyàn méjì."
+    "video_two_people_only": "Fídíò àti pínpín ojú-ìwé ń ṣiṣẹ́ nínú àwọn ìpè láàrin ènìyàn méjì fún ìsinsìnyí. Ìpè yìí ní ju bẹ́ẹ̀ lọ, nítorí náà ohùn nìkan ni. Bí kámẹ́rà rẹ bá wà ní títan, yóò tún bẹ̀rẹ̀ sí í fi ránṣẹ́ nígbà tí ìpè náà bá padà sí ènìyàn méjì.",
+    "relay_canonical_audio_only": "Fídíò wọn kò lè dé ọ̀dọ̀ rẹ ní ìsinsìnyí: ọ̀nà tí ó wà láàrin yín gbé ohùn nìkan. O ṣì lè gbọ́ wọn."
   }
 }
