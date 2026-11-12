@@ -6467,5 +6467,9 @@
     "leave_reason_unknown": "Hiyo si sababu ya kuondoka kwenye simu.",
     "video_two_people_only": "Video na kushiriki skrini hufanya kazi kwenye simu kati ya watu wawili kwa sasa. Simu hii ina watu zaidi, hivyo ni ya sauti pekee. Ikiwa kamera yako imewashwa, itaanza kutuma tena wakati simu itakaporudi kuwa ya watu wawili.",
     "relay_canonical_audio_only": "Video yao haiwezi kukufikia kwa sasa: njia iliyo baina yenu inabeba sauti pekee. Bado unaweza kuwasikia."
+  },
+  "decisions": {
+    "not_found": "Uamuzi huo haupo wazi kwako tena.",
+    "awaiting_members": "Jibu lako limerekodiwa. Wanachama wengine bado wanahitaji kuidhinisha kabla hii kuanza kutumika."
   }
 }

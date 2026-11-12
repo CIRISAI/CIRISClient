@@ -6467,5 +6467,9 @@
     "leave_reason_unknown": "That isn't a reason for leaving a call.",
     "video_two_people_only": "Video and screen sharing work in calls between two people for now. This call has more, so it's voice only. If your camera is on, it starts sending again when the call is back to two.",
     "relay_canonical_audio_only": "Their video can't reach you right now: the route between you carries sound only. You can still hear them."
+  },
+  "decisions": {
+    "not_found": "That decision isn't open for you any more.",
+    "awaiting_members": "Your answer is recorded. The other members still need to approve before this takes effect."
   }
 }

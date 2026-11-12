@@ -6467,5 +6467,9 @@
     "leave_reason_unknown": "Ìdí yẹn kì í ṣe ìdí fún yíyọ kúrò nínú ìpè.",
     "video_two_people_only": "Fídíò àti pínpín ojú-ìwé ń ṣiṣẹ́ nínú àwọn ìpè láàrin ènìyàn méjì fún ìsinsìnyí. Ìpè yìí ní ju bẹ́ẹ̀ lọ, nítorí náà ohùn nìkan ni. Bí kámẹ́rà rẹ bá wà ní títan, yóò tún bẹ̀rẹ̀ sí í fi ránṣẹ́ nígbà tí ìpè náà bá padà sí ènìyàn méjì.",
     "relay_canonical_audio_only": "Fídíò wọn kò lè dé ọ̀dọ̀ rẹ ní ìsinsìnyí: ọ̀nà tí ó wà láàrin yín gbé ohùn nìkan. O ṣì lè gbọ́ wọn."
+  },
+  "decisions": {
+    "not_found": "Ìpinnu yẹn kò sí ní ṣíṣí fún ọ mọ́.",
+    "awaiting_members": "A ti ṣàkọsílẹ̀ ìdáhùn rẹ. Àwọn ọmọ ẹgbẹ́ mìíràn ṣì nílò láti fọwọ́sí kí èyí tó bẹ̀rẹ̀ sí í ṣiṣẹ́."
   }
 }

@@ -6467,5 +6467,9 @@
     "leave_reason_unknown": "Questo non è un motivo per lasciare la chiamata.",
     "video_two_people_only": "Per ora, video e condivisione dello schermo funzionano nelle chiamate tra due persone. Questa chiamata ne ha di più, quindi è solo vocale. Se la tua fotocamera è attiva, riprenderà a trasmettere quando la chiamata tornerà a due persone.",
     "relay_canonical_audio_only": "Il loro video non può raggiungerti in questo momento: il percorso tra voi trasporta solo l'audio. Puoi comunque sentirli."
+  },
+  "decisions": {
+    "not_found": "Questa decisione non è più aperta per te.",
+    "awaiting_members": "La tua risposta è stata registrata. Gli altri membri devono ancora approvare prima che questa decisione abbia effetto."
   }
 }

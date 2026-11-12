@@ -6467,5 +6467,9 @@
     "leave_reason_unknown": "Ce n'est pas une raison valable pour quitter un appel.",
     "video_two_people_only": "La vidéo et le partage d'écran fonctionnent pour l'instant uniquement dans les appels entre deux personnes. Cet appel compte plus de participants, il est donc uniquement vocal. Si votre caméra est activée, elle recommencera à transmettre lorsque l'appel reviendra à deux participants.",
     "relay_canonical_audio_only": "Leur vidéo ne peut pas vous parvenir pour le moment : la liaison entre vous ne transporte que le son. Vous pouvez toujours les entendre."
+  },
+  "decisions": {
+    "not_found": "Cette décision n'est plus ouverte pour vous.",
+    "awaiting_members": "Votre réponse est enregistrée. Les autres membres doivent encore donner leur approbation avant que cela prenne effet."
   }
 }
