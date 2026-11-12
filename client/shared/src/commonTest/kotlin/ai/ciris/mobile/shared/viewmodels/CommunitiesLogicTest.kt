@@ -32,6 +32,35 @@ class CommunitiesLogicTest {
      * invitations. Invite is hidden only where the node has said so, on the room
      * or by its refusal; an older node's rooms keep it.
      */
+    /**
+     * The answers a ciris-server 0.5.246 node gave (release/0.5.246 `2bfb48a7`, two
+     * nodes, 2026-11-12), read with this client's own models. A founder alone in a
+     * room that holds two can invite; with one invitation open the room is full,
+     * and the node refused the next one with 409 `community.two_people_only`
+     * `{max_people: 2, members: 1, open_invitations: 1}`.
+     */
+    @Test
+    fun theNodesOwnAnswersMakeARoomFullAtOneMemberAndOneOpenInvitation() {
+        val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+        val room = json.decodeFromString<CommunityRoom>(
+            """{"cohort_scope": "community", "community_id": "chat:room:v1:3ebf42a12c1743c68a6df2aeb8e47962", "consensus_protocol": "majority", "founded_at": "2026-11-12T12:28:32.158+00:00", "kind": "room", "max_people": 2, "member_count": 1, "members": [{"joined_at": "2026-11-12T12:28:32.158+00:00", "key_id": "ciris-mod-a-11f17ac6-user-ixydwigu22", "role": "founder"}], "moderators": ["ciris-mod-a-11f17ac6-user-ixydwigu22"], "my_role": "founder", "name": "two people", "revocations": 0, "roles": {"founder": ["ciris-mod-a-11f17ac6-user-ixydwigu22"]}, "tier": "community", "widenings": 0}""",
+        )
+        assertEquals(2, room.maxPeople, "the node says the limit on the room itself")
+        assertFalse(CommunitiesViewModel.roomIsFull(room, openInvitations = 0, learnedLimit = null), "a founder alone may invite one person")
+        val invites = json.decodeFromString<ai.ciris.mobile.shared.models.federation.GroupInviteList>(
+            """{"community_id": "chat:room:v1:3ebf42a12c1743c68a6df2aeb8e47962", "invites": [{"expires_at": "2026-11-26T12:28:32.181+00:00", "invitee_key_id": "ciris-mod-b-9cb6cbe1-user-fhsce5njaz", "proposal_id": "f592ec06-8fc4-464e-8b11-c1eae86e0d2f", "proposed_at": "2026-11-12T12:28:32.182+00:00", "proposer_key_id": "ciris-mod-a-11f17ac6-user-ixydwigu22", "reply_id": null, "role": null, "state": "pending"}], "seated_now": []}""",
+        )
+        val open = invites.invites.count {
+            it.state == ai.ciris.mobile.shared.models.federation.InviteState.PENDING ||
+                it.state == ai.ciris.mobile.shared.models.federation.InviteState.ACCEPTED
+        }
+        assertEquals(1, open)
+        assertTrue(CommunitiesViewModel.roomIsFull(room, open, learnedLimit = null), "one member plus one open invitation: where the node refused the next invite")
+        // A pair room arrives with the same limit and both people in it.
+        val pair = json.decodeFromString<CommunityRoom>("""{"community_id": "chat:pair:v1:ef3e5d77", "kind": "pair", "max_people": 2, "member_count": 2}""")
+        assertTrue(CommunitiesViewModel.roomIsFull(pair, 0, null))
+    }
+
     @Test
     fun aRoomIsFullOnlyWhereTheNodeSaysItsLimit() {
         fun members(n: Int) = (1..n).map { ai.ciris.mobile.shared.models.federation.CommunityRoomMember(keyId = "k$it") }

@@ -320,8 +320,15 @@ keeps nothing from the response. A refusal is drawn by its id:
 `moderation.not_a_moderator`, `moderation.nothing_to_clear`,
 `moderation.unknown_class`, `moderation.flag_failed`,
 `moderation.delegate_may_not_moderate` (a delegate session may do neither).
-**Not observed on a node**: read from CIRISServer `adopt/edge-v45` `05cbe665`
-(`src/contacts_chat.rs`) and checked by view-model tests against a fake.
+**Observed over HTTP, not through this screen** (2026-11-12, two nodes built
+at CIRISServer `release/0.5.246` `2bfb48a7`, each person on their own node, a
+pair room): a flag hid the message on the moderator's node at once and on the
+author's 12 s later; reveal returned the body on each node; raising the class
+reset each reader's reveal; clear lifted it on both. `nothing_to_clear` and
+`unknown_class` came back by id with this client's sentences. The menu items
+and the confirm were not driven on a node; view-model tests cover them against
+a fake. In a pair room both people hold every duty, so `not_a_moderator` could
+not be provoked there; it was, on a three-node room of an earlier build.
 Until 0.5.246 this menu's flag item went to `POST /v1/safety/flag` on the
 author's key, signed by the node, which a room's readers ignore. Moderating another member's room file (withdrawing or
 hiding it) **does not work yet**: no route lets a moderator withdraw a file they
@@ -374,9 +381,19 @@ reviewer of the room rules on the appeal:
 Refusals are drawn by id: `moderation.nothing_to_appeal`,
 `moderation.no_standing`, `moderation.unknown_grounds`,
 `moderation.not_a_reviewer`, `moderation.unknown_outcome`,
-`moderation.nothing_to_rule`, `moderation.appeal_failed`. **Not observed on a
-node**: read from CIRISServer `adopt/edge-v45` `e9866938` and checked by tests
-against a fake. Takedown is not in 0.5.246 (CIRISPersist#1260) and stays drawn
+`moderation.nothing_to_rule`, `moderation.appeal_failed`. **Observed over HTTP,
+not through this screen** (same run): the author's appeal reached the
+reviewer's node in 3 to 9 s, including one filed in the seconds after the
+moderator raised the class; `upheld` and `partial` reached the author in 21 s
+and left the item flagged and withheld; `reversed` lifted the flag and
+returned the body on the author's node in 21 s; an appeal after it answered
+`nothing_to_appeal`; a new flag after the reversal took effect at once.
+`nothing_to_rule`, `unknown_grounds` and `unknown_outcome` came back by id.
+`no_standing` and `not_a_reviewer` were provoked on a three-node room of the
+`2ae2d8a8` build. Two defects this run's predecessors found are fixed in
+`2bfb48a7`: on `d892af04` no appeal crossed between nodes and a flag never
+reached a third member (the contact grant did not carry those rows), and on
+`2ae2d8a8` an appeal against a superseded flag row was lost. Takedown is not in 0.5.246 (CIRISPersist#1260) and stays drawn
 unavailable.
 
 ## 3. Contracts (who)

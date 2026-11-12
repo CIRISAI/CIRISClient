@@ -233,9 +233,15 @@ cannot observe.
   after one `community.two_people_only` the limit is remembered for the
   session. **Households are not limited** (a household defaults to
   `founder_only`, where the founder alone seats a member), and a pair room is
-  two people by construction. Read from the CIRISServer session's account of
-  `release/0.5.246` `8be814f9`; the refusal was not provoked on a node from
-  this client.
+  two people by construction. **Observed over HTTP, not through this screen**
+  (2026-11-12, a node built at `release/0.5.246` `2bfb48a7`): a new room
+  answers `max_people: 2`, as does every room in `GET /v1/communities`, a pair
+  room included; with one member and one pending invitation the next
+  `POST …/invites`, and the `/members` alias, answered 409
+  `community.two_people_only` `{max_people: 2, members: 1, open_invitations: 1}`.
+  Those answers are a test fixture (`CommunitiesLogicTest`). The refusal on
+  `…/changes/envelope` was not reached: the probe's key was refused first as
+  `community.not_a_contact`.
 * **A quorum ROOM cannot seat an accepted invitee from this client.** The
   server seats them through `…/changes/envelope {op: add}` → cosign →
   assemble; this client does not call the community envelope route. The
