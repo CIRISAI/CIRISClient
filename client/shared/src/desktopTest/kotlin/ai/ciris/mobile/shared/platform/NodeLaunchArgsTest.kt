@@ -26,11 +26,15 @@ class NodeLaunchArgsTest {
         assertEquals(legacy, NodeLaunchArgs.forNode("/h", null), "no answer is not 0.5.246")
     }
 
-    @Test fun theVersionIsTheFirstThreeNumbersPrinted() {
+    @Test fun theVersionIsTheLineTheServerPrintsAndNothingElse() {
         assertEquals(listOf(0, 5, 246), NodeLaunchArgs.parseVersion("ciris-server 0.5.246\n"))
-        assertEquals(listOf(0, 5, 246), NodeLaunchArgs.parseVersion("v0.5.246-rc1 (edge 45.0.0)"))
+        assertEquals(listOf(0, 5, 246), NodeLaunchArgs.parseVersion("some banner\nciris-server 0.5.246\n"))
         assertNull(NodeLaunchArgs.parseVersion("unknown serve arg: --version"))
         assertNull(NodeLaunchArgs.parseVersion(""))
+        // A number that only looks like a version, in a path or a note, is not one.
+        assertNull(NodeLaunchArgs.parseVersion("keyring tier pinned: home /home/u/ciris-0.9.900 (tracked: CIRISServer#783)"))
+        assertNull(NodeLaunchArgs.parseVersion("ciris-server 0.5.246 --home /x"))
+        assertNull(NodeLaunchArgs.parseVersion("other-server 0.5.246"))
     }
 
     /** The probe against real processes: one that answers, one that refuses, one that hangs, one that is not there. */
@@ -44,6 +48,12 @@ class NodeLaunchArgsTest {
                 "an older node refuses the flag, and its refusal is not a version")
             assertNull(NodeLaunchArgs.probe(script("liar", "echo '0.5.246'; exit 1")), "a version on a failed exit is not believed")
             assertNull(NodeLaunchArgs.probe(script("hang", "sleep 30"), timeoutSeconds = 1), "a node that does not answer is not waited for")
+            assertEquals(
+                listOf(0, 5, 245),
+                NodeLaunchArgs.probe(script("noisy", "echo 'ciris_server: keyring tier pinned, home /h/ciris-0.9.900 (CIRISServer#783)' >&2; echo 'ciris-server 0.5.245'")),
+                "a note on stderr that holds a version-like number is not the version",
+            )
+            assertNull(NodeLaunchArgs.probe(script("stderr-only", "echo 'ciris-server 0.5.246' >&2")), "stdout is where the server says it")
             assertNull(NodeLaunchArgs.probe(File(dir, "absent").absolutePath))
         } finally {
             dir.deleteRecursively()

@@ -671,8 +671,8 @@ actual fun createPythonRuntime(): PythonRuntime = PythonRuntime()
  * before, and so is one whose version cannot be read: the wrong guess one way
  * costs a descriptive name on a fresh home, the other way costs an identity.
  *
- * `ciris-server --version` prints one line, `ciris-server 0.5.246`, and exits 0
- * before anything else, from 0.5.246 (CIRISServer `93d52612`). It counts only as
+ * `ciris-server --version` prints one line, `ciris-server 0.5.246`, on stdout
+ * and exits 0, from 0.5.246 (CIRISServer `93d52612`). It counts only as
  * the ONLY argument, so the probe passes nothing else. Older servers (checked by
  * the server session at every tag from 0.5.230 to 0.5.245) answer "unknown serve
  * arg: --version" and exit nonzero before they bind a port or open a home. They
@@ -683,11 +683,16 @@ actual fun createPythonRuntime(): PythonRuntime = PythonRuntime()
 internal object NodeLaunchArgs {
     const val LEGACY_KEY_ID = "ciris-client"
     private val HOME_PICKS_ITS_KEY = listOf(0, 5, 246)
-    private val VERSION = Regex("""(\d+)\.(\d+)\.(\d+)""")
+    private val VERSION_LINE = Regex("""^ciris-server (\d+)\.(\d+)\.(\d+)\s*$""")
 
-    /** The first `x.y.z` in what `--version` printed, or null. */
-    fun parseVersion(output: String): List<Int>? =
-        VERSION.find(output)?.groupValues?.drop(1)?.map { it.toInt() }
+    /**
+     * The version in what `--version` printed on STDOUT: the line that reads
+     * `ciris-server x.y.z` and nothing else, or null. Any other line is ignored,
+     * and so is stderr, which the caller does not pass here.
+     */
+    fun parseVersion(stdout: String): List<Int>? =
+        stdout.lineSequence().firstNotNullOfOrNull { VERSION_LINE.find(it.trim()) }
+            ?.groupValues?.drop(1)?.map { it.toInt() }
 
     /** [version] is what [probe] returned: null when the node did not say. */
     fun forNode(home: String, version: List<Int>?): List<String> {
@@ -707,9 +712,16 @@ internal object NodeLaunchArgs {
      * Ask the binary its version. Null on a nonzero exit, a timeout, an error or
      * output with no version in it: every one of those is "not known to be
      * 0.5.246 or later".
+     *
+     * STDOUT ONLY. A pip-installed server lists the default home's `identity/`
+     * and `keys/` folders at import to choose its keyring tier, and may print a
+     * line about it on stderr that carries a path and an issue number. It writes
+     * nothing and opens no key (CIRISServer, found by running the 0.5.246
+     * candidate). Stderr is discarded so that line can never be read as a version.
      */
     fun probe(executable: String, timeoutSeconds: Long = 5): List<Int>? = try {
-        val p = ProcessBuilder(executable, "--version").redirectErrorStream(true).start()
+        val p = ProcessBuilder(executable, "--version")
+            .redirectError(ProcessBuilder.Redirect.DISCARD).start()
         p.outputStream.close()
         // Read on another thread: a process that prints nothing and never exits must not hold the launch.
         val out = StringBuilder()
