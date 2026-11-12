@@ -6467,5 +6467,9 @@
     "leave_reason_unknown": "Esa no es una razón para salir de la llamada.",
     "video_two_people_only": "El video y la pantalla compartida funcionan por ahora en llamadas entre dos personas. Esta llamada tiene más personas, así que es solo de voz. Si tu cámara está activada, volverá a enviar video cuando la llamada vuelva a tener dos personas.",
     "relay_canonical_audio_only": "Su video no puede llegarte en este momento: la ruta entre ustedes solo transporta sonido. Aún puedes oírlos."
+  },
+  "decisions": {
+    "not_found": "Esa decisión ya no está abierta para ti.",
+    "awaiting_members": "Tu respuesta está registrada. Los demás miembros todavía deben aprobar antes de que esto surta efecto."
   }
 }

@@ -176,9 +176,18 @@ A screen is decided by three kinds of input and nothing else (L8).
      values must all be circles, and the write must send it). The door judges a
      row at one scope, and a wider scope can change whether it is confirmed.
      `row: null` only for a write that puts down no row.
-   - `confirm:` **copied from CC's `transitions.json` for that family and verb.**
-     True when the row widens or has no way back. Nothing checks your copy
-     against the manifest yet, so a reviewer must.
+   - `confirm:` **read from CC's `transitions.json` for that family and verb,
+     for the row as signed.** The cell is a boolean and a `when`: the boolean is
+     an upper bound and `when` narrows it (`CSD5.md` §4, L6). Confirm when the
+     row widens at the scope it is signed at, or has no way back:
+       - `confirm.when: always` → `confirm: true`;
+       - `confirm.when: if_widens` on a `by_scope` family → `true` when the
+         write's scope cannot be `self`, `false` when it is always `self`;
+       - a supersede (an edit) → confirmed only when it promotes the row's scope.
+     A write whose scope the person picks AND can be `self` needs a confirm that
+     depends on the pick. The gate does not hold that yet: say so in the card
+     and raise it before adopting. Nothing checks your reading against the
+     manifest yet, so a reviewer must.
 6. **`defs:`** names for guards you repeat.
 
 A refusal is an answer. A non-2xx with a body is an answer. `failed` means
@@ -312,6 +321,8 @@ cannot.
 
 **Does it hold up a person's choice?**
 - [ ] Nothing that widens or cannot be undone is one tap away.
+- [ ] Nothing signed only to the person's own scope has a confirm in front of it: on a `by_scope` family a row at `self` does not widen.
+- [ ] No copy says a write "can be undone" because the table offers a withdraw. A way back for the row is not a recall of copies already taken.
 - [ ] Nothing that is a way out (leave, withdraw, revoke) has a confirm in front of it.
 - [ ] Each sheet's `shows:` states what it sends, rather than relying on a field underneath.
 - [ ] No new `reason: null`.

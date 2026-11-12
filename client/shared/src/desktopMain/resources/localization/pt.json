@@ -6467,5 +6467,9 @@
     "leave_reason_unknown": "Esse não é um motivo para sair de uma chamada.",
     "video_two_people_only": "Por enquanto, o vídeo e o compartilhamento de tela funcionam em chamadas entre duas pessoas. Esta chamada tem mais pessoas, por isso é só voz. Se sua câmera estiver ligada, ela volta a enviar quando a chamada voltar a ter duas pessoas.",
     "relay_canonical_audio_only": "O vídeo da outra pessoa não consegue chegar até você agora: a rota entre vocês transmite apenas som. Você ainda pode ouvi-la."
+  },
+  "decisions": {
+    "not_found": "Essa decisão não está mais aberta para você.",
+    "awaiting_members": "Sua resposta está registrada. Os outros membros ainda precisam aprovar antes que isso entre em vigor."
   }
 }

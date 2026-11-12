@@ -656,6 +656,8 @@ custody.receipt_signer_not_your_device	server	server	-	-	-	-	-
 custody.receipt_time_unknown	unclaimed	-	-	-	-	-	-
 custody.receipts_admitted_on_author_device	server	server	-	-	-	-	-
 custody.receipts_unreadable	server	server	-	-	-	-	-
+decisions.awaiting_members	unclaimed	-	-	-	-	-	-
+decisions.not_found	unclaimed	-	-	-	-	-	-
 description	client	client	literal	-	-	-	-
 discord.deferral_continued	agent	agent	-	-	-	-	-
 discord.deferral_request	agent	agent	-	-	-	-	-

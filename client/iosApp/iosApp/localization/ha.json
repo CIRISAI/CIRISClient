@@ -6467,5 +6467,9 @@
     "leave_reason_unknown": "Wannan ba dalili ba ne na barin kiran.",
     "video_two_people_only": "Bidiyo da raba allo suna aiki ne kawai a kiraye-kiraye tsakanin mutane biyu a yanzu. Wannan kiran yana da fiye da haka, don haka murya ne kawai. Idan kyamararku a kunne take, za ta sake fara aikawa idan kiran ya koma mutane biyu.",
     "relay_canonical_audio_only": "Bidiyonsu ba zai iya isa gare ku a yanzu ba: hanyar da ke tsakaninku tana ɗauke da sauti kawai. Har yanzu kuna iya jin su."
+  },
+  "decisions": {
+    "not_found": "Wannan shawarar ba ta ƙara buɗewa gare ku ba.",
+    "awaiting_members": "An rubuta amsarku. Sauran membobi har yanzu suna buƙatar amincewa kafin wannan ya fara aiki."
   }
 }
