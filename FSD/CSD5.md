@@ -150,6 +150,31 @@ laws.
   confirm in front of an exit is friction on the way out, and the gate refuses
   it as it refuses a missing one. Where a transition's `undo` cell is `gap`, the
   `confirm` value is provisional.
+
+  **Confirm is decided for the row as signed, at the scope it is signed at.**
+  From rc19 the table's `widens` and `confirm` cells each carry a boolean and a
+  `when`, and one rule reads every cell: the boolean never under-states, and
+  `when` narrows it. `widens.when` is `always` (eleven families that live at
+  the federation whatever the signer picks), `by_scope` (165 families: a row
+  signed at `self` does not widen, a wider one does), or on a supersede
+  `by_scope_change` (a replacing row widens when its scope is wider than the
+  row it replaces, CC 4.4.3.3.1). `confirm.when` is `always` (the row widens at
+  every scope, or has no way back) or `if_widens` (it has a way back, and is
+  confirmed only when `widens.when` holds for the row as signed). So a write
+  whose scope the person picks, on a `by_scope` family, is confirmed exactly
+  when the picked scope is not `self`, and an edit is confirmed only when it
+  promotes the row's scope. Confirming on the boolean alone over-confirms, and
+  L6 refuses a confirm in front of a row that does not widen. This is why a
+  write's row declares its `scope` (§5.1). **Not yet held by the gate**: a
+  card's `confirm:` is still one boolean, which is right for every write whose
+  scope cannot be `self`, as on CSD-070. A card with a write that can be signed
+  at `self` needs `confirm: {value, when}`, and the gate must grow with it.
+
+  One caution from CC, which this standard carries: "has a way back" in the
+  table means the table offers a withdraw or recant of the ROW. It does not
+  mean the effect can be undone in the world: a copy a peer already took is not
+  recalled. `if_widens` is honest only for the question the table answers, and
+  a screen draws no "this can be undone" from it.
 * **L7 is half carried.** `preview_is_execution` proves that the view an item
   previews is the view the door produces when the row arrives. It does not prove
   that a write is sent only while its preview is held, or that it sends only
