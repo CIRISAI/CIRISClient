@@ -6287,7 +6287,8 @@
     "pair_room_fixed": "2人の間のチャットはメンバーを変更できません。より多くの人と話すには、ルームを創設してください。",
     "quorum_pending": "この変更が効力を持つには、ルームのルールに基づきさらに署名が必要です。",
     "store_unavailable": "ノードはディレクトリを読み書きできませんでした。",
-    "write_failed": "ノードは変更を書き込めませんでした。"
+    "write_failed": "ノードは変更を書き込めませんでした。",
+    "two_people_only": "ルームは今のところ2人までです。"
   },
   "partnership_queue": {
     "outcome_approved": "承認",

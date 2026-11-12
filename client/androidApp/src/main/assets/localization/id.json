@@ -6287,7 +6287,8 @@
     "pair_room_fixed": "Obrolan antara dua orang tidak dapat mengubah anggotanya. Dirikan sebuah ruangan untuk berbicara dengan lebih banyak orang.",
     "quorum_pending": "Aturan ruangan memerlukan lebih banyak tanda tangan sebelum perubahan ini berlaku.",
     "store_unavailable": "Node tidak dapat membaca atau menulis direktorinya.",
-    "write_failed": "Node tidak dapat menulis perubahan tersebut."
+    "write_failed": "Node tidak dapat menulis perubahan tersebut.",
+    "two_people_only": "Untuk saat ini, sebuah ruangan menampung dua orang."
   },
   "partnership_queue": {
     "title": "Bermitra dengan agen ini",

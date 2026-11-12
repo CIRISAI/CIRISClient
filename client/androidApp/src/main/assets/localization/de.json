@@ -6287,7 +6287,8 @@
     "pair_room_fixed": "Ein Chat zwischen zwei Personen kann seine Mitglieder nicht ändern. Gründen Sie einen Raum, um mit mehr Personen zu sprechen.",
     "quorum_pending": "Die Regel des Raums benötigt weitere Signaturen, bevor diese Änderung wirksam wird.",
     "store_unavailable": "Der Knoten konnte sein Verzeichnis nicht lesen oder schreiben.",
-    "write_failed": "Der Knoten konnte die Änderung nicht schreiben."
+    "write_failed": "Der Knoten konnte die Änderung nicht schreiben.",
+    "two_people_only": "Ein Raum fasst vorerst zwei Personen."
   },
   "partnership_queue": {
     "revocable_not_undoable": "Eine Partnerschaft kann jederzeit beendet werden, das ist jedoch kein Rückgängigmachen: Der Agent trennt Ihre Identität sofort und lässt das, was er gelernt hat, über 90 Tage verblassen.",

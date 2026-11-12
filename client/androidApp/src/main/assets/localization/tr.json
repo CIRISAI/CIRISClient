@@ -6287,7 +6287,8 @@
     "pair_room_fixed": "İki kişi arasındaki bir sohbetin üyeleri değiştirilemez. Daha fazla kişiyle konuşmak için bir oda kurun.",
     "quorum_pending": "Bu değişikliğin yürürlüğe girmesi için odanın kuralı daha fazla imza gerektiriyor.",
     "store_unavailable": "Düğüm, dizinini okuyamadı veya yazamadı.",
-    "write_failed": "Düğüm, değişikliği yazamadı."
+    "write_failed": "Düğüm, değişikliği yazamadı.",
+    "two_people_only": "Bir oda şimdilik iki kişiyi barındırır."
   },
   "partnership_queue": {
     "admin_only": "Bu ajanı kimlerin beklediğini yalnızca yöneticileri görebilir.",

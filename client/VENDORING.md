@@ -21,7 +21,7 @@ upstream's last merged state** — the branch point the next pull starts from:
 
 | Upstream | Last merged state | Input commit | Pulled |
 |---|---|---|---|
-| `CIRISAI/CIRISServer` | `release/0.5.246` (`d892af0416520137b7cf77ab651b9e1b4bb9103f`) | `chore/pin-server-0.5.246` (the commit the CIRISServer session named final for 0.5.246, NOT YET A TAG: the edge v45.0.0 adopt; calls with video for two people; the frames-socket events of `7b489909`; a room moderator's flag and clear, the author's appeal and a reviewer's ruling; `ciris-server --version`; the pending-decision ids; and the moderation refusals in this repo's own sentences. Move this to the `v0.5.246` tag when it is cut. Previous: `v0.5.245` `7af5d4ebc56a2f092f9c22cfef4bbc7f6c67ce3d`, `feat/0.5.239`) | 2026-11-11 |
+| `CIRISAI/CIRISServer` | `release/0.5.246` (`b19f32acd424ee0818134927720cf22e101cff79`) | `chore/pin-server-0.5.246` (the commit the CIRISServer session named FINAL for 0.5.246 on 2026-11-12, its release PR CIRISServer#875, NOT YET A TAG: edge v45.0.0 and persist 61.2.2, with no reader pool on macOS and iOS (CIRISPersist#1261); calls with video for two people; the frames-socket events of `7b489909`; a room moderator's flag and clear, the author's appeal and a reviewer's ruling, crossing between members; a room holds two people (`max_people`, `community.two_people_only`); `ciris-server --version`; the pending-decision ids; and the moderation refusals in this repo's own sentences. Its binary behaviour is `2bfb48a7`'s, which this repo ran two nodes against; `b19f32ac` adds one test. Move this to the `v0.5.246` tag when it is cut. Previous: `v0.5.245` `7af5d4ebc56a2f092f9c22cfef4bbc7f6c67ce3d`, `feat/0.5.239`) | 2026-11-11 |
 | `CIRISAI/CIRISAgent` | `v2.9.36-stable` (`c211a9ff330ab5821002a159c13741cdd74609bb`) | `merge/agent-v2.9.36` | 2026-08-24 |
 
 The §2 exclusion set (extended: `.ciris_keys/`, `__pycache__/`, `*.pyc`,
@@ -40,7 +40,7 @@ source is the pair a bisect wants:
 The tree's current recorded state — sha256-of-sha256s over every git-tracked
 file under `client/` except this one:
 
-**state digest:** `2dae67e98f18197ee96b0cfc4c232ae6d2946050dd40ebca504d2573692d37a1`
+**state digest:** `67a99672418f1d197e5744c6a7ddfc34b309597188e6326089fbada2e4d5b853`
 
 `packaging/check_vendoring.py` asserts it on every push, and refuses any
 tracked file matching a §2 never-vendor class. **Any commit that touches

@@ -6287,7 +6287,8 @@
     "pair_room_fixed": "Một cuộc trò chuyện giữa hai người không thể thay đổi các thành viên của nó. Lập một phòng để trò chuyện với nhiều người hơn.",
     "quorum_pending": "Quy tắc của phòng cần thêm chữ ký trước khi thay đổi này có hiệu lực.",
     "store_unavailable": "Nút không thể đọc hoặc ghi vào thư mục của nó.",
-    "write_failed": "Nút không thể ghi thay đổi."
+    "write_failed": "Nút không thể ghi thay đổi.",
+    "two_people_only": "Hiện tại, một phòng chỉ chứa được hai người."
   },
   "partnership_queue": {
     "title": "Hợp tác với tác nhân này",

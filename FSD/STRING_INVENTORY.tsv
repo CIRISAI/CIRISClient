@@ -558,6 +558,7 @@ community.not_found	server	client,server	literal	-	-	-	-
 community.pair_room_fixed	server	server	-	-	-	-	-
 community.quorum_pending	server	client,server	literal	-	-	-	-
 community.store_unavailable	server	server	-	-	-	-	-
+community.two_people_only	server	client,server	literal	-	-	-	-
 community.write_failed	server	server	-	-	-	-	-
 conscience.forced_ponder_rationale	agent	agent	-	-	-	-	-
 conscience.override_rationale	agent	agent	-	-	-	-	-

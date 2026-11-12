@@ -6287,7 +6287,8 @@
     "pair_room_fixed": "Una chat tra due persone non può modificare i propri membri. Fonda una stanza per parlare con più persone.",
     "quorum_pending": "La regola della stanza richiede più firme prima che questa modifica abbia effetto.",
     "store_unavailable": "Il nodo non è riuscito a leggere o scrivere la propria directory.",
-    "write_failed": "Il nodo non è riuscito a scrivere la modifica."
+    "write_failed": "Il nodo non è riuscito a scrivere la modifica.",
+    "two_people_only": "Per ora, una stanza ospita due persone."
   },
   "partnership_queue": {
     "title": "Partnership con questo agente",
