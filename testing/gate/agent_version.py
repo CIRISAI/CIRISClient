@@ -59,7 +59,7 @@ class ResolveError(Exception):
 
 @dataclass(frozen=True)
 class AgentResolution:
-    tag: str        # the GitHub release tag: v2.16.2-stable (or the input as typed)
+    tag: str        # the GitHub release tag, always v2.16.2-stable whichever form was typed
     pypi: str       # what `pip install ciris-agent==` takes: 2.16.2
     server: str     # the ciris-server the agent pins and folds in: 0.5.229
     source: str     # INPUT | LATEST
@@ -94,6 +94,10 @@ def resolve(*, override: Optional[str], latest: Callable[[], str],
     else:
         tag, source = latest().strip(), LATEST
     version = pypi_version(tag)
+    # ONE SPELLING OF THE TAG. The iOS leg checks CIRISAgent out at `tag`, and
+    # CIRISAgent has no ref named `2.21.0` — run 43438260138 typed the PyPI form
+    # the input's own description offers and the checkout failed three times.
+    tag = f"v{version}-stable"
     info = pypi_meta(version)
     if info is None:
         raise ResolveError(
