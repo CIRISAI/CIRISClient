@@ -28,6 +28,9 @@ def test_the_latest_release_is_mapped_to_its_pypi_version_and_its_node_pin():
 def test_the_input_wins_in_any_of_its_spellings_and_never_reads_latest(typed):
     r = av.resolve(override=typed, latest=_latest_untouched, pypi_meta=_pypi({"2.16.2": META}))
     assert (r.pypi, r.source) == ("2.16.2", av.INPUT)
+    # The iOS leg checks CIRISAgent out at this tag; `2.16.2` is not a ref there
+    # (run 43438260138).
+    assert r.tag == "v2.16.2-stable"
 
 
 @pytest.mark.parametrize("bad", ["latest", "main", "2.16", "v2.16.2-rc1"])

@@ -1778,7 +1778,17 @@ private fun AiStep(
 
                     ExposedDropdownMenu(
                         expanded = modelExpanded,
-                        onDismissRequest = { modelExpanded = false }
+                        onDismissRequest = { modelExpanded = false },
+                        // A provider's live list is longer than the menu is tall
+                        // (run 43438260138, Windows: the chosen model sat below the
+                        // fold). The menu scrolls for a person; this lets the test
+                        // driver scroll it too. Only while open: a closed menu must
+                        // not become the newest scrollable and take the page's scrolls.
+                        scrollState = if (modelExpanded) {
+                            rememberTestableScrollState(name = "setup_model_menu")
+                        } else {
+                            rememberScrollState()
+                        }
                     ) {
                         // Show recommended models first
                         val sortedModels = availableModels.sortedByDescending {
