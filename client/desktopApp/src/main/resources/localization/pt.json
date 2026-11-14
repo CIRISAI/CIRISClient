@@ -4683,7 +4683,10 @@
     "nothing_to_rule": "Ninguém recorreu da sinalização desse item, portanto não há nada a julgar.",
     "appeal_failed": "O recurso não pôde ser assinado e registrado, portanto nada mudou.",
     "reveal_failed": "O consentimento para visualizar não pôde ser registrado, portanto o item permanece oculto.",
-    "unknown_action": "um item em uma sala é revelado com reveal"
+    "unknown_action": "um item em uma sala é revelado com reveal",
+    "nothing_to_take_down": "Esse item não tem conteúdo separado para remover.",
+    "takedown_needs_reason": "Diga por que você está removendo isso, com suas próprias palavras.",
+    "takedown_failed": "A remoção não pôde ser assinada e registrada, portanto nada mudou."
   },
   "nav": {
     "group": {
@@ -6288,7 +6291,8 @@
     "quorum_pending": "A regra da sala precisa de mais assinaturas antes que esta alteração entre em vigor.",
     "store_unavailable": "O nó não conseguiu ler ou escrever no seu diretório.",
     "write_failed": "O nó não conseguiu escrever a alteração.",
-    "two_people_only": "Por enquanto, uma sala comporta duas pessoas."
+    "two_people_only": "Por enquanto, uma sala comporta duas pessoas.",
+    "room_full": "Esta sala está cheia."
   },
   "partnership_queue": {
     "title": "Parceria com este agente",

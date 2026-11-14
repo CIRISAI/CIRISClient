@@ -84,7 +84,10 @@ runs:
         [ -f "$CIRIS_AGENT_HOME/.env" ] && { echo "::error::$CIRIS_AGENT_HOME/.env exists — a with-AI leg starts from a first run"; exit 1; }
         echo "agent home (CIRIS_HOME): $CIRIS_AGENT_HOME"
 
+        # CIRIS_NODE_IDENTITY_TTL_S: the agent's own node states an end for its
+        # identity, as the ciris-node action's does (see the note there).
         CIRIS_HOME="$CIRIS_AGENT_HOME" CIRIS_DEVICE_CLASS=laptop CIRIS_TRACE_RUN_KIND=qa PYTHONUNBUFFERED=1 \
+          CIRIS_NODE_IDENTITY_TTL_S=10800 \
           "$py" -m ciris_engine.cli --adapter api --port 8080 > "$CIRIS_AGENT_LOG" 2>&1 &
         pid=$!
         echo "agent pid $pid"

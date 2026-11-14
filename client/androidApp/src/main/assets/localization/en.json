@@ -4778,7 +4778,10 @@
     "nothing_to_rule": "Nobody has appealed that item's flag, so there is nothing to rule on.",
     "appeal_failed": "The appeal could not be signed and recorded, so nothing changed.",
     "reveal_failed": "The consent to view could not be recorded, so the item stays hidden.",
-    "unknown_action": "an item in a room is revealed with reveal"
+    "unknown_action": "an item in a room is revealed with reveal",
+    "nothing_to_take_down": "That item has no separate content to take down.",
+    "takedown_needs_reason": "Say why you're taking this down, in your own words.",
+    "takedown_failed": "The takedown could not be signed and recorded, so nothing changed."
   },
   "nav": {
     "group": {
@@ -6350,7 +6353,8 @@
     "quorum_pending": "The room's rule needs more signatures before this change takes effect.",
     "store_unavailable": "The node could not read or write its directory.",
     "write_failed": "The node could not write the change.",
-    "two_people_only": "A room holds two people for now."
+    "two_people_only": "A room holds two people for now.",
+    "room_full": "This room is full."
   },
   "membership": {
     "consent_required": "Someone has to accept an invitation before they join. Nobody is added to a household or a community without their own yes.",

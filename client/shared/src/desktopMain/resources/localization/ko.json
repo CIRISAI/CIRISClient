@@ -4683,7 +4683,10 @@
     "nothing_to_rule": "그 항목의 플래그에 대해 아무도 이의를 제기하지 않았으므로, 판정할 것이 없습니다.",
     "appeal_failed": "이의 제기를 서명하여 기록할 수 없어, 변경된 것은 없습니다.",
     "reveal_failed": "열람 동의를 기록하지 못해 항목은 숨겨진 상태로 유지됩니다.",
-    "unknown_action": "방의 항목은 reveal 동작으로 공개됩니다"
+    "unknown_action": "방의 항목은 reveal 동작으로 공개됩니다",
+    "nothing_to_take_down": "그 항목에는 삭제할 별도의 콘텐츠가 없습니다.",
+    "takedown_needs_reason": "이것을 삭제하는 이유를 본인의 말로 설명해 주세요.",
+    "takedown_failed": "삭제 조치를 서명하여 기록할 수 없어, 변경된 것은 없습니다."
   },
   "nav": {
     "group": {
@@ -6288,7 +6291,8 @@
     "quorum_pending": "이 변경이 효력을 발생하기 전에 방의 규칙에 따라 더 많은 서명이 필요합니다.",
     "store_unavailable": "노드가 디렉터리를 읽거나 쓸 수 없었습니다.",
     "write_failed": "노드가 변경 사항을 기록할 수 없었습니다.",
-    "two_people_only": "현재 방은 두 사람만 수용합니다."
+    "two_people_only": "현재 방은 두 사람만 수용합니다.",
+    "room_full": "이 방은 가득 찼습니다."
   },
   "partnership_queue": {
     "title": "이 에이전트와의 파트너십",

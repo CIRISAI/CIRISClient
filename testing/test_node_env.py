@@ -30,3 +30,56 @@ def test_the_workflow_node_action_starts_a_laptop():
     root = Path(__file__).resolve().parent.parent
     action = (root / ".github/actions/ciris-node/action.yml").read_text(encoding="utf-8")
     assert "CIRIS_DEVICE_CLASS: laptop" in action
+
+
+# -- CIRIS_NODE_IDENTITY_TTL_S (ciris-server 0.5.247) -------------------------
+
+def test_a_ci_node_states_an_end_for_its_identity():
+    """On a CI runner the home is new each job, so the node's identity rows
+    carry a stated end and leave nothing live on the canonical afterwards."""
+    env = node_env({"GITHUB_ACTIONS": "true"})
+    assert env["CIRIS_NODE_IDENTITY_TTL_S"] == "10800"
+
+
+def test_a_node_off_ci_keeps_an_identity_with_no_end():
+    """A developer's home is reused across days: an end signed into it would
+    lapse that node for good. Nothing is set off CI."""
+    assert "CIRIS_NODE_IDENTITY_TTL_S" not in node_env({})
+    assert "CIRIS_NODE_IDENTITY_TTL_S" not in node_env({"GITHUB_ACTIONS": "false"})
+
+
+def test_an_end_already_chosen_is_kept():
+    env = node_env({"GITHUB_ACTIONS": "true", "CIRIS_NODE_IDENTITY_TTL_S": "900"})
+    assert env["CIRIS_NODE_IDENTITY_TTL_S"] == "900"
+
+
+def test_the_end_outlasts_the_longest_leg():
+    """A row that lapses while its leg still runs fails the leg for a reason
+    nobody would look for. Every job limit in the workflow fits inside it."""
+    import re
+    from testing.gate.node_env import IDENTITY_TTL_S
+    root = Path(__file__).resolve().parent.parent
+    wf = (root / ".github/workflows/five-platform-live-qa.yml").read_text(encoding="utf-8")
+    limits = [int(m) for m in re.findall(r"^\s+timeout-minutes:\s*(\d+)\s*$", wf, re.M)]
+    assert limits, "no job limits parsed from the workflow"
+    assert max(limits) * 60 < int(IDENTITY_TTL_S)
+    assert int(IDENTITY_TTL_S) >= 600  # the server's own floor
+
+
+def test_the_peer_console_calls_carry_the_same_environment():
+    """`identity create` and `claim` sign the owner's key and binding in their
+    own process: without the variable there, those rows get no end."""
+    root = Path(__file__).resolve().parent.parent
+    src = (root / "testing/gate/two_node.py").read_text(encoding="utf-8")
+    assert "subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, env=node_env())" in src
+
+
+def test_the_workflow_actions_state_the_same_end():
+    """The leg's own node and the with-AI leg's agent are started by composite
+    actions, which do not pass through node_env()."""
+    from testing.gate.node_env import IDENTITY_TTL_S
+    root = Path(__file__).resolve().parent.parent
+    node = (root / ".github/actions/ciris-node/action.yml").read_text(encoding="utf-8")
+    agent = (root / ".github/actions/ciris-agent/action.yml").read_text(encoding="utf-8")
+    assert f'CIRIS_NODE_IDENTITY_TTL_S: "{IDENTITY_TTL_S}"' in node
+    assert f"CIRIS_NODE_IDENTITY_TTL_S={IDENTITY_TTL_S}" in agent

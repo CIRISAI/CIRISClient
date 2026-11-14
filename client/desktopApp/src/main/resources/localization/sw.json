@@ -4683,7 +4683,10 @@
     "nothing_to_rule": "Hakuna aliyekata rufaa dhidi ya alama ya kipengele hicho, kwa hivyo hakuna cha kuamua.",
     "appeal_failed": "Rufaa haikuweza kutiwa saini na kurekodiwa, hivyo hakuna kilichobadilika.",
     "reveal_failed": "Idhini ya kuona haikuweza kurekodiwa, kwa hivyo kipengele kinabaki kimefichwa.",
-    "unknown_action": "kipengele katika chumba kinaonyeshwa kwa kutumia 'onyesha'"
+    "unknown_action": "kipengele katika chumba kinaonyeshwa kwa kutumia 'onyesha'",
+    "nothing_to_take_down": "Kipengele hicho hakina maudhui tofauti ya kuondoa.",
+    "takedown_needs_reason": "Eleza kwa maneno yako mwenyewe kwa nini unakiondoa kipengele hiki.",
+    "takedown_failed": "Uondoaji haukuweza kutiwa saini na kurekodiwa, hivyo hakuna kilichobadilika."
   },
   "nav": {
     "group": {
@@ -6288,7 +6291,8 @@
     "quorum_pending": "Kanuni ya chumba inahitaji saini zaidi kabla mabadiliko haya kuanza kutumika.",
     "store_unavailable": "Nodi haikuweza kusoma au kuandika saraka yake.",
     "write_failed": "Nodi haikuweza kuandika mabadiliko hayo.",
-    "two_people_only": "Kwa sasa, chumba kinashikilia watu wawili."
+    "two_people_only": "Kwa sasa, chumba kinashikilia watu wawili.",
+    "room_full": "Chumba hiki kimejaa."
   },
   "partnership_queue": {
     "title": "Kushirikiana na wakala huyu",

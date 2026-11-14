@@ -4683,7 +4683,10 @@
     "nothing_to_rule": "Hiç kimse bu öğenin işaretine itiraz etmemiş, bu nedenle karar verilecek bir şey yok.",
     "appeal_failed": "İtiraz imzalanıp kaydedilemedi, bu nedenle hiçbir şey değişmedi.",
     "reveal_failed": "Görüntüleme onayı kaydedilemedi, bu nedenle öğe gizli kalır.",
-    "unknown_action": "bir odadaki bir öğe, reveal ile gösterilir"
+    "unknown_action": "bir odadaki bir öğe, reveal ile gösterilir",
+    "nothing_to_take_down": "Bu öğenin kaldırılacak ayrı bir içeriği yok.",
+    "takedown_needs_reason": "Bunu neden kaldırdığınızı kendi sözlerinizle belirtin.",
+    "takedown_failed": "Kaldırma işlemi imzalanıp kaydedilemedi, bu nedenle hiçbir şey değişmedi."
   },
   "nav": {
     "group": {
@@ -6288,7 +6291,8 @@
     "quorum_pending": "Bu değişikliğin yürürlüğe girmesi için odanın kuralı daha fazla imza gerektiriyor.",
     "store_unavailable": "Düğüm, dizinini okuyamadı veya yazamadı.",
     "write_failed": "Düğüm, değişikliği yazamadı.",
-    "two_people_only": "Bir oda şimdilik iki kişiyi barındırır."
+    "two_people_only": "Bir oda şimdilik iki kişiyi barındırır.",
+    "room_full": "Bu oda dolu."
   },
   "partnership_queue": {
     "admin_only": "Bu ajanı kimlerin beklediğini yalnızca yöneticileri görebilir.",

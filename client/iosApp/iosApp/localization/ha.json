@@ -4683,7 +4683,10 @@
     "nothing_to_rule": "Babu wanda ya ɗaukaka ƙara kan alamar wannan abu, don haka babu abin da za a yanke hukunci a kai.",
     "appeal_failed": "Ba a iya sa hannu da rubuta ƙarar ba, don haka babu abin da ya canza.",
     "reveal_failed": "Ba a iya rubuta yardar ganin shi ba, don haka abun yana zama a ɓoye.",
-    "unknown_action": "ana bayyana abu a ɗaki da umarnin bayyana"
+    "unknown_action": "ana bayyana abu a ɗaki da umarnin bayyana",
+    "nothing_to_take_down": "Wannan abu ba shi da keɓaɓɓen abun ciki da za a cire.",
+    "takedown_needs_reason": "Ku faɗi dalilin da ya sa kuke cire wannan, da kalmominku.",
+    "takedown_failed": "Ba a iya sa hannu da rubuta cirewar ba, don haka babu abin da ya canza."
   },
   "nav": {
     "group": {
@@ -6288,7 +6291,8 @@
     "quorum_pending": "Ka'idar ɗakin na buƙatar ƙarin sa hannu kafin wannan canjin ya fara aiki.",
     "store_unavailable": "Kumburin bai iya karanta ko rubuta kundin adireshinsa ba.",
     "write_failed": "Kumburin bai iya rubuta canjin ba.",
-    "two_people_only": "Ɗaki yana riƙe da mutum biyu a yanzu."
+    "two_people_only": "Ɗaki yana riƙe da mutum biyu a yanzu.",
+    "room_full": "Wannan ɗaki ya cika."
   },
   "partnership_queue": {
     "title": "Haɗin gwiwa da wannan wakili",
