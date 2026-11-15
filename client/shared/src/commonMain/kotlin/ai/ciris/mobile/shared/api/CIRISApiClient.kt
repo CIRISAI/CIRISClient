@@ -16697,6 +16697,53 @@ class CIRISApiClient internal constructor(
         }
         return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.InviteWithdrawn.serializer(), raw)
     }
+
+    /**
+     * `GET {nodeUrl}/v1/self/decisions[?circle=]` — what the signed-in person can
+     * decide, from THEIR NODE's queue (CIRISServer 0.5.246+; seats, and from
+     * 0.5.247 the agent's deferrals). Not the agent's `/v1/wa/deferrals`. A bare
+     * 404 is a node without the route ([isInviteRouteMissing] reads it).
+     */
+    suspend fun listMyDecisions(
+        circle: String? = null,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.NodeDecisionList {
+        val method = "listMyDecisions"
+        val url = "$nodeUrl/v1/self/decisions" +
+            (circle?.let { "?circle=" + it.encodeURLParameter() } ?: "")
+        logInfo(method, "GET $url")
+        val raw = communityCall(method, url) { client ->
+            client.get(url) { authHeader()?.let { header("Authorization", it) } }
+        }
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.NodeDecisionList.serializer(), raw)
+    }
+
+    /**
+     * `POST {nodeUrl}/v1/self/decisions/{id}/answer {answer}` → 200 `applied`, or
+     * 202 `decisions.awaiting_members` (recorded; the room's rule needs more
+     * voices). Both are answers, returned as [DecisionAnswered]; anything else
+     * is a [NodeRefusal] (`decisions.not_found` when it closed meanwhile).
+     */
+    suspend fun answerDecision(
+        decisionId: String,
+        approve: Boolean,
+        nodeUrl: String = LOCAL_NODE_URL,
+    ): ai.ciris.mobile.shared.models.federation.DecisionAnswered {
+        val method = "answerDecision"
+        val url = "$nodeUrl/v1/self/decisions/${decisionId.encodeURLPathPart()}/answer"
+        logInfo(method, "POST $url answer=${if (approve) "approve" else "decline"}")
+        val body = buildJsonObject {
+            put("answer", if (approve) ai.ciris.mobile.shared.models.federation.NodeDecision.APPROVE else ai.ciris.mobile.shared.models.federation.NodeDecision.DECLINE)
+        }
+        val raw = communityCall(method, url) { client ->
+            client.post(url) {
+                authHeader()?.let { header("Authorization", it) }
+                contentType(ContentType.Application.Json)
+                setBody(body.toString())
+            }
+        }
+        return jsonConfig.decodeFromString(ai.ciris.mobile.shared.models.federation.DecisionAnswered.serializer(), raw)
+    }
     // ─── end Communities and affiliations ────────────────────────────────────
 
     // ── Partnership queue (CSD-054 §7) + connectors (CSD-020 §7) ────────────

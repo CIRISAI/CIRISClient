@@ -859,6 +859,7 @@ fun CommunityRosterScreen(viewModel: CommunitiesViewModel) {
     val applied by viewModel.applied.collectAsState()
     val pending by viewModel.pending.collectAsState()
     val invites by viewModel.invites.collectAsState()
+    val decisions by viewModel.decisions.collectAsState()
     val inviteSupport by viewModel.inviteSupport.collectAsState()
     val inviteNotice by viewModel.inviteNotice.collectAsState()
     val peopleLimit by viewModel.peopleLimit.collectAsState()
@@ -869,6 +870,7 @@ fun CommunityRosterScreen(viewModel: CommunitiesViewModel) {
     var removing by remember { mutableStateOf<Pair<CommunityRoom, CommunityRoomMember>?>(null) }
     var inviting by remember { mutableStateOf<Pair<CommunityRoom, String>?>(null) }
     var withdrawing by remember { mutableStateOf<Pair<CommunityRoom, ai.ciris.mobile.shared.models.federation.GroupInvite>?>(null) }
+    var approving by remember { mutableStateOf<Triple<CommunityRoom, ai.ciris.mobile.shared.models.federation.GroupInvite, ai.ciris.mobile.shared.models.federation.NodeDecision>?>(null) }
 
     LaunchedEffect(Unit) { viewModel.refresh() }
 
@@ -892,7 +894,12 @@ fun CommunityRosterScreen(viewModel: CommunitiesViewModel) {
         RefusalLine(refusal)
         AppliedLine(applied)
         inviteNotice?.let { n ->
-            val text = s(if (n == CommunitiesViewModel.NOTICE_WITHDRAWN) "invites_notice_withdrawn" else "invites_notice_invited")
+            val text = s(when (n) {
+                CommunitiesViewModel.NOTICE_WITHDRAWN -> "invites_notice_withdrawn"
+                CommunitiesViewModel.NOTICE_SEATED -> "invites_notice_seated"
+                CommunitiesViewModel.NOTICE_SEAT_AWAITING -> "invites_notice_seat_awaiting"
+                else -> "invites_notice_invited"
+            })
             Text(text, style = type.body, color = t.ok, modifier = Modifier.testable(InviteTags.INBOX_NOTICE + "_roster", text))
         }
         if (pending.isNotEmpty()) Text(s("community_roster_pending_note"), style = type.body, color = t.brand)
@@ -938,8 +945,12 @@ fun CommunityRosterScreen(viewModel: CommunitiesViewModel) {
                 }
                 // Invitations (CSD-106): read per room, drawn under its members
                 // and never counted as one of them.
-                LaunchedEffect(room.communityId) { viewModel.loadInvites(room.communityId) }
+                LaunchedEffect(room.communityId) {
+                    viewModel.loadInvites(room.communityId)
+                    viewModel.loadDecisions(room.communityId)
+                }
                 val roomInvites = invites[room.communityId] ?: GroupInvitesRead.NotAsked
+                val roomDecisions = decisions[room.communityId] ?: ai.ciris.mobile.shared.viewmodels.DecisionsRead.NotAsked
                 PendingInvites(
                     read = roomInvites,
                     ownerKeyId = myKeyId,
@@ -947,11 +958,14 @@ fun CommunityRosterScreen(viewModel: CommunitiesViewModel) {
                     busy = busy,
                     nameOf = { nameOf(it, contacts) },
                     onWithdraw = { inv -> withdrawing = room to inv },
-                    // A room under a quorum seats an accepted invitee through
-                    // `…/changes/envelope` `{op: add}`, which this card does not
-                    // call yet: the row says so instead of offering it.
+                    // A room's accepted invitee is seated through the node's
+                    // decision queue (`/v1/self/decisions`): the node says who
+                    // may approve and how many voices the rule needs. Where the
+                    // queue was not read, the old line stands.
                     onSeat = null,
                     seatLimit = s("invites_community_seat_limit"),
+                    seatStatusOf = { inv -> ai.ciris.mobile.shared.viewmodels.seatStatus(inv, roomDecisions) },
+                    onApprove = { d, inv -> approving = Triple(room, inv, d) },
                 )
                 val legacy = inviteSupport == InviteSupport.LEGACY
                 val openInvitations = (roomInvites as? GroupInvitesRead.Loaded)?.invites.orEmpty()
@@ -959,7 +973,8 @@ fun CommunityRosterScreen(viewModel: CommunitiesViewModel) {
                 val full = CommunitiesViewModel.roomIsFull(room, openInvitations, peopleLimit)
                 if (full) {
                     // A full room offers no Invite: the node would refuse it, and the line says why.
-                    val text = localizedString(CommunitiesViewModel.TWO_PEOPLE_ONLY)
+                    // "Two people for now" only where the limit IS two; a larger room is just full.
+                    val text = localizedString(CommunitiesViewModel.fullRoomLine(room, peopleLimit))
                     Text(text, style = type.body, color = t.dim, modifier = Modifier.testable("txt_community_room_full_" + room.communityId, text))
                 } else if (addFor == room.communityId) {
                     FieldRow(
@@ -1057,6 +1072,16 @@ fun CommunityRosterScreen(viewModel: CommunitiesViewModel) {
             tagPrefix = InviteTags.COMMUNITY_CONFIRM_WITHDRAW,
             onConfirm = { withdrawing = null; viewModel.withdrawInvite(room.communityId, inv.proposalId) },
             onDismiss = { withdrawing = null },
+        )
+    }
+
+    approving?.let { (room, inv, d) ->
+        SeatApproveConfirm(
+            name = nameOf(inv.inviteeKeyId, contacts),
+            room = room.name.ifBlank { shortKey(room.communityId) },
+            required = d.required,
+            onConfirm = { approving = null; viewModel.approveSeat(room.communityId, d.decisionId) },
+            onDismiss = { approving = null },
         )
     }
 }

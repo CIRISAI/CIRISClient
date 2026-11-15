@@ -7,6 +7,7 @@ import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.models.federation.GroupInvite
 import ai.ciris.mobile.shared.models.federation.InboxInvite
 import ai.ciris.mobile.shared.models.federation.InviteState
+import ai.ciris.mobile.shared.models.federation.NodeDecision
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.ui.glyphs.GlyphName
 import ai.ciris.mobile.shared.ui.primitives.ChipSpec
@@ -22,6 +23,7 @@ import ai.ciris.mobile.shared.ui.theme.Tone
 import ai.ciris.mobile.shared.viewmodels.GroupInvitesRead
 import ai.ciris.mobile.shared.viewmodels.InboxRead
 import ai.ciris.mobile.shared.viewmodels.InvitationsViewModel
+import ai.ciris.mobile.shared.viewmodels.SeatStatus
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -247,6 +249,14 @@ fun PendingInvites(
     onSeat: ((GroupInvite) -> Unit)?,
     /** Said on an accepted row when nobody here can seat them (a quorum room: CSD-103 §3.1). */
     seatLimit: String? = null,
+    /**
+     * The node's own answer, per accepted row, to whether THIS person may
+     * approve seating them (`/v1/self/decisions`, a community room). Null where
+     * the card reads no queue (a household): the row keeps [onSeat]/[seatLimit].
+     */
+    seatStatusOf: ((GroupInvite) -> SeatStatus)? = null,
+    /** Approve seating the person a [SeatStatus.CanApprove] row names, behind its confirm. */
+    onApprove: ((NodeDecision, GroupInvite) -> Unit)? = null,
 ) {
     when (read) {
         is GroupInvitesRead.Loaded -> {
@@ -254,7 +264,8 @@ fun PendingInvites(
             val me = viewerOf(read, ownerKeyId)
             for (inv in shown) {
                 val withdraw = withdrawShown(inv, me)
-                PendingInviteRow(inv, nameOf(inv.inviteeKeyId), withdraw, quorum, busy, onWithdraw, onSeat, seatLimit)
+                val seat = seatStatusOf?.invoke(inv) ?: SeatStatus.Unknown
+                PendingInviteRow(inv, nameOf(inv.inviteeKeyId), withdraw, quorum, busy, onWithdraw, onSeat, seatLimit, seat, onApprove)
             }
         }
         is GroupInvitesRead.Failed -> StateBlock(
@@ -281,6 +292,8 @@ private fun PendingInviteRow(
     onWithdraw: (GroupInvite) -> Unit,
     onSeat: ((GroupInvite) -> Unit)?,
     seatLimit: String?,
+    seatStatus: SeatStatus = SeatStatus.Unknown,
+    onApprove: ((NodeDecision, GroupInvite) -> Unit)? = null,
 ) {
     val accepted = invite.state == InviteState.ACCEPTED
     val status = when (invite.state) {
@@ -296,8 +309,34 @@ private fun PendingInviteRow(
                 add(RowFlag(localizedString("mobile.invites_expires", "date", it), tag = InviteTags.expires(invite.proposalId), tone = Tone.DIM))
             }
         }
-        if (accepted && onSeat == null && quorum && seatLimit != null) add(RowFlag(seatLimit, tone = Tone.DIM))
+        // What the node's queue said about seating them, when it was read: the
+        // node's own count, never this app's reading of the room's rule.
+        when (seatStatus) {
+            is SeatStatus.Approved -> add(RowFlag(
+                seatApprovedLine(seatStatus.signed, seatStatus.required),
+                tag = InviteTags.seatApproved(invite.proposalId), tone = Tone.DIM,
+            ))
+            SeatStatus.Declined -> add(RowFlag(
+                localizedString("mobile.invites_seat_declined"),
+                tag = InviteTags.seatApproved(invite.proposalId), tone = Tone.DIM,
+            ))
+            SeatStatus.Waiting -> add(RowFlag(
+                localizedString("mobile.invites_seat_waiting"),
+                tag = InviteTags.seatWaiting(invite.proposalId), tone = Tone.DIM,
+            ))
+            is SeatStatus.CanApprove -> {
+                val d = seatStatus.decision
+                if (d.signed != null && d.required != null && d.required > 1) add(RowFlag(
+                    localizedString("mobile.ceremony_signed_of", mapOf("signed" to d.signed.toString(), "needed" to d.required.toString())),
+                    tag = InviteTags.seatApproved(invite.proposalId), tone = Tone.DIM,
+                ))
+            }
+            // The queue was not read (or this node has none): the old line stands.
+            SeatStatus.Unknown, SeatStatus.NotApplicable ->
+                if (accepted && onSeat == null && quorum && seatLimit != null) add(RowFlag(seatLimit, tone = Tone.DIM))
+        }
     }
+    val approve = (seatStatus as? SeatStatus.CanApprove)?.decision?.takeIf { onApprove != null }
     val seat = accepted && quorum && onSeat != null
     ItemRow(
         glyph = GlyphName.INVITE,
@@ -314,9 +353,15 @@ private fun PendingInviteRow(
         )),
         flags = flags,
         tag = InviteTags.pending(invite.proposalId),
-        trailing = if (!withdraw && !seat) null else {
+        trailing = if (!withdraw && !seat && approve == null) null else {
             {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    if (approve != null && onApprove != null) {
+                        CirisTextButton(
+                            localizedString("mobile.invites_seat_approve"), tag = InviteTags.seatApprove(invite.proposalId),
+                            onClick = { onApprove(approve, invite) }, enabled = !busy,
+                        )
+                    }
                     if (seat && onSeat != null) {
                         CirisTextButton(
                             localizedString("mobile.invites_seat"), tag = InviteTags.seat(invite.proposalId),
@@ -338,6 +383,49 @@ private fun PendingInviteRow(
 // ═════════════════════════════════════════════════════════════════════════════
 // Small pieces
 // ═════════════════════════════════════════════════════════════════════════════
+
+/** "You approved", with the node's count when the rule needs more than one voice. */
+@Composable
+private fun seatApprovedLine(signed: Int?, required: Int?): String =
+    if (signed != null && required != null && required > 1) {
+        localizedString("mobile.invites_seat_approved_of", mapOf("signed" to signed.toString(), "required" to required.toString()))
+    } else {
+        localizedString("mobile.invites_seat_approved")
+    }
+
+/**
+ * The confirm before approving a seat. Seating someone WIDENS the room — they
+ * read what it holds from then on — so it is confirmed (CC transitions.json
+ * `confirm`: widens). [required] is the node's count of voices the rule needs.
+ */
+@Composable
+fun SeatApproveConfirm(
+    name: String,
+    room: String,
+    required: Int?,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ConfirmSheet(
+        title = localizedString("mobile.invites_seat_confirm_title", "name", name),
+        facts = listOf(
+            ConfirmFact(localizedString("mobile.invites_confirm_who"), name),
+            ConfirmFact(localizedString("mobile.invites_confirm_into"), room),
+            ConfirmFact(
+                localizedString("mobile.invites_confirm_means"),
+                if (required != null && required > 1) {
+                    localizedString("mobile.invites_seat_confirm_means_quorum", "required", required.toString())
+                } else {
+                    localizedString("mobile.invites_seat_confirm_means")
+                },
+            ),
+        ),
+        confirmLabel = localizedString("mobile.invites_seat_approve"),
+        onConfirm = onConfirm,
+        onDismiss = onDismiss,
+        tagPrefix = InviteTags.CONFIRM_SEAT,
+    )
+}
 
 @Composable
 private fun groupLabel(invite: InboxInvite): String =

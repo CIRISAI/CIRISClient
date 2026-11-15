@@ -118,8 +118,20 @@ class CommunitiesViewModel(
      */
     val myKeyId: StateFlow<String?> = _myKeyId.asStateFlow()
 
+    private val _decisions = MutableStateFlow<Map<String, DecisionsRead>>(emptyMap())
+    /**
+     * Room id → what the signed-in person can decide in it, from the node's
+     * queue (`/v1/self/decisions?circle=`), read beside the room's invitations.
+     * Who may approve a seat and how many voices it needs come from here.
+     */
+    val decisions: StateFlow<Map<String, DecisionsRead>> = _decisions.asStateFlow()
+
     private val _inviteNotice = MutableStateFlow<String?>(null)
-    /** One-shot: [NOTICE_INVITED] or [NOTICE_WITHDRAWN]. An invitation is never reported as an applied add. */
+    /**
+     * One-shot: [NOTICE_INVITED], [NOTICE_WITHDRAWN], [NOTICE_SEATED] or
+     * [NOTICE_SEAT_AWAITING]. An invitation is never reported as an applied add,
+     * and an approval that still needs other voices is never reported as a seat.
+     */
     val inviteNotice: StateFlow<String?> = _inviteNotice.asStateFlow()
 
     // ── Reads ────────────────────────────────────────────────────────────────
@@ -265,6 +277,45 @@ class CommunitiesViewModel(
         }
     }
 
+    /** Read the node's decision queue for one room. A failure is its own state, never "nothing to decide". */
+    fun loadDecisions(communityId: String) {
+        val epoch = sessionEpoch
+        viewModelScope.launch {
+            if (_decisions.value[communityId] !is DecisionsRead.Loaded) {
+                _decisions.value = _decisions.value + (communityId to DecisionsRead.Loading)
+            }
+            val next = try {
+                DecisionsRead.Loaded(apiClient.listMyDecisions(communityId, nodeUrl()).decisions)
+            } catch (e: Exception) {
+                PlatformLogger.w(tag, "[listMyDecisions] ${(e as? NodeRefusal)?.reasonId ?: e.message}")
+                DecisionsRead.of(e)
+            }
+            if (epoch != sessionEpoch) return@launch
+            _decisions.value = _decisions.value + (communityId to next)
+        }
+    }
+
+    /**
+     * Approve seating the person a seat decision names. The node signs this
+     * person's voice (a cosignature held in the mesh when the rule needs more
+     * than one) and seats ONLY that person once the rule is met. 200 `applied`
+     * is a seat; 202 `awaiting_members` is a recorded answer, not a seat.
+     */
+    fun approveSeat(communityId: String, decisionId: String) {
+        act("approve_seat") {
+            val out = apiClient.answerDecision(decisionId, approve = true, nodeUrl = nodeUrl())
+            if (out.applied) {
+                _inviteNotice.value = NOTICE_SEATED
+                if (_selected.value == communityId) loadDetail(communityId)
+                refresh()
+            } else {
+                _inviteNotice.value = NOTICE_SEAT_AWAITING
+            }
+            loadInvites(communityId)
+            loadDecisions(communityId)
+        }
+    }
+
     /** Withdraw an invitation nobody has answered. The node refuses anyone but its proposer. */
     fun withdrawInvite(communityId: String, proposalId: String) {
         act("withdraw") {
@@ -403,6 +454,7 @@ class CommunitiesViewModel(
         _pending.value = emptyMap()
         _cosignature.value = null
         _invites.value = emptyMap()
+        _decisions.value = emptyMap()
         _inviteSupport.value = InviteSupport.UNKNOWN
         _inviteNotice.value = null
         _myKeyId.value = null
@@ -411,6 +463,10 @@ class CommunitiesViewModel(
     companion object {
         const val NOTICE_INVITED = "invited"
         const val NOTICE_WITHDRAWN = "withdrawn"
+        /** The approval met the room's rule: the person is seated. */
+        const val NOTICE_SEATED = "seated"
+        /** The approval is recorded; other members still have to approve. */
+        const val NOTICE_SEAT_AWAITING = "seat_awaiting"
 
         /** A paste that is not JSON of the expected shape. The client's own id, never the node's. */
         const val MALFORMED_PASTE = "mobile.community_paste_malformed"
@@ -419,6 +475,18 @@ class CommunitiesViewModel(
         /** CIRISServer 0.5.246: "A room holds two people for now." (Eric, 2026-11-11; quorum rooms are 0.6). */
         const val TWO_PEOPLE_ONLY = "community.two_people_only"
         const val TWO_PEOPLE = 2
+        /** CIRISServer 0.5.247+: "This room is full." — a room whose limit is not two. */
+        const val ROOM_FULL = "community.room_full"
+
+        /**
+         * The line a full room draws in place of Invite. "Two people for now"
+         * only where the limit is two (the room's own `max_people`, else what
+         * the node's refusal taught); otherwise the room is simply full.
+         */
+        fun fullRoomLine(room: CommunityRoom, learnedLimit: Int?): String {
+            val limit = room.maxPeople ?: learnedLimit
+            return if (limit == null || limit == TWO_PEOPLE) TWO_PEOPLE_ONLY else ROOM_FULL
+        }
 
         /**
          * Whether [room] can take nobody else: its members plus its open
