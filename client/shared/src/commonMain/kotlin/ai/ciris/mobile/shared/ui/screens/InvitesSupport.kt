@@ -32,12 +32,16 @@ object InviteTags {
     /** ConfirmSheet prefixes: `sheet_invitation_answer_accept`, `btn_invitation_answer_accept_confirm`, … */
     const val CONFIRM_ACCEPT = "invitation_answer_accept"
     const val CONFIRM_DECLINE = "invitation_answer_decline"
+    const val CONFIRM_SEAT = "invitation_seat_approve"
 
     // ── The pending rows, on a roster ──
     fun pending(proposalId: String) = "invitation_pending_${slug(proposalId)}"
     fun withdraw(proposalId: String) = "btn_invitation_withdraw_${slug(proposalId)}"
     /** Under a quorum rule: propose seating someone who accepted (the household's existing envelope). */
     fun seat(proposalId: String) = "btn_invitation_seat_${slug(proposalId)}"
+    fun seatApprove(proposalId: String) = "btn_invitation_seat_approve_${slug(proposalId)}"
+    fun seatApproved(proposalId: String) = "txt_invitation_seat_approved_${slug(proposalId)}"
+    fun seatWaiting(proposalId: String) = "txt_invitation_seat_waiting_${slug(proposalId)}"
     const val ROSTER_INVITES_ERROR = "invitations_roster_error"
     /** CSD-103's room sections: one confirm for an invitation sent from a room, one for withdrawing it. */
     const val COMMUNITY_CONFIRM_INVITE = "community_invite"

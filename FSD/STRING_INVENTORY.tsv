@@ -557,7 +557,7 @@ community.not_authorized	server	server	-	-	-	-	-
 community.not_found	server	client,server	literal	-	-	-	-
 community.pair_room_fixed	server	server	-	-	-	-	-
 community.quorum_pending	server	client,server	literal	-	-	-	-
-community.room_full	server	server	-	-	-	-	-
+community.room_full	server	client,server	literal	-	-	-	-
 community.store_unavailable	server	server	-	-	-	-	-
 community.two_people_only	server	client,server	literal	-	-	-	-
 community.write_failed	server	server	-	-	-	-	-
@@ -3078,6 +3078,8 @@ mobile.invites_not_on_this_node	client	client	literal	-	-	-	-
 mobile.invites_notice_accepted	client	client	literal	-	-	-	-
 mobile.invites_notice_declined	client	client	literal	-	-	-	-
 mobile.invites_notice_invited	client	client	literal	-	-	-	-
+mobile.invites_notice_seat_awaiting	client	client	dynamic	-	-	-	-
+mobile.invites_notice_seated	client	client	dynamic	-	-	-	-
 mobile.invites_notice_withdrawn	client	client	literal	-	-	-	-
 mobile.invites_pending_accepted	client	client	literal	-	-	-	-
 mobile.invites_pending_accepted_quorum	client	client	literal	-	-	-	-
@@ -3090,6 +3092,14 @@ mobile.invites_roster_read_failed	client	client	literal	-	-	-	-
 mobile.invites_row_from	client	client	literal	-	-	-	-
 mobile.invites_row_from_norole	client	client	literal	-	-	-	-
 mobile.invites_seat	client	client	literal	-	-	-	-
+mobile.invites_seat_approve	client	client	literal	-	-	-	-
+mobile.invites_seat_approved	client	client	literal	-	-	-	-
+mobile.invites_seat_approved_of	client	client	literal	-	-	-	-
+mobile.invites_seat_confirm_means	client	client	literal	-	-	-	-
+mobile.invites_seat_confirm_means_quorum	client	client	literal	-	-	-	-
+mobile.invites_seat_confirm_title	client	client	literal	-	-	-	-
+mobile.invites_seat_declined	client	client	literal	-	-	-	-
+mobile.invites_seat_waiting	client	client	literal	-	-	-	-
 mobile.invites_signs_inviter_founder	client	client	literal	-	-	-	-
 mobile.invites_signs_inviter_quorum	client	client	literal	-	-	-	-
 mobile.invites_signs_proposer	client	client	literal	-	-	-	-
