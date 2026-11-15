@@ -48,6 +48,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from testing.gate.node_env import node_env
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -173,13 +174,24 @@ class RealNode:
 
     binary: str
     home: Path
-    key_id: str = "ciris-client"
+    # NO KEY ID BY DEFAULT. From ciris-server 0.5.246 a bare `--home` picks the
+    # home's own node key, as the app's launcher does. This used to pass
+    # `--key-id` with the client's old fixed name on a fresh home every run, and
+    # every CI push registered one more node key under that name on the
+    # canonical (23 between 2026-11-13 and 11-15).
+    key_id: str | None = None
     proc: subprocess.Popen | None = None
     log: Path | None = None
 
     @property
     def url(self) -> str:
         return LOCAL_NODE_URL
+
+    def command(self) -> list[str]:
+        cmd = [self.binary, "--home", str(self.home)]
+        if self.key_id:
+            cmd += ["--key-id", self.key_id]
+        return cmd
 
     def start(self) -> "RealNode":
         # REFUSE to adopt a node we did not start. The port is fixed at 4243 and
@@ -196,9 +208,11 @@ class RealNode:
         self.log = self.home.parent / "node.log"
         with open(self.log, "wb") as fh:
             self.proc = subprocess.Popen(
-                [self.binary, "--home", str(self.home), "--key-id", self.key_id],
+                self.command(),
                 stdout=fh,
                 stderr=subprocess.STDOUT,
+                # A laptop, and on CI an identity with a stated end (node_env).
+                env=node_env(),
             )
         try:
             wait_until_up(self.url)

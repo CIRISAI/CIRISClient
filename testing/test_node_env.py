@@ -21,7 +21,7 @@ def test_both_fixtures_start_their_node_with_it():
     """From ciris-server 0.5.220 a node with no declared class is a server and
     is given no keys for a person's self content (run 37224452548, csd_008)."""
     root = Path(__file__).resolve().parent.parent
-    for f in ("testing/gate/node_fixture.py", "testing/gate/two_node.py"):
+    for f in ("testing/gate/node_fixture.py", "testing/gate/two_node.py", "testing/node_fixture.py"):
         assert "env=node_env()" in (root / f).read_text(encoding="utf-8"), f
 
 
@@ -83,3 +83,16 @@ def test_the_workflow_actions_state_the_same_end():
     agent = (root / ".github/actions/ciris-agent/action.yml").read_text(encoding="utf-8")
     assert f'CIRIS_NODE_IDENTITY_TTL_S: "{IDENTITY_TTL_S}"' in node
     assert f"CIRIS_NODE_IDENTITY_TTL_S={IDENTITY_TTL_S}" in agent
+
+
+def test_the_e2e_node_lets_the_server_pick_its_key():
+    """The e2e walk's node (testing/node_fixture.py, build.yml `e2e (desktop)`)
+    passed `--key-id ciris-client` on a fresh home every run, so every push
+    registered a new `ciris-client-<fp>` node key on the canonical (23 between
+    2026-11-13 and 11-15, the server session's count). From 0.5.246 a bare
+    `--home` picks the home's own key, which is what the app does."""
+    from testing.node_fixture import RealNode
+    root = Path(__file__).resolve().parent.parent
+    src = (root / "testing/node_fixture.py").read_text(encoding="utf-8")
+    assert '"ciris-client"' not in src
+    assert RealNode(binary="ciris-server", home=Path("/h")).command() == ["ciris-server", "--home", "/h"]
