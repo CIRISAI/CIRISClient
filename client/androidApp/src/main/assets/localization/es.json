@@ -4683,7 +4683,10 @@
     "nothing_to_rule": "Nadie ha apelado la marca de ese elemento, así que no hay nada que resolver.",
     "appeal_failed": "La apelación no pudo firmarse ni registrarse, así que nada cambió.",
     "reveal_failed": "El consentimiento para ver no pudo registrarse, así que el elemento permanece oculto.",
-    "unknown_action": "un elemento en una sala se revela con \"reveal\""
+    "unknown_action": "un elemento en una sala se revela con \"reveal\"",
+    "nothing_to_take_down": "Ese elemento no tiene contenido independiente que retirar.",
+    "takedown_needs_reason": "Explica por qué estás retirando esto, con tus propias palabras.",
+    "takedown_failed": "El retiro no pudo firmarse ni registrarse, así que nada cambió."
   },
   "nav": {
     "group": {
@@ -6288,6 +6291,7 @@
     "store_unavailable": "El nodo no pudo leer ni escribir su directorio.",
     "write_failed": "El nodo no pudo escribir el cambio.",
     "two_people_only": "Por ahora, una sala tiene espacio para dos personas.",
+    "room_full": "Esta sala está llena.",
     "pair_room_fixed": "Un chat entre dos personas no puede cambiar sus miembros. Crea una sala para hablar con más personas."
   },
   "partnership_queue": {

@@ -4683,7 +4683,10 @@
     "nothing_to_rule": "Niemand hat gegen die Markierung dieses Elements Einspruch eingelegt, daher gibt es nichts, worüber entschieden werden könnte.",
     "appeal_failed": "Der Einspruch konnte nicht signiert und erfasst werden, daher wurde nichts geändert.",
     "reveal_failed": "Die Zustimmung zur Ansicht konnte nicht erfasst werden, daher bleibt das Element verborgen.",
-    "unknown_action": "ein Element in einem Raum wird mit „reveal“ sichtbar gemacht"
+    "unknown_action": "ein Element in einem Raum wird mit „reveal“ sichtbar gemacht",
+    "nothing_to_take_down": "Dieses Element hat keinen eigenständigen Inhalt, der entfernt werden könnte.",
+    "takedown_needs_reason": "Geben Sie in Ihren eigenen Worten an, warum Sie dies entfernen.",
+    "takedown_failed": "Die Entfernung konnte nicht signiert und erfasst werden, daher wurde nichts geändert."
   },
   "nav": {
     "group": {
@@ -6288,7 +6291,8 @@
     "quorum_pending": "Die Regel des Raums benötigt weitere Signaturen, bevor diese Änderung wirksam wird.",
     "store_unavailable": "Der Knoten konnte sein Verzeichnis nicht lesen oder schreiben.",
     "write_failed": "Der Knoten konnte die Änderung nicht schreiben.",
-    "two_people_only": "Ein Raum fasst vorerst zwei Personen."
+    "two_people_only": "Ein Raum fasst vorerst zwei Personen.",
+    "room_full": "Dieser Raum ist voll."
   },
   "partnership_queue": {
     "revocable_not_undoable": "Eine Partnerschaft kann jederzeit beendet werden, das ist jedoch kein Rückgängigmachen: Der Agent trennt Ihre Identität sofort und lässt das, was er gelernt hat, über 90 Tage verblassen.",

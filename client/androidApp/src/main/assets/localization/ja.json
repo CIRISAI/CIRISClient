@@ -4683,7 +4683,10 @@
     "nothing_to_rule": "その項目のフラグに対して誰も異議を申し立てていません。裁定するものはありません。",
     "appeal_failed": "異議申し立てを署名して記録できなかったため、何も変更されていません。",
     "reveal_failed": "表示への同意を記録できなかったため、項目は非表示のままです。",
-    "unknown_action": "ルーム内の項目は「reveal」で開示されます"
+    "unknown_action": "ルーム内の項目は「reveal」で開示されます",
+    "nothing_to_take_down": "その項目には、取り下げるべき個別のコンテンツがありません。",
+    "takedown_needs_reason": "これを削除する理由を、ご自身の言葉で記入してください。",
+    "takedown_failed": "削除を署名して記録できなかったため、何も変更されていません。"
   },
   "nav": {
     "group": {
@@ -6288,7 +6291,8 @@
     "quorum_pending": "この変更が効力を持つには、ルームのルールに基づきさらに署名が必要です。",
     "store_unavailable": "ノードはディレクトリを読み書きできませんでした。",
     "write_failed": "ノードは変更を書き込めませんでした。",
-    "two_people_only": "ルームは今のところ2人までです。"
+    "two_people_only": "ルームは今のところ2人までです。",
+    "room_full": "このルームは満員です。"
   },
   "partnership_queue": {
     "outcome_approved": "承認",

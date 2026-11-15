@@ -4683,7 +4683,10 @@
     "nothing_to_rule": "Tidak ada yang mengajukan banding atas tanda item itu, sehingga tidak ada yang perlu diputuskan.",
     "appeal_failed": "Banding tidak dapat ditandatangani dan dicatat, sehingga tidak ada yang berubah.",
     "reveal_failed": "Persetujuan untuk melihat tidak dapat dicatat, sehingga item tetap tersembunyi.",
-    "unknown_action": "item dalam ruang ditampilkan dengan reveal"
+    "unknown_action": "item dalam ruang ditampilkan dengan reveal",
+    "nothing_to_take_down": "Item itu tidak memiliki konten terpisah untuk dihapus.",
+    "takedown_needs_reason": "Jelaskan alasan Anda menghapus ini, dengan kata-kata Anda sendiri.",
+    "takedown_failed": "Penghapusan tidak dapat ditandatangani dan dicatat, sehingga tidak ada yang berubah."
   },
   "nav": {
     "group": {
@@ -6288,7 +6291,8 @@
     "quorum_pending": "Aturan ruangan memerlukan lebih banyak tanda tangan sebelum perubahan ini berlaku.",
     "store_unavailable": "Node tidak dapat membaca atau menulis direktorinya.",
     "write_failed": "Node tidak dapat menulis perubahan tersebut.",
-    "two_people_only": "Untuk saat ini, sebuah ruangan menampung dua orang."
+    "two_people_only": "Untuk saat ini, sebuah ruangan menampung dua orang.",
+    "room_full": "Ruangan ini penuh."
   },
   "partnership_queue": {
     "title": "Bermitra dengan agen ini",

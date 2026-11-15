@@ -4683,7 +4683,10 @@
     "nothing_to_rule": "Không ai kháng cáo cờ của mục đó, nên không có gì để phán quyết.",
     "appeal_failed": "Kháng cáo không thể được ký và ghi lại, nên không có gì thay đổi.",
     "reveal_failed": "Sự đồng ý xem không thể được ghi lại, nên mục này vẫn ẩn.",
-    "unknown_action": "một mục trong phòng được hiển thị bằng lệnh reveal"
+    "unknown_action": "một mục trong phòng được hiển thị bằng lệnh reveal",
+    "nothing_to_take_down": "Mục đó không có nội dung riêng để gỡ bỏ.",
+    "takedown_needs_reason": "Hãy nói lý do bạn gỡ bỏ mục này, bằng lời của chính bạn.",
+    "takedown_failed": "Việc gỡ bỏ không thể được ký và ghi lại, nên không có gì thay đổi."
   },
   "nav": {
     "group": {
@@ -6288,7 +6291,8 @@
     "quorum_pending": "Quy tắc của phòng cần thêm chữ ký trước khi thay đổi này có hiệu lực.",
     "store_unavailable": "Nút không thể đọc hoặc ghi vào thư mục của nó.",
     "write_failed": "Nút không thể ghi thay đổi.",
-    "two_people_only": "Hiện tại, một phòng chỉ chứa được hai người."
+    "two_people_only": "Hiện tại, một phòng chỉ chứa được hai người.",
+    "room_full": "Phòng này đã đầy."
   },
   "partnership_queue": {
     "title": "Hợp tác với tác nhân này",

@@ -21,7 +21,7 @@ upstream's last merged state** — the branch point the next pull starts from:
 
 | Upstream | Last merged state | Input commit | Pulled |
 |---|---|---|---|
-| `CIRISAI/CIRISServer` | `v0.5.246` (`9fe076b0a3b6acd03f56bd4350664d64be73c2a2`) | `chore/pin-server-v0.5.246` (the release tag, the squash of CIRISServer#875: edge v45.0.0 and persist 61.2.2, with no reader pool on macOS and iOS (CIRISPersist#1261); calls with video for two people; the frames-socket events; a room moderator's flag and clear, the author's appeal and a reviewer's ruling, crossing between members; a room holds two people (`max_people`, `community.two_people_only`); `ciris-server --version`; the pending-decision ids; the moderation refusals in this repo's own sentences; and the commons surface refusing a duplicate objection and a short dismissal again (`c23e1107`). This repo ran two nodes against `2bfb48a7`, before the commons fix; the tag itself has not been run from here. Previous: `release/0.5.246` `b19f32acd424ee0818134927720cf22e101cff79`, `chore/pin-server-0.5.246`; `v0.5.245` `7af5d4ebc56a2f092f9c22cfef4bbc7f6c67ce3d`, `feat/0.5.239`) | 2026-11-12 |
+| `CIRISAI/CIRISServer` | `v0.5.247` (`baf41f14de21ec943fc6d93cc890adf4fcf2fd6c`) | `chore/pin-server-v0.5.247` (the release tag, the squash of CIRISServer#876: edge v45.1.1, persist v61.4.0 and verify v22.2.0; the reader pool is on again on macOS, and an offline `config set` on a new macOS home opens the store, which failed on 0.5.246; `CIRIS_NODE_IDENTITY_TTL_S` gives a harness node's identity rows a stated end, set here for CI nodes only (`testing/gate/node_env.py`, the `ciris-node` and `ciris-agent` actions); a node is erased only on its present owner's release, never a former owner's; a room's takedown route and its refusals (`moderation.nothing_to_take_down`, `moderation.takedown_needs_reason`, `moderation.takedown_failed`); `community.room_full`, which a 0.5.247 node does not send while rooms hold two people; deferrals listed on `/v1/self/decisions`; `ciris-server --version` prints a second line naming persist, edge and verify. The four ids are in the bundle. This client does NOT yet call the takedown route or read `/v1/self/decisions`: no screen offers a takedown, a deferral or a seat approval. Previous: `v0.5.246` `9fe076b0a3b6acd03f56bd4350664d64be73c2a2`, `chore/pin-server-v0.5.246`; `release/0.5.246` `b19f32acd424ee0818134927720cf22e101cff79`, `chore/pin-server-0.5.246`) | 2026-11-14 |
 | `CIRISAI/CIRISAgent` | `v2.9.36-stable` (`c211a9ff330ab5821002a159c13741cdd74609bb`) | `merge/agent-v2.9.36` | 2026-08-24 |
 
 The §2 exclusion set (extended: `.ciris_keys/`, `__pycache__/`, `*.pyc`,
@@ -40,7 +40,7 @@ source is the pair a bisect wants:
 The tree's current recorded state — sha256-of-sha256s over every git-tracked
 file under `client/` except this one:
 
-**state digest:** `ea5ca2f26f61a053dba8892e4f0d00253d0ed6d419a0579f9185f24b49520741`
+**state digest:** `30584cc4b8df78a97b46d2a28eae65342872ab023b125988fc38cdc92381f2ef`
 
 `packaging/check_vendoring.py` asserts it on every push, and refuses any
 tracked file matching a §2 never-vendor class. **Any commit that touches

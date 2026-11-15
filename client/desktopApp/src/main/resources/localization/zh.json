@@ -4683,7 +4683,10 @@
     "nothing_to_rule": "没有人对该项内容的标记提出申诉，因此没有可裁定的内容。",
     "appeal_failed": "无法对该申诉进行签名和记录，因此未发生任何更改。",
     "reveal_failed": "无法记录查看同意，因此该项内容仍保持隐藏。",
-    "unknown_action": "房间中的项目可通过 reveal 来显示"
+    "unknown_action": "房间中的项目可通过 reveal 来显示",
+    "nothing_to_take_down": "该项内容没有可单独撤下的内容。",
+    "takedown_needs_reason": "请用您自己的话说明为何要撤下此内容。",
+    "takedown_failed": "无法对该下架操作进行签名和记录，因此未发生任何更改。"
   },
   "nav": {
     "group": {
@@ -6288,6 +6291,7 @@
     "store_unavailable": "本节点无法读取或写入其目录。",
     "write_failed": "本节点无法写入此更改。",
     "two_people_only": "聊天室目前仅支持两人。",
+    "room_full": "此聊天室已满。",
     "pair_room_fixed": "两人之间的聊天无法更改成员。请创建一个聊天室与更多人交谈。"
   },
   "partnership_queue": {

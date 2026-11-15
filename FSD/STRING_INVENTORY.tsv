@@ -557,6 +557,7 @@ community.not_authorized	server	server	-	-	-	-	-
 community.not_found	server	client,server	literal	-	-	-	-
 community.pair_room_fixed	server	server	-	-	-	-	-
 community.quorum_pending	server	client,server	literal	-	-	-	-
+community.room_full	server	server	-	-	-	-	-
 community.store_unavailable	server	server	-	-	-	-	-
 community.two_people_only	server	client,server	literal	-	-	-	-
 community.write_failed	server	server	-	-	-	-	-
@@ -4819,6 +4820,7 @@ moderation.not_flagged	server	server	-	-	-	-	-
 moderation.nothing_to_appeal	server	server	-	-	-	-	-
 moderation.nothing_to_clear	server	server	-	-	-	-	-
 moderation.nothing_to_rule	server	server	-	-	-	-	-
+moderation.nothing_to_take_down	server	server	-	-	-	-	-
 moderation.proposal.action_label	client	client	literal	-	-	-	-
 moderation.proposal.action_question	client	client	literal	-	-	-	-
 moderation.proposal.action_report	client	client	literal	-	-	-	-
@@ -4834,6 +4836,8 @@ moderation.proposal.submit	client	client	literal	-	-	-	-
 moderation.proposal.submitting	client	client	literal	-	-	-	-
 moderation.proposal.title	client	client	literal	-	-	-	-
 moderation.reveal_failed	server	server	-	-	-	-	-
+moderation.takedown_failed	server	server	-	-	-	-	-
+moderation.takedown_needs_reason	server	server	-	-	-	-	-
 moderation.unknown_action	server	server	-	-	-	-	-
 moderation.unknown_class	server	server	-	-	-	-	-
 moderation.unknown_grounds	server	server	-	-	-	-	-

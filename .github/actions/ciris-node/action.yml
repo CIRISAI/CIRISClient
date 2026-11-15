@@ -78,6 +78,13 @@ runs:
         # host_device_class), whatever its boot banner says about env vars.
         # testing/gate/node_env.py does the same for the two-node peer.
         CIRIS_DEVICE_CLASS: laptop
+        # THIS NODE'S IDENTITY HAS A STATED END (ciris-server 0.5.247,
+        # src/identity_ttl.rs). The node reaches the canonical and announces to
+        # it, and without this its key record, occurrence and owner binding
+        # stay live there after the runner is gone. Three hours outlasts the
+        # longest leg (testing/test_node_env.py holds the two together). The
+        # home is new each job; never set this for a home that is reused.
+        CIRIS_NODE_IDENTITY_TTL_S: "10800"
         CIRIS_NODE_BINARY: ${{ inputs.binary }}
         CIRIS_NODE_HOME: ${{ inputs.home }}
         CIRIS_NODE_LOG: ${{ inputs.log }}

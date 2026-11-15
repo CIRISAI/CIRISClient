@@ -319,7 +319,9 @@ class PeerNode:
         self._log_handle = None
 
     def _run(self, cmd: List[str], what: str, timeout: float = 120.0) -> str:
-        got = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        # The node's environment, for the console calls too: `identity create`
+        # and `claim` sign the owner's key and binding in their own process.
+        got = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, env=node_env())
         with self.log.open("a", encoding="utf-8") as fh:
             fh.write(f"\n$ {' '.join(cmd)}\n{got.stdout}\n{got.stderr}\n")
         if got.returncode:
