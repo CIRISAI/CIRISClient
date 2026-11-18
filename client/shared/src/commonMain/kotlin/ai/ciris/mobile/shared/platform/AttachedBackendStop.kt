@@ -30,6 +30,14 @@ sealed interface AttachedStop {
 
     /** At least one URL still answered when the bound ran out. */
     data class StillRunning(val urls: List<String>) : AttachedStop
+
+    /**
+     * A backend that will not stop on request: no stop route (404/405/501, a
+     * CIRISServer node before 0.5.250) or a refusal (403: not loopback, behind
+     * a proxy, or a server-class node). It is not waited on; [stopped] lists
+     * any that did stop.
+     */
+    data class CannotAsk(val urls: List<String>, val stopped: List<String>) : AttachedStop
 }
 
 /**
@@ -47,9 +55,12 @@ sealed interface AttachedStop {
  * The backend's own localhost-only `POST /v1/system/local-shutdown` is the
  * stop: it lets the process close its handles itself. This asks each distinct
  * loopback URL once, re-asks on a 409/503 ("retry later"), and waits, bounded,
- * until none answers. A URL that does not serve the route (a 404 from a bare
- * node) is still waited on: if it keeps answering, the result says so and the
- * caller keeps its "still running, restart it" message.
+ * until none answers.
+ *
+ * A URL without the route (404/405/501) is NOT waited on. The first version
+ * waited the full bound for a bare node that could never be asked, so Reset
+ * sat 30 s and the agent's gate (20 s) gave up first (CIRISAgent run
+ * 44346546111, the node-only pass: `local-shutdown at :4243 answered 404`).
  */
 suspend fun stopAttachedBackend(
     urls: List<String>,
@@ -65,11 +76,17 @@ suspend fun stopAttachedBackend(
     if (pending.isEmpty()) return AttachedStop.Stopped(local)
 
     val asked = mutableSetOf<String>()
+    val noRoute = mutableListOf<String>()
     withTimeoutOrNull(timeoutMs) {
         while (pending.isNotEmpty()) {
             for (url in pending.toList()) {
                 if (url !in asked) {
                     val status = requestStop(url)
+                    if (status in NO_STOP_ROUTE) {
+                        noRoute += url
+                        pending.remove(url)
+                        continue
+                    }
                     // 409 (resume in progress) and 503 (not ready) both say
                     // "retry later"; anything else is an answer, asked once.
                     if (status != 409 && status != 503) asked += url
@@ -79,5 +96,12 @@ suspend fun stopAttachedBackend(
             if (pending.isNotEmpty()) delay(pollMs)
         }
     }
-    return if (pending.isEmpty()) AttachedStop.Stopped(local) else AttachedStop.StillRunning(pending.toList())
+    return when {
+        noRoute.isNotEmpty() -> AttachedStop.CannotAsk(noRoute.toList(), local - noRoute.toSet() - pending.toSet())
+        pending.isEmpty() -> AttachedStop.Stopped(local)
+        else -> AttachedStop.StillRunning(pending.toList())
+    }
 }
+
+/** No such route, or a refusal: the backend will not stop on request, so nothing waits on it. */
+private val NO_STOP_ROUTE = setOf(403, 404, 405, 501)

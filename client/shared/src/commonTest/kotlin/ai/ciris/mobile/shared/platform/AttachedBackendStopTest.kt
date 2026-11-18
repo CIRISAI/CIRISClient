@@ -70,12 +70,47 @@ class AttachedBackendStopTest {
 
     @Test
     fun aBackendThatKeepsAnsweringIsReportedStillRunning() = runTest {
+        val agent = "http://127.0.0.1:8080"
+        val b = FakeBackends(alive = setOf(agent))
+        b.answers = { _, _ -> 202 } // accepted, and then never stops
+        val r = stopAttachedBackend(listOf(agent), b::request, b::answering, timeoutMs = 5_000, pollMs = 100)
+        assertEquals(AttachedStop.StillRunning(listOf(agent)), r)
+        assertEquals(1, b.asks[agent], "a definite answer is asked once, not hammered")
+    }
+
+    @Test
+    fun aRefusalIsNotWaitedOn() = runTest {
+        // CIRISServer 0.5.250: 403 system.not_a_personal_node / system.proxied / system.not_loopback.
         val node = "http://127.0.0.1:4243"
         val b = FakeBackends(alive = setOf(node))
-        b.answers = { _, _ -> 404 } // a bare node without the route
-        val r = stopAttachedBackend(listOf(node), b::request, b::answering, timeoutMs = 5_000, pollMs = 100)
-        assertEquals(AttachedStop.StillRunning(listOf(node)), r)
-        assertEquals(1, b.asks[node], "a definite answer is asked once, not hammered")
+        b.answers = { _, _ -> 403 }
+        val started = testScheduler.currentTime
+        val r = stopAttachedBackend(listOf(node), b::request, b::answering, timeoutMs = 30_000, pollMs = 500)
+        assertEquals(AttachedStop.CannotAsk(listOf(node), stopped = emptyList()), r)
+        assertEquals(0L, testScheduler.currentTime - started)
+    }
+
+    @Test
+    fun aBareNodeWithoutTheRouteIsNotWaitedOn() = runTest {
+        // CIRISAgent run 44346546111: :4243 answered 404 and Reset waited 30 s.
+        val node = "http://127.0.0.1:4243"
+        val b = FakeBackends(alive = setOf(node))
+        b.answers = { _, _ -> 404 }
+        val started = testScheduler.currentTime
+        val r = stopAttachedBackend(listOf(node), b::request, b::answering, timeoutMs = 30_000, pollMs = 500)
+        assertEquals(AttachedStop.CannotAsk(listOf(node), stopped = emptyList()), r)
+        assertEquals(0L, testScheduler.currentTime - started, "no wait for a backend that cannot be asked")
+    }
+
+    @Test
+    fun theAgentStillStopsWhenItsNodeCannotBeAsked() = runTest {
+        val agent = "http://127.0.0.1:8080"
+        val node = "http://127.0.0.1:4243"
+        val b = FakeBackends(alive = setOf(agent, node))
+        b.answers = { url, _ -> if (url == node) 404 else 200 }
+        val r = stopAttachedBackend(listOf(agent, node), b::request, b::answering)
+        assertEquals(AttachedStop.CannotAsk(listOf(node), stopped = listOf(agent)), r)
+        assertFalse(agent in b.alive)
     }
 
     @Test
