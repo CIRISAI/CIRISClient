@@ -47,11 +47,16 @@ import kotlinx.coroutines.launch
  *   every operation of that room goes to the node it was opened on.
  * @param chat every chat call this view model makes; a fake in tests.
  */
+/** One page of a room's file listing, and how many pages the chat reads for its "added a file" rows. */
+private const val ROOM_FILE_PAGE = 100
+private const val ROOM_FILE_PAGES = 20
+
 class UserChatViewModel(
     apiClient: CIRISApiClient,
     private val nodeUrl: () -> String = { CIRISApiClient.LOCAL_NODE_URL },
     private val chat: ChatApi = ClientChatApi(apiClient),
-    private val drive: DriveApi = ClientDrive(apiClient, nodeUrl),
+    /** The drive at a given node: the room's files are read from the node the room was opened on, never the active one. */
+    private val driveAt: (String) -> DriveApi = { node -> ClientDrive(apiClient) { node } },
 ) : BaseFederationViewModel(apiClient) {
 
     override val tag: String = "UserChatVM"
@@ -583,7 +588,7 @@ class UserChatViewModel(
             _viewerDuties.value = transcript.viewerDuties
             _acceptsAttachments.value = transcript.acceptsAttachments
             // Its own job: the transcript is loaded now, whatever the drive read does.
-            viewModelScope.launch { loadRoomFiles(communityId, epoch) }
+            viewModelScope.launch { loadRoomFiles(node, communityId, epoch) }
         } catch (e: NodeRefusal) {
             if (epoch == entryEpoch) recordRefusal("listChatMessages", e)
         } catch (e: Exception) {
@@ -601,10 +606,22 @@ class UserChatViewModel(
         }
     }
 
-    /** Best effort, never an error on screen: see [_roomFiles]. */
-    private suspend fun loadRoomFiles(communityId: String, epoch: Long) {
-        val entries = try {
-            drive.readDrive(cohort = "community", roomId = communityId).entries
+    /**
+     * Best effort, never an error on screen: see [_roomFiles]. Every page of
+     * the room's listing, up to [ROOM_FILE_PAGES] (a cursor that never ends is
+     * the node's bug, not a hang here), from [node], the room's own node.
+     */
+    private suspend fun loadRoomFiles(node: String, communityId: String, epoch: Long) {
+        val drive = driveAt(node)
+        val entries = mutableListOf<DriveEntry>()
+        try {
+            var after: String? = null
+            for (page in 1..ROOM_FILE_PAGES) {
+                val read = drive.readDrive(cohort = "community", roomId = communityId, limit = ROOM_FILE_PAGE, after = after)
+                entries += read.entries
+                after = read.resume ?: break
+                if (page == ROOM_FILE_PAGES) PlatformLogger.w(tag, "[roomFiles] still had pages after $ROOM_FILE_PAGES; showing what was read")
+            }
         } catch (e: Exception) {
             PlatformLogger.i(tag, "[roomFiles] not read for ${communityId.take(24)}…: ${e.message}")
             return

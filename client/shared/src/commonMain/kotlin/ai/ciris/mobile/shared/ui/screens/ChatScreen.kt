@@ -351,7 +351,7 @@ fun ChatScreen(
                         PairWaitingBlock(pairPhase, contactLabel.ifBlank { localizedString("mobile.chat_title_fallback") })
                     }
 
-                    loading && messages.isEmpty() -> Box(
+                    loading && timeline.isEmpty() -> Box(
                         modifier = Modifier.fillMaxSize().testable("chat_loading"),
                         contentAlignment = Alignment.Center,
                     ) { CircularProgressIndicator() }
@@ -359,7 +359,7 @@ fun ChatScreen(
                     // A refused read is NOT an empty room: the refusal banner
                     // above is the state, and drawing "No messages yet" under
                     // it would make error and empty look alike (CSD-091).
-                    transcriptLoaded && messages.isEmpty() && refusalReasonId == null && refusalDetail == null -> Box(
+                    transcriptLoaded && timeline.isEmpty() && refusalReasonId == null && refusalDetail == null -> Box(
                         modifier = Modifier.fillMaxSize().testable("chat_empty"),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -381,8 +381,14 @@ fun ChatScreen(
                             if (row is ai.ciris.mobile.shared.viewmodels.RoomRow.FileAdded) {
                                 FileAddedRow(
                                     row = row,
-                                    // Only a room with a panel can open a file.
-                                    onOpen = if (roomFiles == null) null else ({ openingAttachment = it; filesOpen = true }),
+                                    // Only a room with a panel can open a file. A withheld
+                                    // file goes through Reveal first, as a message does;
+                                    // opening it directly is refused by the node.
+                                    onOpen = if (roomFiles == null) null else ({
+                                        val m = row.entry.moderation
+                                        if (m != null && m.withheld && !m.revealed) revealing = m
+                                        else { openingAttachment = it; filesOpen = true }
+                                    }),
                                 )
                                 return@items
                             }
@@ -748,11 +754,14 @@ private fun FileAddedRow(
     onOpen: ((String) -> Unit)?,
 ) {
     val name = row.entry.filename?.takeIf { it.isNotBlank() } ?: localizedString("mobile.files_untitled")
-    val text = if (row.mine) {
+    val added = if (row.mine) {
         localizedString("mobile.chat_file_added_you", "name", name)
     } else {
         localizedString("mobile.chat_file_added", mapOf("who" to row.entry.authorKeyId, "name" to name))
     }
+    // Withheld by a moderator: said on the row, as the files panel says it.
+    val withheld = row.entry.moderation?.let { it.withheld && !it.revealed } == true
+    val text = if (withheld) added + " · " + localizedString("mobile.files_withheld") else added
     Row(
         modifier = Modifier.fillMaxWidth()
             .testable("note_chat_file_added.${row.entry.attestationId}", text),
