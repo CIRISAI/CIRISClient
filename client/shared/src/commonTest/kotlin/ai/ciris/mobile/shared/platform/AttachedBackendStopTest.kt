@@ -120,4 +120,20 @@ class AttachedBackendStopTest {
         assertEquals(AttachedStop.Stopped(listOf("http://127.0.0.1:8080")), r)
         assertTrue(b.asks.isEmpty())
     }
+
+    @Test
+    fun aRateLimitIsRetriedLikeRetryLater() = runTest {
+        val agent = "http://127.0.0.1:8080"
+        val b = FakeBackends(alive = setOf(agent))
+        b.answers = { _, n -> if (n == 1) 429 else 200 }
+        val r = stopAttachedBackend(listOf(agent), b::request, b::answering, timeoutMs = 10_000, pollMs = 100)
+        assertEquals(AttachedStop.Stopped(listOf(agent)), r)
+        assertEquals(2, b.asks[agent])
+    }
+
+    @Test
+    fun theStopRouteIsNotPacedByTheGovernor() {
+        // Codex, CIRISClient#316: a 60 s pause would outlast the 30 s stop.
+        assertTrue(ai.ciris.mobile.shared.api.AgentRateGovernor.isExempt("/v1/system/local-shutdown"))
+    }
 }

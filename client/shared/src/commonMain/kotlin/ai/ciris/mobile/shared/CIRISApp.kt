@@ -2718,6 +2718,8 @@ fun CIRISApp(
                             //
                             // Ask it where it lives while it is still up, too: the answer is
                             // authoritative and it is about to stop being available.
+                            // What the stop found, so "still running" names the backend that is.
+                            var stopResult: ai.ciris.mobile.shared.platform.AttachedStop? = null
                             val declaredHome = if (ai.ciris.mobile.shared.platform.isDesktop()) {
                                 // THE LOCAL NODE'S HOME, EXPLICITLY. The button
                                 // says "Reset this device"; asking the ACTIVE
@@ -2762,6 +2764,7 @@ fun CIRISApp(
                                         answering = { apiClient.answersAt(it) },
                                     )
                                     platformLog(TAG, "[INFO][onResetSetup] attached backend stop: $stop")
+                                    stopResult = stop
                                 }
                                 h
                             } else {
@@ -2791,6 +2794,18 @@ fun CIRISApp(
                                 if (pythonRuntimeProtocol.backendOwnership !=
                                     ai.ciris.mobile.shared.models.capability.BackendOwnership.ATTACHED
                                 ) return@run null
+                                // The backends the stop left running (Codex, CIRISClient#316):
+                                // probing only LOCAL_NODE_URL missed an agent on :8080 that
+                                // kept answering while :4243 stopped.
+                                val leftRunning = when (val r = stopResult) {
+                                    is ai.ciris.mobile.shared.platform.AttachedStop.StillRunning -> r.urls
+                                    is ai.ciris.mobile.shared.platform.AttachedStop.CannotAsk -> r.urls
+                                    else -> emptyList()
+                                }
+                                leftRunning.firstOrNull { apiClient.answersAt(it) }?.let { live ->
+                                    platformLog(TAG, "[INFO][onResetSetup] attached backend at $live is still answering — it keeps its state until restarted")
+                                    return@run live
+                                }
                                 val url = ai.ciris.mobile.shared.api.CIRISApiClient.LOCAL_NODE_URL
                                 val alive = runCatching { apiClient.getNodeHealth(url) }.isSuccess
                                 platformLog(

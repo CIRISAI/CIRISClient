@@ -87,9 +87,10 @@ suspend fun stopAttachedBackend(
                         pending.remove(url)
                         continue
                     }
-                    // 409 (resume in progress) and 503 (not ready) both say
-                    // "retry later"; anything else is an answer, asked once.
-                    if (status != 409 && status != 503) asked += url
+                    // 409 (resume in progress), 429 (rate limited) and 503 (not
+                    // ready) all say "retry later"; anything else is an answer,
+                    // asked once.
+                    if (status !in RETRY_LATER) asked += url
                 }
                 if (!answering(url)) pending.remove(url)
             }
@@ -105,3 +106,6 @@ suspend fun stopAttachedBackend(
 
 /** No such route, or a refusal: the backend will not stop on request, so nothing waits on it. */
 private val NO_STOP_ROUTE = setOf(403, 404, 405, 501)
+
+/** "Ask again shortly": resume in progress, rate limited, not ready. */
+private val RETRY_LATER = setOf(409, 429, 503)
