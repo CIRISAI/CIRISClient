@@ -561,7 +561,9 @@ fun ChatScreen(
     val room = community?.communityId
     if (filesOpen && roomFiles != null && room != null) {
         val filesVm = remember(room) { roomFiles(room) }
-        val closePanel = { filesOpen = false; attaching = false; openingAttachment = null }
+        // Closing the panel re-reads the room's files, so a file added (or
+        // renamed, moved, withdrawn) there shows in the chat at once (Codex, #317).
+        val closePanel = { filesOpen = false; attaching = false; openingAttachment = null; viewModel.refreshRoomFiles() }
         val listingDuties by filesVm.viewerDuties.collectAsState()
         LaunchedEffect(openingAttachment) { openingAttachment?.let(filesVm::openAttachment) }
         androidx.compose.material3.ModalBottomSheet(onDismissRequest = closePanel) {

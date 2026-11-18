@@ -607,6 +607,17 @@ class UserChatViewModel(
     }
 
     /**
+     * Read the open room's files again, after the room's files panel may have
+     * changed them. The transcript is not re-read.
+     */
+    fun refreshRoomFiles() {
+        val id = _community.value?.communityId ?: return
+        val node = roomNodeUrl ?: return
+        val epoch = entryEpoch
+        viewModelScope.launch { loadRoomFiles(node, id, epoch) }
+    }
+
+    /**
      * Best effort, never an error on screen: see [_roomFiles]. Every page of
      * the room's listing, up to [ROOM_FILE_PAGES] (a cursor that never ends is
      * the node's bug, not a hang here), from [node], the room's own node.

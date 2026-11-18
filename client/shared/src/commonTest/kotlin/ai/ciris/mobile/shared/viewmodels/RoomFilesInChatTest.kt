@@ -90,4 +90,19 @@ class RoomFilesInChatTest {
         assertEquals(listOf("file:f1", "m1", "file:f2"), vm.timeline.value.map { it.key })
         assertTrue(vm.timeline.value.filterIsInstance<RoomRow.FileAdded>().none { it.mine })
     }
+
+    @Test
+    fun refreshingTheRoomsFilesReadsThemAgainWithoutTheTranscript() {
+        val drives = mutableListOf<PagedDrive>()
+        val vm = UserChatViewModel(
+            CIRISApiClient(baseUrl = "http://agent.invalid:8080"),
+            { NODE_A },
+            OneRoomChat(),
+            driveAt = { node -> PagedDrive(node).also { drives += it } },
+        ).also { made += it }
+        vm.enterRoom(ROOM_A, name = "Garden", memberCount = 3)
+        vm.refreshRoomFiles()
+        assertEquals(2, drives.size, "the panel closing reads the room's files again")
+        assertEquals(listOf(NODE_A, NODE_A), drives.map { it.node })
+    }
 }
