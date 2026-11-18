@@ -6,6 +6,9 @@ import ai.ciris.mobile.shared.ui.components.HistoryStep
 import ai.ciris.mobile.shared.api.CIRISApiClient
 import ai.ciris.mobile.shared.api.ChatApi
 import ai.ciris.mobile.shared.api.ClientChatApi
+import ai.ciris.mobile.shared.api.ClientDrive
+import ai.ciris.mobile.shared.api.DriveApi
+import ai.ciris.mobile.shared.models.drive.DriveEntry
 import ai.ciris.mobile.shared.api.NodeRefusal
 import ai.ciris.mobile.shared.models.chat.CegChatMessage
 import ai.ciris.mobile.shared.models.chat.ChatCommunity
@@ -16,6 +19,9 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -45,6 +51,7 @@ class UserChatViewModel(
     apiClient: CIRISApiClient,
     private val nodeUrl: () -> String = { CIRISApiClient.LOCAL_NODE_URL },
     private val chat: ChatApi = ClientChatApi(apiClient),
+    private val drive: DriveApi = ClientDrive(apiClient, nodeUrl),
 ) : BaseFederationViewModel(apiClient) {
 
     override val tag: String = "UserChatVM"
@@ -89,6 +96,20 @@ class UserChatViewModel(
 
     private val _messages = MutableStateFlow<List<CegChatMessage>>(emptyList())
     val messages: StateFlow<List<CegChatMessage>> = _messages.asStateFlow()
+
+    /**
+     * The room's own files, for the "added a file" rows. Read after the
+     * transcript, from the same node. A failed read leaves this empty and
+     * draws no file rows: the transcript says nothing about files, so an
+     * absent row is not a claim that none were added.
+     */
+    private val _roomFiles = MutableStateFlow<List<DriveEntry>>(emptyList())
+
+    /** The transcript with the room's added files placed in time ([roomTimeline]). */
+    val timeline: StateFlow<List<RoomRow>> = combine(_messages, _roomFiles, _community) { m, f, c ->
+        val room = c?.communityId
+        if (room == null) m.map { RoomRow.Message(it) } else roomTimeline(room, m, f)
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     /** True once a transcript load has completed — tells "empty" from "not asked yet". */
     private val _transcriptLoaded = MutableStateFlow(false)
@@ -250,6 +271,7 @@ class UserChatViewModel(
         } else {
             // Not an empty room and not a refused read: nothing to read yet.
             _messages.value = emptyList()
+            _roomFiles.value = emptyList()
             _transcriptLoaded.value = false
         }
     }
@@ -294,6 +316,7 @@ class UserChatViewModel(
             // waiting on anyone — and must not inherit the last room's wait.
             _pairPhase.value = PairPhase.OPEN
             _messages.value = emptyList()
+            _roomFiles.value = emptyList()
             _transcriptLoaded.value = false
             // The draft belongs to the room it was written in, not to the screen.
             _draft.value = ""
@@ -559,6 +582,8 @@ class UserChatViewModel(
             _messages.value = transcript.messages
             _viewerDuties.value = transcript.viewerDuties
             _acceptsAttachments.value = transcript.acceptsAttachments
+            // Its own job: the transcript is loaded now, whatever the drive read does.
+            viewModelScope.launch { loadRoomFiles(communityId, epoch) }
         } catch (e: NodeRefusal) {
             if (epoch == entryEpoch) recordRefusal("listChatMessages", e)
         } catch (e: Exception) {
@@ -574,6 +599,17 @@ class UserChatViewModel(
                 _transcriptLoaded.value = true
             }
         }
+    }
+
+    /** Best effort, never an error on screen: see [_roomFiles]. */
+    private suspend fun loadRoomFiles(communityId: String, epoch: Long) {
+        val entries = try {
+            drive.readDrive(cohort = "community", roomId = communityId).entries
+        } catch (e: Exception) {
+            PlatformLogger.i(tag, "[roomFiles] not read for ${communityId.take(24)}…: ${e.message}")
+            return
+        }
+        if (epoch == entryEpoch) _roomFiles.value = entries
     }
 
     private suspend fun <T> callTyped(operation: String, block: suspend () -> T): T? = try {

@@ -4396,6 +4396,8 @@
     "chat_attached": "منسلک: {name}",
     "chat_attachment_remove": "ہٹائیں",
     "chat_attachment_open": "منسلک فائل کھولیں",
+    "chat_file_added": "{who} نے {name} کو کمرے میں شامل کیا",
+    "chat_file_added_you": "آپ نے {name} کو کمرے میں شامل کیا",
     "files_withheld": "موڈریٹر کی جانب سے روکا گیا",
     "files_act_revealed": "یہ اب آپ کے لیے کھلی ہے۔",
     "files_pick_hint": "منسلک کرنے کے لیے ایک فائل منتخب کریں، یا پہلے ایک شامل کریں۔",

@@ -1533,6 +1533,8 @@
     "chat_attached": "ပူးတွဲထားသည်: {name}",
     "chat_attachment_remove": "ဖယ်ရှားရန်",
     "chat_attachment_open": "ပူးတွဲထားသော ဖိုင်ကို ဖွင့်ရန်",
+    "chat_file_added": "{who} က {name} ကို အခန်းထဲသို့ ထည့်ခဲ့သည်",
+    "chat_file_added_you": "သင်က {name} ကို အခန်းထဲသို့ ထည့်ခဲ့သည်",
     "files_withheld": "Moderator တစ်ဦးက ဖုံးကွယ်ထားသည်",
     "files_act_revealed": "ယခု သင့်အတွက် ဖွင့်ပြီးဖြစ်သည်။",
     "files_pick_hint": "ပူးတွဲရန် ဖိုင်တစ်ခု ရွေးချယ်ပါ သို့မဟုတ် ဦးစွာ တစ်ခု ထည့်သွင်းပါ။",

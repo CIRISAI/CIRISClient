@@ -2015,6 +2015,8 @@
     "chat_attached": "An haɗa: {name}",
     "chat_attachment_remove": "Cire",
     "chat_attachment_open": "Buɗe fayil ɗin da aka haɗa",
+    "chat_file_added": "{who} ya ƙara {name} zuwa ɗakin",
+    "chat_file_added_you": "Kai ka ƙara {name} zuwa ɗakin",
     "files_withheld": "An ɓoye shi daga mai kula",
     "files_act_revealed": "Yana buɗe a gare ku yanzu.",
     "files_pick_hint": "Zaɓi fayil don haɗawa, ko ƙara ɗaya tukuna.",

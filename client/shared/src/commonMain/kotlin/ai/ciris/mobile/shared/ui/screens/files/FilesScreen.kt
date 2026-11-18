@@ -542,8 +542,11 @@ private fun FileSheet(open: OpenState, policy: PolicySource, onClose: () -> Unit
     var savedTo by remember(open) { mutableStateOf<String?>(null) }
     var saveFailed by remember(open) { mutableStateOf(false) }
     ModalBottomSheet(onDismissRequest = onClose, modifier = Modifier.testable(FilesTags.SHEET)) {
+        // THE SHEET SCROLLS. On a short desktop window the 360 dp preview pushed
+        // "Save a copy" and Close below the sheet's visible edge, with no way to
+        // reach them (2026-11-18, Windows, a 49 KB text file in a room).
         Column(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             when (open) {
@@ -627,20 +630,7 @@ private fun FileSheet(open: OpenState, policy: PolicySource, onClose: () -> Unit
                     // under the node's own table narrowed by the recommended set.
                     val decision = remember(open, policy) { RenderTier.decide(declared, open.bytes, policy.policy) }
                     val saveAllowed = remember(open, policy) { RenderTier.saveAllowed(decision, name, open.bytes) }
-                    when (decision) {
-                        is RenderTier.Decision.Text -> Box(
-                            modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp)
-                                .verticalScroll(rememberScrollState()).testable("file_preview_text"),
-                        ) {
-                            Text(decision.visible.take(20_000), style = CirisTheme.type.body, color = t.ink)
-                        }
-                        else -> Text(
-                            renderDecisionText(decision),
-                            style = CirisTheme.type.body,
-                            color = if (decision is RenderTier.Decision.Mismatch || decision is RenderTier.Decision.Polyglot) t.danger else t.dim,
-                            modifier = Modifier.testable("file_not_rendered"),
-                        )
-                    }
+                    // The act first, then the preview: a long preview never hides what can be done with the file.
                     if (saveAllowed) {
                         CirisButton(
                             label = localizedString("mobile.files_save_copy"),
@@ -664,6 +654,20 @@ private fun FileSheet(open: OpenState, policy: PolicySource, onClose: () -> Unit
                     }
                     if (saveFailed) {
                         Text(localizedString("mobile.files_save_failed"), style = CirisTheme.type.body, color = t.danger)
+                    }
+                    when (decision) {
+                        is RenderTier.Decision.Text -> Box(
+                            modifier = Modifier.fillMaxWidth().heightIn(max = 360.dp)
+                                .verticalScroll(rememberScrollState()).testable("file_preview_text"),
+                        ) {
+                            Text(decision.visible.take(20_000), style = CirisTheme.type.body, color = t.ink)
+                        }
+                        else -> Text(
+                            renderDecisionText(decision),
+                            style = CirisTheme.type.body,
+                            color = if (decision is RenderTier.Decision.Mismatch || decision is RenderTier.Decision.Polyglot) t.danger else t.dim,
+                            modifier = Modifier.testable("file_not_rendered"),
+                        )
                     }
                 }
             }

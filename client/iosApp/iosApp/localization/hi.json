@@ -4442,6 +4442,8 @@
     "chat_attached": "अटैच किया गया: {name}",
     "chat_attachment_remove": "हटाएं",
     "chat_attachment_open": "अटैच की गई फ़ाइल खोलें",
+    "chat_file_added": "{who} ने {name} को रूम में जोड़ा",
+    "chat_file_added_you": "आपने {name} को रूम में जोड़ा",
     "files_withheld": "मॉडरेटर द्वारा रोका गया",
     "files_act_revealed": "यह अब आपके लिए खुला है।",
     "files_pick_hint": "अटैच करने के लिए कोई फ़ाइल चुनें, या पहले एक जोड़ें।",

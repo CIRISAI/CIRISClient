@@ -4447,6 +4447,8 @@
     "chat_attached": "Imeambatishwa: {name}",
     "chat_attachment_remove": "Ondoa",
     "chat_attachment_open": "Fungua faili lililoambatishwa",
+    "chat_file_added": "{who} aliongeza {name} kwenye chumba",
+    "chat_file_added_you": "Uliongeza {name} kwenye chumba",
     "files_withheld": "Limezuiliwa na msimamizi",
     "files_act_revealed": "Sasa limefunguliwa kwako.",
     "files_pick_hint": "Chagua faili la kuambatisha, au ongeza moja kwanza.",

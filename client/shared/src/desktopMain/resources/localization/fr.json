@@ -1363,6 +1363,8 @@
     "chat_attached": "Joint : {name}",
     "chat_attachment_remove": "Supprimer",
     "chat_attachment_open": "Ouvrir le fichier joint",
+    "chat_file_added": "{who} a ajouté {name} à la salle",
+    "chat_file_added_you": "Vous avez ajouté {name} à la salle",
     "files_withheld": "Masqué par un modérateur",
     "files_act_revealed": "Il vous est désormais accessible.",
     "files_pick_hint": "Choisissez un fichier à joindre, ou ajoutez-en un d'abord.",

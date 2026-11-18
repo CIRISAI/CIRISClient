@@ -4396,6 +4396,8 @@
     "chat_attached": "已附加：{name}",
     "chat_attachment_remove": "移除",
     "chat_attachment_open": "打开附加文件",
+    "chat_file_added": "{who} 将 {name} 添加到了聊天室",
+    "chat_file_added_you": "您将 {name} 添加到了聊天室",
     "files_withheld": "已被管理员隐藏",
     "files_act_revealed": "现在您可以查看它了。",
     "files_pick_hint": "选择一个文件进行附加，或先添加一个文件。",

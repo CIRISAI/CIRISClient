@@ -4448,6 +4448,8 @@
     "chat_attached": "مُرفَق: {name}",
     "chat_attachment_remove": "إزالة",
     "chat_attachment_open": "فتح الملف المرفق",
+    "chat_file_added": "أضاف {who} {name} إلى الغرفة",
+    "chat_file_added_you": "أضفت {name} إلى الغرفة",
     "files_withheld": "محجوب من قِبل مشرف",
     "files_act_revealed": "صار مفتوحاً لك الآن.",
     "files_pick_hint": "اختر ملفاً لإرفاقه، أو أضف واحداً أولاً.",

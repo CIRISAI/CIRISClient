@@ -4432,6 +4432,8 @@
     "chat_attached": "Прикріплено: {name}",
     "chat_attachment_remove": "Видалити",
     "chat_attachment_open": "Відкрити прикріплений файл",
+    "chat_file_added": "{who} додав(ла) {name} до кімнати",
+    "chat_file_added_you": "Ви додали {name} до кімнати",
     "files_withheld": "Приховано модератором",
     "files_act_revealed": "Тепер це відкрито для вас.",
     "files_pick_hint": "Оберіть файл для прикріплення або спочатку додайте його.",

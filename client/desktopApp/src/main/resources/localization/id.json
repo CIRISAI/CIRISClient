@@ -4396,6 +4396,8 @@
     "chat_attached": "Terlampir: {name}",
     "chat_attachment_remove": "Hapus",
     "chat_attachment_open": "Buka berkas lampiran",
+    "chat_file_added": "{who} menambahkan {name} ke ruangan",
+    "chat_file_added_you": "Anda menambahkan {name} ke ruangan",
     "files_withheld": "Ditahan oleh moderator",
     "files_act_revealed": "Sekarang terbuka untuk Anda.",
     "files_pick_hint": "Pilih berkas untuk dilampirkan, atau tambahkan satu terlebih dahulu.",
