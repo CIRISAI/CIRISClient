@@ -5,6 +5,7 @@ import java.nio.file.Files
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -93,7 +94,37 @@ class LocalDataWipeTest {
         assertTrue(home.listFiles()?.isEmpty() == true)
     }
 
+    // -- A HELD FILE (Windows) ------------------------------------------------
+    //
+    // On Windows an open handle makes a delete fail outright. The Linux test
+    // host cannot hold a file that way, so the remover is the seam: it fails
+    // the first N calls for `data` the way a handle closing a moment late does.
 
+    private fun heldFor(failures: Int, calls: MutableMap<String, Int>): (File) -> Unit = { f ->
+        val n = calls.merge(f.name, 1, Int::plus)!!
+        if (!(f.name == "data" && n <= failures)) {
+            if (f.isDirectory) f.deleteRecursively() else f.delete()
+        }
+    }
 
+    @Test
+    fun `a handle released a moment late is retried and the wipe succeeds`() {
+        populate()
+        val calls = mutableMapOf<String, Int>()
+        assertTrue(wipeGeneratedState(home, checkout = false, attempts = 5, pauseMs = 1, remove = heldFor(2, calls)))
+        assertFalse(File(home, "data").exists())
+        assertEquals(3, calls["data"], "two failed tries, then the one that removed it")
+        assertEquals(1, calls[".env"], "an entry removed on the first try is not retried")
+    }
 
+    @Test
+    fun `a handle that is never released fails the wipe after the bound`() {
+        populate()
+        val calls = mutableMapOf<String, Int>()
+        assertFalse(wipeGeneratedState(home, checkout = false, attempts = 4, pauseMs = 1, remove = heldFor(Int.MAX_VALUE, calls)))
+        assertTrue(File(home, "data/ciris_engine.db").exists())
+        assertEquals(4, calls["data"])
+        // and nothing outside the allow-list was touched by the retries
+        assertTrue(File(home, "my_thesis.txt").exists())
+    }
 }

@@ -36,6 +36,7 @@
     "POST /v1/system/adapters/configure/{}/step :: Adapters, Setup",
     "POST /v1/system/adapters/{} :: Adapters, DataManagement",
     "POST /v1/system/adapters/{}/configure/start :: Adapters, Setup",
+    "POST /v1/system/local-shutdown :: DataManagement, Login",
     "PUT /v1/config/{} :: Config, Transport",
     "PUT /v1/system/adapters/{}/reload :: Adapters, LLMSettings"
   ],

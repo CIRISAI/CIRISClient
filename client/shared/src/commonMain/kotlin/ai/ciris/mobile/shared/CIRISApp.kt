@@ -2740,6 +2740,29 @@ fun CIRISApp(
                                 platformLog(TAG, "[INFO][onResetSetup] node declared home: ${h ?: "<none>"}")
                                 runCatching { pythonRuntime.shutdown() }
                                     .onFailure { platformLog(TAG, "[WARN][onResetSetup] backend shutdown: ${it.message}") }
+                                // AN ATTACHED LOCAL BACKEND IS ASKED TO STOP TOO.
+                                // shutdown() above declines to kill a process this
+                                // app did not start, which left the launcher's
+                                // backend holding its files while they were
+                                // deleted: on Windows `data\` could not be removed
+                                // and Reset failed whenever a handle was open
+                                // (CIRISAgent five-platform, ciris-server 0.5.249).
+                                // Its own localhost-only stop lets it close them;
+                                // Startup's retry then launches a backend from the
+                                // wiped home. Loopback URLs only.
+                                if (pythonRuntimeProtocol.backendOwnership ==
+                                    ai.ciris.mobile.shared.models.capability.BackendOwnership.ATTACHED
+                                ) {
+                                    val stop = ai.ciris.mobile.shared.platform.stopAttachedBackend(
+                                        urls = listOf(
+                                            pythonRuntimeProtocol.serverUrl,
+                                            ai.ciris.mobile.shared.api.CIRISApiClient.LOCAL_NODE_URL,
+                                        ),
+                                        requestStop = { apiClient.postLocalShutdown(it) },
+                                        answering = { apiClient.answersAt(it) },
+                                    )
+                                    platformLog(TAG, "[INFO][onResetSetup] attached backend stop: $stop")
+                                }
                                 h
                             } else {
                                 null
