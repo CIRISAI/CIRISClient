@@ -128,7 +128,13 @@ actual fun wipeLocalData(declaredNodeHome: String?): Boolean {
  * a `src/`, a `.git`. Asserting the intended targets are gone would have passed
  * for all four of them.
  */
-internal fun wipeGeneratedState(home: File, checkout: Boolean): Boolean {
+internal fun wipeGeneratedState(
+    home: File,
+    checkout: Boolean,
+    attempts: Int = 5,
+    pauseMs: Long = 1_000,
+    remove: (File) -> Unit = { f -> if (f.isDirectory) f.deleteRecursively() else f.delete() },
+): Boolean {
     var ok = true
     var removed = 0
 
@@ -162,9 +168,21 @@ internal fun wipeGeneratedState(home: File, checkout: Boolean): Boolean {
             }
             continue
         }
-        runCatching { if (f.isDirectory) f.deleteRecursively() else f.delete() }
+        // A FEW TRIES, NOT ONE. On Windows a handle the backend has just
+        // closed, or an antivirus scanner reading a fresh file, makes a delete
+        // fail for a moment and succeed a second later. Nothing here deletes
+        // anything new on a retry: it is the same name, and what one pass
+        // removed stays removed.
+        var tries = 0
+        while (true) {
+            tries++
+            runCatching { remove(f) }
+            if (!f.exists() || tries >= attempts) break
+            Thread.sleep(pauseMs)
+        }
         if (f.exists()) {
-            println("[LocalDataWipe] could not remove ${f.absolutePath}")
+            val stuck = f.walkBottomUp().firstOrNull { it.isFile } ?: f
+            println("[LocalDataWipe] could not remove ${f.absolutePath} after $tries tries (still present: ${stuck.absolutePath})")
             ok = false
         } else {
             removed++
