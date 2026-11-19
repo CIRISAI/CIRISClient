@@ -1039,7 +1039,9 @@ class CIRISApiClient internal constructor(
     /**
      * Does anything answer HTTP at [url]? ANY status counts, including 4xx and
      * 5xx: a first-run agent or a node mid-shutdown is still a live process
-     * holding its files. Only a failed connection or a timeout reads as gone.
+     * holding its files. A timeout counts too: a stopped loopback process
+     * refuses the connection at once, so a probe that runs out of time reached
+     * a live one (Codex, CIRISClient#316). Only a failed connection reads as gone.
      */
     suspend fun answersAt(url: String): Boolean {
         val client = agentHttpClient {
@@ -1052,7 +1054,7 @@ class CIRISApiClient internal constructor(
             client.get("$url/v1/system/health")
             true
         } catch (e: Exception) {
-            false
+            ai.ciris.mobile.shared.platform.probeFailureMeansAlive(e)
         } finally {
             client.close()
         }

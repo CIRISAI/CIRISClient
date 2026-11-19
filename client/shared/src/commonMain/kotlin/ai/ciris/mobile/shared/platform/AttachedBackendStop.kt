@@ -35,9 +35,15 @@ sealed interface AttachedStop {
      * A backend that will not stop on request: no stop route (404/405/501, a
      * CIRISServer node before 0.5.250) or a refusal (403: not loopback, behind
      * a proxy, or a server-class node). It is not waited on; [stopped] lists
-     * any that did stop.
+     * any that did stop, and [running] any other URL that could be asked but
+     * still answered when the bound ran out (Codex, CIRISClient#316: a node
+     * without the route beside an agent that would not stop lost the agent).
      */
-    data class CannotAsk(val urls: List<String>, val stopped: List<String>) : AttachedStop
+    data class CannotAsk(
+        val urls: List<String>,
+        val stopped: List<String>,
+        val running: List<String> = emptyList(),
+    ) : AttachedStop
 }
 
 /**
@@ -56,6 +62,10 @@ sealed interface AttachedStop {
  * stop: it lets the process close its handles itself. This asks each distinct
  * loopback URL once, re-asks on a 409/503 ("retry later"), and waits, bounded,
  * until none answers.
+ *
+ * [answering] must read a TIMEOUT as answering: only a refused connection
+ * means gone. A live backend busy enough to miss the probe still holds its
+ * files (Codex, CIRISClient#316); the bound then reports it as running.
  *
  * A URL without the route (404/405/501) is NOT waited on. The first version
  * waited the full bound for a bare node that could never be asked, so Reset
@@ -98,7 +108,11 @@ suspend fun stopAttachedBackend(
         }
     }
     return when {
-        noRoute.isNotEmpty() -> AttachedStop.CannotAsk(noRoute.toList(), local - noRoute.toSet() - pending.toSet())
+        noRoute.isNotEmpty() -> AttachedStop.CannotAsk(
+            urls = noRoute.toList(),
+            stopped = local - noRoute.toSet() - pending.toSet(),
+            running = pending.toList(),
+        )
         pending.isEmpty() -> AttachedStop.Stopped(local)
         else -> AttachedStop.StillRunning(pending.toList())
     }
@@ -109,3 +123,14 @@ private val NO_STOP_ROUTE = setOf(403, 404, 405, 501)
 
 /** "Ask again shortly": resume in progress, rate limited, not ready. */
 private val RETRY_LATER = setOf(409, 429, 503)
+
+/**
+ * Does a failed probe still mean "something is there"? A timeout does: on
+ * loopback a stopped process refuses the connection at once, so a probe that
+ * runs out of time reached a live process too busy to answer. Only a refused
+ * or otherwise failed connection reads as gone.
+ */
+fun probeFailureMeansAlive(e: Throwable): Boolean =
+    e is io.ktor.client.plugins.HttpRequestTimeoutException ||
+        e is io.ktor.client.network.sockets.ConnectTimeoutException ||
+        e is io.ktor.client.network.sockets.SocketTimeoutException

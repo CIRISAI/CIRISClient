@@ -2799,7 +2799,7 @@ fun CIRISApp(
                                 // kept answering while :4243 stopped.
                                 val leftRunning = when (val r = stopResult) {
                                     is ai.ciris.mobile.shared.platform.AttachedStop.StillRunning -> r.urls
-                                    is ai.ciris.mobile.shared.platform.AttachedStop.CannotAsk -> r.urls
+                                    is ai.ciris.mobile.shared.platform.AttachedStop.CannotAsk -> r.running + r.urls
                                     else -> emptyList()
                                 }
                                 leftRunning.firstOrNull { apiClient.answersAt(it) }?.let { live ->

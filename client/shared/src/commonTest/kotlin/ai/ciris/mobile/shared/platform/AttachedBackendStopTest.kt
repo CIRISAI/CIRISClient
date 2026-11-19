@@ -114,6 +114,24 @@ class AttachedBackendStopTest {
     }
 
     @Test
+    fun anAgentThatWillNotStopIsKeptBesideANodeThatCannotBeAsked() = runTest {
+        val agent = "http://127.0.0.1:8080"
+        val node = "http://127.0.0.1:4243"
+        val b = FakeBackends(alive = setOf(agent, node))
+        b.answers = { url, _ -> if (url == node) 404 else 202 } // the agent accepts and never goes
+        val r = stopAttachedBackend(listOf(agent, node), b::request, b::answering, timeoutMs = 2_000, pollMs = 100)
+        assertEquals(AttachedStop.CannotAsk(listOf(node), stopped = emptyList(), running = listOf(agent)), r)
+    }
+
+    @Test
+    fun aProbeThatTimesOutReachedALiveBackend() {
+        assertTrue(probeFailureMeansAlive(io.ktor.client.plugins.HttpRequestTimeoutException("http://127.0.0.1:8080/v1/system/health", 2_000)))
+        assertTrue(probeFailureMeansAlive(io.ktor.client.network.sockets.ConnectTimeoutException("connect timeout")))
+        assertTrue(probeFailureMeansAlive(io.ktor.client.network.sockets.SocketTimeoutException("socket timeout")))
+        assertFalse(probeFailureMeansAlive(IllegalStateException("Connection refused")))
+    }
+
+    @Test
     fun aBackendThatIsAlreadyGoneIsNotAsked() = runTest {
         val b = FakeBackends(alive = emptySet())
         val r = stopAttachedBackend(listOf("http://127.0.0.1:8080"), b::request, b::answering)
