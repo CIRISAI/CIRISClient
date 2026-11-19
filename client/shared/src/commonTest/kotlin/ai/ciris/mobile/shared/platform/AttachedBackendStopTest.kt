@@ -21,7 +21,7 @@ class AttachedBackendStopTest {
         var answers: (String, Int) -> Int? = { _, _ -> 200 }
 
         suspend fun request(url: String): Int? {
-            val n = asks.merge(url, 1, Int::plus)!!
+            val n = (asks[url] ?: 0) + 1; asks[url] = n
             val status = answers(url, n)
             if (status == 200 && n >= (stopsAfterAsks[url] ?: 1)) alive -= url
             return status
