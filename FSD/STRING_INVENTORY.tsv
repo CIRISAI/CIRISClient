@@ -1733,6 +1733,8 @@ mobile.chat_details_subjects	client	client	literal	-	-	-	-
 mobile.chat_editing	client	client	literal	-	-	-	-
 mobile.chat_empty	client	client	literal	-	-	-	-
 mobile.chat_empty_room	client	client	literal	-	-	-	-
+mobile.chat_file_added	client	client	literal	-	-	-	-
+mobile.chat_file_added_you	client	client	literal	-	-	-	-
 mobile.chat_flag_author	client	client	dynamic	-	154	same	-
 mobile.chat_input_hint	client	client	literal	-	-	-	-
 mobile.chat_length_counter	client	client	literal	-	-	-	-

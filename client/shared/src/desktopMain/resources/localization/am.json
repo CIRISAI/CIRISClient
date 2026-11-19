@@ -4285,6 +4285,8 @@
     "chat_attached": "ተያይዟል፦ {name}",
     "chat_attachment_remove": "አስወግድ",
     "chat_attachment_open": "የተያያዘ ፋይል ክፈት",
+    "chat_file_added": "{who} {name}ን ወደ ክፍሉ ጨምረዋል",
+    "chat_file_added_you": "እርስዎ {name}ን ወደ ክፍሉ ጨምረዋል",
     "files_withheld": "በተቆጣጣሪ ተደብቋል",
     "files_act_revealed": "አሁን ለእርስዎ ተከፍቷል።",
     "files_pick_hint": "ለማያያዝ ፋይል ይምረጡ፣ ወይም መጀመሪያ አንድ ይጨምሩ።",

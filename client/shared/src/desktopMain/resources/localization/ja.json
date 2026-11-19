@@ -4407,6 +4407,8 @@
     "chat_attached": "添付済み: {name}",
     "chat_attachment_remove": "削除",
     "chat_attachment_open": "添付ファイルを開く",
+    "chat_file_added": "{who}が{name}をルームに追加しました",
+    "chat_file_added_you": "あなたが{name}をルームに追加しました",
     "files_withheld": "モデレーターにより非表示",
     "files_act_revealed": "これで表示できるようになりました。",
     "files_pick_hint": "添付するファイルを選択するか、先にファイルを追加してください。",

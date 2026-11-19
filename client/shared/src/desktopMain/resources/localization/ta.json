@@ -4398,6 +4398,8 @@
     "chat_attached": "இணைக்கப்பட்டது: {name}",
     "chat_attachment_remove": "அகற்று",
     "chat_attachment_open": "இணைக்கப்பட்ட கோப்பைத் திற",
+    "chat_file_added": "{who} {name} ஐ அறைக்கு சேர்த்தார்",
+    "chat_file_added_you": "நீங்கள் {name} ஐ அறைக்கு சேர்த்தீர்கள்",
     "files_withheld": "நிர்வாகியால் நிறுத்தி வைக்கப்பட்டது",
     "files_act_revealed": "இது இப்போது உங்களுக்குத் திறந்துள்ளது.",
     "files_pick_hint": "இணைக்க ஒரு கோப்பைத் தேர்ந்தெடுக்கவும், அல்லது முதலில் ஒன்றைச் சேர்க்கவும்.",

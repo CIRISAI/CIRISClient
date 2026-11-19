@@ -4402,6 +4402,8 @@
     "chat_attached": "پیوست شد: {name}",
     "chat_attachment_remove": "حذف",
     "chat_attachment_open": "باز کردن فایل پیوست‌شده",
+    "chat_file_added": "{who} {name} را به اتاق افزود",
+    "chat_file_added_you": "شما {name} را به اتاق افزودید",
     "files_withheld": "پنهان‌شده توسط یک مدیر",
     "files_act_revealed": "اکنون برای شما باز است.",
     "files_pick_hint": "فایلی برای پیوست انتخاب کنید، یا ابتدا یکی اضافه کنید.",

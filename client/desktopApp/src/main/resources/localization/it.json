@@ -1873,6 +1873,8 @@
     "chat_attached": "Allegato: {name}",
     "chat_attachment_remove": "Rimuovi",
     "chat_attachment_open": "Apri il file allegato",
+    "chat_file_added": "{who} ha aggiunto {name} alla stanza",
+    "chat_file_added_you": "Hai aggiunto {name} alla stanza",
     "files_withheld": "Trattenuto da un moderatore",
     "files_act_revealed": "Ora è aperto per te.",
     "child_safety_group_label": "key_id del gruppo (devi moderarlo)",

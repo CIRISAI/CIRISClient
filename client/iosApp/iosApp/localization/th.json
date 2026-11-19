@@ -4396,6 +4396,8 @@
     "chat_attached": "แนบแล้ว: {name}",
     "chat_attachment_remove": "นำออก",
     "chat_attachment_open": "เปิดไฟล์แนบ",
+    "chat_file_added": "{who} เพิ่ม {name} เข้าห้อง",
+    "chat_file_added_you": "คุณเพิ่ม {name} เข้าห้อง",
     "files_withheld": "ถูกระงับไว้โดยผู้ดูแล",
     "files_act_revealed": "ตอนนี้คุณเปิดดูได้แล้ว",
     "files_pick_hint": "เลือกไฟล์ที่จะแนบ หรือเพิ่มไฟล์ก่อน",

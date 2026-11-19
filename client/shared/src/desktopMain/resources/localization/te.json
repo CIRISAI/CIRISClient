@@ -1533,6 +1533,8 @@
     "chat_attached": "జోడించబడింది: {name}",
     "chat_attachment_remove": "తొలగించు",
     "chat_attachment_open": "జోడించిన ఫైల్‌ను తెరువు",
+    "chat_file_added": "{who} {name}ను గదికి జోడించారు",
+    "chat_file_added_you": "మీరు {name}ను గదికి జోడించారు",
     "files_withheld": "మోడరేటర్ ద్వారా నిలిపివేయబడింది",
     "files_act_revealed": "ఇది ఇప్పుడు మీకు తెరవబడింది.",
     "files_pick_hint": "జోడించడానికి ఒక ఫైల్‌ను ఎంచుకోండి, లేదా ముందుగా ఒకదాన్ని జోడించండి.",

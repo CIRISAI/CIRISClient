@@ -4396,6 +4396,8 @@
     "chat_attached": "Đã đính kèm: {name}",
     "chat_attachment_remove": "Xóa",
     "chat_attachment_open": "Mở tệp đính kèm",
+    "chat_file_added": "{who} đã thêm {name} vào phòng",
+    "chat_file_added_you": "Bạn đã thêm {name} vào phòng",
     "files_withheld": "Bị giữ lại bởi người kiểm duyệt",
     "files_act_revealed": "Giờ đây nó đã mở cho bạn.",
     "files_pick_hint": "Chọn một tệp để đính kèm, hoặc thêm một tệp trước.",

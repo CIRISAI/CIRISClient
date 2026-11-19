@@ -4245,6 +4245,8 @@
     "chat_attached": "সংযুক্ত: {name}",
     "chat_attachment_remove": "সরান",
     "chat_attachment_open": "সংযুক্ত ফাইল খুলুন",
+    "chat_file_added": "{who} {name}-কে রুমে যুক্ত করেছেন",
+    "chat_file_added_you": "আপনি {name}-কে রুমে যুক্ত করেছেন",
     "files_withheld": "মডারেটর দ্বারা আটকে রাখা হয়েছে",
     "files_act_revealed": "এটি এখন আপনার জন্য উন্মুক্ত।",
     "files_pick_hint": "সংযুক্ত করার জন্য একটি ফাইল বেছে নিন, অথবা প্রথমে একটি যোগ করুন।",

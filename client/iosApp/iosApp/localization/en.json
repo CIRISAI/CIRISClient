@@ -4491,6 +4491,8 @@
     "chat_attached": "Attached: {name}",
     "chat_attachment_remove": "Remove",
     "chat_attachment_open": "Open attached file",
+    "chat_file_added": "{who} added {name} to the room",
+    "chat_file_added_you": "You added {name} to the room",
     "files_withheld": "Withheld by a moderator",
     "files_act_revealed": "It is open to you now.",
     "files_pick_hint": "Choose a file to attach, or add one first.",

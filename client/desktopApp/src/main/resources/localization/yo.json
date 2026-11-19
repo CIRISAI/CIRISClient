@@ -4504,6 +4504,8 @@
     "chat_attached": "Tí a sopọ̀ mọ́: {name}",
     "chat_attachment_remove": "Yọ Kúrò",
     "chat_attachment_open": "Ṣí fáìlì tí a sopọ̀ mọ́",
+    "chat_file_added": "{who} fi {name} kún yàrá náà",
+    "chat_file_added_you": "Ìwọ fi {name} kún yàrá náà",
     "files_withheld": "Tí olùdarí fi pamọ́",
     "files_act_revealed": "Ó ṣí sílẹ̀ fún ọ nísinsìnyí.",
     "files_pick_hint": "Yan fáìlì kan láti sopọ̀ mọ́, tàbí kọ́kọ́ fi ọ̀kan kún.",

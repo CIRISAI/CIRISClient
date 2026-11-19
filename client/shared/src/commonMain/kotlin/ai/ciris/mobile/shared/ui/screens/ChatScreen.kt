@@ -165,6 +165,7 @@ fun ChatScreen(
     val acceptsAttachments by viewModel.acceptsAttachments.collectAsState()
     val roomMembers by viewModel.memberCount.collectAsState()
     val messages by viewModel.messages.collectAsState()
+    val timeline by viewModel.timeline.collectAsState()
     val transcriptLoaded by viewModel.transcriptLoaded.collectAsState()
     val loading by viewModel.loading.collectAsState()
     val draft by viewModel.draft.collectAsState()
@@ -196,8 +197,8 @@ fun ChatScreen(
     // The keyboard coming up shrinks the transcript from below; bring the
     // newest message back above the composer when it does (CIRISClient#186).
     val keyboardUp = imeOpen()
-    LaunchedEffect(messages.size, keyboardUp) {
-        if (messages.isNotEmpty()) listState.scrollToItem(messages.lastIndex)
+    LaunchedEffect(timeline.size, keyboardUp) {
+        if (timeline.isNotEmpty()) listState.scrollToItem(timeline.lastIndex)
     }
 
     var detailsFor by remember { mutableStateOf<String?>(null) }
@@ -350,7 +351,7 @@ fun ChatScreen(
                         PairWaitingBlock(pairPhase, contactLabel.ifBlank { localizedString("mobile.chat_title_fallback") })
                     }
 
-                    loading && messages.isEmpty() -> Box(
+                    loading && timeline.isEmpty() -> Box(
                         modifier = Modifier.fillMaxSize().testable("chat_loading"),
                         contentAlignment = Alignment.Center,
                     ) { CircularProgressIndicator() }
@@ -358,7 +359,7 @@ fun ChatScreen(
                     // A refused read is NOT an empty room: the refusal banner
                     // above is the state, and drawing "No messages yet" under
                     // it would make error and empty look alike (CSD-091).
-                    transcriptLoaded && messages.isEmpty() && refusalReasonId == null && refusalDetail == null -> Box(
+                    transcriptLoaded && timeline.isEmpty() && refusalReasonId == null && refusalDetail == null -> Box(
                         modifier = Modifier.fillMaxSize().testable("chat_empty"),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -376,7 +377,22 @@ fun ChatScreen(
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
-                        items(messages, key = { it.attestationId }) { msg ->
+                        items(timeline, key = { it.key }) { row ->
+                            if (row is ai.ciris.mobile.shared.viewmodels.RoomRow.FileAdded) {
+                                FileAddedRow(
+                                    row = row,
+                                    // Only a room with a panel can open a file. A withheld
+                                    // file goes through Reveal first, as a message does;
+                                    // opening it directly is refused by the node.
+                                    onOpen = if (roomFiles == null) null else ({
+                                        val m = row.entry.moderation
+                                        if (m != null && m.withheld && !m.revealed) revealing = m
+                                        else { openingAttachment = it; filesOpen = true }
+                                    }),
+                                )
+                                return@items
+                            }
+                            val msg = (row as ai.ciris.mobile.shared.viewmodels.RoomRow.Message).message
                             // TWO AXES, ONE BRANCH (CIRISClient#37). The decision
                             // lives in presentationOf so it can be enumerated and
                             // tested without composing anything; this is only its
@@ -545,7 +561,9 @@ fun ChatScreen(
     val room = community?.communityId
     if (filesOpen && roomFiles != null && room != null) {
         val filesVm = remember(room) { roomFiles(room) }
-        val closePanel = { filesOpen = false; attaching = false; openingAttachment = null }
+        // Closing the panel re-reads the room's files, so a file added (or
+        // renamed, moved, withdrawn) there shows in the chat at once (Codex, #317).
+        val closePanel = { filesOpen = false; attaching = false; openingAttachment = null; viewModel.refreshRoomFiles() }
         val listingDuties by filesVm.viewerDuties.collectAsState()
         LaunchedEffect(openingAttachment) { openingAttachment?.let(filesVm::openAttachment) }
         androidx.compose.material3.ModalBottomSheet(onDismissRequest = closePanel) {
@@ -726,6 +744,50 @@ fun chatCustodyTarget(message: CegChatMessage): CustodyTarget? =
  * carrying an untranslated sentence, and a raw dotted key on screen is
  * CIRISClient#34.
  */
+/**
+ * Someone added a file to the room. Drawn in the transcript at the time the
+ * file's own entry was signed, in the same quiet style as the node's notes,
+ * with Open when this room has a files panel. The node sends no such event:
+ * the row is the room's drive entry (RoomTimeline.kt).
+ */
+@Composable
+private fun FileAddedRow(
+    row: ai.ciris.mobile.shared.viewmodels.RoomRow.FileAdded,
+    onOpen: ((String) -> Unit)?,
+) {
+    val name = row.entry.filename?.takeIf { it.isNotBlank() } ?: localizedString("mobile.files_untitled")
+    val added = if (row.mine) {
+        localizedString("mobile.chat_file_added_you", "name", name)
+    } else {
+        localizedString("mobile.chat_file_added", mapOf("who" to row.entry.authorKeyId, "name" to name))
+    }
+    // Withheld by a moderator: said on the row, as the files panel says it.
+    val withheld = row.entry.moderation?.let { it.withheld && !it.revealed } == true
+    val text = if (withheld) added + " · " + localizedString("mobile.files_withheld") else added
+    Row(
+        modifier = Modifier.fillMaxWidth()
+            .testable("note_chat_file_added.${row.entry.attestationId}", text),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text,
+            fontSize = 12.sp,
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f, fill = false).padding(vertical = 6.dp),
+        )
+        if (onOpen != null) {
+            TextButton(
+                onClick = { onOpen(row.entry.attestationId) },
+                modifier = Modifier.testableClickable("btn_chat_file_added_open.${row.entry.attestationId}") {
+                    onOpen(row.entry.attestationId)
+                },
+            ) { Text(localizedString("mobile.chat_attachment_open"), fontSize = 12.sp) }
+        }
+    }
+}
+
 @Composable
 private fun SystemNoteRow(message: CegChatMessage) {
     // localizedString is @Composable, so the lookup happens HERE and the pure

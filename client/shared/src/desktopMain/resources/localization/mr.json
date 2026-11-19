@@ -1137,6 +1137,8 @@
     "chat_attached": "जोडले: {name}",
     "chat_attachment_remove": "काढा",
     "chat_attachment_open": "जोडलेली फाइल उघडा",
+    "chat_file_added": "{who} ने {name} ला रूममध्ये जोडले",
+    "chat_file_added_you": "तुम्ही {name} ला रूममध्ये जोडले",
     "files_withheld": "मॉडरेटरद्वारे रोखले",
     "files_act_revealed": "ते आता तुमच्यासाठी खुले आहे.",
     "files_pick_hint": "जोडण्यासाठी फाइल निवडा, किंवा आधी एक जोडा.",

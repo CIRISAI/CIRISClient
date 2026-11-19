@@ -4332,6 +4332,8 @@
     "chat_attached": "Adjunto: {name}",
     "chat_attachment_remove": "Quitar",
     "chat_attachment_open": "Abrir archivo adjunto",
+    "chat_file_added": "{who} añadió {name} a la sala",
+    "chat_file_added_you": "Añadiste {name} a la sala",
     "files_withheld": "Retenido por un moderador",
     "files_act_revealed": "Ahora está abierto para ti.",
     "files_pick_hint": "Elige un archivo para adjuntar, o añade uno primero.",

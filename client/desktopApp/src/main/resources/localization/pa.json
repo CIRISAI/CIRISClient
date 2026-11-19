@@ -4396,6 +4396,8 @@
     "chat_attached": "ਨੱਥੀ ਕੀਤਾ: {name}",
     "chat_attachment_remove": "ਹਟਾਓ",
     "chat_attachment_open": "ਨੱਥੀ ਫਾਈਲ ਖੋਲ੍ਹੋ",
+    "chat_file_added": "{who} ਨੇ {name} ਨੂੰ ਕਮਰੇ ਵਿੱਚ ਸ਼ਾਮਲ ਕੀਤਾ",
+    "chat_file_added_you": "ਤੁਸੀਂ {name} ਨੂੰ ਕਮਰੇ ਵਿੱਚ ਸ਼ਾਮਲ ਕੀਤਾ",
     "files_withheld": "ਇੱਕ ਮਾਡਰੇਟਰ ਦੁਆਰਾ ਰੋਕਿਆ ਗਿਆ",
     "files_act_revealed": "ਇਹ ਹੁਣ ਤੁਹਾਡੇ ਲਈ ਖੁੱਲ੍ਹੀ ਹੈ।",
     "files_pick_hint": "ਨੱਥੀ ਕਰਨ ਲਈ ਇੱਕ ਫਾਈਲ ਚੁਣੋ, ਜਾਂ ਪਹਿਲਾਂ ਇੱਕ ਸ਼ਾਮਲ ਕਰੋ।",

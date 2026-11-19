@@ -2609,6 +2609,8 @@
     "chat_attached": "Angehängt: {name}",
     "chat_attachment_remove": "Entfernen",
     "chat_attachment_open": "Angehängte Datei öffnen",
+    "chat_file_added": "{who} hat {name} zum Raum hinzugefügt",
+    "chat_file_added_you": "Sie haben {name} zum Raum hinzugefügt",
     "files_withheld": "Von einem Moderator zurückgehalten",
     "files_act_revealed": "Sie ist jetzt für Sie geöffnet.",
     "files_pick_hint": "Wählen Sie eine Datei zum Anhängen aus, oder fügen Sie zuerst eine hinzu.",
