@@ -38,6 +38,10 @@ class AttachedBackendStopTest {
         assertFalse(isLoopbackUrl("http://108.61.242.236:4243"))
         assertFalse(isLoopbackUrl("http://127.0.0.1.example.com:8080"))
         assertFalse(isLoopbackUrl("https://node.example.org"))
+        assertFalse(isLoopbackUrl("http://localhost:secret@remote.example:8080"))
+        assertFalse(isLoopbackUrl("http://127.0.0.1@remote.example"))
+        assertTrue(isLoopbackUrl("http://user:pw@127.0.0.1:8080/x@y"))
+        assertFalse(isLoopbackUrl("http://remote.example?h=127.0.0.1"))
     }
 
     @Test

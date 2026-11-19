@@ -11,7 +11,10 @@ import kotlinx.coroutines.withTimeoutOrNull
  */
 fun isLoopbackUrl(url: String): Boolean {
     val afterScheme = url.substringAfter("://", url)
-    val authority = afterScheme.substringBefore('/')
+    // The authority ends at the first '/', '?' or '#', and its host follows any
+    // user-info: `http://localhost:x@remote.example` is remote (Codex,
+    // CIRISClient#316).
+    val authority = afterScheme.takeWhile { it != '/' && it != '?' && it != '#' }.substringAfterLast('@')
     val host = if (authority.startsWith("[")) {
         authority.substringAfter('[').substringBefore(']')
     } else {

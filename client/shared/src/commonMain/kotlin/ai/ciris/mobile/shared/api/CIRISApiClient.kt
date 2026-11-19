@@ -1053,6 +1053,11 @@ class CIRISApiClient internal constructor(
         return try {
             client.get("$url/v1/system/health")
             true
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // The caller's own bound ran out (stopAttachedBackend's 30 s): that
+            // says nothing about the backend, so it must not read as "gone"
+            // (Codex, CIRISClient#316).
+            throw e
         } catch (e: Exception) {
             ai.ciris.mobile.shared.platform.probeFailureMeansAlive(e)
         } finally {
@@ -1085,6 +1090,8 @@ class CIRISApiClient internal constructor(
             }.status.value
             logInfo(method, "local-shutdown at $url answered $status")
             status
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             // Expected — server dies before responding
             logInfo(method, "Server shutdown (expected error): ${e.message}")
