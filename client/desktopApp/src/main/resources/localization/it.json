@@ -4551,7 +4551,40 @@
     "call_h264_failed_load": "Il codec H.264 è stato scaricato, ma questo computer non è riuscito a caricarlo. Riprova, oppure disattiva il video H.264, il che eliminerà il codec.",
     "call_h264_needed": "Qualcuno in questa chiamata sta inviando video H.264. Attiva il video H.264 per vederlo.",
     "call_h264_licence": "Mostra la licenza",
-    "call_h264_licence_hide": "Nascondi la licenza"
+    "call_h264_licence_hide": "Nascondi la licenza",
+    "wa_identity_amendment_title": "Richiesta di modifica dell'identità di questo agente",
+    "wa_identity_base_link_title": "Ancora l'identità di questo agente al proprio modello",
+    "wa_identity_base_link_custom_note": "Questo agente usa un modello personalizzato. Approvalo come base dell'identità di questo agente.",
+    "wa_identity_reapproval_title": "Riapprova una modifica dell'identità esistente",
+    "wa_identity_unreadable_title": "Una modifica dell'identità che questa app non può leggere",
+    "wa_identity_unreadable_note": "Questa app non può mostrare questa richiesta per intero, quindi non può essere approvata qui. Il riepilogo e i dettagli sono riportati di seguito. Rifiutala indicando un motivo, oppure aprila con una versione più recente dell'app.",
+    "wa_identity_reapproval_note": "Questa modifica è precedente all'approvazione del testo esatto. Non è valida finché non viene approvata di nuovo.",
+    "wa_identity_exact_text": "Il testo esatto che stai approvando",
+    "wa_identity_edited_by_wa": "Modificato da una Wise Authority",
+    "wa_identity_why": "Motivo (M-1, Coerenza adattiva)",
+    "wa_identity_no_justification": "Non è stata indicata alcuna motivazione.",
+    "wa_identity_objection": "La coscienza {conscience} dell'agente ha sollevato un'obiezione ({type}): {reason}",
+    "wa_identity_template_name": "Modello",
+    "wa_identity_template_version": "Versione",
+    "wa_identity_manifest_digest": "Digest del manifest",
+    "wa_identity_copy_digest": "Copia digest",
+    "wa_identity_guidance_optional": "Indicazioni (facoltative per approvare, necessarie per rifiutare)",
+    "wa_identity_reject_why": "Per rifiutare, indica il motivo, così l'agente potrà proporre una nuova formulazione",
+    "wa_identity_blocked_base_link_first": "Approva prima il collegamento di base di questo agente. Finché la sua identità non è ancorata al proprio modello, una modifica approvata non può essere applicata.",
+    "wa_identity_blocked_outer_whitespace": "Questo testo inizia o termina con uno spazio o un'interruzione di riga, cosa che l'agente rifiuta. Non viene modificato qui, quindi non può essere approvato. Rifiutalo e chiedi all'agente di riproporlo.",
+    "wa_identity_blocked_no_digest": "Questa richiesta non ha un digest completo del modello, quindi non può essere approvata.",
+    "wa_identity_blocked_agent_cannot_bind": "Questo agente non può collegare un'approvazione a questa richiesta esatta, quindi non può essere approvata qui.",
+    "wa_identity_approved": "Approvato. Le coscienze dell'agente lo esaminano prima che venga applicato.",
+    "wa_identity_rejected": "Rifiutato. L'agente può proporre una nuova formulazione.",
+    "wa_identity_not_resolved": "Questa richiesta non è stata risolta. Un'altra Wise Authority potrebbe averla già decisa.",
+    "wa_identity_failed": "Impossibile inviare la decisione: {detail}",
+    "wa_identity_receipt_request": "Richiedi ricevuta",
+    "wa_identity_receipt_response": "Ricevuta della tua risposta",
+    "wa_identity_profile_unanchored": "L'identità di questo agente non è ancora ancorata. Approva prima il suo collegamento di base.",
+    "wa_identity_profile_mismatch": "L'identità di questo agente non corrisponde al proprio modello approvato. Nessuna modifica all'identità verrà applicata finché la questione non sarà risolta.",
+    "wa_identity_profile_contested": "L'identità di questo agente è contestata. Nessuna modifica all'identità verrà applicata finché la questione non sarà risolta.",
+    "wa_identity_profile_unknown": "Questo agente ha segnalato uno stato dell'identità che questa app non riconosce.",
+    "wa_identity_open_base_link": "Apri la richiesta di collegamento di base"
   },
   "moderation": {
     "ladder": {
@@ -6488,5 +6521,15 @@
   "decisions": {
     "not_found": "Questa decisione non è più aperta per te.",
     "awaiting_members": "La tua risposta è stata registrata. Gli altri membri devono ancora approvare prima che questa decisione abbia effetto."
+  },
+  "wa": {
+    "resolve_one_subject": "Approva il testo oppure il digest del modello, non entrambi.",
+    "base_link_digest_requires_approve": "Un digest del modello può essere inviato solo con Approva.",
+    "base_link_digest_mismatch": "Quel digest del modello non corrisponde a quello proposto da questo agente. Aggiorna e riprova.",
+    "amendment_text_requires_approve": "Il testo della modifica può essere inviato solo con Approva.",
+    "no_signed_request_row": "Questo rinvio non ha alcuna richiesta firmata, quindi non c'è nulla a cui la tua risposta firmata possa rispondere."
+  },
+  "deferral": {
+    "unknown_request": "Il nodo non conosce la richiesta di questo rinvio."
   }
 }

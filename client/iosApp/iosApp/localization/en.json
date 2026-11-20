@@ -4646,7 +4646,40 @@
     "call_h264_failed_load": "The H.264 codec was downloaded, but this computer couldn't load it. Try again, or turn H.264 video off, which deletes the codec.",
     "call_h264_needed": "Someone in this call is sending H.264 video. Turn on H.264 video to see it.",
     "call_h264_licence": "Show the license",
-    "call_h264_licence_hide": "Hide the license"
+    "call_h264_licence_hide": "Hide the license",
+    "wa_identity_amendment_title": "Request to change this agent's identity",
+    "wa_identity_base_link_title": "Anchor this agent's identity to its template",
+    "wa_identity_base_link_custom_note": "This agent runs a custom template. Approve it as the base of this agent's identity.",
+    "wa_identity_reapproval_title": "Re-approve an existing identity amendment",
+    "wa_identity_unreadable_title": "An identity change this app can't read",
+    "wa_identity_unreadable_note": "This app can't show this request in full, so it can't be approved here. Its summary and details are below. Reject it with a reason, or open it on a newer app.",
+    "wa_identity_reapproval_note": "This amendment predates exact-text approval. It doesn't count until it is approved again.",
+    "wa_identity_exact_text": "The exact text you are approving",
+    "wa_identity_edited_by_wa": "Edited by a Wise Authority",
+    "wa_identity_why": "Why (M-1, Adaptive Coherence)",
+    "wa_identity_no_justification": "No justification was stated.",
+    "wa_identity_objection": "The agent's {conscience} conscience objected ({type}): {reason}",
+    "wa_identity_template_name": "Template",
+    "wa_identity_template_version": "Version",
+    "wa_identity_manifest_digest": "Manifest digest",
+    "wa_identity_copy_digest": "Copy digest",
+    "wa_identity_guidance_optional": "Guidance (optional to approve, needed to reject)",
+    "wa_identity_reject_why": "To reject, say why, so the agent can propose a new wording",
+    "wa_identity_blocked_base_link_first": "Approve this agent's base link first. Until its identity is anchored to its template, an approved change can't apply.",
+    "wa_identity_blocked_outer_whitespace": "This text starts or ends with a space or line break, which the agent refuses. It isn't changed here, so it can't be approved. Reject it and ask the agent to propose it again.",
+    "wa_identity_blocked_no_digest": "This request has no complete template digest, so it can't be approved.",
+    "wa_identity_blocked_agent_cannot_bind": "This agent can't bind an approval to this exact request, so it can't be approved here.",
+    "wa_identity_approved": "Approved. The agent's consciences review it before it applies.",
+    "wa_identity_rejected": "Rejected. The agent can propose a new wording.",
+    "wa_identity_not_resolved": "This request wasn't resolved. Another Wise Authority may have decided it first.",
+    "wa_identity_failed": "The decision could not be sent: {detail}",
+    "wa_identity_receipt_request": "Request receipt",
+    "wa_identity_receipt_response": "Your answer's receipt",
+    "wa_identity_profile_unanchored": "This agent's identity isn't anchored yet. Approve its base link first.",
+    "wa_identity_profile_mismatch": "This agent's identity doesn't match its approved template. No identity change applies until that is settled.",
+    "wa_identity_profile_contested": "This agent's identity is contested. No identity change applies until that is settled.",
+    "wa_identity_profile_unknown": "This agent reported an identity status this app doesn't know.",
+    "wa_identity_open_base_link": "Open the base-link request"
   },
   "moderation": {
     "ladder": {
@@ -6488,5 +6521,15 @@
   "decisions": {
     "not_found": "That decision isn't open for you any more.",
     "awaiting_members": "Your answer is recorded. The other members still need to approve before this takes effect."
+  },
+  "wa": {
+    "resolve_one_subject": "Approve either the text or the template digest, not both.",
+    "base_link_digest_requires_approve": "A template digest can only be sent with Approve.",
+    "base_link_digest_mismatch": "That template digest doesn't match the one this agent proposed. Refresh and try again.",
+    "amendment_text_requires_approve": "Amendment text can only be sent with Approve.",
+    "no_signed_request_row": "This deferral has no signed request, so there is nothing for your signed answer to answer."
+  },
+  "deferral": {
+    "unknown_request": "The node doesn't know this deferral's request."
   }
 }

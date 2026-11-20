@@ -3874,9 +3874,18 @@ fun CIRISApp(
                 }
 
                 val waAlertsBlocked by wiseAuthorityViewModel.notificationsBlocked.collectAsState()
+                val deferralMeta by wiseAuthorityViewModel.deferralMeta.collectAsState()
+                val identityOutcome by wiseAuthorityViewModel.identityOutcome.collectAsState()
                 WiseAuthorityScreen(
                     waStatus = waStatus,
                     deferrals = deferrals,
+                    deferralMeta = deferralMeta,
+                    identityOutcome = identityOutcome,
+                    onResolveIdentity = { deferralId, resolution, guidance, subject ->
+                        PlatformLogger.i("CIRISApp", "[Screen.WiseAuthority] Resolving identity deferral: $deferralId -> $resolution")
+                        wiseAuthorityViewModel.resolveIdentityDeferral(deferralId, resolution, guidance, subject)
+                    },
+                    onIdentityOutcomeSeen = { wiseAuthorityViewModel.clearIdentityOutcome() },
                     notificationsBlocked = waAlertsBlocked,
                     isLoading = isWALoading,
                     isResolving = isResolving,

@@ -3,6 +3,11 @@ package ai.ciris.mobile.shared.ui.screens
 import ai.ciris.mobile.shared.api.DeferralData
 import ai.ciris.mobile.shared.api.WAStatusData
 import ai.ciris.mobile.shared.approvals.ApprovalKind
+import ai.ciris.mobile.shared.approvals.DeferralListMeta
+import ai.ciris.mobile.shared.approvals.ResolveSubject
+import ai.ciris.mobile.shared.approvals.baseLinkDeferral
+import ai.ciris.mobile.shared.approvals.identityChangeOf
+import ai.ciris.mobile.shared.viewmodels.IdentityResolveOutcome
 import ai.ciris.mobile.shared.approvals.BudgetCapability
 import ai.ciris.mobile.shared.approvals.PendingApproval
 import ai.ciris.mobile.shared.approvals.TicketBudgetState
@@ -109,6 +114,16 @@ fun WiseAuthorityScreen(
     onRejectProposal: (approvalId: String, reason: String) -> Unit = { _, _ -> },
     /** "Not now" — record why, issue nothing, leave the agent fail-closed. */
     onDeferProposal: (approvalId: String, note: String) -> Unit = { _, _ -> },
+    /**
+     * The list's identity `profile` and `capabilities` (CIRISAgent v2.23.1-stable).
+     * NONE — every existing caller, and an older agent — keeps the plain view.
+     */
+    deferralMeta: DeferralListMeta = DeferralListMeta.NONE,
+    /** What the last identity resolve did; shown above the list until dismissed. */
+    identityOutcome: IdentityResolveOutcome? = null,
+    onResolveIdentity: (deferralId: String, resolution: String, guidance: String, subject: ResolveSubject?) -> Unit =
+        { _, _, _, _ -> },
+    onIdentityOutcomeSeen: () -> Unit = {},
 ) {
     var selectedDeferral by remember { mutableStateOf<DeferralData?>(null) }
     var showResolveDialog by remember { mutableStateOf(false) }
@@ -211,6 +226,20 @@ fun WiseAuthorityScreen(
                 )
             }
 
+            identityOutcome?.let { outcome ->
+                item { IdentityOutcomeNotice(outcome, onDismiss = onIdentityOutcomeSeen) }
+            }
+
+            // The agent's identity is not anchored to its template (or does not
+            // match it): no amendment counts until its base link is approved.
+            item {
+                val baseLink = remember(deferrals, deferralMeta) { baseLinkDeferral(deferrals, deferralMeta) }
+                IdentityProfileBanner(
+                    meta = deferralMeta,
+                    onOpenBaseLink = baseLink?.let { d -> { selectedDeferral = d; showResolveDialog = true } },
+                )
+            }
+
             // WA Status Overview
             item {
                 WAStatusCard(waStatus = waStatus)
@@ -275,7 +304,26 @@ fun WiseAuthorityScreen(
     }
 
     // Resolve Deferral Dialog
-    if (showResolveDialog && selectedDeferral != null) {
+    val identityChange = selectedDeferral?.let { d ->
+        remember(d.deferralId, d.context, deferralMeta) { identityChangeOf(d, deferralMeta) }
+    }
+    if (showResolveDialog && selectedDeferral != null && identityChange != null) {
+        IdentityChangeDialog(
+            deferral = selectedDeferral!!,
+            change = identityChange,
+            meta = deferralMeta,
+            isResolving = isResolving,
+            onDismiss = {
+                showResolveDialog = false
+                selectedDeferral = null
+            },
+            onResolve = { resolution, guidance, subject ->
+                onResolveIdentity(selectedDeferral!!.deferralId, resolution, guidance, subject)
+                showResolveDialog = false
+                selectedDeferral = null
+            },
+        )
+    } else if (showResolveDialog && selectedDeferral != null) {
         ResolveDeferralDialog(
             deferral = selectedDeferral!!,
             isResolving = isResolving,

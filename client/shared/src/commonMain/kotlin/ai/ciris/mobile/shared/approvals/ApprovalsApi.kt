@@ -33,6 +33,25 @@ interface ApprovalsApi {
     suspend fun resolveDeferral(deferralId: String, resolution: String, guidance: String): ResolveDeferralData
 
     /**
+     * The deferrals with the list's `profile` and `capabilities`. The default is
+     * the plain list with no meta: an implementation (or test fake) that does not
+     * read them shows the plain deferral view, which is what an older agent gets.
+     */
+    suspend fun fetchDeferralList(): DeferralList = DeferralList(fetchDeferrals())
+
+    /**
+     * Resolve an IDENTITY deferral, sending at most one [subject] (the exact
+     * amendment text, or the base-link digest). A refusal is thrown as
+     * [ai.ciris.mobile.shared.api.NodeRefusal] carrying its reason id.
+     */
+    suspend fun resolveIdentityDeferral(
+        deferralId: String,
+        resolution: String,
+        guidance: String,
+        subject: ResolveSubject?,
+    ): ai.ciris.mobile.shared.api.IdentityResolveData
+
+    /**
      * Tickets the agent proposed and cannot itself start — `status=blocked`
      * carrying `metadata.__proposal__`.
      *
@@ -141,6 +160,15 @@ class CIRISApprovalsApi(private val client: CIRISApiClient) : ApprovalsApi {
     override suspend fun fetchWAStatus(): WAStatusData = client.getWAStatus()
 
     override suspend fun fetchDeferrals(): List<DeferralData> = client.getDeferrals()
+
+    override suspend fun fetchDeferralList(): DeferralList = client.getDeferralList()
+
+    override suspend fun resolveIdentityDeferral(
+        deferralId: String,
+        resolution: String,
+        guidance: String,
+        subject: ResolveSubject?,
+    ) = client.resolveIdentityDeferral(deferralId, resolution, guidance, subject)
 
     override suspend fun resolveDeferral(
         deferralId: String,
