@@ -1037,13 +1037,46 @@ class CIRISApiClient internal constructor(
     }
 
     /**
-     * Request the Python server to shut down via /v1/system/local-shutdown.
-     * Used after factory reset on desktop to force a clean server restart.
-     * The connection will likely fail/timeout since the server is dying — that's expected.
+     * Does anything answer HTTP at [url]? ANY status counts, including 4xx and
+     * 5xx: a first-run agent or a node mid-shutdown is still a live process
+     * holding its files. A timeout counts too: a stopped loopback process
+     * refuses the connection at once, so a probe that runs out of time reached
+     * a live one (Codex, CIRISClient#316). Only a failed connection reads as gone.
      */
-    suspend fun postLocalShutdown() {
+    suspend fun answersAt(url: String): Boolean {
+        val client = agentHttpClient {
+            install(io.ktor.client.plugins.HttpTimeout) {
+                requestTimeoutMillis = 2_000
+                connectTimeoutMillis = 1_000
+            }
+        }
+        return try {
+            client.get("$url/v1/system/health")
+            true
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // The caller's own bound ran out (stopAttachedBackend's 30 s): that
+            // says nothing about the backend, so it must not read as "gone"
+            // (Codex, CIRISClient#316).
+            throw e
+        } catch (e: Exception) {
+            ai.ciris.mobile.shared.platform.probeFailureMeansAlive(e)
+        } finally {
+            client.close()
+        }
+    }
+
+    /**
+     * Ask the backend at [url] to stop, via its localhost-only
+     * `POST /v1/system/local-shutdown`. Reset on desktop calls this for an
+     * ATTACHED local backend before deleting its home (stopAttachedBackend).
+     *
+     * Returns the HTTP status, or null when the connection failed, which is
+     * expected: the server may die before it answers. The agent answers 409 or
+     * 503 for "retry later", and a bare node without the route answers 404.
+     */
+    suspend fun postLocalShutdown(url: String = baseUrl): Int? {
         val method = "postLocalShutdown"
-        logInfo(method, "Sending local-shutdown request to $baseUrl/v1/system/local-shutdown")
+        logInfo(method, "Sending local-shutdown request to $url/v1/system/local-shutdown")
         val client = agentHttpClient {
             install(io.ktor.client.plugins.contentnegotiation.ContentNegotiation) { json(jsonConfig) }
             install(io.ktor.client.plugins.HttpTimeout) {
@@ -1051,13 +1084,18 @@ class CIRISApiClient internal constructor(
                 connectTimeoutMillis = 2000
             }
         }
-        try {
-            client.post("$baseUrl/v1/system/local-shutdown") {
+        return try {
+            val status = client.post("$url/v1/system/local-shutdown") {
                 authHeader()?.let { header("Authorization", it) }
-            }
+            }.status.value
+            logInfo(method, "local-shutdown at $url answered $status")
+            status
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
         } catch (e: Exception) {
             // Expected — server dies before responding
             logInfo(method, "Server shutdown (expected error): ${e.message}")
+            null
         } finally {
             client.close()
         }

@@ -302,6 +302,11 @@ class AgentRateGovernor internal constructor() {
         val EXEMPT_PATHS = setOf(
             "/openapi.json", "/docs", "/redoc", "/emergency/shutdown",
             "/v1/system/health", "/v1/system/adapters", "/v1/setup/adapter-types",
+            // NOT in the agent's list. Reset's stop is bounded at 30 s and a
+            // pause here can be up to 60 s, so a paced request could never
+            // reach the backend and the wipe would run under it (Codex,
+            // CIRISClient#316). A 429 from the agent is retried by the caller.
+            "/v1/system/local-shutdown",
         )
 
         /** The clock; tests replace it with virtual time. */
