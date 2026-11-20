@@ -13,6 +13,7 @@ import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableClickable
 import ai.ciris.mobile.shared.platform.testableVerticalScroll
+import ai.ciris.mobile.shared.ui.primitives.rememberTextInputDriver
 import ai.ciris.mobile.shared.ui.components.CIRISIcons
 import ai.ciris.mobile.shared.ui.screens.files.refusalText
 import ai.ciris.mobile.shared.ui.theme.SemanticColors
@@ -105,11 +106,12 @@ internal fun IdentityChangeDialog(
                     localizedString("mobile.wa_identity_guidance_optional"),
                     style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold,
                 )
+                rememberTextInputDriver("input_identity_guidance", guidance, enabled = !isResolving) { guidance = it }
                 OutlinedTextField(
                     value = guidance,
                     onValueChange = { guidance = it },
                     placeholder = { Text(localizedString("mobile.wa_identity_reject_why")) },
-                    modifier = Modifier.fillMaxWidth().testable("input_identity_guidance"),
+                    modifier = Modifier.fillMaxWidth().testable("input_identity_guidance", guidance),
                     minLines = 2, maxLines = 4, enabled = !isResolving,
                 )
 
