@@ -216,10 +216,10 @@ fun ConstitutionalScreen(
                         // halted is never drawn as "disarmed".
                         val reading = KillSwitch.read(haltStatus, isLoading)
                         val (standingKey, standingTag, standingColor) = when (val st = reading.standing) {
-                            HaltStanding.Reading -> Triple(localizedString("mobile.constitutional_killswitch_loading"), "txt_killswitch_loading", CIRISColors.TextDim)
-                            HaltStanding.Unknown -> Triple(localizedString("mobile.constitutional_killswitch_unknown"), "txt_killswitch_unknown", CIRISColors.TextDim)
-                            HaltStanding.NotHalted -> Triple(localizedString("mobile.constitutional_halt_not_halted"), "txt_killswitch_not_halted", CIRISColors.SignetTeal)
-                            HaltStanding.Lapsed -> Triple(localizedString("mobile.constitutional_halt_lapsed"), "txt_killswitch_lapsed", CIRISColors.TextSecondary)
+                            HaltStanding.Reading -> Triple(localizedString("mobile.constitutional_killswitch_loading"), KillSwitchTags.LOADING, CIRISColors.TextDim)
+                            HaltStanding.Unknown -> Triple(localizedString("mobile.constitutional_killswitch_unknown"), KillSwitchTags.UNKNOWN, CIRISColors.TextDim)
+                            HaltStanding.NotHalted -> Triple(localizedString("mobile.constitutional_halt_not_halted"), KillSwitchTags.NOT_HALTED, CIRISColors.SignetTeal)
+                            HaltStanding.Lapsed -> Triple(localizedString("mobile.constitutional_halt_lapsed"), KillSwitchTags.LAPSED, CIRISColors.TextSecondary)
                             is HaltStanding.Lone, HaltStanding.Confirmed -> {
                                 val head = haltStatus?.record?.invocationId?.let { id ->
                                     localizedString("mobile.constitutional_halt_active_invocation", "id", id)
@@ -230,11 +230,11 @@ fun ConstitutionalScreen(
                                     } ?: localizedString("mobile.constitutional_halt_lone")
                                     else -> localizedString("mobile.constitutional_halt_confirmed")
                                 }
-                                Triple("$head\n$tail", "txt_killswitch_halted", CIRISColors.StatusWarn)
+                                Triple("$head\n$tail", KillSwitchTags.HALTED, CIRISColors.StatusWarn)
                             }
                         }
                         Surface(
-                            color = if (standingTag == "txt_killswitch_halted") CIRISColors.StatusWarn.copy(alpha = 0.18f)
+                            color = if (standingTag == KillSwitchTags.HALTED) CIRISColors.StatusWarn.copy(alpha = 0.18f)
                             else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier.fillMaxWidth(),
@@ -243,8 +243,8 @@ fun ConstitutionalScreen(
                                 text = standingKey,
                                 color = standingColor,
                                 fontSize = 12.sp,
-                                fontWeight = if (standingTag == "txt_killswitch_halted") FontWeight.Bold else FontWeight.Normal,
-                                fontFamily = if (standingTag == "txt_killswitch_halted") FontFamily.Default else FontFamily.Monospace,
+                                fontWeight = if (standingTag == KillSwitchTags.HALTED) FontWeight.Bold else FontWeight.Normal,
+                                fontFamily = if (standingTag == KillSwitchTags.HALTED) FontFamily.Default else FontFamily.Monospace,
                                 modifier = Modifier
                                     .padding(horizontal = 12.dp, vertical = 8.dp)
                                     .testable(standingTag),
@@ -385,4 +385,17 @@ fun ConstitutionalScreen(
             }
         }
     }
+}
+
+/**
+ * The kill switch's standing line takes one of these tags, chosen at run time
+ * (CSD-003 §2.1a). They are named here, not inline, so the tag checkers that
+ * read literal tags (testing/test_csd_state_tags.py) can see every one.
+ */
+internal object KillSwitchTags {
+    const val LOADING = "txt_killswitch_loading"
+    const val UNKNOWN = "txt_killswitch_unknown"
+    const val NOT_HALTED = "txt_killswitch_not_halted"
+    const val LAPSED = "txt_killswitch_lapsed"
+    const val HALTED = "txt_killswitch_halted"
 }
