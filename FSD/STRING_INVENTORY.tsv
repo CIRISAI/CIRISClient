@@ -3906,7 +3906,7 @@ mobile.settings_verify_active	client	client	literal	-	-	-	-
 mobile.settings_verify_description	client	client	literal	-	-	-	-
 mobile.settings_verify_running	client	client	literal	-	-	-	-
 mobile.settings_verify_status_unknown	client	client	literal	-	-	-	-
-mobile.settings_version	client	client	literal	-	308	differs:6	-
+mobile.settings_version	client	client	literal	-	308	differs:5	-
 mobile.setup_2fa_desc	client	client	literal	-	-	-	-
 mobile.setup_2fa_title	client	client	literal	-	-	-	-
 mobile.setup_account_desc	client	client	literal	-	-	-	-
@@ -4140,7 +4140,7 @@ mobile.skill_field_homepage	client	client	dynamic	-	-	-	-
 mobile.skill_field_homepage_hint	client	client	dynamic	-	-	-	-
 mobile.skill_field_name	client	client	literal	-	-	-	-
 mobile.skill_field_name_hint	client	client	literal	-	-	-	-
-mobile.skill_field_version	client	client	literal	-	308	differs:6	-
+mobile.skill_field_version	client	client	literal	-	308	differs:5	-
 mobile.skill_finding_backdoor	client	client	dynamic	-	-	-	-
 mobile.skill_finding_credential_access	client	client	dynamic	-	-	-	-
 mobile.skill_finding_cryptominer	client	client	dynamic	-	-	-	-
@@ -4683,7 +4683,7 @@ mobile.wa_identity_receipt_response	client	client	literal	-	-	-	-
 mobile.wa_identity_reject_why	client	client	literal	-	-	-	-
 mobile.wa_identity_rejected	client	client	literal	-	-	-	-
 mobile.wa_identity_template_name	client	client	literal	-	-	-	-
-mobile.wa_identity_template_version	client	client	literal	-	308	differs:6	-
+mobile.wa_identity_template_version	client	client	literal	-	308	differs:5	-
 mobile.wa_identity_unreadable_note	client	client	literal	-	-	-	-
 mobile.wa_identity_unreadable_title	client	client	literal	-	-	-	-
 mobile.wa_identity_why	client	client	literal	-	-	-	-
