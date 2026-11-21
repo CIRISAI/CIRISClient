@@ -78,7 +78,7 @@ ahead of, or behind, its code: **11 cards, 18 gaps** today.
 | [CSD-066](CSD-066-child-safety.md) | Child Safety (the protective posture, and the opt-in that must never be silent) | `building` | — | `testing/flows/drafts/csd-066-child-safety.yaml` |
 | [CSD-067](CSD-067-accord.md) | Accord (Trust Root) — the kill switch, its roster, and the five kinds | `building` | **5** | none yet |
 | [CSD-068](CSD-068-provision-accord-holder.md) | Provision Accord Holder (the custody floor, in three steps) | `testable` | **2** | `testing/flows/csd-068-provision-accord-holder.yaml` |
-| [CSD-069](CSD-069-accord-ceremony.md) | Accord Genesis Ceremony (six keys, three humans, one artifact) | `building` | **1** | `testing/flows/drafts/csd-069-accord-ceremony.yaml` |
+| [CSD-069](CSD-069-accord-ceremony.md) | The genesis ceremony (v62): one sitting per holder, offline | `building` | **1** | none yet |
 | [CSD-070](CSD-070-commons.md) | Commons (1-of-N to protect, m-of-n to undo — and eight distinct zeroes) | `building` | — | none yet |
 | [CSD-071](CSD-071-audit.md) | Audit (one card, five homes, and one list) | `building` | — | none yet |
 | [CSD-080](CSD-080-startup.md) | Startup (the screen before there is a shell) | `building` | — | none yet |
