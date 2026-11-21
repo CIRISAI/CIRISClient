@@ -35,24 +35,33 @@ the box and why the root is never the only trust knob.
 
 **A CIRIS licence is a row under the root community (CC 2.4.1.2.1, 3.3.9,
 4.4.3.4.3).** The CIRIS L3C licensing authority
-is the humanity accord trust root acting through the root community it founded,
-`ciris-canonical`, whose founders are the accord holders A1/B1/C1 (CC 3.2,
+is the root community `ciris-canonical`'s authority set. The accord itself
+signs no licence: CC 4.2.1, "accord keys cannot sign grants or licenses"; its
+signatures are valid only on the enumeration (halts, lifecycle, re-bind,
+bundles). Whether holders signing as `ciris-canonical`'s founders is the accord
+signing is **OPEN — CIRISConstitution (O10)**. `ciris-canonical` is founded by the holders of the genesis bundle in force,
+every founder signing its founding record (CEREMONY step 10; CC 3.2,
 `CLM-canonical-founders-accord`). So the dimension is
 **`licensure:ciris-canonical:v1`** — the root community's `community_key_id`,
-NOT `licensure:humanity-accord:v1`: the accord family is a witnessed lineage and
-a kill switch, not a licensor. The row is a **cosigned row** admitted under the
+NOT `licensure:humanity-accord:v1`: the accord is the genesis bundle's lineage and
+the halt, not a licensor; its witnessing (transparency services) is off at
+genesis, with no witness members (Eric's ruling, SCITT; CC `7beaf20`). The row is a **cosigned row** admitted under the
 cosigned-row rule (CC 2.1: "the family declares its `consensus_protocol`
 source … for `licensure:{community_key_id}` the authority named in the
 dimension") at its signed `asserted_at`, cosigned by that community's quorum
-(`quorum:2/3`, a strict majority of three founders) **or** signed by a key
+(its birth counts at a strict majority of the bundle's holders, 2·yes > N;
+the count for its later acts, a licence among them, is OPEN —
+CIRISConstitution + persist, O4) **or** signed by a key
 holding a plain `license`-scoped `delegates_to` from `ciris-canonical`, itself
 cosigned under that quorum (CC 2.4.1.2.1, 3.3.9, 4.4.3.4.3). **There is no
 `infra:license` and there must be none**: `license` is an agency scope in the
 CC 4.4.3.4.3 table, and a node key (identity_type ⊇ node) may carry only
 `infra:*` scopes, so a licence can never be issued by an install. The `license`
 delegation is an ordinary cosigned row the reader walks, never a member of the
-GenesisBundle (CC 3.2 T5, 5.3.4: the bundle carries the charter, the holders,
-the serve nodes and the birth record, and nothing else is a root).
+genesis bundle (on v62 `ceg-genesis-bundle/2` names the holders' and seats'
+key records, the seat bindings, the holders, `serve_nodes` and a charter, and
+nothing else is a root; the trust-root community's birth record is not in it —
+Verify `genesis.rs:1-11`; CEREMONY step 10).
 
 **Any affiliation is its own licensor, on the same rule.** A state board, a
 clinic, a guild issues `licensure:{its community_key_id}:v1` cosigned under its
@@ -144,12 +153,12 @@ fields:
     use: display-only
     type: string
     example: "ciris-canonical"
-    renders: "'Authority' — the affiliation (named) or the key; the licence's provenance (CC 2.4.1.2.1); for ciris-canonical the card says 'the root community, founded by the accord holders' and nothing grander"
+    renders: "'Authority' — the affiliation (named) or the key; the licence's provenance (CC 2.4.1.2.1); for ciris-canonical the card says 'the root community, founded by the holders of the genesis in force' (dropping 'accord' if O10 rules the founder role separate) and nothing grander"
     tag: "proposed:txt_licence_authority_*"
   - ceg: x_private:cosigned_under
     use: display-only
     type: string
-    example: "quorum:2/3 — A1, B1 signed"
+    example: "strict majority of the founders (m of N, as the node reports) — 2 founders signed"
     renders: "'Signed by' — the scrub set that met the authority's protocol at asserted_at (persist v60: the full scrub set ∩ the roster at the instant, evaluated under the community's own protocol); one member's signature alone reads 'testimony, not a licence'"
     tag: "proposed:txt_licence_cosigned_*"
   - ceg: x_private:issued_under_delegation
@@ -316,7 +325,7 @@ with `trust_classes` / `trust_depth`, CIRISPersist#1142). The CIRIS case needs a
 `infrastructure` root with seated founders (`quorum: 2`), which TOPOLOGY.md §2.1
 types and the builder refuses until the ceremony can mint it; the card tests the
 CIRIS chain on T6's key root with the affiliation standing for `ciris-canonical`
-and `founder_only` standing for `quorum:2/3`, and says so.
+and `founder_only` standing for the root community's count (O4), and says so.
 
 ## 4. Flow
 

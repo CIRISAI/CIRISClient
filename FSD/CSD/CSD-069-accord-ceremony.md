@@ -8,6 +8,59 @@ stage: building
 owner: CIRISClient
 ```
 
+**Code gaps.** Where this card and the client code disagree today, each proven against the tree by `packaging/check_csd_code_gaps.py`. Closing one means deleting its entry in the same commit.
+
+```yaml csd:code_gaps
+- id: family-envelope-ceremony
+  card: 'obsolete on v62: no family envelope, no co-signed family, no assembled genesis'
+  code: 'the client calls genesis/envelope, genesis/assemble and family/cosign'
+  where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/api/CIRISApiClient.kt
+  open_while: 'v1/accord/(genesis/(envelope|assemble)|family/cosign)'
+  blocked_on: 'O1, O2'
+```
+
+> **Obsolete on v62.** This card describes the pre-0.5.220 six-key
+> family-envelope ceremony (`genesis/envelope`, `family/cosign`,
+> `genesis/assemble`, `quorum:2/3`). On v62 every route and most claims below
+> are retired; the corrections are inline, marked **v62**. Whether this card is
+> rewritten as the v62 ceremony card (CEREMONY §3) or its number is retired with
+> the ceremony living on CSD-067's `FinalGenesisSheet` is **OPEN (O2, Eric /
+> CIRISClient)**. The stage and number are unchanged until that is decided.
+> Audit: the CIRISServer session's trust-root edit list (2026-11-21), read
+> against CIRISClient `4806bd5a`.
+
+## 0. v62 (re-genesis) status
+
+**Total re-genesis.** This edition begins a new mesh. Nothing of the earlier
+mesh carries: its roots, bundles (v1–v4), holders A1/B1/C1, canonical records
+and family rows give no standing here. A node upgrading to it deletes its
+earlier store and starts before its genesis, and an earlier-form bundle offered
+to it is refused as `earlier_form_object`. (CEREMONY intro and §4; CC 2.6.1.12;
+persist `src/store/edition_upgrade.rs:257` `delete_earlier_store`;
+`edition2/genesis.rs:1745`.)
+
+**Counts.** The founding genesis is signed by **every holder (a first bundle,
+version 1, no prev)** (constants.tsv `charter_change_threshold` row 24; CC
+5.3.4; CEREMONY step 4). Every later act counts at **a strict majority of the
+standing accord roster (2·yes > N; N is read from the holders of the bundle in
+force — 3 at the seed, so 2 today)** (constants.tsv `root_conferral_threshold`
+row 8, `accord_holder_count` row 6; CC 4.2.6). The two are never conflated, and
+N and m are shown as numbers the node reports, never as a literal.
+
+**What a v62 ceremony card would hold** (if O2 puts it here): the CEREMONY §3
+steps 1–5 grid (each holder's own `key:record`; each seat's own record and
+binding with signed `dial_hints`, offline; one sealed halt per holder; one voice
+per holder over the bundle, `sub` = the bundle's `family_key_id`; the anchor);
+halt coverage before publish; the recovery-key rules; the anchor (thumbprints,
+then the object id); the draft checks (`check_key_record`,
+`check_seat_binding`, `check_halt`, `check_genesis_offer`); and the final gate
+(`import_offer_into_throwaway`). CSD-067 §4 *The v62 genesis ceremony* spells
+these out with sources.
+
+**OPEN, with who decides:** O1 every v62 route shape (CIRISServer 0.6 ceremony
+crate); O2 which card hosts the v62 ceremony (Eric / CIRISClient); O9 which
+screen mints a holder's recovery key (CIRISClient / CIRISServer).
+
 ## 1. Mission (why)
 
 **Three humans standing up a NEW mesh can walk one guided sequence — six keys
@@ -17,6 +70,11 @@ keep.** Serves **Core Identity**: this is where a mesh's kill switch comes from,
 and a mesh whose genesis was fumbled has a constitutional layer nobody can
 operate.
 
+**v62:** N holders (3 at the seed) each sign their own `key:record`; each seat
+signs its own record and binding offline; each holder seals a halt; every holder
+signs the bundle voice; the anchor is published. Spares are recovery keys,
+committed and not provisioned as seats (CEREMONY §2, §3).
+
 CC 4.2.3 says what is being made: the accord-holder triple **structurally IS an
 entrenched `family`** with `consensus_protocol: "quorum:2/3"` and
 `consensus_protocol_entrenched: true`. Entrenched means the ceremony's output is
@@ -24,6 +82,12 @@ not correctable in the ordinary way later — replacement runs an out-of-band
 process. A wizard whose steps can be taken out of order, or whose done-state can
 be reached without the artifact being saved, produces a mesh that is wrong
 permanently.
+
+**v62:** the genesis is the first `ceg-genesis-bundle/2`, version 1, no prev,
+signed by every holder; later roster changes are later bundles at a strict
+majority of the standing roster; a lost key is recovered by the holder's
+recovery key alone. There is no family row and no `quorum:2/3` (CC 4.2.6,
+5.3.4; constants rows 8, 24).
 
 ## 2. Surface (what)
 
@@ -79,13 +143,13 @@ fields:
     use: display-only
     type: string
     example: "humanity-accord"
-    renders: "'Family humanity-accord — entrenched, quorum:2/3' on the done card, the id read from the assembled genesis the node returned (family_key_id)"
+    renders: "the done card's family line, the id read from the assembled genesis the node returned (family_key_id). v62: the accord is the bundle's lineage, not a family row; m is a strict majority of N, read from the roster, and moves with N"
     tag: txt_ceremony_family
   - ceg: "accord:holders"
     use: display-only
     type: "list[string]"
     example: ["wa-holder-1c4f", "wa-holder-9b02", "wa-holder-33da"]
-    renders: "six slots — A1 A2 B1 B2 C1 C2, primaries SEAT and spares VAULT"
+    renders: "six slots — A1 A2 B1 B2 C1 C2 (0.5.x). v62: one slot per holder — its signing key (seated) and its recovery key (committed, not seated; distinct from every other holder's, never a signing key; CC 4.2.6 line 343, R-85d3e18)"
     tag: "row_ceremony_slot_${slot.label}"
   - ceg: "hardware_custody:{platform}"
     bind: {platform: yubikey_5_fips}
@@ -98,7 +162,7 @@ fields:
     use: display-only
     type: string
     example: "{\"family_key_id\":\"humanity-accord\",\"members\":[…]}"
-    renders: "the assembled genesis, in mono — the cold-start bake artifact"
+    renders: "the assembled genesis, in mono (0.5.x). v62: the artifact is the set of statements (records, bindings, voices, plus the sealed halts kept until publication), identified by the bundle's object id; v62.0 has no bake (v62.1 forward work)"
     tag: accord_ceremony_genesis_json
   - ceg: x_private:ceremony_phase
     use: display-only
@@ -148,13 +212,16 @@ apart.
   portable seed other nodes adopt — §3's finding, put where the person is.
 * **The correlated-failure geometry is stated.** `txt_ceremony_diversity`
   on the intro: three people who do not share a household or an employer,
-  because two of three from one address is a quorum one door can reach — CC
-  4.2.3's *"the mitigant is diversifying the holder set"*, at the one moment it
-  can land.
-* **`consensus_protocol_entrenched` is shown.** `txt_ceremony_entrenched`
-  on the intro: the family's `quorum:2/3` cannot be lowered later by anyone
-  inside the federation; replacing a seat is a new ceremony and a re-minted
-  seed, not an edit.
+  because a strict majority of the holders from one address is a quorum one
+  door can reach — CC 4.2.3's *"the mitigant is diversifying the holder set"*,
+  at the one moment it can land. CC 4.2.3 also requires one device per holder,
+  judged by the leaf serial (`holder_device_shared`): three distinct token
+  serials. The same f9 attestation certificate over distinct device serials is
+  valid.
+* **`consensus_protocol_entrenched` is shown** (0.5.x). `txt_ceremony_entrenched`
+  on the intro. **v62:** there is no family `quorum:2/3`; m is a strict majority
+  of N, read from the roster, and moves with N (constants row 8). Replacing a
+  seat is a later bundle at a strict majority of the standing roster.
 * **Open:** `AccordCeremonyViewModel` composes its notices and plain-language
   errors as English literals (`"Provisioning A1… TOUCH your YubiKey…"`, the
   ten `plainLanguageError` sentences). The fix is the key-plus-detail shape
@@ -184,20 +251,27 @@ Until then `entry:` is prose and this is the only CSD in safety-commons whose
 
 ## 3. Contracts (who)
 
-Verified against ciris-server 0.5.217.
+Verified against ciris-server 0.5.217. **v62:** every row below except
+`yubikey-status` and `/v1/trust-root*` is retired; the rows stay because the
+client code still calls them (`check_csd_routes.py`). Shapes on v62 are
+**0.6: pending (CIRISServer)** (O1).
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| is a token present | `GET /v1/accord/yubikey-status` | CIRISServer `src/accord_provision.rs:3770` | **live** |
-| provision one of six | `POST /v1/accord/provision-holder` | `src/accord_provision.rs:3697` | **live**, loopback-only |
-| register the minted key | `POST /v1/accord/holder` | `src/accord.rs:2600` | **live** |
-| the family envelope | `POST /v1/accord/genesis/envelope` | `src/accord.rs:2621` | **live** |
-| a primary's co-sign | `POST /v1/accord/family/cosign` | `src/accord_provision.rs:3701` | **live** |
-| assemble the genesis | `POST /v1/accord/genesis/assemble` | `src/accord.rs:2625` | **live** |
-| did this node end up rooted | `GET /v1/trust-root` → `posture` (`entrenched` / `pre_genesis` + the missing `leg`) and `banner` | `src/trust_root_api.rs:415`, `:55-66` | **live on this node's own machine, called** from the Accord card's trust-root detail (`txt_trust_posture_state`, CSD-067 §3), not from this ceremony; **remote reach** `blocked_by: CIRISServer#652` |
-| adopt the ceremony's output on another node | `POST /v1/trust-root/import` | `src/trust_root_api.rs:416` | **live, and it does NOT take this ceremony's artifact** — see below |
-| change the family after genesis — build the quorum envelope | `POST /v1/accord/family/change/envelope` | `src/accord.rs:2637` | live, **not called, and cannot succeed for this family**: it hardcodes `humanity-accord` (`:2151`) while supersede refuses that id — CIRISServer#682 |
-| replace the family | `POST /v1/accord/family/supersede` | `src/accord.rs:2641` | live, **not called**: always refuses `humanity-accord` by design (`:2306-2315`); its refusal names a route that does not exist — CIRISServer#682. The accord changes seats by re-running the ceremony and re-minting the seed (CSD-067 §3.1). `GET /v1/accord/family/history` (`:2645`) is read on the Accord card |
+| is a token present | `GET /v1/accord/yubikey-status` | CIRISServer `src/accord_provision.rs:3770` | **live**; v62: kept (host probe) |
+| provision one of six | `POST /v1/accord/provision-holder` | `src/accord_provision.rs:3697` | **v62:** re-implemented as an on-device composite key + `holder_key_record_draft`; **0.6: pending (CIRISServer)**. **live**, loopback-only |
+| register the minted key | `POST /v1/accord/holder` | `src/accord.rs:2600` | **v62: retired** — a holder is seated only by a bundle that names its record; there is no registration. **live** |
+| the family envelope | `POST /v1/accord/genesis/envelope` | `src/accord.rs:2621` | **v62: retired.** **live** |
+| a primary's co-sign | `POST /v1/accord/family/cosign` | `src/accord_provision.rs:3701` | **v62: retired.** **live** |
+| assemble the genesis | `POST /v1/accord/genesis/assemble` | `src/accord.rs:2625` | **v62: retired.** The ceremony's output IS the portable genesis (statements + object id), imported by `Engine::put_genesis_bundle(statements, anchor)` (P-CER header). **live** |
+| did this node end up rooted | `GET /v1/trust-root` → `posture` (`entrenched` / `pre_genesis` + the missing `leg`) and `banner` | `src/trust_root_api.rs:415`, `:55-66` | **v62:** kept and re-implemented; shape **0.6: pending (CIRISServer)** (CSD-105). **live on this node's own machine, called** from the Accord card's trust-root detail (`txt_trust_posture_state`, CSD-067 §3), not from this ceremony; **remote reach** `blocked_by: CIRISServer#652` |
+| adopt the ceremony's output on another node | `POST /v1/trust-root/import` | `src/trust_root_api.rs:416` | **v62:** kept; the import is statements + an anchor; shape **0.6: pending (CIRISServer)** (CSD-105). **live, and it does NOT take this ceremony's artifact** — see below |
+| change the family after genesis — build the quorum envelope | `POST /v1/accord/family/change/envelope` | `src/accord.rs:2637` | **v62: retired** with the family rows. live, **not called, and cannot succeed for this family**: it hardcodes `humanity-accord` (`:2151`) while supersede refuses that id — CIRISServer#682 |
+| replace the family | `POST /v1/accord/family/supersede` | `src/accord.rs:2641` | **v62: retired** with the family rows; a seat changes by a later bundle. live, **not called**: always refuses `humanity-accord` by design (`:2306-2315`); its refusal names a route that does not exist — CIRISServer#682. The accord changes seats by re-running the ceremony and re-minting the seed (CSD-067 §3.1). `GET /v1/accord/family/history` (`:2645`) is read on the Accord card |
+
+**v62:** the paragraph below is 0.5.x history. On v62 the ceremony's output
+IS the portable genesis (statements + object id), and there is no separate
+re-mint (P-CER header).
 
 **This ceremony's artifact is not the portable seed.** `genesis/assemble`
 returns and saves the founder-signed family genesis `SignedCegObject`
@@ -227,8 +301,9 @@ different mission and done state: a one-key form should not carry a six-key
 sequencer, and a person who needs a seat should not walk a genesis wizard that
 is only offered when no family exists.
 
-**Every route this ceremony needs is live.** The two amendment rows cannot succeed for the accord family (CIRISServer#682);
-the accord's seats change by a new ceremony and a re-minted seed. `admit-node`
+**On 0.5.x every route this ceremony needs is live; on v62 none of the
+ceremony routes is** (above). The two amendment rows cannot succeed for the accord family (CIRISServer#682);
+on v62 the accord's seats change by a later bundle. `admit-node`
 and `announce` are called from the Accord screen and cited in CSD-067 §3. This
 document's gap list is client-side: the English literals in the view model
 (§2.2), and a surface the checker cannot resolve (§2.3).
@@ -311,6 +386,7 @@ five and the ceremony runs on one.
 4. The ceremony is offered only where it can be completed.
 
 **Not tested here.**
+* **The v62 ceremony.** It has no 0.6 routes and no card yet (O2).
 * **Six provisions and three co-signs.** Physical hardware, PIN and touch;
   there is no endpoint for a touch and a mocked one tests the mock.
 * **Acceptance 2 past the first slot** — the no-token failure on A1 is

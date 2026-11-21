@@ -10,6 +10,17 @@ stage: building
 owner: CIRISClient
 ```
 
+**Code gaps.** Where this card and the client code disagree today, each proven against the tree by `packaging/check_csd_code_gaps.py`. Closing one means deleting its entry in the same commit.
+
+```yaml csd:code_gaps
+- id: node-code-v4
+  card: 'the node code is CIRIS-V4- over the composite key''s thumbprint; no V1 code converts'
+  code: 'NodeCodeCodec encodes CIRIS-V1-'
+  where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/platform/util/NodeCodeCodec.kt
+  open_while: 'PREFIX = "CIRIS-V1-"'
+  blocked_on: '0.6: pending (CIRISServer)'
+```
+
 ## 1. Mission (why)
 
 **A person can read the key this node signs the federation with, how many
@@ -61,7 +72,7 @@ fields:
     use: display-only
     type: string
     example: "CIRIS-V1-…"
-    renders: "THIS node's code, from the node itself, with a copy control — the key it signs with above, not the agent's"
+    renders: "THIS node's code, from the node itself, with a copy control — the key it signs with above, not the agent's. On v62 the code is CIRIS-V4-… (version 0x04): the composite key's thumbprint, the transport identity and up to 4 ordered hints; no code of the earlier form (V1) converts to it (CC 2.6.8, CC 7f0cc76)"
     tag: text_my_node_code
 ```
 
@@ -86,8 +97,8 @@ Verified against CIRISServer 0.5.217 and CIRISAgent `main`.
 | value | endpoint | owner | state |
 |---|---|---|---|
 | signer key, counts, capabilities | `GET /v1/federation/identity` → `{data: {signer_key_id, crate_version, peer_count_total, peer_count_canonical, peer_counts_standing, capabilities}}` (`src/federation_surface.rs:696`, handler `:120-152`) | CIRISServer | live — `getFederationIdentity` (`CIRISApiClient.kt:1230`, node URL). `peer_counts_standing` (`measured` / `store_unavailable` / `self_identity_unresolved`, CIRISServer#372) is read as `FederationIdentity.peerCountsStanding` and `peerCountReading()` |
-| this node's code | `GET /v1/federation/node-code` → `{code, qr_payload, key_id, alias_hint}` (`src/federation_nodecode.rs:92`, handler `:50`) | CIRISServer | live — `getNodeCode(LOCAL_NODE_URL)` (`CIRISApiClient.kt:2386`). **Not** the agent's `GET /v1/system/peers/my-node-code` (CIRISAgent `routes/system/peers.py:132`), which carries the AGENT's key on a with-AI install and 404s on a bare node |
-| the Federation ID aggregate | `GET /v1/system/peers/federation-identity` → `{data: {aggregate, node_code_key_id, node_code_pubkey_ed25519_base64}}` (CIRISAgent `routes/system/peers.py:194`, OBSERVER) | CIRISAgent | live on the agent only — `getFederationIdentityAggregate` raises `RouteNotOnThisHost` in `ClientMode.NODE` and the card says so |
+| this node's code | `GET /v1/federation/node-code` → `{code, qr_payload, key_id, alias_hint}` (`src/federation_nodecode.rs:92`, handler `:50`) | CIRISServer | live — `getNodeCode(LOCAL_NODE_URL)` (`CIRISApiClient.kt:2386`). **On v62** the code is `CIRIS-V4-` over the composite key's thumbprint (CC 2.6.8), and a key's displayed identity is that thumbprint, not the earlier `key_id` format; the route's shape is 0.6: pending (CIRISServer). **Not** the agent's `GET /v1/system/peers/my-node-code` (CIRISAgent `routes/system/peers.py:132`), which carries the AGENT's key on a with-AI install and 404s on a bare node |
+| the Federation ID aggregate | `GET /v1/system/peers/federation-identity` → `{data: {aggregate, node_code_key_id, node_code_pubkey_ed25519_base64}}` (CIRISAgent `routes/system/peers.py:194`, OBSERVER) | CIRISAgent | live on the agent only. **On v62** a key's displayed identity is the composite thumbprint, not an Ed25519 public key, so `node_code_pubkey_ed25519_base64` is the earlier form (CC 2.6.8 "The earlier form") — `getFederationIdentityAggregate` raises `RouteNotOnThisHost` in `ClientMode.NODE` and the card says so |
 | the bound owner's fed-ID | `GET /v1/setup/owned-nodes` → `owner` (`src/auth/bootstrap.rs:1489`, loopback-only) | CIRISServer | live — best-effort, null when unclaimed |
 | this node's conformance declaration | `GET /v1/federation/conformance` (`src/federation_admin.rs`, `conformance`; `DeclaredConformance {profiles, build_profiles, ceg_wire_version, wire_vocabulary_sha256, …}`, `src/conformance.rs:454`) | CIRISServer | **live and uncalled from any screen** — `getNodeCapabilities` (`CIRISApiClient.kt:9608`) parses it through `CapabilityWire` and is reached only from the capability gate. It belongs on this card as a "what this node claims" row; not built, see §6 |
 
