@@ -2485,7 +2485,7 @@
       ],
       "node_min": "0.5.168",
       "node_min_reason": "unchanged from 0.5.241. Reset's stop of an attached backend needs ciris-server 0.5.250 (POST /v1/system/local-shutdown); on an older node Reset names the backend it left running and still deletes the client's files. The WA identity-change screen needs an agent that declares identity_change_review (CIRISAgent 2.23.1+); older agents get the plain deferral view.",
-      "node_max_tested": "0.5.252",
+      "node_max_tested": "0.5.253",
       "agent_min_tested": "2.17.0",
       "capabilities": [
         "contacts",
@@ -2564,7 +2564,7 @@
         "node.edition",
         "accord.kill_switch_standing"
       ],
-      "capabilities_note": "added over 0.5.241: a Wise Authority approves an agent's identity change as the exact proposed text, with its justification, or approves a custom template as the base of the agent's identity (wa.identity_change, #318); Reset stops an attached local backend before deleting its files (reset.stops_attached_backend, #316); a room's members approve an accepted invitee from the node's decision queue (decisions.seat_approval, #313); Save is always reachable in the file sheet and a room's chat shows the files added to it (#317); the client reads the node's edition from /v1/federation/conformance and, on a v62 node, does not offer the acts v62 retires; the kill switch shows whether a halt is in force (lone with its lapse time, confirmed, lapsed) apart from whether a halt would reach this node; the fifth halt kind, lifecycle:confirmed, has its own badge (node.edition, accord.kill_switch_standing, #319).",
+      "capabilities_note": "added over 0.5.241: a call that ends now says why in the app log (the join answer, a frames socket that will not open, the close and every leave; the frames ticket is never logged); a Wise Authority approves an agent's identity change as the exact proposed text, with its justification, or approves a custom template as the base of the agent's identity (wa.identity_change, #318); Reset stops an attached local backend before deleting its files (reset.stops_attached_backend, #316); a room's members approve an accepted invitee from the node's decision queue (decisions.seat_approval, #313); Save is always reachable in the file sheet and a room's chat shows the files added to it (#317); the client reads the node's edition from /v1/federation/conformance and, on a v62 node, does not offer the acts v62 retires; the kill switch shows whether a halt is in force (lone with its lapse time, confirmed, lapsed) apart from whether a halt would reach this node; the fifth halt kind, lifecycle:confirmed, has its own badge (node.edition, accord.kill_switch_standing, #319).",
       "spec_source": {
         "repo": "CIRISAI/CIRISServer",
         "release": null,
@@ -2575,7 +2575,7 @@
         "languages": 29,
         "keys": 6072
       },
-      "notes": "For CIRISServer 0.5.252 and CIRISAgent 2.23.1. Tested: TODO(five-platform run with AI on the release commit: run id, legs, results). The v62 paths (edition 2) are covered by unit tests only: no released node reports edition 2 yet. New strings are machine-translated and reviewed by a judge of a different model family: draft / machine_reviewed, with no native-fluency review.",
+      "notes": "For CIRISServer 0.5.253 (the LTS) and CIRISAgent 2.23.1. Tested: TODO(five-platform run with AI on the release commit: run id, legs, results). The v62 paths (edition 2) are covered by unit tests only: no released node reports edition 2 yet. New strings are machine-translated and reviewed by a judge of a different model family: draft / machine_reviewed, with no native-fluency review.",
       "published": null
     }
   ]
