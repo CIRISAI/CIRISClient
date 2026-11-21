@@ -34,12 +34,15 @@ self-founding (CC 3.2: a community is born by its founders' signatures), and
 `authority_id` of every licence it issues (CSD-122).
 
 **CIRIS is one such affiliation, and uses this card.** The root community
-`ciris-canonical`, founded by the accord holders A1/B1/C1 (CC 3.2,
+`ciris-canonical`, founded by the holders of the genesis bundle in force
+(every founder signs its founding record, CEREMONY step 10; CC 3.2,
 `CLM-canonical-founders-accord`), is the affiliation whose licences are
-`licensure:ciris-canonical:v1` (CSD-122). It has a charter like any other; its
-birth record rides the GenesisBundle (CC 5.3.4, served by this registry since
-4.1.0) only because it is the shipped default root, never because it is a
-different kind of thing.
+`licensure:ciris-canonical:v1` (CSD-122). It has a charter like any other. On
+v62 its birth record is **not** in the genesis bundle: `ceg-genesis-bundle/2`
+names key records, seat bindings, the holders, `serve_nodes` and a charter only
+(Verify `genesis.rs:1-11`; persist `trust_root_group.rs:5-9`), and the community
+is founded after the genesis. It is the shipped default root, never a different
+kind of thing.
 
 **Mandatory-with-default, not mandatory-to-author.** CC 4.4.3.2.8 ships a no-op
 default and archetype presets, so a five-person committee sets one field
@@ -113,8 +116,8 @@ fields:
   - ceg: x_private:consensus_protocol
     use: emit
     type: string
-    example: "quorum:2/3"
-    renders: "'How this organization decides' — the full range of persist's quorum models, chosen at founding (CSD-102 offers it for any community) and changeable later by a decision of the active quorum; the same rule signs a licence, a role, a charter change. ciris-canonical decides by a strict majority of its three founders, which is this value"
+    example: "strict majority of the founders (2·yes > N)"
+    renders: "'How this organization decides' — the full range of persist's quorum models, chosen at founding (CSD-102 offers it for any community) and changeable later by a decision of the active quorum; the same rule signs a licence, a role, a charter change. ciris-canonical's birth counts at a strict majority of the genesis bundle's holders (N from the bundle); the count for its later acts, its own consensus_protocol or the bundle's holders, is OPEN — CIRISConstitution + persist (O4)"
     tag: "proposed:select_consensus_protocol"
   - ceg: x_private:role_term
     use: emit
@@ -157,7 +160,7 @@ fields:
   - ceg: x_private:public_face
     use: display-only
     type: "list[string]"
-    example: ["exists", "ciris-canonical", "officers: A1 founder, B1 founder, C1 founder", "classes: practice"]
+    example: ["exists", "ciris-canonical", "officers: N founders (the holders of the genesis bundle in force)", "classes: practice"]
     renders: "'What strangers can see' — existence, the id, officers' roles, declared licence classes (CC 4.4.3.2.8 'Public face'): Commons-visible for every affiliation, with no privacy presumption; the roster beyond the officers reaches members only"
     tag: "proposed:txt_public_face"
   - ceg: x_private:listing_row
@@ -291,7 +294,7 @@ today; `authority.licensing` is past the `authority` relation the builder refuse
 a transition the flow writes (no config record, then version 1, then version 2 after
 one supersession) and no atom names it: the README's asks list `affiliation.charter.declared`
 and `affiliation.charter.superseded` as the two atoms to add, and a cosigned
-supersession under `quorum:2/3` needs T5's `quorum_change` + `cosign` at the
+supersession under the community's count (OPEN, O4) needs T5's `quorum_change` + `cosign` at the
 affiliations tier, which no entry builds.
 
 ## 4. Flow

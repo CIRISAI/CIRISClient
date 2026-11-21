@@ -14,4 +14,5 @@ number	status	title	source	note
 127	reserved	First contact, and leaving a root	#179	global-commons
 128	reserved	The protected reporter channel	#179	local-community / safety
 129	reserved	Drill, halt, announce: end to end	CIRISServer FSD/CONSTITUTIONAL_HALT.md	used by the server's CSD/4 catalogue (T8, T19; packaging/csd4/requirements.yaml); no client card yet
+145	reserved	Emergency shutdown, composite (3.0)	CIRISServer (v62 trust-root audit, 2026-11-21)	one composite signature under the EmergencyShutdown signing domain (ciris.emergency_shutdown.v1); kept apart from a constitutional halt and an operator pause (CC 4.2.1.2); waits on persist v62 names and the compose route shape (O16)
 900-999	test	Test fixtures	testing/	Used by testing/test_flows.py and test_flow_fixtures.py; never a real card.

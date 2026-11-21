@@ -4703,15 +4703,22 @@ fun CIRISApp(
             }
 
             Screen.DutyConferral -> {
-                // Delegate moderation duty, reached from the Accord card. Confer
-                // slash / moderate / review on another self, stating in one control
-                // whether — and how far — they may pass the duty on. Co-scrubbed by
-                // the accord holders; the node signs, the app holds no keys.
-                PlatformLogger.d(TAG, "[Screen.DutyConferral] Rendering duty conferral screen")
-                DutyConferralScreen(
-                    viewModel = dutyConferralViewModel,
-                    onBack = { currentScreen = Screen.Accord },
-                )
+                if (!ai.ciris.mobile.shared.models.federation.AccordEditionGate.offersNewAction("confer_duty", nodeCapabilities.edition)) {
+                    ai.ciris.mobile.shared.ui.screens.AccordEditionNoticeScreen(
+                        edition = nodeCapabilities.edition,
+                        onBack = { currentScreen = Screen.Accord },
+                    )
+                } else {
+                    // Delegate moderation duty, reached from the Accord card. Confer
+                    // slash / moderate / review on another self, stating in one control
+                    // whether — and how far — they may pass the duty on. Co-scrubbed by
+                    // the accord holders; the node signs, the app holds no keys.
+                    PlatformLogger.d(TAG, "[Screen.DutyConferral] Rendering duty conferral screen")
+                    DutyConferralScreen(
+                        viewModel = dutyConferralViewModel,
+                        onBack = { currentScreen = Screen.Accord },
+                    )
+                }
             }
 
             Screen.Accord -> {
@@ -4727,6 +4734,7 @@ fun CIRISApp(
                     onStartCeremony = { currentScreen = Screen.AccordCeremony },
                     onConferDuty = { currentScreen = Screen.DutyConferral },
                     onOpenTrustRoot = { currentScreen = Screen.TrustRoot },
+                    nodeEdition = nodeCapabilities.edition,
                 )
             }
 
@@ -4734,6 +4742,7 @@ fun CIRISApp(
                 // Trust root (card: Accord): this node's side of the accord's root —
                 // posture, roots, adopt a seed, un-trust. Loopback-only on the node
                 // (CIRISServer#652); the screen says so off the node's machine.
+                LaunchedEffect(nodeCapabilities.edition) { trustRootViewModel.setNodeEdition(nodeCapabilities.edition) }
                 TrustRootScreen(
                     viewModel = trustRootViewModel,
                     onBack = { currentScreen = Screen.Accord },
@@ -4742,27 +4751,41 @@ fun CIRISApp(
             }
 
             Screen.AccordCeremony -> {
-                // Genesis ceremony (CIRISServer #41): the foolproof guided wizard
-                // that stands up a NEW mesh's 2-of-3 human kill-switch — 6 keys
-                // (3 primaries + 3 cold spares), cosign, assemble. The app holds no
-                // keys; the re-inserted YubiKey signs via the loopback endpoints.
-                PlatformLogger.d(TAG, "[Screen.AccordCeremony] Rendering accord genesis ceremony")
-                AccordCeremonyScreen(
-                    viewModel = accordCeremonyViewModel,
-                    onBack = { currentScreen = Screen.Accord },
-                )
+                if (!ai.ciris.mobile.shared.models.federation.AccordEditionGate.offersInAppCeremony(nodeCapabilities.edition)) {
+                    ai.ciris.mobile.shared.ui.screens.AccordEditionNoticeScreen(
+                        edition = nodeCapabilities.edition,
+                        onBack = { currentScreen = Screen.Accord },
+                    )
+                } else {
+                    // Genesis ceremony (CIRISServer #41): the foolproof guided wizard
+                    // that stands up a NEW mesh's 2-of-3 human kill-switch — 6 keys
+                    // (3 primaries + 3 cold spares), cosign, assemble. The app holds no
+                    // keys; the re-inserted YubiKey signs via the loopback endpoints.
+                    PlatformLogger.d(TAG, "[Screen.AccordCeremony] Rendering accord genesis ceremony")
+                    AccordCeremonyScreen(
+                        viewModel = accordCeremonyViewModel,
+                        onBack = { currentScreen = Screen.Accord },
+                    )
+                }
             }
 
             Screen.ProvisionAccordHolder -> {
-                // Provision Accord Holder (Manage group): the foolproof guided flow
-                // that mints a portable-2FA accord-holder identity from an already-
-                // FIPS-approved YubiKey + a chosen ML-DSA USB path. Drives the
-                // loopback POST /v1/accord/provision-holder; the app holds no keys.
-                PlatformLogger.d(TAG, "[Screen.ProvisionAccordHolder] Rendering provision-holder screen")
-                ProvisionAccordHolderScreen(
-                    viewModel = provisionAccordHolderViewModel,
-                    onBack = { currentScreen = Screen.Accord },
-                )
+                if (!ai.ciris.mobile.shared.models.federation.AccordEditionGate.offersInAppCeremony(nodeCapabilities.edition)) {
+                    ai.ciris.mobile.shared.ui.screens.AccordEditionNoticeScreen(
+                        edition = nodeCapabilities.edition,
+                        onBack = { currentScreen = Screen.Accord },
+                    )
+                } else {
+                    // Provision Accord Holder (Manage group): the foolproof guided flow
+                    // that mints a portable-2FA accord-holder identity from an already-
+                    // FIPS-approved YubiKey + a chosen ML-DSA USB path. Drives the
+                    // loopback POST /v1/accord/provision-holder; the app holds no keys.
+                    PlatformLogger.d(TAG, "[Screen.ProvisionAccordHolder] Rendering provision-holder screen")
+                    ProvisionAccordHolderScreen(
+                        viewModel = provisionAccordHolderViewModel,
+                        onBack = { currentScreen = Screen.Accord },
+                    )
+                }
             }
 
             Screen.Moderation -> {
@@ -5312,6 +5335,7 @@ fun CIRISApp(
                     onOpenAccordCeremony = { currentScreen = Screen.AccordCeremony },
                     onOpenProvisionHolder = { currentScreen = Screen.ProvisionAccordHolder },
                     onIssueClick = { url -> uriHandler.openUri(url) },
+                    nodeEdition = nodeCapabilities.edition,
                 )
             }
             // The federation transport hub. Reached via the Global Commons

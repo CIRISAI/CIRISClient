@@ -13,6 +13,17 @@ stage: building
 owner: CIRISClient
 ```
 
+**Code gaps.** Where this card and the client code disagree today, each proven against the tree by `packaging/check_csd_code_gaps.py`. Closing one means deleting its entry in the same commit.
+
+```yaml csd:code_gaps
+- id: canonical-servers
+  card: 'the canonical set is the seats of the bundle in force'
+  code: 'setup reads GET /v1/accord/canonical/servers, retired on v62'
+  where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/api/CIRISApiClient.kt
+  open_while: 'v1/accord/canonical/servers'
+  blocked_on: 'O1'
+```
+
 ## 1. Mission (why)
 
 **A person can see what this node has shared outward on their behalf, turn that
@@ -70,7 +81,7 @@ fields:
     use: display-only
     type: "enum[granted,revoked]"
     example: "granted"
-    renders: "the accord-sharing switch — on is `consent:state:granted` to the canonical servers; off is the withdraw"
+    renders: "the accord-sharing switch — on is `consent:state:granted` to the canonical servers (on v62, the seats of the genesis bundle in force, CC 4.2.1); off is the withdraw"
     tag: switch_consent
   - ceg: "consent:{kind}"
     bind: {kind: replication}
@@ -250,7 +261,7 @@ error:     {tag: data_error, renders: "the read or the act failed — a StateBlo
 | **a receipt to check** | — (`sign_deletion_proof`, `verification.py:106`, has no caller on main) | CIRISAgent | **missing** — `blocked_by: CIRISAgent#1207`. The card verifies a pasted receipt; nothing mints one |
 | an erasable payload | — (the disclosure store is unbuilt) | CIRISPersist | **missing** — `blocked_by: CIRISPersist#914`: nothing minted today is erasable |
 | peers / peering state | `GET /v1/federation/peers` | CIRISServer | live — `src/federation_peers.rs` |
-| grant federation consent | `GET /v1/accord/canonical/servers` (`src/accord_provision.rs:3711`), then `POST /v1/federation/consent` (owner-gated) — `authorFederationConsent`, `CIRISApiClient.kt` ~5270 | CIRISServer | live. (`/v1/accord/canonical-servers`, with a hyphen, 404s.) |
+| grant federation consent | `GET /v1/accord/canonical/servers` (`src/accord_provision.rs:3711`), then `POST /v1/federation/consent` (owner-gated) — `authorFederationConsent`, `CIRISApiClient.kt` ~5270 | CIRISServer | live on 0.5.x. (`/v1/accord/canonical-servers`, with a hyphen, 404s.) **Retired on v62; 0.6: pending (CIRISServer).** On v62 the canonical set is the seats of the genesis bundle in force; who this step consents to (each seat's identity reference) follows the bundle (O1) |
 | erase the account | `POST /v1/system/data/reset-account` | CIRISServer | live — `src/system_data.rs:379`, owner + `CapabilityVerb::Wipe`, non-delegable |
 | erase the signing key | `POST /v1/system/data/wipe-signing-key` | CIRISServer | live — `src/system_data.rs:383`, same gate. Both of these go to `baseUrl`, the front door: the node's route on a node-only install, the agent's on an agent build (the route checker attributes them to the agent for that reason) |
 | which node is about to be wiped | `GET /v1/federation/node-code` → `key_id` (public, unauthenticated) | CIRISServer (`src/federation_nodecode.rs:92`) | live; **called BEFORE** reset-account / wipe-signing-key (`wipeTarget`) — after a key wipe the key_id is gone. A failed read leaves the identity unknown and nothing is matched by key |

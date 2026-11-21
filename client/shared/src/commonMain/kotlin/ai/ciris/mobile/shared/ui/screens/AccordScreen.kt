@@ -8,6 +8,8 @@ import ai.ciris.mobile.shared.ui.components.HistoryEntry
 import ai.ciris.mobile.shared.ui.components.AttHistory
 import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.models.federation.AccordEventDto
+import ai.ciris.mobile.shared.models.federation.AccordEditionGate
+import ai.ciris.mobile.shared.models.capability.NodeEdition
 import ai.ciris.mobile.shared.models.federation.AccordFamilyDto
 import ai.ciris.mobile.shared.models.federation.AccordHolderDto
 import ai.ciris.mobile.shared.models.federation.AccordInvocationDto
@@ -171,6 +173,12 @@ fun AccordScreen(
     onConferDuty: () -> Unit = {},
     /** Open this node's trust root (`TrustRootScreen`) — the node's side of this root. */
     onOpenTrustRoot: () -> Unit = {},
+    /**
+     * Which mesh the node is on (`/v1/federation/conformance` → `edition`). The
+     * acts v62 retires are offered only on [NodeEdition.EDITION_1]; see
+     * [AccordEditionGate]. No default: a caller that does not know must say so.
+     */
+    nodeEdition: NodeEdition,
 ) {
     val family by viewModel.family.collectAsState()
     val holders by viewModel.holders.collectAsState()
@@ -203,9 +211,11 @@ fun AccordScreen(
 
     // Screen entry: refresh the canonical roster + the gossiped pending co-scrubs so a
     // partial that arrived over the accord peer-plane shows up without a manual refresh.
-    LaunchedEffect(Unit) {
-        viewModel.loadCanonicalServers()
-        viewModel.loadPendingCoscrubs()
+    LaunchedEffect(nodeEdition) {
+        if (AccordEditionGate.readsEarlierMeshRoster(nodeEdition)) {
+            viewModel.loadCanonicalServers()
+            viewModel.loadPendingCoscrubs()
+        }
     }
 
     Scaffold(
@@ -231,7 +241,7 @@ fun AccordScreen(
                         NewAttestationMenu(
                             expanded = newMenu,
                             onDismiss = { newMenu = false },
-                            actions = buildList {
+                            actions = buildList<NewAttestationAction> {
                                 add(
                                     NewAttestationAction("admit_node", "mobile.accord_new_admit_node") {
                                         sheet = AccordSheet.AdmitNode
@@ -306,7 +316,7 @@ fun AccordScreen(
                                         destructive = true,
                                     ) { sheet = AccordSheet.Halt },
                                 )
-                            },
+                            }.filter { AccordEditionGate.offersNewAction(it.id, nodeEdition) },
                         )
                     }
                 },
@@ -328,6 +338,14 @@ fun AccordScreen(
             )
 
             // ── Messages ─────────────────────────────────────────────────────
+            AccordEditionGate.noteKey(nodeEdition)?.let { key ->
+                Text(
+                    text = localizedString(key),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(vertical = 6.dp).testable("note_accord_edition"),
+                )
+            }
             notice?.let { msg -> Banner(msg, error = false, tag = "accord_notice") }
             error?.let { msg -> Banner(msg, error = true, tag = "accord_error") }
             // The first load waits for the node like startup does (#149/#151):
@@ -442,7 +460,10 @@ fun AccordScreen(
                 )
             } else {
                 canonicalServers.forEach { s ->
-                    val att = canonicalAttestation(s)
+                    val att = canonicalAttestation(s).let {
+                        if (AccordEditionGate.offersCanonicalDoors(nodeEdition)) it
+                        else it.copy(withheldOps = setOf(AttOp.Withdraw, AttOp.Supersede))
+                    }
                     val ip = s.transportHints?.firstOrNull { it.kind == "ip" }?.destination
                     AttestationCard(
                         att = att,
@@ -562,7 +583,9 @@ fun AccordScreen(
     }
 
     // ── Shared sub-flows ─────────────────────────────────────────────────────
-    when (val s = sheet) {
+    // ONE CHOKEPOINT for the acts v62 retires: whatever path set the sheet, a
+    // retired one is never drawn on a node that is not edition 1.
+    when (val s = sheet?.takeIf { nodeEdition == NodeEdition.EDITION_1 || !it.retiredOnV62() }) {
         null -> Unit
         is AccordSheet.AdmitNode -> AdmitNodeSheet(viewModel, holders, busy) { sheet = null }
         is AccordSheet.AddCanonical ->
@@ -642,6 +665,14 @@ fun AccordScreen(
 }
 
 // ── Op routing ───────────────────────────────────────────────────────────────
+
+/** The sheets that drive an act v62 retires (`AccordEditionGate`). */
+private fun AccordSheet.retiredOnV62(): Boolean = when (this) {
+    is AccordSheet.AdmitNode, is AccordSheet.AddCanonical, is AccordSheet.BlessCiWorkers,
+    is AccordSheet.RemintTrustRoot, is AccordSheet.RescrubTrustRoot, is AccordSheet.CoscrubCosign,
+    is AccordSheet.Withdraw, is AccordSheet.Supersede -> true
+    else -> false
+}
 
 /** Route the uniform ops that don't need canonical-row context. */
 private fun handleOp(op: AttOp, att: Attestation, open: (AccordSheet) -> Unit) {
@@ -775,6 +806,7 @@ internal fun invocationBadgeKey(kind: InvocationKind): String = when (kind) {
     InvocationKind.NOTIFY -> "mobile.accord_kind_notify"
     InvocationKind.DRILL -> "mobile.accord_kind_drill"
     InvocationKind.LIFECYCLE_ACTIVE -> "mobile.accord_kind_reactivated"
+    InvocationKind.LIFECYCLE_CONFIRMED -> "mobile.accord_kind_confirmed"
     InvocationKind.UNKNOWN -> "mobile.accord_kind_unknown"
 }
 
@@ -2161,6 +2193,7 @@ internal fun invocationBindingKey(kind: InvocationKind): String = when (kind) {
     InvocationKind.DRILL -> "mobile.accord_binding_drill"
     InvocationKind.NOTIFY -> "mobile.accord_binding_notify"
     InvocationKind.LIFECYCLE_ACTIVE -> "mobile.accord_binding_reactivated"
+    InvocationKind.LIFECYCLE_CONFIRMED -> "mobile.accord_binding_confirmed"
     InvocationKind.UNKNOWN -> "mobile.accord_binding_unknown"
 }
 
@@ -2316,5 +2349,43 @@ private fun AccordHistoryDialog(viewModel: AccordViewModel, att: Attestation, on
             AttestationHistoryDialog(title, AttHistory.Loaded(entries, complete = true), onDismiss)
         }
         else -> AttestationHistoryDialog(title, rowOnlyHistory(att), onDismiss)
+    }
+}
+
+/**
+ * Drawn in place of an in-app 0.5.x ceremony or the accord's duty conferral on a
+ * node that is not edition 1 (`AccordEditionGate`): what the screen would have
+ * done is not something this node admits, and saying why is the whole screen.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AccordEditionNoticeScreen(
+    edition: NodeEdition,
+    onBack: () -> Unit,
+) {
+    Scaffold(
+        topBar = {
+            ScreenTopBar(
+                title = { Text(localizedString("mobile.accord_title")) },
+                navigationIcon = {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.testableClickable("btn_accord_edition_back") { onBack() },
+                    ) {
+                        Icon(CIRISIcons.arrowBack, contentDescription = localizedString("mobile.common_back"))
+                    }
+                },
+            )
+        },
+    ) { pad ->
+        Column(modifier = Modifier.fillMaxSize().padding(pad).padding(16.dp)) {
+            Text(
+                text = localizedString(
+                    AccordEditionGate.noteKey(edition) ?: "mobile.accord_edition_unknown",
+                ),
+                fontSize = 14.sp,
+                modifier = Modifier.testable("note_accord_edition_screen"),
+            )
+        }
     }
 }

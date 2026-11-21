@@ -9,6 +9,17 @@ stage: building
 owner: CIRISClient
 ```
 
+**Code gaps.** Where this card and the client code disagree today, each proven against the tree by `packaging/check_csd_code_gaps.py`. Closing one means deleting its entry in the same commit.
+
+```yaml csd:code_gaps
+- id: canonical-servers
+  card: 'the canonical set is the seats of the bundle in force'
+  code: 'setup reads GET /v1/accord/canonical/servers, retired on v62'
+  where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/api/CIRISApiClient.kt
+  open_while: 'v1/accord/canonical/servers'
+  blocked_on: 'O1'
+```
+
 ## 1. Mission (why)
 
 **Three questions, asked once each: who are you, do you join, and what powers
@@ -221,7 +232,7 @@ listed in `scratchpad/csd-route-map.md`'s duplicates.
 <!-- generated: python3 packaging/check_csd_routes.py --print CSD-082 (screen Setup; heuristic) -->
 | value | endpoint | owner | state |
 |---|---|---|---|
-| `authorFederationConsent` | `GET /v1/accord/canonical/servers` | CIRISServer | called — `viewmodels/SetupViewModel.kt:1405` |
+| `authorFederationConsent` | `GET /v1/accord/canonical/servers` | CIRISServer | called — `viewmodels/SetupViewModel.kt:1405`. Retired on v62; 0.6: pending (CIRISServer, O1): the canonical set becomes the seats of the genesis bundle in force |
 | `getCredits` | `GET /v1/api/billing/credits` | CIRISAgent (front door) | called — `viewmodels/BillingViewModel.kt:174` |
 | `createDelegation` | `POST /v1/auth/device/delegate` | CIRISServer | called — `viewmodels/SetupViewModel.kt:1004` |
 | `login`, `loginToNode` | `POST /v1/auth/login` | CIRISAgent (front door), CIRISServer | called — `CIRISApp.kt:2785, viewmodels/SetupViewModel.kt:1298` |

@@ -8,6 +8,67 @@ stage: building
 owner: CIRISClient
 ```
 
+**Code gaps.** Where this card and the client code disagree today, each proven against the tree by `packaging/check_csd_code_gaps.py`. Closing one means deleting its entry in the same commit.
+
+```yaml csd:code_gaps
+- id: duty-from-accord
+  card: 'duties come from the trust root (trust:confers:v1), not the accord'
+  code: 'the client confers duties through accord duty/propose and duty/cosign on edition-1 nodes; on v62 and unknown nodes the card is not offered and the screen shows the edition note (AccordEditionGate), and no trust-root conferral is built'
+  where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/api/CIRISApiClient.kt
+  open_while: 'v1/accord/duty/(propose|cosign)'
+  blocked_on: 'O3'
+```
+
+> ## Obsolete on v62: duties come from the trust root, not the accord
+>
+> Eric's ruling, and CC 4.2.1 line 108: mesh config is the trust root's
+> `trust:confers:v1` on the delegation plane, "never the accord's ceremony
+> plane". CC 4.2.1's enumeration (lines 74-84) gives accord signatures no duty
+> grant. This card's own §3 delta 1 argued exactly this; v62 settles it. v62 is
+> also a total re-genesis, so nothing the accord conferred on the earlier mesh
+> carries.
+>
+>
+> **Who confers, on CC 3.4.7.3 "Who confers" (audit round 2):** a community's
+> authority set confers its duties (`moderate`, `slash`, `takedown`, `review`);
+> a reader's trusted root confers capabilities under that root; the accord
+> confers only what its charter names (halts, lifecycle, re-bind, bundles). So
+> "the trust root" here reads as the trust-root community's (`ciris-canonical`'s)
+> authority set for root-scope duties, and each community's own authority set
+> for its own: the narrow reading (O14, ruled by Eric 2026-11-21):
+> `ciris-canonical`'s authority set covers `infra:serve`, `infra:attest` and the
+> root's own room; every other community's duties come from its own authority
+> set (CC 3.4.7.3; CC 4.5.4 laws iv and v). A delegation onto a minor-band
+> user confers no duty (CC `bf02d42`, `minor_cannot_hold_duty`).
+>
+> What no longer holds, read everything below as the 0.5.x card:
+>
+> * **Who confers.** Not "two accord holders" and not `GET /v1/accord/family`
+>   ("Conferred by — HUMANITY_ACCORD / humanity-accord"): the conferring
+>   authority is the trust root's identity reference (its root community).
+> * **The count.** No `quorum:2/3`, no "1 of 2 signatures", and accord seats
+>   (`A1`, `A2`, `A3`) are not the conferring set. If the root community's count
+>   applies, it is that community's own rule, with m and N as the node reports
+>   them, never a literal.
+> * **`slash`.** There is no `ConferralPlane::FamilyQuorum` on v62; `slash` too
+>   comes from the trust root's delegation plane.
+> * **Routes.** `duty/{propose,cosign}` are retired from the accord;
+>   `accord/family` and `accord-holders` are retired or re-pointed. There is no
+>   route yet for a trust-root `trust:confers:v1` grant: 0.6: pending
+>   (CIRISServer, O1).
+>
+> **OPEN — CIRISConstitution + persist (O3):** who signs a trust root's duty
+> grant on v62, and at what count. The candidates are the root community's
+> roster under its own rule, or a strict majority of the bundle's holders as
+> founders. Persist counts `trust:confers` through `voices::put_counted_row`
+> (`edition2/typed.rs:1357-1376`), but no reader names the root's signer set.
+>
+> **OPEN — Eric / CIRISClient (O3):** the audit recommends moving this card from
+> the Accord leaf to the trust-root community (CSD-122/124's root-community
+> home) and re-staging it to `sketched` until a route exists, keeping the depth
+> control, the vocabulary read and the CC 4.2.1 consent/licence wall. Neither
+> the stage nor `numbers.tsv` is changed by this revision.
+
 ## 1. Mission (why)
 
 **Two accord holders, in one room, confer a moderation duty on another self —
@@ -66,7 +127,7 @@ fields:
     use: display-only
     type: string
     example: "quorum:2/3"
-    renders: "'Adopted at quorum:2/3 — this grant does nothing until that many distinct seats have signed it', or the entrenched wording when the family says the threshold is fixed. The accord's own string, verbatim"
+    renders: "'Adopted at quorum:2/3 — this grant does nothing until that many distinct seats have signed it', or the entrenched wording when the family says the threshold is fixed. The accord's own string, verbatim (0.5.x only: v62 has no family and no quorum:2/3; see the banner)"
     tag: duty_source_quorum
   - ceg: x_private:family_live_seats
     use: display-only
@@ -144,7 +205,7 @@ fields:
     use: display-only
     type: int
     example: 1
-    renders: "'1 of 2 signatures', monospace. Below quorum: 'Not conferred yet — hand the partial to the next holder to cosign'"
+    renders: "'1 of 2 signatures', monospace. Below quorum: 'Not conferred yet — hand the partial to the next holder to cosign' (0.5.x only: on v62 the count is the trust root's rule, OPEN O3, with m and N from the node)"
     tag: duty_scrub_count
   - ceg: "trust:{job}:{version}"
     bind: {job: confers, version: v1}
@@ -191,10 +252,10 @@ the operator debugging a network that is working fine". The 404 sets
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| scrub #1 | `POST /v1/accord/duty/propose` | CIRISServer (`src/accord_duty.rs:648`) | live — owner-gated, loopback; `501 accord.duty.pkcs11_required` on a build without the `pkcs11` feature |
-| the next holder's scrub | `POST /v1/accord/duty/cosign` | CIRISServer (`src/accord_duty.rs:649`) | live — the partial goes back BYTE-IDENTICAL; the signature covers its exact bytes |
-| who is conferring | `GET /v1/accord/family` | CIRISServer (`src/accord.rs:2628`) | live — and a 404 means "no family", not "could not ask" |
-| the holder registry | `GET /v1/accord-holders` | CIRISServer (`src/accord.rs:2601`) | live — the same source the quorum is counted from, which is why the holder is a dropdown and not a text box |
+| scrub #1 | `POST /v1/accord/duty/propose` | CIRISServer (`src/accord_duty.rs:648`) | **retired on v62; 0.6: pending (CIRISServer)**: no route yet for a trust-root `trust:confers:v1` grant. On 0.5.x live — owner-gated, loopback; `501 accord.duty.pkcs11_required` on a build without the `pkcs11` feature |
+| the next holder's scrub | `POST /v1/accord/duty/cosign` | CIRISServer (`src/accord_duty.rs:649`) | **retired on v62; 0.6: pending (CIRISServer).** On 0.5.x live — the partial goes back BYTE-IDENTICAL; the signature covers its exact bytes |
+| who is conferring | `GET /v1/accord/family` | CIRISServer (`src/accord.rs:2628`) | **retired on v62** (no family row; the conferring authority is the trust root's identity reference); 0.6: pending (CIRISServer). On 0.5.x live — and a 404 means "no family", not "could not ask" |
+| the holder registry | `GET /v1/accord-holders` | CIRISServer (`src/accord.rs:2601`) | **re-pointed on v62 at the bundle's holders, who are not the conferring set**; 0.6: pending (CIRISServer). On 0.5.x live — the same source the quorum is counted from, which is why the holder is a dropdown and not a text box |
 | token readiness | `GET /v1/accord/yubikey-status` | CIRISServer (`src/accord_provision.rs:3770`) | live |
 | prefill the subject | `GET /v1/setup/owned-nodes` | CIRISServer | live, **loopback-only** — off-host it 403s (CSD-084 measured it on 0.5.190), so on a remote node the subject field is simply blank and the screen does not say why |
 | the conferrable vocabulary | `CONFERRABLE_DUTIES` | CIRISPersist `federation/admission.rs:6385` (`DELEGATED_DUTY_SCOPES`, v48.0.0) | live — re-exported, not re-listed (`CIRISServer src/accord_duty.rs:96` is literally `= ciris_persist::federation::admission::DELEGATED_DUTY_SCOPES`, validated `:287-300`). The list is SEVEN: `consent_revocation, moderate, takedown, review, slash, license, grant` (`license` and `grant` since persist v42.0.0). Persist's own doc comment at `admission.rs:6338-6345` gives the reason: "a hand-picked mirror of another crate's vocabulary drifts the moment that vocabulary grows" |
@@ -223,6 +284,9 @@ most likely to hit — render as the node's English rather than by id. Moderatio
 owns that screen; the gap is recorded here.
 
 ### The CC delta, stated plainly
+
+**Settled on v62:** the accord confers no duty (see the banner at the top). The
+deltas below are kept as the record of why; delta 1 is now the rule.
 
 **1. CC 4.2.1 does not admit this ceremony.** "`HUMANITY_ACCORD` signatures are
 valid only on `EmergencyShutdown CONSTITUTIONAL`, `accord:invoke:notify:{id}`,
@@ -268,9 +332,10 @@ in **C's authority set** — a founder, or a key C's `consensus_protocol` names 
 and is steward-bound. The conferral envelope carries no `community_id`, and its
 root is the humanity accord, which is in no community's authority set. So the
 grant this screen writes is not the shape CC 4.5.4 resolves
-`is_named_moderator(K, C, moderate)` against. For `slash` the family root is
-right — the enforcement ladder is federation-tier and CIRISPersist reads it
-through `ConferralPlane::FamilyQuorum` — which is the tell: **one control is
+`is_named_moderator(K, C, moderate)` against. For `slash` the family root was
+right on 0.5.x — the enforcement ladder is federation-tier and CIRISPersist read it
+through `ConferralPlane::FamilyQuorum` (gone on v62: `slash` too comes from the
+trust root's delegation plane) — which is the tell: **one control is
 doing two constitutionally different jobs.**
 
 **4. A judgment duty is never node-holdable, and nothing checks.** "Judgment
