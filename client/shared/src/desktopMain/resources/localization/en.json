@@ -6247,7 +6247,11 @@
     "withdrawn": "Its author withdrew this file. The bytes are no longer served anywhere.",
     "awaiting_key": "Its bytes are here, but this device's key for them hasn't arrived yet. It follows on its own; try again shortly.",
     "withheld_by_moderation": "A moderator of this room flagged this file, so it stays hidden until you choose to see it.",
-    "flagged_by_moderation": "a moderator of this room flagged this file; it stays in the room while the flag stands"
+    "flagged_by_moderation": "a moderator of this room flagged this file; it stays in the room while the flag stands",
+    "no_rendition": "This file has no preview the node can make.",
+    "image_too_large": "This image is too large for the node to make a preview.",
+    "image_undecodable": "The node couldn't read this image to make a preview.",
+    "unknown_rendition": "The app asked for a kind of preview the node doesn't make."
   },
   "notes": {
     "author_signer_unavailable": "This node can't sign as you right now, so the note wasn't written.",
@@ -6529,7 +6533,9 @@
     "share_unavailable": "Sharing your screen isn't available on this node yet.",
     "leave_reason_unknown": "That isn't a reason for leaving a call.",
     "video_two_people_only": "Video and screen sharing work in calls between two people for now. This call has more, so it's voice only. If your camera is on, it starts sending again when the call is back to two.",
-    "relay_canonical_audio_only": "Their video can't reach you right now: the route between you carries sound only. You can still hear them."
+    "relay_canonical_audio_only": "Their video can't reach you right now: the route between you carries sound only. You can still hear them.",
+    "share_already_live": "You're already sharing your screen.",
+    "no_share": "You aren't sharing your screen."
   },
   "decisions": {
     "not_found": "That decision isn't open for you any more.",

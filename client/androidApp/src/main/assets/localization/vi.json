@@ -6174,6 +6174,10 @@
     "awaiting_key": "Các byte của nó đã có ở đây, nhưng khóa của thiết bị này cho chúng vẫn chưa đến. Khóa sẽ tự đến; hãy thử lại sau một chút.",
     "withheld_by_moderation": "Một người kiểm duyệt của phòng này đã gắn cờ tệp này, nên tệp vẫn ẩn cho đến khi bạn chọn xem nó.",
     "flagged_by_moderation": "một người kiểm duyệt của phòng này đã gắn cờ tệp này; tệp vẫn ở trong phòng trong khi cờ còn hiệu lực",
+    "no_rendition": "Tệp này không có bản xem trước nào mà nút có thể tạo.",
+    "image_too_large": "Hình ảnh này quá lớn để nút tạo bản xem trước.",
+    "image_undecodable": "Nút không thể đọc hình ảnh này để tạo bản xem trước.",
+    "unknown_rendition": "Ứng dụng đã yêu cầu một loại bản xem trước mà nút không tạo.",
     "store_unavailable": "Nút này không thể truy cập kho tệp của nó.",
     "too_large": "Tệp đó quá lớn để thêm vào đây.",
     "unknown_cohort": "Đó không phải là nơi có thể lưu tệp. Hãy dùng Chỉ tôi, một gia đình hoặc một cộng đồng.",
@@ -6529,7 +6533,9 @@
     "share_unavailable": "Chia sẻ màn hình chưa khả dụng trên nút này.",
     "leave_reason_unknown": "Đó không phải là lý do để rời khỏi cuộc gọi.",
     "video_two_people_only": "Video và chia sẻ màn hình hiện chỉ hoạt động trong cuộc gọi giữa hai người. Cuộc gọi này có nhiều người hơn, nên đây là cuộc gọi chỉ có thoại. Nếu camera của bạn đang bật, nó sẽ bắt đầu gửi lại khi cuộc gọi trở về còn hai người.",
-    "relay_canonical_audio_only": "Video của họ hiện không thể đến được với bạn: tuyến đường giữa hai bên chỉ mang âm thanh. Bạn vẫn có thể nghe thấy họ."
+    "relay_canonical_audio_only": "Video của họ hiện không thể đến được với bạn: tuyến đường giữa hai bên chỉ mang âm thanh. Bạn vẫn có thể nghe thấy họ.",
+    "share_already_live": "Bạn đang chia sẻ màn hình của mình rồi.",
+    "no_share": "Bạn không chia sẻ màn hình của mình."
   },
   "decisions": {
     "not_found": "Quyết định đó không còn mở cho bạn nữa.",
