@@ -27,6 +27,9 @@ import argparse
 import re
 import shutil
 import sys
+
+sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parent))
+import check_csd_code_gaps as code_gaps  # noqa: E402  (stdlib-only sibling)
 import tempfile
 from pathlib import Path
 
@@ -90,6 +93,9 @@ def read_cards(csd: Path) -> dict[int, dict]:
             problems.append(f"{f.name}: CSD-{n:03d} is also {cards[n]['file']}")
             continue
         cards[n] = {"file": f.name, "title": h.group(2).strip(), "stage": s.group(1), "flow": flow}
+    gaps = code_gaps.count_by_card(csd)
+    for c in cards.values():
+        c["gaps"] = gaps.get(c["file"], 0)
     if not cards and not problems:
         raise RosterError(f"{csd}: no CSD-*.md parsed — a roster of nothing is a broken parser, not an empty set")
     if problems:
@@ -197,13 +203,20 @@ def render(cards: dict[int, dict], rows: list[dict]) -> str:
         "",
         "## Cards",
         "",
-        "| CSD | Card | Stage | Flow |",
-        "|---|---|---|---|",
+        "**Code gaps** counts the places a card and the code are known to disagree, each",
+        "declared in the card's `csd:code_gaps` block and proven against the tree by",
+        "`packaging/check_csd_code_gaps.py` (`--list` prints them). A card with gaps is",
+        f"ahead of, or behind, its code: **{sum(1 for c in cards.values() if c['gaps'])} cards, "
+        f"{sum(max(c['gaps'], 0) for c in cards.values())} gaps** today.",
+        "",
+        "| CSD | Card | Stage | Code gaps | Flow |",
+        "|---|---|---|---|---|",
     ]
     for n in sorted(cards):
         c = cards[n]
         title = c["title"].replace("|", "\\|")
-        L.append(f"| [CSD-{n:03d}]({c['file']}) | {title} | `{c['stage']}` | {c['flow']} |")
+        g = {0: "—", -1: "unreadable"}.get(c["gaps"], f"**{c['gaps']}**")
+        L.append(f"| [CSD-{n:03d}]({c['file']}) | {title} | `{c['stage']}` | {g} | {c['flow']} |")
     L += ["", "## Reserved", "",
           "Numbers held for cards that are drafted elsewhere or asked for in an issue, and not in",
           "this directory yet.", "",

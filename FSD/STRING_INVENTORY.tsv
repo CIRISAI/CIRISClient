@@ -351,6 +351,7 @@ call.ended	server	server	-	-	-	-	-
 call.frame_over_budget	server	server	-	-	-	-	-
 call.keep_refused	server	server	-	-	-	-	-
 call.leave_reason_unknown	server	server	-	-	-	-	-
+call.no_share	server	server	-	-	-	-	-
 call.not_a_member	server	server	-	-	-	-	-
 call.not_joined	server	server	-	-	-	-	-
 call.not_owner	server	server	-	-	-	-	-
@@ -359,6 +360,7 @@ call.plumbing	server	client,server	literal	-	-	-	-
 call.relay_canonical_audio_only	client	client	literal	-	-	-	-
 call.room_may_keep.not_yet	server	server	-	-	-	-	-
 call.session_absent	server	server	-	-	-	-	-
+call.share_already_live	server	server	-	-	-	-	-
 call.share_unavailable	server	client,server	literal	-	-	-	-
 call.socket_already_open	server	server	-	-	-	-	-
 call.video_two_people_only	server	client,server	literal	-	-	-	-
@@ -706,8 +708,11 @@ drive.field_after_file	server	server	-	-	-	-	-
 drive.filename_empty	server	server	-	-	-	-	-
 drive.flagged_by_moderation	server	server	-	-	-	-	-
 drive.format_mismatch	server	server	-	-	-	-	-
+drive.image_too_large	server	server	-	-	-	-	-
+drive.image_undecodable	server	server	-	-	-	-	-
 drive.listing_failed	server	server	-	-	-	-	-
 drive.no_node_key	server	server	-	-	61	same	-
+drive.no_rendition	server	server	-	-	-	-	-
 drive.not_a_member	server	server	-	-	-	-	-
 drive.not_author	server	server	-	-	-	-	-
 drive.not_fetched	server	client,server	literal	-	-	-	-
@@ -723,6 +728,7 @@ drive.store_unavailable	server	server	-	-	-	-	-
 drive.too_large	server	server	-	-	-	-	-
 drive.too_large_for_whole_read	server	client,server	literal	-	-	-	-
 drive.unknown_cohort	server	server	-	-	-	-	-
+drive.unknown_rendition	server	server	-	-	-	-	-
 drive.unopened	server	server	-	-	-	-	-
 drive.withdraw_failed	server	server	-	-	-	-	-
 drive.withdrawn	server	server	-	-	-	-	-
@@ -1134,6 +1140,7 @@ mobile.accord_badge_holder	client	client	literal	-	103	differs:1	-
 mobile.accord_badge_recanted	client	client	literal	-	104	differs:14	-
 mobile.accord_badge_superseded	client	client	literal	-	-	-	-
 mobile.accord_badge_withdrawn	client	client	literal	-	105	differs:12	-
+mobile.accord_binding_confirmed	client	client	literal	-	-	-	-
 mobile.accord_binding_constitutional	client	client	literal	-	-	-	-
 mobile.accord_binding_drill	client	client	literal	-	-	-	-
 mobile.accord_binding_notify	client	client	literal	-	-	-	-
@@ -1277,6 +1284,8 @@ mobile.accord_drill_desc	client	client	literal	-	-	-	-
 mobile.accord_drill_id_label	client	client	literal	-	-	-	-
 mobile.accord_drills_empty	client	client	dynamic	-	-	-	-
 mobile.accord_drills_title	client	client	dynamic	-	-	-	-
+mobile.accord_edition2_offline_ceremony	client	client	literal	-	-	-	-
+mobile.accord_edition_unknown	client	client	literal	-	-	-	-
 mobile.accord_entrenched	client	client	dynamic	-	102	differs:2	-
 mobile.accord_event_from	client	client	literal	-	-	-	-
 mobile.accord_event_recorded_at	client	client	dynamic	-	-	-	-
@@ -1305,6 +1314,7 @@ mobile.accord_holders_empty	client	client	literal	-	-	-	-
 mobile.accord_holders_title	client	client	dynamic	-	-	-	-
 mobile.accord_invocations_empty	client	client	dynamic	-	-	-	-
 mobile.accord_invocations_title	client	client	dynamic	-	-	-	-
+mobile.accord_kind_confirmed	client	client	literal	-	-	-	-
 mobile.accord_kind_constitutional	client	client	literal	-	40	differs:12	-
 mobile.accord_kind_drill	client	client	literal	-	-	-	-
 mobile.accord_kind_notify	client	client	literal	-	-	-	-
@@ -2064,15 +2074,24 @@ mobile.consent_withdraw_fact_signs	client	client	literal	-	1	differs:16	fact
 mobile.consent_withdraw_fact_stops	client	client	literal	-	191	differs:15	fact
 mobile.consent_withdraw_fact_who	client	client	literal	-	-	-	fact
 mobile.consent_withdraw_signs_value	client	client	literal	-	-	-	-
+mobile.constitutional_armed_no	client	client	literal	-	-	-	-
+mobile.constitutional_armed_unknown	client	client	literal	-	-	-	-
+mobile.constitutional_armed_yes	client	client	literal	-	-	-	-
 mobile.constitutional_family_desc	client	client	literal	-	-	-	-
 mobile.constitutional_family_desc_threshold	client	client	literal	-	-	-	-
 mobile.constitutional_family_live	client	client	literal	-	-	-	-
 mobile.constitutional_family_not_configured	client	client	literal	-	-	-	-
 mobile.constitutional_halt_active	client	client	literal	-	-	-	-
 mobile.constitutional_halt_active_invocation	client	client	literal	-	-	-	-
+mobile.constitutional_halt_confirmed	client	client	literal	-	-	-	-
+mobile.constitutional_halt_lapsed	client	client	literal	-	-	-	-
+mobile.constitutional_halt_lone	client	client	literal	-	-	-	-
+mobile.constitutional_halt_lone_lapses	client	client	literal	-	-	-	-
+mobile.constitutional_halt_not_halted	client	client	literal	-	-	-	-
 mobile.constitutional_holders_count	client	client	literal	-	-	-	-
+mobile.constitutional_holders_count_m_unknown	client	client	literal	-	-	-	-
 mobile.constitutional_holders_none	client	client	literal	-	-	-	-
-mobile.constitutional_killswitch_disarmed	client	client	literal	-	-	-	-
+mobile.constitutional_killswitch_disarmed	client	client	dynamic	-	-	-	-
 mobile.constitutional_killswitch_heading	client	client	literal	-	-	-	-
 mobile.constitutional_killswitch_loading	client	client	literal	-	-	-	-
 mobile.constitutional_killswitch_unknown	client	client	literal	-	-	-	-
@@ -3893,7 +3912,7 @@ mobile.settings_verify_active	client	client	literal	-	-	-	-
 mobile.settings_verify_description	client	client	literal	-	-	-	-
 mobile.settings_verify_running	client	client	literal	-	-	-	-
 mobile.settings_verify_status_unknown	client	client	literal	-	-	-	-
-mobile.settings_version	client	client	literal	-	308	differs:6	-
+mobile.settings_version	client	client	literal	-	308	differs:5	-
 mobile.setup_2fa_desc	client	client	literal	-	-	-	-
 mobile.setup_2fa_title	client	client	literal	-	-	-	-
 mobile.setup_account_desc	client	client	literal	-	-	-	-
@@ -4127,7 +4146,7 @@ mobile.skill_field_homepage	client	client	dynamic	-	-	-	-
 mobile.skill_field_homepage_hint	client	client	dynamic	-	-	-	-
 mobile.skill_field_name	client	client	literal	-	-	-	-
 mobile.skill_field_name_hint	client	client	literal	-	-	-	-
-mobile.skill_field_version	client	client	literal	-	308	differs:6	-
+mobile.skill_field_version	client	client	literal	-	308	differs:5	-
 mobile.skill_finding_backdoor	client	client	dynamic	-	-	-	-
 mobile.skill_finding_credential_access	client	client	dynamic	-	-	-	-
 mobile.skill_finding_cryptominer	client	client	dynamic	-	-	-	-
@@ -4670,7 +4689,7 @@ mobile.wa_identity_receipt_response	client	client	literal	-	-	-	-
 mobile.wa_identity_reject_why	client	client	literal	-	-	-	-
 mobile.wa_identity_rejected	client	client	literal	-	-	-	-
 mobile.wa_identity_template_name	client	client	literal	-	-	-	-
-mobile.wa_identity_template_version	client	client	literal	-	308	differs:6	-
+mobile.wa_identity_template_version	client	client	literal	-	308	differs:5	-
 mobile.wa_identity_unreadable_note	client	client	literal	-	-	-	-
 mobile.wa_identity_unreadable_title	client	client	literal	-	-	-	-
 mobile.wa_identity_why	client	client	literal	-	-	-	-

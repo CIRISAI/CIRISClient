@@ -14,10 +14,51 @@ stage: sketched
 owner: CIRISClient
 ```
 
+**Model.** What this card draws and offers, cited from CIRISConstitution's formal model (pinned in `packaging/model/`) and held to it by `packaging/check_csd_model.py`: a modelled state the card leaves out, or a signer, policy or confirm that differs, fails CI.
+
+```yaml csd:model
+- act: 'takedown_notice:{basis} attest'
+  roles: 'takedown'
+  policy: 'cosigned'
+  confirm: 'true'
+```
+
+> **On v62 (audit of 2026-11-21): stale, and its authority is OPEN.** This card
+> was built on CSD-067's co-scrub and the canonical withdraw door. v62 has
+> neither: there is no co-scrub, and the withdraw and supersede doors are
+> deleted (only a later bundle un-seats a canonical; Eric's ruling). A counted
+> row on v62 is one statement per signer over one payload, counted by persist and
+> held `count_short` until met (persist `edition2/halt.rs:35`, the pattern).
+> CC 4.2.1's enumeration does not list `takedown`, so a steward purge is not the
+> accord's act.
+>
+> **Partly answered (audit round 2):** CC 3.4.7.3's reserved-family signer table
+> says a `takedown_notice:{basis}` row is signed by **the holder of the
+> `takedown` duty**, conferred by the content's subject or the community's
+> authority set. Over the canonical corpus that is a `takedown` duty holder
+> conferred by `ciris-canonical`'s authority set, never the accord. So:
+> * the stewards are **holders of the `takedown` duty over the canonical corpus**;
+> * the signer picker reads the duty holders (or the community's authority set),
+>   **not** the accord holders (`GET /v1/accord-holders` below is the 0.5.x
+>   picker);
+> * the entry `btn_accord_open_steward_purge` moves from the Accord card to the
+>   root community's surface: Accord is for accord acts only (CC 4.2.1).
+>
+> **Who signs, answered (O3 for takedown, O10; CIRISConstitution's reading, relayed 2026-11-21 (rc22 `3004759`)):** a takedown is signed
+> by ONE holder of the `takedown` duty over the target, conferred by the
+> content's subject or the community's authority set, with **no count** (CC
+> 3.4.7.3, `takedown_notice:{basis}`; refused `takedown_unauthorised`). The
+> community's members may lift it (CC 4.5.13). Holders acting for
+> `ciris-canonical` act as its founders, not with accord authority (CC 4.2.1, CC
+> 3.2). The descend quorum is CSD-065's (OPEN — CIRISServer). Read §1.1's
+> "parents" below as history.
+
 ## 1. Mission (why)
 
-**The stewards of the global trust root can remove a set of rows that never
-belonged in the canonical corpus.** The set might be mock-model traces, harness
+**Holders of the `takedown` duty over the canonical corpus, conferred by
+`ciris-canonical`'s authority set, can remove a set of rows that never belonged
+in the canonical corpus** (v62 wording; the accord does not sign it, CC 4.2.1,
+CC 3.4.7.3). The set might be mock-model traces, harness
 identities registered on production, or rows no apply door would admit today.
 Before anyone signs, a steward sees exactly which rows and how many, table by
 table, with a sample. A cosigned notice names the selection by its digest, and
@@ -71,9 +112,11 @@ not by its name.
   (CIRISServer#677).
 * **The quorum cosign is CSD-067's co-scrub.** The pattern is propose, hand the
   byte-identical partial to the next holder, cosign until quorum, and read the
-  partials still below quorum. It already carries the canonical-server propose,
-  cosign and withdraw ops (`withdraw_canonical_role`'s door, behind a
-  2-of-3 proposal digest) and CSD-090's duty conferral.
+  partials still below quorum. On 0.5.x it carried the canonical-server propose,
+  cosign and withdraw ops (`withdraw_canonical_role`'s door) and CSD-090's duty
+  conferral. **None of these exists on v62:** the co-scrub is gone, the withdraw
+  door is deleted, and duties come from the trust root (see the note under the
+  stage block).
 
 The generic door makes **by actor/key** one selection kind among four. That kind
 is descend's selection, widened from one actor's bytes to every row attested by
@@ -104,7 +147,7 @@ What carries over from both parents, unchanged:
 * from the ladder: the preview-hash commit (what was previewed is what runs),
   the always-present "what this does NOT reach" block, and refusals by id;
 * from co-scrub: the holder picker from `GET /v1/accord-holders`, the
-  byte-identical partial, the `1 of 2` count, and the pending list.
+  byte-identical partial, the count (m of N as the node reports, never a literal), and the pending list.
 
 ## 2. Surface (what)
 
@@ -198,8 +241,8 @@ fields:
   - ceg: x_private:purge_quorum
     use: display-only
     type: string
-    example: "1 of 2 signatures (roster 3)"
-    renders: "'1 of 2 signatures (roster 3)', counted from the root's consensus_protocol. Below quorum: 'Not authorised yet. Hand the partial to the next holder to cosign.'"
+    example: "1 of m signatures (m of N as the node reports)"
+    renders: "'1 of m signatures (roster N)', m and N as the node reports them, never a literal; if the root's community roster applies, m is a strict majority of it (2·yes > N). The signer set and count are OPEN (O3). Below quorum: 'Not authorised yet. Hand the partial to the next holder to cosign.'"
     tag: "proposed:txt_purge_quorum"
   - ceg: x_private:purge_cosigners
     use: display-only

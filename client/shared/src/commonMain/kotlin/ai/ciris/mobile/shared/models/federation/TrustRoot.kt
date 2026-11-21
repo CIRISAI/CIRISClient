@@ -285,7 +285,17 @@ data class TrustRootView(
     val evaluationError: String?,
 )
 
-fun trustRootView(entry: TrustRootEntryDto): TrustRootView {
+/**
+ * @param edition which mesh the node is on. persist v62 renamed the verdict's
+ * `charter_quorum` to `signer_count` (SM-fix1: a clean break, no alias; same
+ * members), so v62 reads only `signer_count` and only an edition-1 node is
+ * read through `charter_quorum`. An unknown edition reads `signer_count` alone.
+ */
+fun trustRootView(
+    entry: TrustRootEntryDto,
+    edition: ai.ciris.mobile.shared.models.capability.NodeEdition =
+        ai.ciris.mobile.shared.models.capability.NodeEdition.EDITION_1,
+): TrustRootView {
     val v = entry.verdict.obj()
     val evaluationError = v.str("error")
     val kindToken = entry.rootKind.ifBlank { v.str("root_kind").orEmpty() }
@@ -297,7 +307,12 @@ fun trustRootView(entry: TrustRootEntryDto): TrustRootView {
         "unreadable" -> RootKindView.UNREADABLE
         else -> RootKindView.OTHER
     }
-    val quorum = v?.get("charter_quorum").obj()?.let { q ->
+    val quorumField = if (edition == ai.ciris.mobile.shared.models.capability.NodeEdition.EDITION_1) {
+        "charter_quorum" // edition 1 only: persist v62 calls it signer_count
+    } else {
+        "signer_count"
+    }
+    val quorum = v?.get(quorumField).obj()?.let { q ->
         val d = q.int("distinct_holders")
         val r = q.int("required")
         val n = q.int("roster_size")

@@ -11782,6 +11782,7 @@ class CIRISApiClient internal constructor(
         val wire = ai.ciris.mobile.shared.models.capability.CapabilityWire
         wire.parse(body, wire.FIELD_CONFERRED).copy(
             features = wire.parse(body, wire.FIELD_FEATURES).declared,
+            edition = ai.ciris.mobile.shared.models.capability.NodeEdition.fromConformance(body),
         )
     } catch (e: kotlinx.coroutines.CancellationException) {
         // Structured concurrency: a cancelled probe must die, not publish state.

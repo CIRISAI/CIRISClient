@@ -1276,6 +1276,8 @@
     "accord_sign_as_holder_usb_label": "Dossier USB (matériel PQC)",
     "accord_start_drill": "Lancer l'exercice",
     "accord_subtitle": "Les détenteurs de clés fondateurs qui ancrent le maillage canonique et détiennent conjointement le coupe-circuit. Visible par tous ; seuls les détenteurs de l'accord peuvent agir. L'application ne détient aucune clé ; le nœud signe.",
+    "accord_edition2_offline_ceremony": "Ce nœud exécute le maillage v62. Sa racine de confiance est créée hors ligne, avec l'outil de cérémonie. Pour cette raison, cette application ne propose pas ici les actes de l'ancien maillage : l'admission d'un nœud, le changement de nœud canonique, la réémission de la racine de confiance, la bénédiction des agents CI, ou l'attribution d'un devoir.",
+    "accord_edition_unknown": "Ce nœud n'a pas indiqué quelle édition de maillage il exécute ; les actes qui diffèrent entre les éditions ne sont donc pas proposés tant qu'il ne l'a pas fait.",
     "accord_supersede_desc": "Admet l'enregistrement canonique complet à 2 sur 3 du successeur, puis marque {key} d'une pierre tombale indiquant qu'elle est remplacée par celui-ci — l'ensemble canonique n'est jamais vide entre les deux. Nécessite la proposition d'accord à 2 sur 3 qui autorise la rotation.",
     "accord_supersede_fact_who": "Quel serveur",
     "accord_supersede_who": "{old} est retiré ; {new} prend sa place en tant que serveur canonique.",
@@ -1742,6 +1744,15 @@
     "constitutional_halt_active": "ARRÊT ACTIF — les agents de ce nœud sont en pause",
     "constitutional_killswitch_loading": "Lecture de l'état de l'interrupteur d'arrêt…",
     "constitutional_killswitch_unknown": "État du kill-switch INCONNU — le nœud n'a pas répondu, ou n'a pas pu lire son propre verrou d'arrêt. Ceci ne signifie pas qu'il est désarmé.",
+    "constitutional_halt_not_halted": "Aucun arrêt n'est en vigueur sur ce nœud.",
+    "constitutional_halt_lone": "Un détenteur a arrêté ce nœud. L'arrêt devient caduc à moins qu'une majorité stricte des détenteurs ne le confirme.",
+    "constitutional_halt_lone_lapses": "Un détenteur a arrêté ce nœud. L'arrêt devient caduc à {time} à moins qu'une majorité stricte des détenteurs ne le confirme.",
+    "constitutional_halt_confirmed": "Une majorité stricte des détenteurs a confirmé cet arrêt. Il reste en vigueur jusqu'à ce que les détenteurs reprennent.",
+    "constitutional_halt_lapsed": "Aucun arrêt n'est en vigueur. Le dernier arrêt est devenu caduc car aucune majorité des détenteurs ne l'a confirmé à temps.",
+    "constitutional_armed_yes": "Armé : une genèse est en vigueur, ses détenteurs sont installés, et ce nœud accepte cette racine de confiance ; l'arrêt d'un détenteur l'atteint donc.",
+    "constitutional_armed_no": "Non armé : l'arrêt d'un détenteur n'atteindrait pas ce nœud.",
+    "constitutional_armed_unknown": "On ne sait pas si l'arrêt d'un détenteur atteindrait ce nœud : ce nœud ne le signale pas.",
+    "constitutional_holders_count_m_unknown": "{n} détenteur(s) de l'accord. Le nœud n'a pas indiqué combien d'entre eux doivent donner leur consentement.",
     "constitutional_killswitch_disarmed": "Interrupteur d'arrêt désarmé — tous les systèmes sont nominaux",
     "constitutional_family_live": "ACTIVE",
     "constitutional_family_not_configured": "NON CONFIGURÉE",
@@ -4156,6 +4167,8 @@
     "accord_kind_reactivated": "RÉACTIVÉ — REPRIS APRÈS ARRÊT",
     "accord_kind_unknown": "TYPE INCONNU ({kind})",
     "accord_binding_reactivated": "réactivé · l'arrêt constitutionnel nommé est TERMINÉ — c'est l'opposé d'un arrêt, pas une notification.",
+    "accord_kind_confirmed": "ARRÊT CONFIRMÉ — CONFIRME L'ARRÊT EN VIGUEUR",
+    "accord_binding_confirmed": "confirmé · une majorité stricte des détenteurs confirme l'arrêt nommé déjà en vigueur. Il ne s'agit ni d'un nouvel arrêt ni d'un avis.",
     "accord_binding_unknown": "type inconnu ({kind}) — cette application ne le reconnaît pas et le traite comme quelque chose qu'elle ne connaît pas.",
     "accord_coscrub_saved": "Partiel de co-scrub enregistré dans {dir}.",
     "accord_coscrub_save_failed": "Impossible d'enregistrer dans {dir} (cette plateforme ne prend peut-être pas en charge l'écriture de fichiers).",
@@ -6172,7 +6185,11 @@
     "withdrawn": "Son auteur a retiré ce fichier. Les octets ne sont plus servis nulle part.",
     "awaiting_key": "Ses octets sont déjà présents, mais la clé de cet appareil pour eux n'est pas encore arrivée. Elle arrive automatiquement ; réessayez dans quelques instants.",
     "withheld_by_moderation": "Un modérateur de ce salon a signalé ce fichier, il reste donc masqué jusqu'à ce que vous choisissiez de le voir.",
-    "flagged_by_moderation": "un modérateur de ce salon a signalé ce fichier ; il reste dans le salon tant que le signalement est maintenu"
+    "flagged_by_moderation": "un modérateur de ce salon a signalé ce fichier ; il reste dans le salon tant que le signalement est maintenu",
+    "no_rendition": "Ce fichier n'a aucun aperçu que le nœud puisse générer.",
+    "image_too_large": "Cette image est trop volumineuse pour que le nœud puisse en générer un aperçu.",
+    "image_undecodable": "Le nœud n'a pas pu lire cette image pour en générer un aperçu.",
+    "unknown_rendition": "L'application a demandé un type d'aperçu que le nœud ne génère pas."
   },
   "notes": {
     "author_signer_unavailable": "Ce nœud ne peut pas signer en votre nom pour le moment, la note n'a donc pas été écrite.",
@@ -6516,7 +6533,9 @@
     "share_unavailable": "Le partage d'écran n'est pas encore disponible sur ce nœud.",
     "leave_reason_unknown": "Ce n'est pas une raison valable pour quitter un appel.",
     "video_two_people_only": "La vidéo et le partage d'écran fonctionnent pour l'instant uniquement dans les appels entre deux personnes. Cet appel compte plus de participants, il est donc uniquement vocal. Si votre caméra est activée, elle recommencera à transmettre lorsque l'appel reviendra à deux participants.",
-    "relay_canonical_audio_only": "Leur vidéo ne peut pas vous parvenir pour le moment : la liaison entre vous ne transporte que le son. Vous pouvez toujours les entendre."
+    "relay_canonical_audio_only": "Leur vidéo ne peut pas vous parvenir pour le moment : la liaison entre vous ne transporte que le son. Vous pouvez toujours les entendre.",
+    "share_already_live": "Vous partagez déjà votre écran.",
+    "no_share": "Vous ne partagez pas votre écran."
   },
   "decisions": {
     "not_found": "Cette décision n'est plus ouverte pour vous.",

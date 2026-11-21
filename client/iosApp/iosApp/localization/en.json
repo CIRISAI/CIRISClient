@@ -1728,6 +1728,8 @@
     "accord_sign_as_holder_usb_label": "USB folder (PQC materials)",
     "accord_start_drill": "Start drill",
     "accord_subtitle": "The founding keyholders that anchor the canonical mesh and jointly hold the kill-switch. Visible to everyone; only the accord holders can act. The app holds no keys; the node signs.",
+    "accord_edition2_offline_ceremony": "This node runs the v62 mesh. Its trust root is created offline, with the ceremony tool. For that reason this app does not offer the acts of the earlier mesh here: admitting a node, changing a canonical node, re-minting the trust root, blessing CI workers, or conferring a duty.",
+    "accord_edition_unknown": "This node has not said which mesh edition it runs, so the acts that differ between editions are not offered until it does.",
     "accord_title": "Trust Root",
     "accord_trust_1of1": "1-of-1",
     "accord_written_by": "written by {who}",
@@ -4022,6 +4024,8 @@
     "accord_kind_reactivated": "REACTIVATED — RESUMED FROM HALT",
     "accord_kind_unknown": "UNKNOWN KIND ({kind})",
     "accord_binding_reactivated": "reactivated · the named constitutional halt is ENDED — this is the opposite of a halt, not a notice.",
+    "accord_kind_confirmed": "CONFIRMED HALT — CONFIRMS THE HALT IN FORCE",
+    "accord_binding_confirmed": "confirmed · a strict majority of the holders confirms the named halt that is already in force. It is not a new halt and not a notice.",
     "accord_binding_unknown": "unknown kind ({kind}) — this app does not recognise it and treats it as nothing it knows.",
     "accord_coscrub_saved": "Saved the co-scrub partial to {dir}.",
     "accord_coscrub_save_failed": "Couldn't save to {dir} (this platform may not support file writes).",
@@ -4046,6 +4050,15 @@
     "constitutional_halt_active": "ACTIVE HALT — the agents on this node are paused",
     "constitutional_killswitch_loading": "Reading kill-switch status…",
     "constitutional_killswitch_unknown": "Kill-switch status UNKNOWN — the node did not answer, or could not read its own halt latch. This is not a report that it is disarmed.",
+    "constitutional_halt_not_halted": "No halt is in force on this node.",
+    "constitutional_halt_lone": "One holder has halted this node. The halt lapses unless a strict majority of the holders confirms it.",
+    "constitutional_halt_lone_lapses": "One holder has halted this node. The halt lapses at {time} unless a strict majority of the holders confirms it.",
+    "constitutional_halt_confirmed": "A strict majority of the holders has confirmed this halt. It stays in force until the holders resume.",
+    "constitutional_halt_lapsed": "No halt is in force. The last halt lapsed because no majority of the holders confirmed it in time.",
+    "constitutional_armed_yes": "Armed: a genesis is in force, its holders are seated, and this node accepts that trust root, so a holder's halt reaches it.",
+    "constitutional_armed_no": "Not armed: a holder's halt would not reach this node.",
+    "constitutional_armed_unknown": "Whether a holder's halt would reach this node is not known: this node does not report it.",
+    "constitutional_holders_count_m_unknown": "{n} accord holder(s). The node did not report how many of them must agree.",
     "constitutional_killswitch_disarmed": "Kill-switch disarmed — all systems nominal",
     "constitutional_family_live": "LIVE",
     "constitutional_family_not_configured": "NOT CONFIGURED",
@@ -6234,7 +6247,11 @@
     "withdrawn": "Its author withdrew this file. The bytes are no longer served anywhere.",
     "awaiting_key": "Its bytes are here, but this device's key for them hasn't arrived yet. It follows on its own; try again shortly.",
     "withheld_by_moderation": "A moderator of this room flagged this file, so it stays hidden until you choose to see it.",
-    "flagged_by_moderation": "a moderator of this room flagged this file; it stays in the room while the flag stands"
+    "flagged_by_moderation": "a moderator of this room flagged this file; it stays in the room while the flag stands",
+    "no_rendition": "This file has no preview the node can make.",
+    "image_too_large": "This image is too large for the node to make a preview.",
+    "image_undecodable": "The node couldn't read this image to make a preview.",
+    "unknown_rendition": "The app asked for a kind of preview the node doesn't make."
   },
   "notes": {
     "author_signer_unavailable": "This node can't sign as you right now, so the note wasn't written.",
@@ -6516,7 +6533,9 @@
     "share_unavailable": "Sharing your screen isn't available on this node yet.",
     "leave_reason_unknown": "That isn't a reason for leaving a call.",
     "video_two_people_only": "Video and screen sharing work in calls between two people for now. This call has more, so it's voice only. If your camera is on, it starts sending again when the call is back to two.",
-    "relay_canonical_audio_only": "Their video can't reach you right now: the route between you carries sound only. You can still hear them."
+    "relay_canonical_audio_only": "Their video can't reach you right now: the route between you carries sound only. You can still hear them.",
+    "share_already_live": "You're already sharing your screen.",
+    "no_share": "You aren't sharing your screen."
   },
   "decisions": {
     "not_found": "That decision isn't open for you any more.",

@@ -1525,6 +1525,8 @@
     "accord_sign_as_holder_usb_label": "Cartella USB (materiali PQC)",
     "accord_start_drill": "Avvia esercitazione",
     "accord_subtitle": "I portatori di chiavi fondatori che ancorano la mesh canonica e detengono congiuntamente il kill-switch. Visibile a tutti; solo i detentori dell'accord possono agire. L'app non detiene chiavi; firma il nodo.",
+    "accord_edition2_offline_ceremony": "Questo nodo esegue la mesh v62. La sua radice di fiducia viene creata offline, con lo strumento di cerimonia. Per questo motivo questa app non offre qui le azioni della mesh precedente: ammettere un nodo, cambiare un nodo canonico, ri-coniare la radice di fiducia, benedire i worker CI, o conferire un dovere.",
+    "accord_edition_unknown": "Questo nodo non ha dichiarato quale edizione della mesh esegue, quindi le azioni che differiscono tra le edizioni non vengono offerte finché non lo farà.",
     "accord_title": "Radice di Fiducia",
     "accord_trust_1of1": "1 di 1",
     "adapter_add": "Aggiungi Adattatore",
@@ -4103,6 +4105,8 @@
     "accord_kind_reactivated": "RIATTIVATO — RIPRESO DOPO L'ARRESTO",
     "accord_kind_unknown": "TIPO SCONOSCIUTO ({kind})",
     "accord_binding_reactivated": "riattivato · l'arresto costituzionale indicato è TERMINATO — è l'opposto di un arresto, non un avviso.",
+    "accord_kind_confirmed": "ARRESTO CONFERMATO — CONFERMA L'ARRESTO IN VIGORE",
+    "accord_binding_confirmed": "confermato · una maggioranza netta dei detentori conferma l'arresto indicato che è già in vigore. Non è un nuovo arresto né un avviso.",
     "accord_binding_unknown": "tipo sconosciuto ({kind}) — questa app non lo riconosce e lo tratta come qualcosa che non le è noto.",
     "accord_coscrub_saved": "Parziale di co-scrub salvato in {dir}.",
     "accord_coscrub_save_failed": "Non è stato possibile salvare in {dir} (questa piattaforma potrebbe non supportare la scrittura di file).",
@@ -4127,6 +4131,15 @@
     "constitutional_halt_active": "ARRESTO ATTIVO — gli agenti su questo nodo sono in pausa",
     "constitutional_killswitch_loading": "Lettura dello stato del kill-switch…",
     "constitutional_killswitch_unknown": "Stato del kill-switch SCONOSCIUTO — il nodo non ha risposto, oppure non è riuscito a leggere il proprio blocco di arresto. Questo non è un segnale che sia disattivato.",
+    "constitutional_halt_not_halted": "Nessun arresto è in vigore su questo nodo.",
+    "constitutional_halt_lone": "Un detentore ha arrestato questo nodo. L'arresto decade a meno che una maggioranza netta dei detentori non lo confermi.",
+    "constitutional_halt_lone_lapses": "Un detentore ha arrestato questo nodo. L'arresto decade alle {time} a meno che una maggioranza netta dei detentori non lo confermi.",
+    "constitutional_halt_confirmed": "Una maggioranza netta dei detentori ha confermato questo arresto. Resta in vigore finché i detentori non riprendono.",
+    "constitutional_halt_lapsed": "Nessun arresto è in vigore. L'ultimo arresto è decaduto perché nessuna maggioranza dei detentori lo ha confermato in tempo.",
+    "constitutional_armed_yes": "Armato: una genesi è in vigore, i suoi detentori sono insediati, e questo nodo accetta quella radice di fiducia, quindi l'arresto di un detentore lo raggiunge.",
+    "constitutional_armed_no": "Non armato: l'arresto di un detentore non raggiungerebbe questo nodo.",
+    "constitutional_armed_unknown": "Non è noto se l'arresto di un detentore raggiungerebbe questo nodo: questo nodo non lo comunica.",
+    "constitutional_holders_count_m_unknown": "{n} detentore/i dell'accord. Il nodo non ha comunicato quanti di essi debbano essere d'accordo.",
     "constitutional_killswitch_disarmed": "Kill-switch disarmato — tutti i sistemi nominali",
     "constitutional_family_live": "ATTIVA",
     "constitutional_family_not_configured": "NON CONFIGURATA",
@@ -6172,7 +6185,11 @@
     "withdrawn": "Il suo autore ha ritirato questo file. I byte non vengono più forniti da nessuna parte.",
     "awaiting_key": "I suoi byte sono qui, ma la chiave di questo dispositivo per essi non è ancora arrivata. Arriverà da sola; riprova a breve.",
     "withheld_by_moderation": "Un moderatore di questa stanza ha segnalato questo file, quindi resta nascosto finché non scegli di vederlo.",
-    "flagged_by_moderation": "un moderatore di questa stanza ha segnalato questo file; resta nella stanza finché la segnalazione è valida"
+    "flagged_by_moderation": "un moderatore di questa stanza ha segnalato questo file; resta nella stanza finché la segnalazione è valida",
+    "no_rendition": "Questo file non ha un'anteprima che il nodo possa generare.",
+    "image_too_large": "Questa immagine è troppo grande perché il nodo possa generarne un'anteprima.",
+    "image_undecodable": "Il nodo non è riuscito a leggere questa immagine per generarne un'anteprima.",
+    "unknown_rendition": "L'app ha richiesto un tipo di anteprima che il nodo non genera."
   },
   "notes": {
     "author_signer_unavailable": "Questo nodo non può firmare come te in questo momento, quindi la nota non è stata scritta.",
@@ -6516,7 +6533,9 @@
     "share_unavailable": "La condivisione dello schermo non è ancora disponibile su questo nodo.",
     "leave_reason_unknown": "Questo non è un motivo per lasciare la chiamata.",
     "video_two_people_only": "Per ora, video e condivisione dello schermo funzionano nelle chiamate tra due persone. Questa chiamata ne ha di più, quindi è solo vocale. Se la tua fotocamera è attiva, riprenderà a trasmettere quando la chiamata tornerà a due persone.",
-    "relay_canonical_audio_only": "Il loro video non può raggiungerti in questo momento: il percorso tra voi trasporta solo l'audio. Puoi comunque sentirli."
+    "relay_canonical_audio_only": "Il loro video non può raggiungerti in questo momento: il percorso tra voi trasporta solo l'audio. Puoi comunque sentirli.",
+    "share_already_live": "Stai già condividendo lo schermo.",
+    "no_share": "Non stai condividendo lo schermo."
   },
   "decisions": {
     "not_found": "Questa decisione non è più aperta per te.",

@@ -88,6 +88,12 @@ enum class InvocationKind {
     DRILL,
     /** `lifecycle:active` — the resumption from a constitutional halt (CC 4.2.1.3). */
     LIFECYCLE_ACTIVE,
+    /**
+     * `lifecycle:confirmed` — the CONFIRMATION of the named halt already in force
+     * (CC 4.2.1.2, the fifth kind): never a fresh halt and never a notify. A
+     * strict majority of the standing roster confirming it stops its fuse.
+     */
+    LIFECYCLE_CONFIRMED,
     UNKNOWN;
 
     companion object {
@@ -97,6 +103,7 @@ enum class InvocationKind {
             "notify" -> NOTIFY
             "drill" -> DRILL
             "lifecycle:active" -> LIFECYCLE_ACTIVE
+            "lifecycle:confirmed" -> LIFECYCLE_CONFIRMED
             else -> UNKNOWN
         }
     }

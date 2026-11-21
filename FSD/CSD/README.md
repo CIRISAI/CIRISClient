@@ -13,116 +13,121 @@ where the card is drafted or asked for. **To adopt a reserved card**, add its fi
 delete its row in the same commit; `--check` refuses a card on a number that is still
 reserved. **A retired number is never reused.**
 
-**104 cards** — 9 envisioned · 17 sketched · 70 building · 8 testable. **13 reserved**, **2 retired**.
+**104 cards** — 9 envisioned · 17 sketched · 70 building · 8 testable. **14 reserved**, **2 retired**.
 
 ## Cards
 
-| CSD | Card | Stage | Flow |
-|---|---|---|---|
-| [CSD-002](CSD-002-environment-card.md) | Environment graph (what this circle has, wants and can lend) | `building` | none yet |
-| [CSD-003](CSD-003-constitutional-card.md) | Constitutional card — is the halt authority armed, and who holds it | `building` | none yet |
-| [CSD-004](CSD-004-capacity-attestations.md) | Federation capacity attestations (Health & Reputation) | `building` | none yet |
-| [CSD-005](CSD-005-people.md) | People (the Contacts surface, rebuilt on the primitives) | `testable` | `testing/flows/csd-005-people.yaml` |
-| [CSD-006](CSD-006-receipt.md) | The receipt (the template every CEG item asserts) | `testable` | `testing/flows/csd-006-receipt.yaml` |
-| [CSD-007](CSD-007-files.md) | Files (the drive plane) | `building` | `testing/flows/drafts/csd-007-files.yaml` |
-| [CSD-008](CSD-008-notes-to-self.md) | Notes to self (the chat of one, in Just me › Chats) | `testable` | `testing/flows/csd-008-notes-to-self.yaml` |
-| [CSD-010](CSD-010-interact.md) | Interact (the agent conversation, in Just me › Chats) | `building` | none yet |
-| [CSD-011](CSD-011-sessions.md) | Cognitive Sessions (the agent's own state, under This node) | `building` | none yet |
-| [CSD-012](CSD-012-scheduler.md) | Scheduler (what the agent will do later, under This node) | `building` | none yet |
-| [CSD-013](CSD-013-tickets.md) | Tickets (the duties other people's requests put on this node) | `building` | none yet |
-| [CSD-014](CSD-014-tools.md) | Tools (what the agent can reach for, under This node) | `building` | none yet |
-| [CSD-015](CSD-015-skills.md) | Skills (importing someone else's code into your agent) | `building` | none yet |
-| [CSD-016](CSD-016-services.md) | Services (what is running here, under This node) | `building` | none yet |
-| [CSD-020](CSD-020-adapters.md) | Adapters (the channels the agent acts through) | `building` | none yet |
-| [CSD-021](CSD-021-llm-settings.md) | LLM (what the agent thinks with) | `building` | none yet |
-| [CSD-022](CSD-022-agent-settings.md) | Settings (every build's, and the agent's, on one screen) | `building` | none yet |
-| [CSD-023](CSD-023-config.md) | Config (what this node is running, and what a root asks of it) | `building` | none yet |
-| [CSD-024](CSD-024-runtime.md) | Runtime (the agent's reasoning, stopped mid-thought) | `building` | none yet |
-| [CSD-025](CSD-025-system.md) | System (is this node well, and how do I know) | `building` | none yet |
-| [CSD-026](CSD-026-client-interface.md) | Interface (how this device draws the agent) | `building` | none yet |
-| [CSD-027](CSD-027-memory.md) | Memory (what the node holds, as a list) | `building` | none yet |
-| [CSD-028](CSD-028-graph-memory.md) | Graph (the same memory, drawn) | `building` | none yet |
-| [CSD-029](CSD-029-logs.md) | Logs (what happened, from the node or from the brain) | `building` | none yet |
-| [CSD-030](CSD-030-telemetry.md) | Telemetry (what the agent costs, and where that goes) | `envisioned` | none yet |
-| [CSD-031](CSD-031-transport.md) | Transport (how this node is reachable, and over what radio) | `building` | none yet |
-| [CSD-032](CSD-032-network-identity.md) | This node's federation identity (the Identity tile) | `building` | `testing/flows/drafts/csd-032-network-identity.yaml` |
-| [CSD-033](CSD-033-network-peers.md) | The peers this node holds (the Peers tile) | `building` | `testing/flows/drafts/csd-033-network-peers.yaml` |
-| [CSD-035](CSD-035-nodes.md) | Nodes (My things › This node › Nodes) | `building` | none yet |
-| [CSD-036](CSD-036-network-ops.md) | Network (My things › This node › Network) | `building` | `testing/flows/drafts/csd-036-network-ops.yaml` |
-| [CSD-037](CSD-037-identity-management.md) | My keys (My things › Devices & keys) | `sketched` | none yet |
-| [CSD-039](CSD-039-data.md) | Data (My things › Everything I shared › Data) | `building` | `testing/flows/drafts/csd-039-data-erasure.yaml` |
-| [CSD-040](CSD-040-storage.md) | Storage (My things › Everything I shared › Storage) | `building` | `testing/flows/drafts/csd-040-storage.yaml` |
-| [CSD-041](CSD-041-wise-authority.md) | Wise Authority (My things › Someone I trust) | `building` | none yet |
-| [CSD-042](CSD-042-help.md) | Help (My things › Help) | `sketched` | none yet |
-| [CSD-043](CSD-043-users.md) | Users (Communities and affiliations › People) | `building` | none yet |
-| [CSD-044](CSD-044-health-reputation.md) | Health & Reputation, the card in its circles (Decisions) | `sketched` | none yet |
-| [CSD-045](CSD-045-node-self-standing.md) | This node's own standing (shed load · stop accepting · legal compulsion) | `building` | `testing/flows/drafts/csd-045-node-self-standing.yaml` |
-| [CSD-046](CSD-046-network-trust-graph.md) | The peer set as a graph (the Trust graph tile; the Map tile folded in) | `building` | `testing/flows/drafts/csd-046-network-trust-graph.yaml` |
-| [CSD-047](CSD-047-network-content.md) | Fetch content from a peer by its digest (the Content tile) | `testable` | `testing/flows/csd-047-network-content.yaml` |
-| [CSD-048](CSD-048-network-interfaces.md) | The transports this node carries traffic on (the Interfaces tile) | `building` | `testing/flows/drafts/csd-048-network-interfaces.yaml` |
-| [CSD-049](CSD-049-network-queue.md) | What this node has sent, received and is still carrying (the Queue tile) | `building` | `testing/flows/drafts/csd-049-network-queue.yaml` |
-| [CSD-050](CSD-050-layer-hub.md) | The layer hub (one card, four scopes) | `building` | none yet |
-| [CSD-051](CSD-051-layer-global-commons.md) | Everyone's Rules card opens the radio settings | `building` | none yet |
-| [CSD-052](CSD-052-trust.md) | Trust (the attestation ladder, misnamed and misplaced) | `building` | none yet |
-| [CSD-053](CSD-053-manage-consent.md) | Manage Consent (a grant, and the way back) | `building` | `testing/flows/drafts/csd-053-manage-consent.yaml` |
-| [CSD-054](CSD-054-consent.md) | Consent (the subject's half, offered on a host that does not serve it) | `building` | `testing/flows/drafts/csd-054-partnership-queue.yaml` |
-| [CSD-055](CSD-055-delegations.md) | Delegations (offer, approve, refuse, revoke) | `building` | none yet |
-| [CSD-056](CSD-056-billing.md) | Billing (a card CC keeps off the wire, filed under a circle's rules) | `building` | none yet |
-| [CSD-057](CSD-057-wallet.md) | Wallet (real money, in a circle, bound to a family that does not exist) | `testable` | `testing/flows/csd-057-wallet.yaml` |
-| [CSD-065](CSD-065-moderation.md) | Moderation (the duty, the existence invariant, and the brake) | `building` | none yet |
-| [CSD-066](CSD-066-child-safety.md) | Child Safety (the protective posture, and the opt-in that must never be silent) | `building` | `testing/flows/drafts/csd-066-child-safety.yaml` |
-| [CSD-067](CSD-067-accord.md) | Accord (Trust Root) — the kill switch, its roster, and the four kinds | `building` | none yet |
-| [CSD-068](CSD-068-provision-accord-holder.md) | Provision Accord Holder (the custody floor, in three steps) | `testable` | `testing/flows/csd-068-provision-accord-holder.yaml` |
-| [CSD-069](CSD-069-accord-ceremony.md) | Accord Genesis Ceremony (six keys, three humans, one artifact) | `building` | `testing/flows/drafts/csd-069-accord-ceremony.yaml` |
-| [CSD-070](CSD-070-commons.md) | Commons (1-of-N to protect, m-of-n to undo — and eight distinct zeroes) | `building` | none yet |
-| [CSD-071](CSD-071-audit.md) | Audit (one card, five homes, and one list) | `building` | none yet |
-| [CSD-080](CSD-080-startup.md) | Startup (the screen before there is a shell) | `building` | none yet |
-| [CSD-081](CSD-081-login.md) | Login (the one door, and which one it is) | `building` | `testing/flows/drafts/csd-081-login.yaml` |
-| [CSD-082](CSD-082-setup-with-ai.md) | Setup, the with-AI pass (You → Join the federation → AI → Complete) | `building` | `testing/flows/drafts/csd-082-setup-with-ai.yaml` |
-| [CSD-083](CSD-083-setup-without-ai.md) | Setup, the run-without-AI pass (You → Join the federation → Complete) | `building` | `testing/flows/drafts/csd-083-setup-without-ai.yaml` |
-| [CSD-084](CSD-084-server-connection.md) | Server connection (which node this client is talking to) | `building` | none yet |
-| [CSD-085](CSD-085-claim-node.md) | Claim a node (binding a responsible party to an unowned key) | `building` | `testing/flows/drafts/csd-085-claim-node.yaml` |
-| [CSD-086](CSD-086-add-federation-id.md) | Add Federation ID (the catch-up, not the wizard again) | `building` | none yet |
-| [CSD-087](CSD-087-verify-agent.md) | Verify an agent build (the surface shipped ahead of its API) | `building` | `testing/flows/drafts/csd-087-verify-agent.yaml` |
-| [CSD-088](CSD-088-first-run.md) | First run (the wizard's order, and what every choice gives and costs) | `sketched` | none yet |
-| [CSD-090](CSD-090-duty-conferral.md) | Duty Conferral (two holders hand someone the authority to moderate) | `building` | `testing/flows/drafts/csd-090-duty-conferral.yaml` |
-| [CSD-091](CSD-091-user-chat.md) | User chat (one room, two people, every message an attestation) | `building` | `testing/flows/drafts/csd-091-user-chat.yaml` |
-| [CSD-092](CSD-092-share-contact-code.md) | Share my contact code (a card on People) | `testable` | `testing/flows/csd-092-share-contact-code.yaml` |
-| [CSD-093](CSD-093-show-approval-code.md) | Add this device to an existing CIRIS ID (the new device, first run) | `building` | `testing/flows/drafts/csd-093-add-this-device.yaml` |
-| [CSD-094](CSD-094-approve-new-device.md) | Approve a new device (the device you already have) | `building` | `testing/flows/drafts/csd-094-approve-new-device.yaml` |
-| [CSD-095](CSD-095-self-key-roster.md) | Changes to your devices (the self-key roster's held changes) | `sketched` | none yet |
-| [CSD-100](CSD-100-household.md) | The household (the Family hub, on Family › Rules) | `building` | `testing/flows/drafts/csd-100-household.yaml` |
-| [CSD-101](CSD-101-household-members.md) | Household members (the roster, on Family › People) | `testable` | `testing/flows/csd-101-household-members.yaml` |
-| [CSD-102](CSD-102-communities.md) | Communities and affiliations: the community itself (Rules) | `building` | `testing/flows/drafts/csd-102-communities.yaml` |
-| [CSD-103](CSD-103-community-roster-and-rooms.md) | Communities and affiliations: who is in it (People) and the rooms (Chats) | `building` | `testing/flows/drafts/csd-103-community-roster.yaml` |
-| [CSD-104](CSD-104-key-verification.md) | Verify someone's key (the peer detail's short-code ceremony) | `building` | `testing/flows/drafts/csd-104-key-verification.yaml` |
-| [CSD-105](CSD-105-trust-root.md) | This node's trust root (the Accord card's detail: posture, adopt a seed, un-trust) | `building` | `testing/flows/drafts/csd-105-trust-root.yaml` |
-| [CSD-106](CSD-106-membership-invites.md) | Invitations to a household or a community (nobody joins without saying yes) | `building` | `testing/flows/drafts/csd-106-membership-invites.yaml` |
-| [CSD-107](CSD-107-file-custody.md) | Where is this file (file custody, one card from every file surface) | `building` | `testing/flows/drafts/csd-107-file-custody.yaml` |
-| [CSD-108](CSD-108-steward-purge.md) | Steward purge (remove rows that never belonged, under the global trust root) | `sketched` | none yet |
-| [CSD-109](CSD-109-contact-requests.md) | Contact requests (someone added you; you say yes, or ignore it) | `building` | `testing/flows/drafts/csd-109-contact-requests.yaml` |
-| [CSD-110](CSD-110-community-chats.md) | The rooms you talk in (Communities and affiliations › Chats) | `building` | none yet |
-| [CSD-120](CSD-120-affiliation.md) | Affiliation (an organization is a community gathered by necessity) | `envisioned` | none yet |
-| [CSD-121](CSD-121-members-and-roles.md) | Members and roles (a role is a delegation, a member is a person who said yes) | `envisioned` | none yet |
-| [CSD-122](CSD-122-licensure.md) | Licensure (any authority, under its own key, says who may practise) | `envisioned` | none yet |
-| [CSD-123](CSD-123-partners.md) | Partners (recognition, role, forums: the half of a partner that is not a licence) | `envisioned` | none yet |
-| [CSD-124](CSD-124-authority-delegations.md) | Authority delegations (the right to issue, handed down one attenuating step at a time) | `envisioned` | none yet |
-| [CSD-125](CSD-125-grants.md) | Grants (access to one thing, from its owner, and never passed on) | `envisioned` | none yet |
-| [CSD-126](CSD-126-affiliation-keys.md) | Affiliation keys (register, rotate, revoke, escrow — and the registry holds nothing) | `envisioned` | none yet |
-| [CSD-131](CSD-131-owner-requests.md) | Requests from your nodes (sign or decide) | `sketched` | none yet |
-| [CSD-132](CSD-132-owned-agents.md) | Agents you own (My things › Devices & keys) | `building` | none yet |
-| [CSD-133](CSD-133-my-devices.md) | My devices (My things › Devices & keys) | `building` | none yet |
-| [CSD-134](CSD-134-calls.md) | Calls (a room's live streams, and whether this one is saved) | `sketched` | none yet |
-| [CSD-135](CSD-135-feeds.md) | Feeds (what this node holds, by circle: mine, my communities', everyone's) | `sketched` | none yet |
-| [CSD-136](CSD-136-library-article.md) | Library: an encyclopedia article (body, revisions, corrections, citations, quality) | `sketched` | none yet |
-| [CSD-137](CSD-137-news.md) | News (headline, publisher, byline, how long it holds, and the publisher's standing) | `sketched` | none yet |
-| [CSD-138](CSD-138-dictionary.md) | Dictionary (no content kind exists; what must be decided first) | `envisioned` | none yet |
-| [CSD-139](CSD-139-posts-and-comments.md) | Posts and comments (a blog post, the comments on it, and the replies to those) | `sketched` | none yet |
-| [CSD-140](CSD-140-media-gallery.md) | Media gallery (images, audio, video, film and 3D shared at a circle, each with its description and AI disclosure) | `sketched` | none yet |
-| [CSD-141](CSD-141-events.md) | Events (a listing, who is going, and whether it is still on) | `sketched` | none yet |
-| [CSD-142](CSD-142-observations.md) | Observations (a notice others can support, rebut or ask to clarify) | `sketched` | none yet |
-| [CSD-143](CSD-143-drafts-and-bookmarks.md) | Notes, drafts and bookmarks (private until the owner shares one wider) | `sketched` | none yet |
-| [CSD-144](CSD-144-registry-lookups.md) | Registry lookups (a build, a partner, a revocation, the transparency witnesses) | `sketched` | none yet |
+**Code gaps** counts the places a card and the code are known to disagree, each
+declared in the card's `csd:code_gaps` block and proven against the tree by
+`packaging/check_csd_code_gaps.py` (`--list` prints them). A card with gaps is
+ahead of, or behind, its code: **11 cards, 18 gaps** today.
+
+| CSD | Card | Stage | Code gaps | Flow |
+|---|---|---|---|---|
+| [CSD-002](CSD-002-environment-card.md) | Environment graph (what this circle has, wants and can lend) | `building` | — | none yet |
+| [CSD-003](CSD-003-constitutional-card.md) | Constitutional card — is the halt authority armed, and who holds it | `building` | **1** | none yet |
+| [CSD-004](CSD-004-capacity-attestations.md) | Federation capacity attestations (Health & Reputation) | `building` | — | none yet |
+| [CSD-005](CSD-005-people.md) | People (the Contacts surface, rebuilt on the primitives) | `testable` | — | `testing/flows/csd-005-people.yaml` |
+| [CSD-006](CSD-006-receipt.md) | The receipt (the template every CEG item asserts) | `testable` | — | `testing/flows/csd-006-receipt.yaml` |
+| [CSD-007](CSD-007-files.md) | Files (the drive plane) | `building` | — | `testing/flows/drafts/csd-007-files.yaml` |
+| [CSD-008](CSD-008-notes-to-self.md) | Notes to self (the chat of one, in Just me › Chats) | `testable` | — | `testing/flows/csd-008-notes-to-self.yaml` |
+| [CSD-010](CSD-010-interact.md) | Interact (the agent conversation, in Just me › Chats) | `building` | — | none yet |
+| [CSD-011](CSD-011-sessions.md) | Cognitive Sessions (the agent's own state, under This node) | `building` | — | none yet |
+| [CSD-012](CSD-012-scheduler.md) | Scheduler (what the agent will do later, under This node) | `building` | — | none yet |
+| [CSD-013](CSD-013-tickets.md) | Tickets (the duties other people's requests put on this node) | `building` | — | none yet |
+| [CSD-014](CSD-014-tools.md) | Tools (what the agent can reach for, under This node) | `building` | — | none yet |
+| [CSD-015](CSD-015-skills.md) | Skills (importing someone else's code into your agent) | `building` | — | none yet |
+| [CSD-016](CSD-016-services.md) | Services (what is running here, under This node) | `building` | — | none yet |
+| [CSD-020](CSD-020-adapters.md) | Adapters (the channels the agent acts through) | `building` | — | none yet |
+| [CSD-021](CSD-021-llm-settings.md) | LLM (what the agent thinks with) | `building` | — | none yet |
+| [CSD-022](CSD-022-agent-settings.md) | Settings (every build's, and the agent's, on one screen) | `building` | — | none yet |
+| [CSD-023](CSD-023-config.md) | Config (what this node is running, and what a root asks of it) | `building` | — | none yet |
+| [CSD-024](CSD-024-runtime.md) | Runtime (the agent's reasoning, stopped mid-thought) | `building` | — | none yet |
+| [CSD-025](CSD-025-system.md) | System (is this node well, and how do I know) | `building` | — | none yet |
+| [CSD-026](CSD-026-client-interface.md) | Interface (how this device draws the agent) | `building` | — | none yet |
+| [CSD-027](CSD-027-memory.md) | Memory (what the node holds, as a list) | `building` | — | none yet |
+| [CSD-028](CSD-028-graph-memory.md) | Graph (the same memory, drawn) | `building` | — | none yet |
+| [CSD-029](CSD-029-logs.md) | Logs (what happened, from the node or from the brain) | `building` | — | none yet |
+| [CSD-030](CSD-030-telemetry.md) | Telemetry (what the agent costs, and where that goes) | `envisioned` | — | none yet |
+| [CSD-031](CSD-031-transport.md) | Transport (how this node is reachable, and over what radio) | `building` | — | none yet |
+| [CSD-032](CSD-032-network-identity.md) | This node's federation identity (the Identity tile) | `building` | **1** | `testing/flows/drafts/csd-032-network-identity.yaml` |
+| [CSD-033](CSD-033-network-peers.md) | The peers this node holds (the Peers tile) | `building` | — | `testing/flows/drafts/csd-033-network-peers.yaml` |
+| [CSD-035](CSD-035-nodes.md) | Nodes (My things › This node › Nodes) | `building` | — | none yet |
+| [CSD-036](CSD-036-network-ops.md) | Network (My things › This node › Network) | `building` | — | `testing/flows/drafts/csd-036-network-ops.yaml` |
+| [CSD-037](CSD-037-identity-management.md) | My keys (My things › Devices & keys) | `sketched` | — | none yet |
+| [CSD-039](CSD-039-data.md) | Data (My things › Everything I shared › Data) | `building` | **1** | `testing/flows/drafts/csd-039-data-erasure.yaml` |
+| [CSD-040](CSD-040-storage.md) | Storage (My things › Everything I shared › Storage) | `building` | — | `testing/flows/drafts/csd-040-storage.yaml` |
+| [CSD-041](CSD-041-wise-authority.md) | Wise Authority (My things › Someone I trust) | `building` | — | none yet |
+| [CSD-042](CSD-042-help.md) | Help (My things › Help) | `sketched` | — | none yet |
+| [CSD-043](CSD-043-users.md) | Users (Communities and affiliations › People) | `building` | — | none yet |
+| [CSD-044](CSD-044-health-reputation.md) | Health & Reputation, the card in its circles (Decisions) | `sketched` | — | none yet |
+| [CSD-045](CSD-045-node-self-standing.md) | This node's own standing (shed load · stop accepting · legal compulsion) | `building` | — | `testing/flows/drafts/csd-045-node-self-standing.yaml` |
+| [CSD-046](CSD-046-network-trust-graph.md) | The peer set as a graph (the Trust graph tile; the Map tile folded in) | `building` | — | `testing/flows/drafts/csd-046-network-trust-graph.yaml` |
+| [CSD-047](CSD-047-network-content.md) | Fetch content from a peer by its digest (the Content tile) | `testable` | — | `testing/flows/csd-047-network-content.yaml` |
+| [CSD-048](CSD-048-network-interfaces.md) | The transports this node carries traffic on (the Interfaces tile) | `building` | — | `testing/flows/drafts/csd-048-network-interfaces.yaml` |
+| [CSD-049](CSD-049-network-queue.md) | What this node has sent, received and is still carrying (the Queue tile) | `building` | — | `testing/flows/drafts/csd-049-network-queue.yaml` |
+| [CSD-050](CSD-050-layer-hub.md) | The layer hub (one card, four scopes) | `building` | — | none yet |
+| [CSD-051](CSD-051-layer-global-commons.md) | Everyone's Rules card opens the radio settings | `building` | — | none yet |
+| [CSD-052](CSD-052-trust.md) | Trust (the attestation ladder, misnamed and misplaced) | `building` | — | none yet |
+| [CSD-053](CSD-053-manage-consent.md) | Manage Consent (a grant, and the way back) | `building` | — | `testing/flows/drafts/csd-053-manage-consent.yaml` |
+| [CSD-054](CSD-054-consent.md) | Consent (the subject's half, offered on a host that does not serve it) | `building` | — | `testing/flows/drafts/csd-054-partnership-queue.yaml` |
+| [CSD-055](CSD-055-delegations.md) | Delegations (offer, approve, refuse, revoke) | `building` | — | none yet |
+| [CSD-056](CSD-056-billing.md) | Billing (a card CC keeps off the wire, filed under a circle's rules) | `building` | — | none yet |
+| [CSD-057](CSD-057-wallet.md) | Wallet (real money, in a circle, bound to a family that does not exist) | `testable` | — | `testing/flows/csd-057-wallet.yaml` |
+| [CSD-065](CSD-065-moderation.md) | Moderation (the duty, the existence invariant, and the brake) | `building` | **1** | none yet |
+| [CSD-066](CSD-066-child-safety.md) | Child Safety (the protective posture, and the opt-in that must never be silent) | `building` | — | `testing/flows/drafts/csd-066-child-safety.yaml` |
+| [CSD-067](CSD-067-accord.md) | Accord (Trust Root) — the kill switch, its roster, and the five kinds | `building` | **5** | none yet |
+| [CSD-068](CSD-068-provision-accord-holder.md) | Provision Accord Holder (the custody floor, in three steps) | `testable` | **2** | `testing/flows/csd-068-provision-accord-holder.yaml` |
+| [CSD-069](CSD-069-accord-ceremony.md) | Accord Genesis Ceremony (six keys, three humans, one artifact) | `building` | **1** | `testing/flows/drafts/csd-069-accord-ceremony.yaml` |
+| [CSD-070](CSD-070-commons.md) | Commons (1-of-N to protect, m-of-n to undo — and eight distinct zeroes) | `building` | — | none yet |
+| [CSD-071](CSD-071-audit.md) | Audit (one card, five homes, and one list) | `building` | — | none yet |
+| [CSD-080](CSD-080-startup.md) | Startup (the screen before there is a shell) | `building` | — | none yet |
+| [CSD-081](CSD-081-login.md) | Login (the one door, and which one it is) | `building` | — | `testing/flows/drafts/csd-081-login.yaml` |
+| [CSD-082](CSD-082-setup-with-ai.md) | Setup, the with-AI pass (You → Join the federation → AI → Complete) | `building` | **1** | `testing/flows/drafts/csd-082-setup-with-ai.yaml` |
+| [CSD-083](CSD-083-setup-without-ai.md) | Setup, the run-without-AI pass (You → Join the federation → Complete) | `building` | **1** | `testing/flows/drafts/csd-083-setup-without-ai.yaml` |
+| [CSD-084](CSD-084-server-connection.md) | Server connection (which node this client is talking to) | `building` | — | none yet |
+| [CSD-085](CSD-085-claim-node.md) | Claim a node (binding a responsible party to an unowned key) | `building` | — | `testing/flows/drafts/csd-085-claim-node.yaml` |
+| [CSD-086](CSD-086-add-federation-id.md) | Add Federation ID (the catch-up, not the wizard again) | `building` | — | none yet |
+| [CSD-087](CSD-087-verify-agent.md) | Verify an agent build (the surface shipped ahead of its API) | `building` | — | `testing/flows/drafts/csd-087-verify-agent.yaml` |
+| [CSD-088](CSD-088-first-run.md) | First run (the wizard's order, and what every choice gives and costs) | `sketched` | — | none yet |
+| [CSD-090](CSD-090-duty-conferral.md) | Duty Conferral (two holders hand someone the authority to moderate) | `building` | **1** | `testing/flows/drafts/csd-090-duty-conferral.yaml` |
+| [CSD-091](CSD-091-user-chat.md) | User chat (one room, two people, every message an attestation) | `building` | — | `testing/flows/drafts/csd-091-user-chat.yaml` |
+| [CSD-092](CSD-092-share-contact-code.md) | Share my contact code (a card on People) | `testable` | — | `testing/flows/csd-092-share-contact-code.yaml` |
+| [CSD-093](CSD-093-show-approval-code.md) | Add this device to an existing CIRIS ID (the new device, first run) | `building` | — | `testing/flows/drafts/csd-093-add-this-device.yaml` |
+| [CSD-094](CSD-094-approve-new-device.md) | Approve a new device (the device you already have) | `building` | — | `testing/flows/drafts/csd-094-approve-new-device.yaml` |
+| [CSD-095](CSD-095-self-key-roster.md) | Changes to your devices (the self-key roster's held changes) | `sketched` | — | none yet |
+| [CSD-100](CSD-100-household.md) | The household (the Family hub, on Family › Rules) | `building` | — | `testing/flows/drafts/csd-100-household.yaml` |
+| [CSD-101](CSD-101-household-members.md) | Household members (the roster, on Family › People) | `testable` | — | `testing/flows/csd-101-household-members.yaml` |
+| [CSD-102](CSD-102-communities.md) | Communities and affiliations: the community itself (Rules) | `building` | — | `testing/flows/drafts/csd-102-communities.yaml` |
+| [CSD-103](CSD-103-community-roster-and-rooms.md) | Communities and affiliations: who is in it (People) and the rooms (Chats) | `building` | — | `testing/flows/drafts/csd-103-community-roster.yaml` |
+| [CSD-104](CSD-104-key-verification.md) | Verify someone's key (the peer detail's short-code ceremony) | `building` | — | `testing/flows/drafts/csd-104-key-verification.yaml` |
+| [CSD-105](CSD-105-trust-root.md) | This node's trust root (the Accord card's detail: posture, adopt a seed, un-trust) | `building` | **3** | `testing/flows/drafts/csd-105-trust-root.yaml` |
+| [CSD-106](CSD-106-membership-invites.md) | Invitations to a household or a community (nobody joins without saying yes) | `building` | — | `testing/flows/drafts/csd-106-membership-invites.yaml` |
+| [CSD-107](CSD-107-file-custody.md) | Where is this file (file custody, one card from every file surface) | `building` | — | `testing/flows/drafts/csd-107-file-custody.yaml` |
+| [CSD-108](CSD-108-steward-purge.md) | Steward purge (remove rows that never belonged, under the global trust root) | `sketched` | — | none yet |
+| [CSD-109](CSD-109-contact-requests.md) | Contact requests (someone added you; you say yes, or ignore it) | `building` | — | `testing/flows/drafts/csd-109-contact-requests.yaml` |
+| [CSD-110](CSD-110-community-chats.md) | The rooms you talk in (Communities and affiliations › Chats) | `building` | — | none yet |
+| [CSD-120](CSD-120-affiliation.md) | Affiliation (an organization is a community gathered by necessity) | `envisioned` | — | none yet |
+| [CSD-121](CSD-121-members-and-roles.md) | Members and roles (a role is a delegation, a member is a person who said yes) | `envisioned` | — | none yet |
+| [CSD-122](CSD-122-licensure.md) | Licensure (any authority, under its own key, says who may practise) | `envisioned` | — | none yet |
+| [CSD-123](CSD-123-partners.md) | Partners (recognition, role, forums: the half of a partner that is not a licence) | `envisioned` | — | none yet |
+| [CSD-124](CSD-124-authority-delegations.md) | Authority delegations (the right to issue, handed down one attenuating step at a time) | `envisioned` | — | none yet |
+| [CSD-125](CSD-125-grants.md) | Grants (access to one thing, from its owner, and never passed on) | `envisioned` | — | none yet |
+| [CSD-126](CSD-126-affiliation-keys.md) | Affiliation keys (register, rotate, revoke, escrow — and the registry holds nothing) | `envisioned` | — | none yet |
+| [CSD-131](CSD-131-owner-requests.md) | Requests from your nodes (sign or decide) | `sketched` | — | none yet |
+| [CSD-132](CSD-132-owned-agents.md) | Agents you own (My things › Devices & keys) | `building` | — | none yet |
+| [CSD-133](CSD-133-my-devices.md) | My devices (My things › Devices & keys) | `building` | — | none yet |
+| [CSD-134](CSD-134-calls.md) | Calls (a room's live streams, and whether this one is saved) | `sketched` | — | none yet |
+| [CSD-135](CSD-135-feeds.md) | Feeds (what this node holds, by circle: mine, my communities', everyone's) | `sketched` | — | none yet |
+| [CSD-136](CSD-136-library-article.md) | Library: an encyclopedia article (body, revisions, corrections, citations, quality) | `sketched` | — | none yet |
+| [CSD-137](CSD-137-news.md) | News (headline, publisher, byline, how long it holds, and the publisher's standing) | `sketched` | — | none yet |
+| [CSD-138](CSD-138-dictionary.md) | Dictionary (no content kind exists; what must be decided first) | `envisioned` | — | none yet |
+| [CSD-139](CSD-139-posts-and-comments.md) | Posts and comments (a blog post, the comments on it, and the replies to those) | `sketched` | — | none yet |
+| [CSD-140](CSD-140-media-gallery.md) | Media gallery (images, audio, video, film and 3D shared at a circle, each with its description and AI disclosure) | `sketched` | — | none yet |
+| [CSD-141](CSD-141-events.md) | Events (a listing, who is going, and whether it is still on) | `sketched` | — | none yet |
+| [CSD-142](CSD-142-observations.md) | Observations (a notice others can support, rebut or ask to clarify) | `sketched` | — | none yet |
+| [CSD-143](CSD-143-drafts-and-bookmarks.md) | Notes, drafts and bookmarks (private until the owner shares one wider) | `sketched` | — | none yet |
+| [CSD-144](CSD-144-registry-lookups.md) | Registry lookups (a build, a partner, a revocation, the transparency witnesses) | `sketched` | — | none yet |
 
 ## Reserved
 
@@ -144,6 +149,7 @@ this directory yet.
 | CSD-127 | First contact, and leaving a root | [#179](https://github.com/CIRISAI/CIRISClient/issues/179) | global-commons |
 | CSD-128 | The protected reporter channel | [#179](https://github.com/CIRISAI/CIRISClient/issues/179) | local-community / safety |
 | CSD-129 | Drill, halt, announce: end to end | CIRISServer FSD/CONSTITUTIONAL_HALT.md | used by the server's CSD/4 catalogue (T8, T19; packaging/csd4/requirements.yaml); no client card yet |
+| CSD-145 | Emergency shutdown, composite (3.0) | CIRISServer (v62 trust-root audit, 2026-11-21) | one composite signature under the EmergencyShutdown signing domain (ciris.emergency_shutdown.v1); kept apart from a constitutional halt and an operator pause (CC 4.2.1.2); waits on persist v62 names and the compose route shape (O16) |
 
 ## Retired
 
@@ -158,4 +164,4 @@ this directory yet.
 
 ## Unassigned
 
-Below CSD-144, these numbers are free: 009, 017–019, 038, 058–064, 072–079, 089, 097–099, 130. Numbers above CSD-144 are free too, up to the test range.
+Below CSD-145, these numbers are free: 009, 017–019, 038, 058–064, 072–079, 089, 097–099, 130. Numbers above CSD-145 are free too, up to the test range.

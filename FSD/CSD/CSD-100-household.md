@@ -50,9 +50,12 @@ under `founder_only` they are the rule. Tapping the household row opens the
 roster.
 
 **The accord family is not a household.** `AccordScreen`'s "accord family" is
-the entrenched `humanity-accord` `quorum:2/3` family (CC 4.2). The node
-reserves that id and answers 404 for it on every household route
-(`family_api.rs:508-511`), and this card never shows it.
+the genesis bundle's lineage (its `family_key_id`), not a family row, on v62
+(CC 4.2.6; persist `edition2/trust_root_group.rs:5-12`). On 0.5.x the node
+reserved the `humanity-accord` id and answered 404 for it on every household
+route (`family_api.rs:508-511`); whether the 0.6 household routes still reserve
+the accord's `family_key_id` is OPEN — CIRISServer (O6). Either way this card
+never shows it.
 
 ```yaml csd:shows
 registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
