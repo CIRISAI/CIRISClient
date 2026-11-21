@@ -58,6 +58,10 @@ python3 packaging/check_csd4.py --verify-pin
 # The CSD roster is current, and no card sits on a reserved or retired number.
 python3 packaging/gen_csd_roster.py --self-test
 python3 packaging/gen_csd_roster.py --check
+# Every place a card and the code are known to disagree is declared in the card
+# (csd:code_gaps) and still true of the tree; a closed gap must be deleted.
+python3 packaging/check_csd_code_gaps.py --self-test
+python3 packaging/check_csd_code_gaps.py
 # Every route a screen calls is cited in a CSD on that screen, and no two
 # screens newly share a mutating route (the same card under two names).
 python3 packaging/check_csd_routes.py --self-test
