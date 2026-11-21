@@ -2178,6 +2178,8 @@ class CIRISApiClient internal constructor(
                 val o = jsonConfig.parseToJsonElement(raw) as JsonObject
                 framesPath = (o["frames_socket"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull
                 ticket = (o["frames_ticket"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull
+                // The ticket is a single-use credential: its presence is logged, never its value.
+                logInfo(method, "answered ${response.status.value} frames_socket=${framesPath ?: "(default)"} ticket=${ticket != null}")
                 return ai.ciris.mobile.shared.calls.CallJoinAnswer.parse(o)
             } finally {
                 client.close()
@@ -2256,6 +2258,8 @@ class CIRISApiClient internal constructor(
             val session = try {
                 http.webSocketSession(url) { auth?.let { header("Authorization", it) } }
             } catch (e: Exception) {
+                // The URL carries the ticket, so only the path is logged.
+                logInfo("openCallSocket", "failed for $path: ${e::class.simpleName}: ${ai.ciris.mobile.shared.calls.redactTicket(e.message)}")
                 http.close()
                 throw e
             }

@@ -17,6 +17,7 @@ import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.longOrNull
+import ai.ciris.mobile.shared.platform.PlatformLogger
 
 /**
  * One call in one room (CSD-134), against the routes agreed for CIRISServer
@@ -58,16 +59,26 @@ class CallSession(
             val answer = try {
                 transport.join(room, video)
             } catch (e: CallRefusal) {
+                PlatformLogger.w(TAG, "[join] refused reason_id=${e.reasonId}")
                 _state.value = CallState.Refused(e.reasonId)
                 return@launch
             }
+            PlatformLogger.i(
+                TAG,
+                "[join] answered call_id=${answer.callId} attendees=${answer.attendees.size} " +
+                    "video_allowed=${answer.videoAllowed} budget=${answer.frameBudgetBytes}",
+            )
             val s = try {
                 transport.openFrames(room)
             } catch (e: Exception) {
+                // This was silent, so a node that logged `left why="left"` right after every join
+                // (2026-11-21) left nothing in the app's log to say the socket was why.
+                PlatformLogger.w(TAG, "[join] frames socket did not open, leaving: ${e::class.simpleName}: ${redactTicket(e.message)}")
                 runCatching { transport.leave(room) }
                 _state.value = CallState.Refused(PLUMBING)
                 return@launch
             }
+            PlatformLogger.i(TAG, "[join] frames socket open")
             socket = s
             _state.value = CallState.InCall(
                 callId = answer.callId,
@@ -85,6 +96,7 @@ class CallSession(
 
     fun leave(reason: LeaveReason = LeaveReason.LEFT) {
         val wasIn = _state.value is CallState.InCall
+        PlatformLogger.i(TAG, "[leave] reason=$reason in_call=$wasIn")
         reader?.cancel()
         socket?.close()
         socket = null
@@ -114,6 +126,7 @@ class CallSession(
             is CallSocketMessage.Binary -> onFrame(message.bytes)
             is CallSocketMessage.Text -> CallEvent.parse(message.text)?.let(::onEvent)
             is CallSocketMessage.Closed -> {
+                PlatformLogger.w(TAG, "[socket] closed by the node, reason=${message.reason}")
                 socket = null
                 _state.value = CallState.Left(LeaveReason.of(message.reason))
             }
@@ -186,6 +199,7 @@ class CallSession(
     }
 
     companion object {
+        private const val TAG = "CallSession"
         const val PLUMBING = "call.plumbing"
 
         /** Why video is not sent in a call of more than [CallState.InCall.videoMaxPeople] people (CIRISServer 0.5.246). */
@@ -513,3 +527,10 @@ class CallShare(
         _state.value = State.Stopped
     }
 }
+
+/**
+ * An exception from opening the frames socket may quote the request URL, and the
+ * URL carries the single-use ticket. Logs get the message with the ticket removed.
+ */
+internal fun redactTicket(message: String?): String? =
+    message?.replace(Regex("(ticket=)[^&\\s\"')]+"), "$1<redacted>")

@@ -10,6 +10,7 @@ import ai.ciris.mobile.shared.calls.media.H264Download
 import ai.ciris.mobile.shared.calls.media.MeasuringSink
 import ai.ciris.mobile.shared.calls.media.opusAvailable
 import ai.ciris.mobile.shared.calls.media.toImageBitmap
+import ai.ciris.mobile.shared.platform.PlatformLogger
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -199,6 +200,7 @@ class CallViewModel(
         }
         val encoder = source?.let { newEncoder(640, 480, 15, 400_000) }
         if (source == null || encoder == null) {
+            PlatformLogger.w(CALL_LOG_TAG, "[camera] unavailable: camera=${source != null} encoder=${encoder != null}")
             // Getting the source may already have opened the camera (desktop, the browser): let it go.
             source?.stop()
             cameraFailed = true
@@ -269,9 +271,13 @@ class CallViewModel(
     fun heard(member: String): MeasuringSink.Heard? = sink?.heard(member)
 
     private suspend fun startAudio() {
-        if (!opusAvailable) return
+        if (!opusAvailable) {
+            PlatformLogger.w(CALL_LOG_TAG, "[audio] no Opus codec on this device: no call audio")
+            return
+        }
         val mic = devices.microphone()
         val speaker = devices.speaker()
+        PlatformLogger.i(CALL_LOG_TAG, "[audio] microphone=${mic != null} speaker=${speaker != null}")
         if (mic == null || speaker == null) _audioUnavailable.value = true
         if (mic == null) return
         val s = MeasuringSink(speaker)
@@ -311,3 +317,5 @@ class CallViewModel(
 /** A frame that cannot be converted costs one picture, never the call. */
 private fun ai.ciris.mobile.shared.calls.media.VideoFrame.toImageBitmapSafe(): androidx.compose.ui.graphics.ImageBitmap? =
     runCatching { toImageBitmap() }.getOrNull()
+
+private const val CALL_LOG_TAG = "CallViewModel"
