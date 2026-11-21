@@ -11,6 +11,20 @@
 - The gate framework is **not** here. It lives in [CIRISGrace](../CIRISGrace) and is imported as `grace.gate`. Do not fork it; extend it there.
 - Gates default to this repo's `client/` and still accept `--client-tree` for a consumer's copy.
 
+## End to end: from ethics to UX
+The full chain, with one worked thread (the halt), is in README.md "From ethics to UX". Every screen should trace back through it:
+
+**ethics (M-1, the Charter's promises) → rules (CC sections) → model (CIRISConstitution `formal/`, `STATE_TABLE.tsv`) → manifests (`transitions.json`, `namespace_registry.json`, `ui_primitives.json`) → card (`FSD/CSD/CSD-NNN`) → code (`client/`) → words (29 locales) → running proof (flows, e2e, five-platform run).**
+
+Layers 1–4 are owned by CIRISConstitution and are read-only here. Layers 5–8 are this repo's. Working rules:
+- **Start from the card, and cite, don't retype.** A card's states, signers, policies and confirms come from the model through `csd:model`, checked by `packaging/check_csd_model.py` against `packaging/model/`. A count, a signer or a list of states written by hand in prose is the drift the v62 audit found on nine cards ("2 of 3"). Write "a strict majority of the standing roster", with N and m read from the node, never a literal.
+- **Declare every mismatch between card and code in the same commit, in `csd:code_gaps`.** Give what the card says, what the code does, where, and an `open_while` / `open_until` pattern; add `model:` when it is a modelled state the code cannot show. Closing a gap means deleting its entry (and any "code lags" prose) in the commit that closes it, because `check_csd_code_gaps.py` fails otherwise. Never fake-close a gap by weakening its pattern.
+- **When the card and the model disagree, the model wins in the card.** When the model and another source disagree (an audit, a peer session, the server's code), don't pick one: record it and tell the CIRISConstitution owner. The card cites the model as pinned until CC moves.
+- **Re-pinning the model:** `python3 packaging/check_csd_model.py --vendor <full sha of a pushed CIRISConstitution commit>`, then fix every card the gate names in the same PR. `model-drift.yml` fails daily while the pin is behind.
+- **Editions:** a v62 node reports `"edition": 2` on `GET /v1/federation/conformance`, and a 0.5.x node has no `edition` member. Gate v62 paths on that member, never on the server version string, and keep serving 0.5.x until the server says otherwise. A route with no 0.6 shape is written "0.6: pending (CIRISServer)" and never invented.
+- **Open questions stay open,** with who decides, in the card. A card describes the ruling, not a guess at it.
+- **The running-proof link is the weakest one.** A card that reaches `testable` needs a flow that drives it on a real node. Evidence from the earlier mesh does not count for v62.
+
 ## Working in `localization/`
 - The pipeline has THREE LANES and ONE DIRECTION: `translate → evaluate → repair`. `--lane` chooses where a run enters; it always flows through the rest. There is no path that writes an unreviewed string into a shipped bundle, and that is not an accident — Haiku fan-outs produced word-salad in 5 of 28 locales that structural validation could not see.
 - **Glossary-first.** Terminology is decided before translation, not after. Every request carries the glossary terms that occur in its batch, that language's prose rules, and real shipped translations as anchors. A model asked to render "node" fresh will pick something; the corpus already decided.
