@@ -5,14 +5,60 @@
 **Extended by**: CSD-108 (Steward purge). Tier 3 (Descend) is the key purge
 that exists today: a previewed selection hash, a quorum of 2, and `evict_actor`
 for each target (moving onto `purge_rows` by actor, CIRISPersist#1046).
-CSD-108 generalises it to four selection kinds under the
-GLOBAL trust root's `takedown` duty. It is a separate card under Accord, not a
-fifth rung, because a community's `slash` and the root's `takedown` are two
-authorities (CSD-108 §1.1).
+CSD-108 generalises it to four selection kinds under the `takedown` duty
+conferred by the trust-root community's (`ciris-canonical`'s) authority set. It
+is a separate card, not a fifth rung, because a community's `slash` and the
+root community's `takedown` are two authorities (CSD-108 §1.1). It is not the
+accord's act (CC 4.2.1), so on v62 its card belongs with the root community,
+not under Accord (CC 3.4.7.3 signer table).
+
+> **On v62 (CIRISPersist v62, CC rc22): this card's tier-2+ commits are refused
+> as built.** CC 3.4.7.3's reserved-family signer table says a `quarantine:*`
+> or `slashing:*` row is signed by **the holder of `slash`**, conferred by the
+> community's authority set, and persist v62 refuses a node key's marker
+> (`SIGNER_KIND_REFUSED`; persist `src/federation/quarantine.rs`, I2851).
+> Server 0.5.252's `build_marker` (`src/admin_ops.rs:1554-1571`) signs the
+> quarantine marker with the node's own key (`assemble_attestation_self`).
+> **Known defect:** every tier-2 quarantine/un-quarantine this card commits,
+> and every tier-3/4 rung that writes `slashing:*`, is refused on v62 until the
+> route takes the moderator's own composite statement. That route has no shape
+> yet: **0.6: pending (CIRISServer)**. Which other rungs (annotate, throttle,
+> descend, de-admit, refuse/accept writes) and `POST /v1/safety/moderation`
+> also exclude a node signer is **OPEN (O11): CIRISConstitution for the
+> families, CIRISServer for the route.** A minor is a ward, never a duty
+> holder (CC `bf02d42`, `minor_cannot_hold_duty`): see §2.2.
+>
+> Missing from the built card for v62: "signed by you, not by this node" on
+> every ladder confirm; the moderator-signing step (token or key) in the ladder
+> flow; and the minor exclusion on moderator reads.
 
 ```yaml csd:stage
 stage: building
 owner: CIRISClient
+```
+
+**Code gaps.** Where this card and the client code disagree today, each proven against the tree by `packaging/check_csd_code_gaps.py`. Closing one means deleting its entry in the same commit.
+
+```yaml csd:code_gaps
+- id: node-signed-quarantine
+  card: 'tier-2 quarantine and slashing are signed by the community''s slash holder; v62 refuses a node-signed marker'
+  code: 'the client posts /v1/admin/quarantine, which server 0.5.252 signs with the node key'
+  where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/AdminLadder.kt
+  open_while: '"/v1/admin/quarantine"'
+  blocked_on: '0.6: pending (CIRISServer), O11'
+```
+
+**Model.** What this card draws and offers, cited from CIRISConstitution's formal model (pinned in `packaging/model/`) and held to it by `packaging/check_csd_model.py`: a modelled state the card leaves out, or a signer, policy or confirm that differs, fails CI.
+
+```yaml csd:model
+- act: 'quarantine:{state} attest'
+  roles: 'slash'
+  policy: 'cosigned'
+  confirm: 'true'
+# slashing:{outcome} is signed by the slash holder (CC 3.4.7.3; CC 4.5.5). The pinned
+# transitions.json says roles ['registered'], which records persist's shipped door, a
+# known divergence (C447, C458) being fixed in v62 (CIRISConstitution, 2026-11-21).
+# Cited once the manifest says slash.
 ```
 
 ## 1. Mission (why)
@@ -20,7 +66,9 @@ owner: CIRISClient
 **A member of a community can ask whether that community has a moderator at all,
 file a moderation event under a duty they actually hold, and — holding the slash
 duty — take a graded enforcement act whose blast radius they saw and whose
-stated limits they read before they signed.** Three claims, and the third is a
+stated limits they read before they signed.** On v62 the act is **signed by
+them, the duty holder, with their own key**: a node never signs a ladder act
+for them, and a marker a node signs is refused (CC 3.4.7.3; persist I2851). Three claims, and the third is a
 brake on other people's participation.
 
 Serves **Justice** and **Non-maleficence**, and rests on two CC clauses that
@@ -107,7 +155,7 @@ fields:
     use: emit
     type: string
     example: "active"
-    renders: "Tier 2 — Quarantine. Filed under a community's authority; it deletes nothing."
+    renders: "Tier 2 — Quarantine, signed by a holder of slash that the community's authority set conferred (a founder, a key its consensus_protocol names, or a delegate on a live chain from one); it deletes nothing. On v62 a node key's marker is refused (SIGNER_KIND_REFUSED)."
     tag: chip_ladder_quarantine
   - ceg: "slashing:{outcome}"
     bind: {outcome: proven_rogue}
@@ -242,6 +290,15 @@ What the sheet does while the route does not exist
   *anyone* may propose, the node adjudicates, and locking every unrecorded
   person out of reporting harm would serve nobody the gate protects.
   `ModerationCatalogueTest` shows the refused case makes no request at all.
+* **A separate rule: a minor cannot hold a duty** (CC `bf02d42`). A
+  `delegates_to` onto a minor-band user confers no duty and names no moderator
+  (`minor_cannot_hold_duty`), and `is_named_moderator` excludes a minor-band
+  key. So a minor is never a moderator or a named-moderator candidate, and
+  cannot hold `moderate`, `slash`, `takedown` or `review`. The ladder's duty
+  radio and any appoint path must refuse a minor appointee by name, and a
+  candidate the node excludes for minority is drawn as excluded, never as "no
+  candidate". This is not the proposal gate above: anyone may propose (CC
+  4.5.13), and the two rules must not be merged.
 * Its copy is in the bundle (`moderation.proposal.*`) and its spinner uses a
   token.
 
@@ -270,7 +327,7 @@ real**. The `why` column is why a flow cannot go without it.
 | `card_moderation_flag` / `btn_flag_subject` / `txt_flag_id` | the Flag card, its send, and the returned attestation id | the only evidence a flag was recorded; the card says a flag hides nothing yet |
 | `txt_file_takedown_unavailable` | "taking a file down by legal basis isn't available yet" | a blocked act (CIRISPersist#1160) is said, not left out |
 
-**What is not offered at 0.5.245.** No room window, 2/3 threshold, expected-active base or 48-hour fallback is enforced until persist v62 (CIRISPersist#1173), so no surface may promise one: the bundle's "The 48-hour community window is open" stays unshown. `POST /v1/safety/reports` and `POST /v1/safety/moderation` are not offered for a room, and `POST /v1/safety/flag` only to a founder or a delegated holder once persist 61.0.2 narrows the duty reads (#1195).
+**What is not offered at 0.5.245.** No room window, 2/3 threshold, expected-active base or 48-hour fallback is enforced until persist v62 (CIRISPersist#1173; whether #1173 landed in v62.0 is OPEN: persist, not yet re-verified), so no surface may promise one: the bundle's "The 48-hour community window is open" stays unshown. `POST /v1/safety/reports` and `POST /v1/safety/moderation` are not offered for a room, and `POST /v1/safety/flag` only to a founder or a delegated holder once persist 61.0.2 narrows the duty reads (#1195).
 
 ### 2.4 Flags, and moderation from an item's menu
 
@@ -408,9 +465,9 @@ Verified against ciris-server 0.5.217, route literals in `src/`.
 | tier 0 — annotate | `POST /v1/admin/annotate` | CIRISServer `src/admin_ops.rs:4264` | **live** — every rung below is posted by `adminLadderCommit` (`CIRISApiClient.kt:1202`, `POST {nodeUrl}{op.route}`) with the route taken from `AdminLadderOp` (`models/AdminLadder.kt:476`) |
 | tier 1 — throttle | `POST /v1/admin/throttle` | `src/admin_ops.rs:4265` | **live** — `AdminLadder.kt:483` |
 | tier 1 — release | `POST /v1/admin/un-throttle` | `src/admin_ops.rs:4266` | **live** — `AdminLadder.kt:490` |
-| tier 2 — quarantine | `POST /v1/admin/quarantine` | `src/admin_ops.rs:4268` | **live** — `AdminLadder.kt:498` |
-| tier 2 — release | `POST /v1/admin/un-quarantine` | `src/admin_ops.rs:4272` | **live** — `AdminLadder.kt:506` |
-| tier 3 — descend | `POST /v1/admin/descend` | `src/admin_ops.rs:4275` | **live** — `AdminLadder.kt:515`; quorum 2, no inverse. Its payload leg calls `Engine::evict_actor` per target today. **Moving onto `purge_rows` by actor** (CIRISPersist#1046, answer 5; v54.1.0), with `evict_actor` still the bytes-plane primitive underneath. The route, its community `slash` authority and this rung are unchanged. The generic, trust-root form of the same door is CSD-108 |
+| tier 2 — quarantine | `POST /v1/admin/quarantine` | `src/admin_ops.rs:4268` | **live** — `AdminLadder.kt:498`. **Refused on v62:** the node signs the marker (0.5.252 `build_marker`, `:1554-1571`); a moderator-signed route is 0.6: pending (CIRISServer, O11) |
+| tier 2 — release | `POST /v1/admin/un-quarantine` | `src/admin_ops.rs:4272` | **live** — `AdminLadder.kt:506`. **Refused on v62**, as quarantine |
+| tier 3 — descend | `POST /v1/admin/descend` | `src/admin_ops.rs:4275` | **live** — `AdminLadder.kt:515`; quorum as served by `GET /v1/operations` (2 on 0.5.217), no inverse. On v62 the count is the community's own rule, never a literal 2: **OPEN — CIRISServer**. Its payload leg calls `Engine::evict_actor` per target today. **Moving onto `purge_rows` by actor** (CIRISPersist#1046, answer 5; v54.1.0), with `evict_actor` still the bytes-plane primitive underneath. The route, its community `slash` authority and this rung are unchanged. The generic, trust-root form of the same door is CSD-108 |
 | tier 4 — de-admit | `POST /v1/admin/deadmit` | `src/admin_ops.rs:4276` | **live** — `AdminLadder.kt:525` |
 | tier 4 — re-admit | `POST /v1/admin/re-admit` | `src/admin_ops.rs:4277` | **live** — `AdminLadder.kt:533` |
 | tier 4 — refuse writes | `POST /v1/admin/refuse-writes` | `src/admin_ops.rs:4280` | **live** — `AdminLadder.kt:541` |
@@ -420,7 +477,7 @@ Verified against ciris-server 0.5.217, route literals in `src/`.
 | **the owner's usable delegation ids** | `GET /v1/admin/self` → `owner_delegations[]` | CIRISServer `src/admin_ops.rs:3348` (read), `owner_serve_delegations` `:3470-3526`, on `integ/0.5.218` (CIRISServer#676) | **live in 0.5.218, read.** `OwnerDelegationDto` (`models/selfreader/SelfAndReaderOps.kt`); the picker is `chip_ladder_delegation_{i}`. **On 0.5.218 every returned row carries `infra:serve`** (`REQUIRED_SCOPE_SELF_DIRECTED`, `:286`): that is the tier S/R scope, and tiers 0–4 require the NAMED row to carry `review`/`moderate`/`slash` itself (`resolve_authority` `:1039`, `authority_scope_absent`). So on this ladder the node's list will, today, carry nothing usable, and the card says exactly that (`txt_ladder_delegations_none_usable`: "returned N delegation(s) carrying infra:serve; none carries slash") rather than offering an id the node would refuse. A node before 0.5.218 returns no field (`txt_ladder_delegations_not_returned`). Upstream ask, not yet filed: return the owner's `review`/`moderate`/`slash` rows too, or let an owner session resolve the delegation (CIRISServer#676 option 2) |
 | the caller's key | `GET /v1/federation/self-key-record` | CIRISServer | live — `SafetyViewModel.probeIdentityAndStatus`; the `signer_key_id` on the report |
 | the caller's protective posture | `GET /v1/safety/status/{key_id}` | CIRISServer `src/safety/age.rs` | live — read on open; rendered by CSD-066 |
-| whose posture | `GET /v1/setup/owned-nodes` (`owner`) | CIRISServer | live — the same probe: the posture's subject is the owner's fed-ID, not the node key (CSD-066 §3). The node key stays this card's `signer_key_id` |
+| whose posture | `GET /v1/setup/owned-nodes` (`owner`) | CIRISServer | live — the same probe: the posture's subject is the owner's fed-ID, not the node key (CSD-066 §3). The node key stays this card's `signer_key_id` today. **On v62 the node key must not be the signer of a `quarantine:*`, `slashing:*` or `moderation:*` row**, and an act is valid only when the signer holds the duty at the row's instant (CC 3.4.7.3 "The rule"); a delegation id the node holds for its owner does not make the node the signer |
 | the proposer's age band (§2.2's minor gate) | `GET /v1/safety/age-assurance/{key_id}` | CIRISServer `src/safety/age.rs` | live — read by `ModerationViewModel` before a proposal; that view model is mounted on Interact, so the route checker files it under CSD-091's screen, not this one |
 
 The line numbers above are 0.5.217's; on `integ/0.5.218` the admin rungs are at

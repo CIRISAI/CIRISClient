@@ -115,6 +115,8 @@ data class NodeCapabilities(
     val undetermined: Boolean = false,
     /** The routes the node serves (`features`); null when it lists none, which every node before 0.5.246 is. */
     val features: Set<String>? = null,
+    /** Which mesh the node is on, from the same document; see [NodeEdition]. */
+    val edition: NodeEdition = NodeEdition.UNKNOWN,
 ) {
     /** A served route, present only when the node says so: no list, or an unknown node, is no. */
     fun hasFeature(id: String): Boolean = !unreachable && features?.contains(id) == true

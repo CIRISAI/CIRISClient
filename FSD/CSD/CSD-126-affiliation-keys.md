@@ -85,7 +85,7 @@ fields:
   - ceg: x_private:bound_under
     use: display-only
     type: string
-    example: "quorum:2/3 — A1, B1 signed"
+    example: "strict majority of the founders (m of N, as the node reports) — 2 founders signed"
     renders: "'Bound to this organization by' — the cosigned KeyManager edge (CC 3.3.9); a binding one founder signed alone reads 'not bound'"
     tag: "proposed:txt_key_bound_under_*"
   - ceg: x_private:pre_rotation_commitment

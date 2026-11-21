@@ -214,11 +214,15 @@ envelope route returns. Calling both would sign the same change twice.
   to Moderation, whose named-moderator verdict
   (`operate`/`auto_promote`/`quiesce`, CSD-065) is the read that fails secure.
 * **Appointing a moderator is not on this card.** Persist's appointed set is
-  founder-rooted `delegates_to` scoped `moderate`; the only conferral this client
-  drives is the accord's (`/v1/accord/duty/propose`, CSD-090), which is rooted
-  in the accord family, not the room's founder. The server FSD says
-  "moderators keep using duty conferral"; no route confers a room-scoped duty
-  from its founder. Stated on the card (`txt_community_appoint_unavailable`).
+  founder-rooted `delegates_to` scoped `moderate`. On v62 the accord confers no
+  duty: a community's duties come from its own authority set (CC 3.4.7.3 "Who
+  confers"); the trust-root community's authority set (`ciris-canonical`'s)
+  covers only `infra:serve`, `infra:attest` and the root's own room, CC 4.5.4
+  iv–v (O14, ruled by Eric 2026-11-21). CSD-090's accord route
+  (`/v1/accord/duty/propose`) is retired and that card is to be re-homed (O3).
+  A minor cannot be appointed: a delegation onto a minor-band user confers no
+  duty (CC `bf02d42`, `minor_cannot_hold_duty`).
+  No route confers a room-scoped duty from its founder yet. Stated on the card (`txt_community_appoint_unavailable`).
 * **The affiliations record** (CC 4.4.3.2.8) has no route — CIRISServer#649.
 
 ### 3.2 Moderation takes the room (CSD-065)

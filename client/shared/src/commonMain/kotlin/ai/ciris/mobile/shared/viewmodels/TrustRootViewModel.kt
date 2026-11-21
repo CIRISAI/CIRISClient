@@ -14,6 +14,7 @@ import ai.ciris.mobile.shared.models.federation.seedCharterRoot
 import ai.ciris.mobile.shared.models.federation.trustPosture
 import ai.ciris.mobile.shared.models.federation.trustRootFailure
 import ai.ciris.mobile.shared.models.federation.trustRootView
+import ai.ciris.mobile.shared.models.capability.NodeEdition
 import ai.ciris.mobile.shared.models.federation.untrustConsequence
 import ai.ciris.mobile.shared.platform.PlatformLogger
 import androidx.lifecycle.ViewModel
@@ -137,8 +138,21 @@ class TrustRootViewModel(
         }
     }
 
-    private fun loaded(listing: TrustRootListingDto) =
-        TrustRootRead.Loaded(listing.trustPosture(), listing.roots.map(::trustRootView))
+    /** Which mesh the node is on (conformance `edition`); decides how a verdict is read. */
+    private var nodeEdition: NodeEdition = NodeEdition.UNKNOWN
+    private var lastListing: TrustRootListingDto? = null
+
+    /** Set from the conformance probe; re-reads a loaded listing under the new edition. */
+    fun setNodeEdition(edition: NodeEdition) {
+        if (edition == nodeEdition) return
+        nodeEdition = edition
+        lastListing?.let { if (_read.value is TrustRootRead.Loaded) _read.value = loaded(it) }
+    }
+
+    private fun loaded(listing: TrustRootListingDto): TrustRootRead.Loaded {
+        lastListing = listing
+        return TrustRootRead.Loaded(listing.trustPosture(), listing.roots.map { trustRootView(it, nodeEdition) })
+    }
 
     // ── Adopt a seed ────────────────────────────────────────────────────────
 

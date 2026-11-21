@@ -43,6 +43,20 @@ class TrustRootTest {
     }
 
     @Test
+    fun v62ReadsSignerCountAndNeverTheEarlierName() {
+        val ed2 = ai.ciris.mobile.shared.models.capability.NodeEdition.EDITION_2
+        val v62 = entrenchedListing.replace("\"charter_quorum\"", "\"signer_count\"")
+        assertEquals(CharterQuorumView(2, 2, 3), trustRootView(listing(v62).roots.single(), ed2).quorum)
+        // A v62 node carrying the old name is not read through it: a clean break.
+        assertNull(trustRootView(listing(entrenchedListing).roots.single(), ed2).quorum)
+        assertNull(
+            trustRootView(listing(entrenchedListing).roots.single(), ai.ciris.mobile.shared.models.capability.NodeEdition.UNKNOWN).quorum,
+        )
+        // Edition 1 reads charter_quorum only.
+        assertNull(trustRootView(listing(v62).roots.single()).quorum)
+    }
+
+    @Test
     fun theVerdictIsReadWhole() {
         val root = trustRootView(listing(entrenchedListing).roots.single())
         assertEquals(RootKindView.FAMILY, root.kind)

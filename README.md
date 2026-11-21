@@ -9,6 +9,69 @@ one artifact that narrows itself against the node it is attached to — and
 consumed as a dependency: CIRISServer and CIRISAgent install `ciris-client` and
 carry no copy of the source.
 
+## From ethics to UX
+
+What a person sees on a screen should be traceable back to a promise the
+system makes, through every layer in between. Each link below has an
+artifact, an owner and a check. Where a link is only partly checked, the
+section says so.
+
+| # | Layer | Artifact | Owner | What holds it to the next layer |
+|---|---|---|---|---|
+| 1 | **Ethics** | The CIRIS Constitution's Charter: Meta-Goal M-1 and the eleven promises (e.g. promise 4: named humans can pause every agent under a root) | [CIRISConstitution](https://github.com/CIRISAI/CIRISConstitution) | each promise names the sections that keep it (`constitution/EXECUTIVE_SUMMARY.md`) |
+| 2 | **Rules** | The constitution's numbered sections (e.g. CC 4.2.1.1, the halt; CC 4.2.6, a strict majority of the standing roster) | CIRISConstitution | the register ties each rule to a model, test or proof, or says none exists |
+| 3 | **Model** | `formal/`: the life of a mesh as checked TLA+, Lean and Python models (e.g. `accord_halt/AccordHaltFuse.tla`: a lone halt lapses, a majority confirms), summarised as every object's states in `formal/STATE_TABLE.tsv` | CIRISConstitution | model checking (TLC, Lean) in that repo |
+| 4 | **Manifests** | `manifests/transitions.json` (every family's transitions: who may sign, under which policy, whether it needs a confirm), `namespace_registry.json` (the families), `ui_primitives.json` (the screen's primitives and laws) | CIRISConstitution | generated from the text and the models there |
+| 5 | **Cards** | One CSD per screen in [`FSD/CSD/`](FSD/CSD/README.md) ([`CSD.md`](CSD.md)): its mission (why, in M-1's terms), what it shows, the states it draws, the acts it offers, the routes it calls, its tests | this repo | see "The card's bindings" below |
+| 6 | **Code** | The Kotlin client in `client/`: screens, view models, the API client | this repo | the card's bindings, plus unit tests |
+| 7 | **Words** | `en.json` and 28 locales, the glossaries, the server's reason ids | this repo | `check_localization_sync.py`, `check_english_fragments.py`, the MQM lanes |
+| 8 | **Running proof** | Flows under `testing/flows/`, the desktop e2e walk, the five-platform run with AI, `compat/matrix.json` | this repo | CI on every PR; the five-platform run gates every release |
+
+### The card's bindings
+
+A card is the point where the upstream layers (1–4) meet the code (6). It
+cites the upstream layers rather than restating them, and each kind of
+citation has its own check:
+
+| Block or section | Binds the card to | Check |
+|---|---|---|
+| `csd:shows` / `csd:states` | the registry's families (layer 4) | `check_csd_v3.py`, against the pinned `client/ceg/namespace_registry.json` |
+| `csd:model` | the model's states and the manifest's transitions (layers 3–4): the card draws exactly the modelled states, and each act's signer, policy and confirm equal the manifest's | `check_csd_model.py`, against `packaging/model/` (CIRISConstitution rc22, pinned by sha256) |
+| `csd:tests` | the server's topology catalogue | `check_csd4.py` |
+| `csd:inputs` / `csd:view` / `csd:acts` | the twelve screen laws, model-checked with TLC | `check_csd5.py` (CSD-070 so far) |
+| §3 routes | the routes the code actually calls (layer 6) | `check_csd_routes.py` |
+| `csd:code_gaps` | the code (layer 6), where it does not match the card yet: what the card says, what the code does, and a pattern proving the gap is still open | `check_csd_code_gaps.py` |
+
+The two last-added checks work as a pair.
+- **`check_csd_model.py`:** every modelled state a card cites must match something in the code, or be listed as a code gap.
+- **`check_csd_code_gaps.py`:** every listed gap must still be true. A gap that has closed fails CI until its entry is deleted.
+
+So the distance between what the model says and what the client does is a list in the card, kept current by CI. The roster's **Code gaps** column shows it per card.
+
+**The model moves the cards.** A daily job ([`model-drift.yml`](.github/workflows/model-drift.yml)) fails when CIRISConstitution's model has moved past the pin. Re-pinning (`check_csd_model.py --vendor <commit>`) then fails every card claim the new model no longer supports, in the same PR as the pin.
+
+### One thread, end to end: the halt
+
+1. **Ethics.** Promise 4: named humans can pause every agent under a root.
+2. **Rules.** CC 4.2.1.1:
+   - one holder's signed row halts;
+   - a lone halt lapses at the fuse unless a strict majority confirms it;
+   - a majority resumes.
+3. **Model.** `AccordHaltFuse.tla` closes, with `Inv_LoneBounded` (a lone pause never outlives the fuse). `root.halt` has three states: `not_halted`, `latched_lone`, `confirmed`.
+4. **Manifest.** `accord:invoke:constitutional:{halt_id}` attest has roles `holder`, policy `mirror` and confirm `true`.
+5. **Card.** CSD-067 (the accord) and CSD-003 (the constitutional card) cite `root.halt` and that act in `csd:model`.
+6. **Code.** `AccordHaltStatusResponse` types `not_halted`, but keeps the standing latch as raw JSON. The cards therefore declare the gap `halt-standing-untyped` for `latched_lone` and `confirmed`. When the client types them, CI requires the gap's deletion.
+7. **Words.** The banner and confirm strings are in all 29 languages.
+8. **Running proof.** Missing. No walk test here halts a node yet. The end-to-end drill/halt card, CSD-129 (draft PR #180), has evidence only from the earlier mesh. This is the link to build next.
+
+### What is not bound yet
+
+- **Gaps are declared, not discovered.** A mismatch nobody wrote down is invisible, except where `csd:model` forces it: a cited modelled state the code cannot show must be declared.
+- **The code side is pattern-based.** A gap's pattern, and a model state's code pattern, are regular expressions over source files, not a semantic check.
+- **Some cards cite nothing yet.** `csd:model` covers six trust-root cards (12 citations) and `csd5` covers one card. Every other card cites the registry and its routes only.
+- **The model pin is states and transitions.** Rules in the text that no model or manifest carries are checked by review, not by CI.
+- **Live behaviour across many nodes is not checked here.** Each check above runs on source; the walk tests start the app against one or two nodes.
+
 ## Install
 
 ```bash
@@ -253,6 +316,8 @@ Two things to know:
 | `packaging/check_csd_v3.py FSD/CSD/*.md --registry client/ceg/namespace_registry.json` | does every CSD's typed block validate against the registry it pins (`registry_sha256` = the grammar hash)? | seconds |
 | `packaging/check_csd_routes.py` | does every route a screen calls (heuristic closure over `CIRISApp.kt` → composables → view models → `CIRISApiClient`) appear in §3 of a CSD on that screen or a sibling screen (same host composable, e.g. the four `LayerHubScreen` hubs), and has no new pair of cards started calling the same mutating route? A baseline that can only fall and must be re-recorded when it does; `--report` is the route map, `--print CSD-NNN` generates §3 rows | seconds A `reset*`/`clear*`/`forget*`/`dismiss*` member call does not charge the model's init-time reads to the caller. |
 | `packaging/check_csd4.py --self-test` · `--verify-pin` (and, per card, through `check_csd_v3.py`) | does a card's CSD/4 `csd:tests` block name a catalogue entry in T0–T19, atoms in the pinned vocabulary, atoms some entry holds at one instant (the server model's own trace), and exactly the topology, tests, atoms and probes the server's `requirements.yaml` carries for that CSD? Catalogue pinned in `packaging/csd4/PIN.md` (re-vendor with `packaging/vendor_csd4.py --from-release <tag>`, which checks the `csd4-*` assets against the release's `SHA256SUMS` and cosign and runs no server code); `--self-test` plants each defect | seconds |
+| `packaging/check_csd_model.py --self-test` · `--verify-pin` · (gate) | does every card's `csd:model` block agree with the pinned CIRISConstitution model? Each cited variable's states must equal the model's. Each cited act's roles, policy and confirm must equal `transitions.json`. Each modelled state must be matched in the named code or declared as a code gap. `--upstream` (daily, `model-drift.yml`) asks whether the pin is behind; `--vendor <commit>` re-pins; `--self-test` plants 12 defects | seconds |
+| `packaging/check_csd_code_gaps.py --self-test` · (gate) | is every `csd:code_gaps` entry still true of the tree? A gap whose pattern says it has closed fails until the entry is deleted, and an entry pointing at no file fails. `--list` prints every gap; `--self-test` plants 11 defects | seconds |
 | `packaging/gen_csd_roster.py --check` | is `FSD/CSD/README.md` — every card number, adopted, reserved (`FSD/CSD/numbers.tsv`) or retired — current, and does no card sit on a reserved or retired number? | seconds |
 | `packaging/check_csd5.py --self-test` · `packaging/check_csd5.py` | for each card that carries `csd:inputs` / `csd:view` / `csd:acts` (`FSD/CSD5.md`; today CSD-070): does every reachable state hold the twelve laws of `packaging/csd5/ui_primitives.json`, is every tag literal in the card's Kotlin accounted for, and is `formal/csd5/<card>.tla` what the card generates? For the whole client: has any tag appeared under a prefix no primitive owns, or any disabled Action that draws no reason (`packaging/csd5/baseline.json`, which can only fall)? The model reads the card, not the Kotlin. `--self-test` plants 30 defects and requires each to go red; `--tlc tla2tools.jar` also runs TLC on the committed module and requires the explorer's state count and no violated invariant (with `--self-test`, five more plants that TLC must find); `--tags CSD-NNN` prints old tag → derived tag | ~60 s · ~25 s (TLC adds ~5 s a module) |
 

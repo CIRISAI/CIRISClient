@@ -34,9 +34,15 @@ re-conferral; a perpetual edge is refused at the door, and the card shows an edg
 remaining term beside its depth.
 
 **The worked example: how a CIRIS licence gets issued (CC 2.4.1.2.1, 3.3.9,
-4.4.3.4.3).** The root community `ciris-canonical` decides by a
-strict majority of its three founders, the accord holders A1/B1/C1
-(`quorum:2/3`). Two of them cosign one ordinary `delegates_to` row: from
+4.4.3.4.3).** The root community `ciris-canonical` is founded by the
+holders of the genesis bundle in force; every founder signs its founding record
+(CEREMONY step 10; persist `edition2/trust_root_group.rs:12-20`), and its birth
+counts at a strict majority of the bundle's holders (2·yes > N; N from the
+bundle). What count its later acts (this `license` delegation among them) take,
+its own `consensus_protocol` or the bundle's holders, is OPEN —
+CIRISConstitution + persist (O4). Each signer's statement is one composite
+statement over the same `delegates_to` payload; together they make one ordinary
+`delegates_to` row: from
 `ciris-canonical` (`community_id: ciris-canonical`) to a registrar's key,
 `scope: [license]`, `delegation_valid_until` within the charter's `role_term`.
 That registrar then signs `licensure:ciris-canonical:v1` rows alone, and
@@ -44,11 +50,30 @@ persist admits them because the `license` chain roots at an edge the quorum
 cosigned naming the affiliation (persist v60). Three things the example is
 not: it is **not `infra:license`** (there is no such scope and must be none; a
 node key may carry only `infra:*`, CC 4.4.3.4.3, so an install can never
-issue); it is **not a genesis-bundle member** (CC 3.2 T5 and 5.3.4 fix what the
-bundle carries — charter, holders, serve nodes, birth record — and a `license`
+issue); it is **not a genesis-bundle member** (on v62, `ceg-genesis-bundle/2`
+names the holders' and seats' key records, the seat bindings, the holders,
+`serve_nodes` and a charter with `recovery_commitments`, `scope` and
+`halt_fuse_secs`; the trust-root community's birth record is not in it — Verify
+`genesis.rs:1-11`; CEREMONY step 10 — and a `license`
 edge is a row the reader walks like any other); and it is **not a sale** (the
 registrar is a role, with a term; nothing on the edge or the licence is paid
 for). Any affiliation does the same under its own protocol with its own id.
+
+**Who confers what, on v62 (CC 3.4.7.3 "Who confers", part_3:2508).** A
+community's authority set confers its duties (`moderate`, `slash`, `takedown`,
+`review`). A reader's trusted root confers a capability under that root (the
+`infra:*` capabilities; mesh config by `trust:confers:v1`, CC 4.2.1). A node's
+owner confers what the node reports. The accord confers nothing but what its
+charter names: halts, lifecycle, re-bind and bundles. Eric's ruling "duties come
+from the trust root, not the accord" reads, on this table, as the trust-root
+community's (`ciris-canonical`'s) authority set for duties over what that root
+anchors, and each community's own authority set for its own duties: the narrow reading (O14, ruled by Eric 2026-11-21):
+`ciris-canonical`'s authority set covers `infra:serve`, `infra:attest` and the
+root's own room; every other community's duties come from its own authority set
+(CC 3.4.7.3 "Who confers"; CC 4.5.4 laws iv and v). A delegation onto a minor-band user
+confers no duty (CC `bf02d42`, `minor_cannot_hold_duty`). The `license` and
+`grant` chain rules on this card root at an affiliation's authority, not the
+accord, so v62's accord changes leave them as they are.
 
 **What CC says for this card.** `license` issues on behalf of a delegator that
 holds licence authority by quorum, refused `licensure_delegator_not_authority`
@@ -110,7 +135,7 @@ fields:
   - ceg: x_private:delegator
     use: display-only
     type: string
-    example: "ciris-canonical (quorum:2/3 — A1, C1 signed)"
+    example: "ciris-canonical (strict majority of the founders, m of N as the node reports — 2 founders signed)"
     renders: "'From' — the person, or the affiliation with the cosigners that met its protocol; a root edge from an affiliation reads as the quorum's act, never as one founder's"
     tag: "proposed:txt_delegation_from_*"
   - ceg: x_private:delegation_depth
@@ -224,4 +249,5 @@ is dead, the depth read says so, B's earlier licence issuance stands.
 ## 5. Acceptance
 
 Unsigned. Not tested here: the device-code offer/approve flow (CSD-055), moderation
-duties (CSD-090), the accord's own conferral ceremony (CSD-069).
+duties (the community's authority set; CSD-065 and the re-homed CSD-090), the
+genesis ceremony (CSD-067/069, per O2).

@@ -8,9 +8,41 @@ stage: testable
 owner: CIRISClient
 ```
 
+**Code gaps.** Where this card and the client code disagree today, each proven against the tree by `packaging/check_csd_code_gaps.py`. Closing one means deleting its entry in the same commit.
+
+```yaml csd:code_gaps
+- id: custody-tier
+  card: 'custody is hardware_class + pq_custody: removable_offline + a DER chain, inside the self-signed key:record'
+  code: 'the provisioning screen reads custody_tier (portable_2fa) from a separate custody attestation; it is offered to edition-1 nodes only (AccordEditionGate)'
+  where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/viewmodels/ProvisionAccordHolderViewModel.kt
+  open_while: 'custody_tier'
+  blocked_on: 'O1'
+- id: holder-registration
+  card: 'there is no registration: a holder is seated only by a bundle that names its record'
+  code: 'the client still has POST /v1/accord/holder, used for edition-1 nodes only'
+  where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/api/CIRISApiClient.kt
+  open_while: 'v1/accord/holder\b'
+```
+
+**Model.** What this card draws and offers, cited from CIRISConstitution's formal model (pinned in `packaging/model/`) and held to it by `packaging/check_csd_model.py`: a modelled state the card leaves out, or a signer, policy or confirm that differs, fails CI.
+
+```yaml csd:model
+- act: 'key:record attest'
+  roles: 'self'
+  policy: 'cosigned'
+  confirm: 'true'
+```
+
+> **On v62 (audit of 2026-11-21): stale.** The screen's purpose survives: a
+> person mints a hardware-custodied holder key and is told plainly what failed.
+> Its custody shape, its next step and its routes change. v62 is a total
+> re-genesis, so a holder key or record of the earlier mesh gives no standing
+> here. §1.1 states the v62 rules; the rest of the card is the 0.5.x screen
+> until it is rebuilt.
+
 ## 1. Mission (why)
 
-**A would-be accord holder mints their portable-2FA HUMANITY_ACCORD identity
+**A would-be accord holder mints their portable-2FA HUMANITY_ACCORD identity (the 0.5.x shape; v62 in §1.1)
 from a FIPS YubiKey and a chosen ML-DSA USB path, and is told in plain language
 what failed when it does — and what to do next when it does not.** Serves
 **Integrity**.
@@ -27,6 +59,48 @@ FIPS-approved, because the app cannot check.
 **The app holds no keys and does no crypto.** One loopback POST; the node opens
 the YubiKey, AEAD-wraps the ML-DSA seed to the USB, and mints both artifacts.
 Touching the token — PIN and touch — is the real authority.
+
+### 1.1 What a holder mints on v62
+
+* **One composite key and one artifact.** The holder mints one composite key
+  (the Ed25519 half on a FIPS YubiKey, the ML-DSA-65 half `removable_offline` on
+  separate media) and its self-signed `key:record` {`accord_holder`}, with no
+  `valid_until`. The record carries `attestation_evidence` =
+  `{hardware_class: "YubiKey_5_FIPS", pq_custody: "removable_offline", chain:
+  [9c leaf, f9, PIV Attestation B 1, Attestation Intermediate B 1]}` (DER, leaf
+  first). There is no separate `custody_attestation` object; the record's own
+  composite COSE signature replaces the July signed envelope (CEREMONY step 1;
+  P-CER `holder_key_record_draft`, `CustodyEvidence::yubikey_5_fips`;
+  CEREMONY-READINESS §3). `custody_tier: portable_2fa` is the earlier-form
+  envelope's vocabulary and does not appear on v62.
+* **The class is verified, not just claimed.** At seating the node checks the
+  chain to Yubico Attestation Root 1, touch-always (.3.8), FIPS (.3.10), and
+  that the leaf SPKI is the composite's Ed25519 half (Verify
+  `edition2/genesis.rs:2202` `custody_gate`, applied `:1441`). The step-1
+  acknowledgement may stay as UX, but the claim is checked.
+* **A fresh attestation per holder.** Each holder exports a fresh attestation
+  from their own token, before minting the record (CEREMONY §1).
+* **One device per holder, by the leaf serial.** CC 4.2.3: the holders' leaves
+  must name distinct device serials (`holder_device_shared`). The screen shows
+  the token serial (ext .3.7) so the holders can check that theirs differ. The
+  f9 attestation certificate is not the test: the same f9 certificate shared
+  across distinct device serials is valid (Eric's ruling).
+* **No registration.** A holder is seated only by a genesis or a later bundle
+  that names this record; there is no "ask the node owner to register you". The
+  record must be minted before the holder's halt (the halt verifies under the
+  key the bundle seats) and after the fresh attestation export (CEREMONY steps
+  1, 3; CEREMONY-READINESS §4).
+* **The recovery key.** Each holder also needs a recovery key, held offline and
+  apart: fresh in this edition, a commitment over its key material in the
+  charter's `recovery_commitments`, distinct from every other holder's, and
+  never a signing key a bundle seats (`recovery_commitment_shared`,
+  `recovery_commitment_is_holder_key`; CC 4.2.6 line 343; CC rc22 `85d3e18`).
+  Its commitment's hex prefix is shown for the out-of-band compare. **OPEN —
+  CIRISClient / CIRISServer (O9):** which screen mints it, this one or the
+  ceremony.
+* **Routes.** `provision-holder` is re-implemented as an on-device composite
+  key + `holder_key_record_draft`: 0.6: pending (CIRISServer, O1).
+  `accord/holder` is retired. `yubikey-status` is kept (a host probe).
 
 ## 2. Surface (what)
 
@@ -83,7 +157,7 @@ fields:
     use: display-only
     type: string
     example: "wa-holder-1c4f"
-    renders: "Minted — wa-holder-1c4f. Now ask the node owner to register you."
+    renders: "Minted — wa-holder-1c4f. Now ask the node owner to register you. (0.5.x. On v62 there is no registration: a bundle seats the record, §1.1, and a holder is identified by the thumbprint of its composite key)"
     tag: provision_holder_success
   - ceg: x_private:provision_failure
     use: display-only
@@ -95,7 +169,7 @@ fields:
     use: display-only
     type: string
     example: "portable_2fa"
-    renders: "Custody class the node recorded: portable_2fa — the minted custody_attestation's tier, shown to the producer (CC 4.2.2.1: a producer claim, and now at least a visible one)"
+    renders: "Custody class the node recorded: portable_2fa — the minted custody_attestation's tier, shown to the producer (CC 4.2.2.1: a producer claim, and now at least a visible one). On v62 this becomes hardware_class + pq_custody: removable_offline, read from the record's attestation_evidence and verified at seating (§1.1)"
     tag: txt_provision_holder_custody
   - ceg: x_private:token_present
     use: display-only
@@ -165,12 +239,14 @@ volume is a holder who thinks they have a spare and does not.
 
 ## 3. Contracts (who)
 
-Verified against ciris-server 0.5.217.
+Verified against ciris-server 0.5.217. On v62 the accord routes here are
+retired or re-implemented, with no 0.6 shape yet: 0.6: pending (CIRISServer,
+O1). The rows stay because the client still calls them.
 
 | value | endpoint | owner | state |
 |---|---|---|---|
-| provision a holder | `POST /v1/accord/provision-holder` | CIRISServer `src/accord_provision.rs:3697` | **live**, loopback-only |
-| register the minted holder | `POST /v1/accord/holder` | CIRISServer `src/accord.rs:2600` | **live** — but this screen does not call it; it tells the person to ask the node owner |
+| provision a holder | `POST /v1/accord/provision-holder` | CIRISServer `src/accord_provision.rs:3697` | **live on 0.5.x**, loopback-only. Retired on v62; re-implemented as an on-device composite key + `holder_key_record_draft`; 0.6: pending (CIRISServer) |
+| register the minted holder | `POST /v1/accord/holder` | CIRISServer `src/accord.rs:2600` | **retired on v62** (no registration; a bundle seats the record). On 0.5.x live, and this screen does not call it; it tells the person to ask the node owner |
 | token presence before the POST | `GET /v1/accord/yubikey-status` | CIRISServer `src/accord_provision.rs:3770` | **live, called** — `ProvisionAccordHolderViewModel.refreshYubiKeyStatus` on entry and on demand, drawn by the same `YubiKeyStatusBanner` the ceremony uses (`yubikey_status_banner`). The FIPS-approval acknowledgement stays a claim (CC 4.2.2.1); whether a token is plugged in is the node's answer |
 | the written path + artifact names | **missing** — the node knows both and only LOGS them | CIRISServer | blocks §2.2's first bullet |
 | the recorded custody class | on the wire here (`custody_attestation` → `custody_tier`) | CIRISClient | **rendered** — `txt_provision_holder_custody`; §2.2's second bullet |
@@ -193,7 +269,12 @@ accord_custody_attestation.rs:70`, envelope key `custody_tier` at `:235`), and
 the screen reads it from there (§2.2). What is missing upstream is the same
 fact on `GET /v1/accord-holders` — and that is CSD-067's row, not a second one.
 
-**Where this identity goes after it is minted** (CSD-067 §3.1): registered
+**Where this identity goes after it is minted, on v62:** seated by a bundle
+(the genesis or a later bundle that names its record); the custody gate runs at
+seating. **OPEN — persist / CIRISServer (O7):** whether `holders_hardware`
+keeps the Layer A / Layer B naming below on v62.
+
+**On 0.5.x** (CSD-067 §3.1): registered
 by the owner (`POST /v1/accord/holder`), seated by the genesis ceremony
 (CSD-069) or a re-mint, and only then counted by `trust_root_valid` — Layer A
 (the evidence parses and names an accepted class) and Layer B (the attestation chain walk
