@@ -41,7 +41,7 @@ internal class MemFs : CeremonyFs {
 }
 
 /** A runner whose tool echoes whatever it is sent, the PIN included: the worst case. */
-internal class EchoRunner(override val fs: CeremonyFs) : CeremonyRunner {
+internal class EchoRunner(override val fs: CeremonyFs, override val bundled: Boolean = true) : CeremonyRunner {
     var last: EchoRun? = null
     override suspend fun prepare(): CeremonyToolState = CeremonyToolState.Ready(CeremonyToolInfo("genesis-ceremony 0.1.0", "0dabc27e", "ab".repeat(32), 1))
     override fun run(step: CeremonyStep, args: List<String>, externalSigner: CeremonyExternalSigner?): CeremonyRun = EchoRun().also { last = it }

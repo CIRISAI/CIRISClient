@@ -86,6 +86,57 @@ class CeremonyDesktopTest {
     // ── The PIN through a real terminal ──────────────────────────────────────
 
     /**
+     * The PIN is held until the tool's exact PIN prompt has arrived: text before it, even
+     * text that mentions a PIN, does not open the gate, and a PIN offered early is wiped
+     * and never sent.
+     */
+    @Test fun the_pin_is_held_until_the_exact_prompt_arrives() = runBlocking {
+        if (!System.getProperty("os.name").startsWith("Linux") || !File("/usr/bin/script").exists()) return@runBlocking
+        val d = tmp()
+        val fake = File(d, "slow-tool.sh").apply {
+            writeText(
+                """
+                |#!/bin/sh
+                |echo "holder A1: token serial 31415926 (the PIN is asked next)"
+                |sleep 1
+                |printf 'YubiKey PIV PIN (slot 9c): '
+                |stty -echo; read -r p; stty echo; echo
+                |echo "got ${'$'}{#p}"
+                |[ "${'$'}p" = 112358 ] && exit 0
+                |exit 9
+                """.trimMargin() + "\n",
+            )
+            setExecutable(true)
+        }
+        val run = PtyRun(DesktopCeremonyRunner.scriptArgv(CeremonyCommands.shellQuote(fake.absolutePath)))
+        val seen = StringBuilder()
+        var early: Boolean? = null
+        var code = -1
+        withTimeout(20_000) {
+            run.events.collect { e ->
+                when (e) {
+                    is CeremonyEvent.Output -> {
+                        seen.append(e.text)
+                        if (early == null && "token serial" in seen) {
+                            val offered = "999999".toCharArray()
+                            early = run.pin(offered)
+                            assertTrue(offered.all { it == '\u0000' }, "an early PIN is wiped")
+                        }
+                    }
+                    is CeremonyEvent.Prompt -> if (e.prompt == CeremonyOutput.Prompt.PIN) assertTrue(run.pin("112358".toCharArray()))
+                    is CeremonyEvent.Exited -> code = e.code
+                    else -> Unit
+                }
+            }
+        }
+        assertEquals(false, early, "nothing is sent before the prompt")
+        assertEquals(0, code, seen.toString())
+        assertTrue("got 6" in seen.toString())
+        assertFalse("112358" in seen.toString() || "999999" in seen.toString())
+    }
+
+
+    /**
      * A stand-in tool, under the same `script` terminal the real one runs in: it asks for
      * the PIN with echo off, as rpassword does, then for `yes`. The PIN must reach it and
      * be in neither the transcript nor the log.

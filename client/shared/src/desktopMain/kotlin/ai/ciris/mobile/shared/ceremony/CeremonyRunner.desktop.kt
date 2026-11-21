@@ -108,6 +108,7 @@ class DesktopCeremonyRunner(
     private val osName: String = System.getProperty("os.name").orEmpty(),
 ) : CeremonyRunner {
     override val fs: CeremonyFs = JvmCeremonyFs
+    override val bundled: Boolean get() = CeremonyToolBuild.SHA256.isNotEmpty()
 
     private fun unsupported(): String? = when {
         osName.startsWith("Linux", ignoreCase = true) -> null

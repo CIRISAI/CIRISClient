@@ -180,21 +180,13 @@ fun AccordScreen(
      */
     nodeEdition: NodeEdition,
 ) {
-    // THE v62 GENESIS CEREMONY (CSD-069). On a v62 node the in-app 0.5.x ceremonies are
-    // gone and the genesis is the offline tool; on desktop this screen runs it. Nothing
-    // here changes for a 0.5.x node: the runner is only asked for on EDITION_2.
-    val ceremonyRunner = remember(nodeEdition) {
-        if (nodeEdition == NodeEdition.EDITION_2) ai.ciris.mobile.shared.ceremony.platformCeremonyRunner() else null
-    }
+    // THE GENESIS CEREMONY (CSD-069): offline, over the bundled tool, never this node.
+    // Offered on every edition when this build carries the tool; a build without it
+    // (every release build) draws nothing new here.
+    val ceremonyRunner = rememberBundledCeremonyRunner()
     var ceremonyOpen by remember { mutableStateOf(false) }
     if (ceremonyOpen && ceremonyRunner != null) {
-        val ceremonyScope = rememberCoroutineScope()
-        val ceremonyVm = remember(ceremonyRunner) {
-            ai.ciris.mobile.shared.viewmodels.GenesisCeremonyViewModel(
-                ceremonyRunner, ceremonyScope, { ai.ciris.mobile.shared.platform.currentTimeMillis() },
-            ) { line -> ai.ciris.mobile.shared.platform.PlatformLogger.i("GenesisCeremony", line) }
-        }
-        GenesisCeremonyScreen(ceremonyVm, onClose = { ceremonyOpen = false })
+        GenesisCeremonyOverlay(ceremonyRunner) { ceremonyOpen = false }
         return
     }
     val family by viewModel.family.collectAsState()
@@ -362,12 +354,18 @@ fun AccordScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 6.dp).testable("note_accord_edition"),
                 )
-                if (ceremonyRunner != null) {
-                    OutlinedButton(
-                        onClick = { ceremonyOpen = true },
-                        modifier = Modifier.testableClickable("btn_accord_open_genesis_ceremony") { ceremonyOpen = true },
-                    ) { Text(localizedString("mobile.genesis_open")) }
-                }
+            }
+            if (ceremonyRunner != null) {
+                Text(
+                    text = localizedString("mobile.genesis_entry_offline_note"),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 6.dp).testable("note_accord_genesis_offline"),
+                )
+                OutlinedButton(
+                    onClick = { ceremonyOpen = true },
+                    modifier = Modifier.testableClickable("btn_accord_open_genesis_ceremony") { ceremonyOpen = true },
+                ) { Text(localizedString("mobile.genesis_open")) }
             }
             notice?.let { msg -> Banner(msg, error = false, tag = "accord_notice") }
             error?.let { msg -> Banner(msg, error = true, tag = "accord_error") }

@@ -9,6 +9,8 @@ object CeremonyOutput {
     /** `>>> Touch the YubiKey now (2 of 3). <<<` (signers.rs). */
     private val TOUCH = Regex(""">>> Touch the YubiKey now \((\d+) of (\d+)\)\. <<<""")
     private val TOUCH_ANY = Regex(""">>> Touch the YubiKey now \(signing\)\. <<<""")
+    /** signers.rs: `rpassword::prompt_password(format!("YubiKey PIV PIN (slot {slot}): "))`, exactly. */
+    private val PIN_PROMPT = Regex("""^YubiKey PIV PIN \(slot [0-9a-fA-F]{2}\): ?$""")
     private val ANSI = Regex("""\u001B\[[0-9;?]*[ -/]*[@-~]""")
 
     /** Which prompt the tool is waiting on, read from its last unfinished line. */
@@ -36,7 +38,7 @@ object CeremonyOutput {
         return when {
             tail.startsWith("Type yes to sign") && tail.trimEnd().endsWith(":") -> Prompt.CONFIRM
             tail.startsWith("Remove holder ") && tail.contains("insert the BACKUP YubiKey") && tail.trimEnd().endsWith(":") -> Prompt.SWAP_TOKEN
-            tail.startsWith("YubiKey PIV PIN") && tail.trimEnd().endsWith(":") -> Prompt.PIN
+            PIN_PROMPT.matches(tail) -> Prompt.PIN
             else -> null
         }
     }

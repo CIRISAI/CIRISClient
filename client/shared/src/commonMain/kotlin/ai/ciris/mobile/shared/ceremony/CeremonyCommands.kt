@@ -44,13 +44,13 @@ object CeremonyCommands {
         val intermediates: List<String>,
         val backupMldsaSeed: String,
         val backupKeygen: Boolean,
-        val backupSlot: String = DEFAULT_SLOT,
     )
 
     /**
-     * Step 1a, each holder, no PIN and no touch: the README's line,
-     * `holder-prep --dir D --name A1 --mldsa-seed S [--keygen] [--intermediate P]...
-     * --backup-slot 9c --backup-mldsa-seed B [--backup-keygen]`.
+     * Step 1a, each holder, no PIN and no touch: Eric's rehearsed line,
+     * `holder-prep --dir D --name N --mldsa-seed S [--keygen] --backup-mldsa-seed B
+     * [--backup-keygen]` (both slots at the tool's default, 9c; `--intermediate P` only
+     * when given, after `--keygen`).
      */
     fun holderPrep(p: HolderPrep): List<String> = buildList {
         add("holder-prep")
@@ -59,7 +59,6 @@ object CeremonyCommands {
         add("--mldsa-seed"); add(p.mldsaSeed)
         if (p.keygen) add("--keygen")
         p.intermediates.filter { it.isNotBlank() }.forEach { add("--intermediate"); add(it) }
-        add("--backup-slot"); add(p.backupSlot)
         add("--backup-mldsa-seed"); add(p.backupMldsaSeed)
         if (p.backupKeygen) add("--backup-keygen")
     }

@@ -100,6 +100,9 @@ interface CeremonyRun {
  *   mobile.
  */
 interface CeremonyRunner {
+    /** Whether this build carries a ceremony tool at all. False: the entry is not drawn. */
+    val bundled: Boolean
+
     /** Check the tool before anything runs: present, hash verified, every subcommand listed. */
     suspend fun prepare(): CeremonyToolState
 

@@ -18,18 +18,24 @@ class CeremonyCommandsTest {
         CeremonyCommands.shellLine(CeremonyCommands.init(d, "2026-12-01T17:00:00.000Z")),
     )
 
-    @Test fun holder_prep_is_the_readme_line() = assertEquals(
+    /** Eric's rehearsed line, exactly (the server session, 2026-11-21). */
+    @Test fun holder_prep_is_erics_rehearsed_line() = assertEquals(
         "genesis-ceremony holder-prep --dir /media/coord/D --name A1 --mldsa-seed /media/A1/mldsa65.seed --keygen " +
-            "--intermediate yubico-piv-ca.pem --backup-slot 9c --backup-mldsa-seed /media/A2/mldsa65.seed --backup-keygen",
+            "--backup-mldsa-seed /media/A2/mldsa65.seed --backup-keygen",
         CeremonyCommands.shellLine(
             CeremonyCommands.holderPrep(
-                CeremonyCommands.HolderPrep(d, "A1", "/media/A1/mldsa65.seed", true, listOf("yubico-piv-ca.pem"), "/media/A2/mldsa65.seed", true),
+                CeremonyCommands.HolderPrep(d, "A1", "/media/A1/mldsa65.seed", true, emptyList(), "/media/A2/mldsa65.seed", true),
             ),
         ),
     )
 
+    @Test fun holder_prep_with_an_intermediate_puts_it_after_keygen() = assertEquals(
+        listOf("holder-prep", "--dir", d, "--name", "A1", "--mldsa-seed", "/s", "--keygen", "--intermediate", "ca.pem", "--backup-mldsa-seed", "/b"),
+        CeremonyCommands.holderPrep(CeremonyCommands.HolderPrep(d, "A1", "/s", true, listOf("ca.pem"), "/b", false)),
+    )
+
     @Test fun holder_prep_without_the_optional_flags() = assertEquals(
-        listOf("holder-prep", "--dir", d, "--name", "B1", "--mldsa-seed", "/m/B1.seed", "--backup-slot", "9c", "--backup-mldsa-seed", "/m/B2.seed"),
+        listOf("holder-prep", "--dir", d, "--name", "B1", "--mldsa-seed", "/m/B1.seed", "--backup-mldsa-seed", "/m/B2.seed"),
         CeremonyCommands.holderPrep(CeremonyCommands.HolderPrep(d, "B1", "/m/B1.seed", false, listOf(""), "/m/B2.seed", false)),
     )
 
@@ -83,6 +89,23 @@ class CeremonyCommandsTest {
         """.trimIndent()
         assertTrue(CeremonyCommands.missingSubcommands(help).isEmpty())
         assertEquals(listOf("holder-prep", "holder-sign"), CeremonyCommands.missingSubcommands(help.lines().filterNot { "holder-" in it }.joinToString("\n")))
+    }
+
+    @Test fun the_entry_is_shown_whenever_the_tool_is_bundled_on_every_edition() {
+        val fs = MemFs()
+        val bundled = EchoRunner(fs, bundled = true)
+        val notBundled = EchoRunner(fs, bundled = false)
+        val editions = listOf(
+            ai.ciris.mobile.shared.models.capability.NodeEdition.EDITION_1,
+            ai.ciris.mobile.shared.models.capability.NodeEdition.EDITION_2,
+            ai.ciris.mobile.shared.models.capability.NodeEdition.UNKNOWN,
+            null,
+        )
+        editions.forEach { e ->
+            assertTrue(ai.ciris.mobile.shared.ui.screens.GenesisCeremonyEntryGate.shows(bundled, e), "bundled, $e")
+            assertFalse(ai.ciris.mobile.shared.ui.screens.GenesisCeremonyEntryGate.shows(notBundled, e), "not bundled, $e")
+            assertFalse(ai.ciris.mobile.shared.ui.screens.GenesisCeremonyEntryGate.shows(null, e), "no runner, $e")
+        }
     }
 
     @Test fun shell_quoting_survives_spaces_and_quotes() =

@@ -5525,6 +5525,12 @@ fun CIRISApp(
                 onOpenHousehold = { currentScreen = Screen.LayerFamily },
             )
         }
+                // THE GENESIS CEREMONY (CSD-069) before anyone is signed in: a fresh desktop
+                // reaches only these two screens, and the ceremony uses no node. Only a
+                // build that carries the tool draws it (GenesisCeremonyEntryGate).
+                if (currentScreen is Screen.Login || currentScreen is Screen.Setup) {
+                    GenesisCeremonyCorner()
+                }
                 } // close Box(modifier = contentModifier)
             } // close mainScreenContent lambda
 

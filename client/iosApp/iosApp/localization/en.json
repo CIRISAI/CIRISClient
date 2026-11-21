@@ -4694,6 +4694,7 @@
     "wa_identity_profile_unknown": "This agent reported an identity status this app doesn't know.",
     "wa_identity_open_base_link": "Open the base-link request",
     "genesis_open": "Open the genesis ceremony",
+    "genesis_entry_offline_note": "The genesis ceremony runs offline from this computer, over a ceremony directory on a USB stick. It does not use this node.",
     "genesis_title": "Genesis ceremony",
     "genesis_close": "Close",
     "genesis_intro": "The v62 genesis is made offline with the ceremony tool. This screen runs it step by step over one ceremony directory and shows what it prints. Every signature is made inside the tool: this app reads no key and signs nothing.",
