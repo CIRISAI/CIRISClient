@@ -271,8 +271,8 @@ python3 packaging/check_wheel_size.py dist/*.whl
 
 **The genesis ceremony tool is never in a release.** A local desktop build can carry the
 offline `genesis-ceremony` binary for the v62 ceremony screen (CSD-069):
-`./gradlew -p client -PceremonyBinary=<path> -PceremonyCommit=<sha> :desktopApp:packageUberJarForCurrentOS`.
-The binary is copied into `build/generated` with its sha256 baked in, and the app verifies that
+`./gradlew -p client -PceremonyBinary=<path> -PceremonyCommit=<sha> -PceremonyIntermediates=<Yubico PIV Attestation B 1 PEM>,<Yubico Attestation Intermediate B 1 PEM> :desktopApp:packageUberJarForCurrentOS`.
+Every holder-prep passes both intermediates, in that chain order (the build checks it). The binary and the PEMs are copied into `build/generated` with its sha256 baked in, and the app verifies that
 hash before every run. Release builds never set `-PceremonyBinary`, so no wheel and no published
 jar carries it; without it the screen says the build has no tool.
 

@@ -29,6 +29,18 @@ class CeremonyCommandsTest {
         ),
     )
 
+    /** The two Yubico intermediates, always, in chain order, right after the seed part. */
+    @Test fun holder_prep_passes_both_yubico_intermediates_in_chain_order() = assertEquals(
+        listOf(
+            "holder-prep", "--dir", d, "--name", "A1", "--mldsa-seed", "/media/A1/mldsa65.seed", "--keygen",
+            "--intermediate", "/rt/intermediate-1.pem", "--intermediate", "/rt/intermediate-2.pem",
+            "--backup-mldsa-seed", "/media/A2/mldsa65.seed", "--backup-keygen",
+        ),
+        CeremonyCommands.holderPrep(
+            CeremonyCommands.HolderPrep(d, "A1", "/media/A1/mldsa65.seed", true, listOf("/rt/intermediate-1.pem", "/rt/intermediate-2.pem"), "/media/A2/mldsa65.seed", true),
+        ),
+    )
+
     @Test fun holder_prep_with_an_intermediate_puts_it_after_keygen() = assertEquals(
         listOf("holder-prep", "--dir", d, "--name", "A1", "--mldsa-seed", "/s", "--keygen", "--intermediate", "ca.pem", "--backup-mldsa-seed", "/b"),
         CeremonyCommands.holderPrep(CeremonyCommands.HolderPrep(d, "A1", "/s", true, listOf("ca.pem"), "/b", false)),

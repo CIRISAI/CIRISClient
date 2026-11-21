@@ -3,6 +3,7 @@ package ai.ciris.mobile.shared.viewmodels
 import ai.ciris.mobile.shared.ceremony.CeremonyAnswer
 import ai.ciris.mobile.shared.ceremony.CeremonyCommands
 import ai.ciris.mobile.shared.ceremony.CeremonyEvent
+import ai.ciris.mobile.shared.ceremony.CeremonyIntermediates
 import ai.ciris.mobile.shared.ceremony.CeremonyLogWriter
 import ai.ciris.mobile.shared.ceremony.CeremonyOutput
 import ai.ciris.mobile.shared.ceremony.CeremonyPreflight
@@ -68,6 +69,10 @@ class GenesisCeremonyViewModel(
     private val _preflight = MutableStateFlow<String?>(null)
     val preflight: StateFlow<String?> = _preflight.asStateFlow()
 
+    /** Plain detail for [preflight], when there is one (e.g. which intermediate is missing). */
+    private val _preflightDetail = MutableStateFlow<String?>(null)
+    val preflightDetail: StateFlow<String?> = _preflightDetail.asStateFlow()
+
     private val writer = runner?.let { CeremonyLogWriter(it.fs, appLog) }
     private var run: CeremonyRun? = null
     private var job: Job? = null
@@ -98,9 +103,21 @@ class GenesisCeremonyViewModel(
         CeremonyPreflight.init(it, _dir.value, t0)
     }
 
+    /**
+     * Holder-prep ALWAYS passes the two bundled Yubico intermediates first (PIV Attestation
+     * B 1, then Attestation Intermediate B 1), then any [p]'s extra ones. Without both the
+     * custody chain stops at f9 and the check refuses it, so the step does not start.
+     */
     fun runHolderPrep(p: CeremonyCommands.HolderPrep) {
-        val q = p.copy(dir = _dir.value)
-        start(CeremonyStep.HOLDER_PREP, CeremonyCommands.holderPrep(q)) { CeremonyPreflight.holderPrep(it, q) }
+        val r = runner ?: return
+        when (val im = r.custodyIntermediates()) {
+            is CeremonyIntermediates.Ready -> {
+                val q = p.copy(dir = _dir.value, intermediates = im.paths + p.intermediates.filter { it.isNotBlank() })
+                start(CeremonyStep.HOLDER_PREP, CeremonyCommands.holderPrep(q)) { CeremonyPreflight.holderPrep(it, q) }
+            }
+            is CeremonyIntermediates.Missing -> { _preflight.value = "mobile.genesis_pre_intermediates_missing"; _preflightDetail.value = im.detail }
+            is CeremonyIntermediates.Refused -> { _preflight.value = "mobile.genesis_pre_intermediates_refused"; _preflightDetail.value = im.detail }
+        }
     }
 
     fun runSeat(name: String, seatSeed: String, transport: String, dial: List<String>) =
@@ -137,8 +154,9 @@ class GenesisCeremonyViewModel(
             _preflight.value = "mobile.genesis_pre_tool_not_ready"
             return
         }
-        preflight(r.fs)?.let { _preflight.value = it; return }
+        preflight(r.fs)?.let { _preflight.value = it; _preflightDetail.value = null; return }
         _preflight.value = null
+        _preflightDetail.value = null
         val d = _dir.value
         val before = CeremonySnapshot.of(r.fs, d)
         val rec = CeremonyStepRecord(step, args, (_tool.value as? CeremonyToolState.Ready)?.info, now())

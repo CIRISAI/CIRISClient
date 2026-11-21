@@ -57,21 +57,21 @@ object CeremonyToolBundle {
      * Copy [source] into [dir] as the runnable tool and verify the COPY against [expectedSha].
      * On a mismatch the copy is deleted and nothing is left to run.
      */
-    fun verifiedCopy(source: InputStream, expectedSha: String, dir: File): Verified {
+    fun verifiedCopy(source: InputStream, expectedSha: String, dir: File, fileName: String = FILE_NAME, executable: Boolean = true): Verified {
         if (expectedSha.isBlank()) return Verified.Missing("no sha256 was built in")
         dir.mkdirs()
-        val tmp = File.createTempFile("$FILE_NAME-", ".part", dir)
+        val tmp = File.createTempFile("$fileName-", ".part", dir)
         try {
             source.use { s -> tmp.outputStream().use { s.copyTo(it) } }
-            ownerOnly(tmp, executable = true)
+            ownerOnly(tmp, executable = executable)
             val actual = sha256(tmp)
             if (!actual.equals(expectedSha, ignoreCase = true)) {
                 tmp.delete()
                 return Verified.Mismatch(expectedSha, actual)
             }
-            val target = File(dir, FILE_NAME)
+            val target = File(dir, fileName)
             Files.move(tmp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
-            ownerOnly(target, executable = true)
+            ownerOnly(target, executable = executable)
             return Verified.Ok(target)
         } finally {
             if (tmp.exists()) tmp.delete()
@@ -85,6 +85,38 @@ object CeremonyToolBundle {
             ?: return Verified.Missing("the build names a tool but carries no ${CeremonyToolBuild.RESOURCE}")
         return verifiedCopy(stream, CeremonyToolBuild.SHA256, runtimeDir())
     }
+
+    /** How many Yubico intermediates a holder-prep needs: PIV Attestation B 1 and Attestation Intermediate B 1. */
+    const val INTERMEDIATES_NEEDED = 2
+
+    /**
+     * The intermediates in [entries] (resource to sha256, chain order), each copied beside the
+     * tool and verified against its built-in hash now. Missing if the build carries fewer than
+     * two; Refused on any mismatch, naming which.
+     */
+    fun intermediates(entries: List<Pair<String, String>>, open: (String) -> InputStream?, dir: File): CeremonyIntermediates {
+        if (entries.size != INTERMEDIATES_NEEDED) {
+            return CeremonyIntermediates.Missing(
+                "this build carries ${entries.size} of the $INTERMEDIATES_NEEDED Yubico intermediates " +
+                    "(Yubico PIV Attestation B 1, Yubico Attestation Intermediate B 1); build it with -PceremonyIntermediates",
+            )
+        }
+        val paths = entries.map { (resource, sha) ->
+            val stream = open(resource) ?: return CeremonyIntermediates.Missing("the build names $resource but does not carry it")
+            when (val v = verifiedCopy(stream, sha, dir, resource.substringAfterLast('/'), executable = false)) {
+                is Verified.Ok -> v.file.absolutePath
+                is Verified.Mismatch -> return CeremonyIntermediates.Refused("$resource: sha256 ${v.actual}, not the built ${v.expected}")
+                is Verified.Missing -> return CeremonyIntermediates.Missing("$resource: ${v.detail}")
+            }
+        }
+        return CeremonyIntermediates.Ready(paths)
+    }
+
+    fun bundledIntermediates(): CeremonyIntermediates = intermediates(
+        CeremonyToolBuild.INTERMEDIATES,
+        { CeremonyToolBundle::class.java.classLoader?.getResourceAsStream(it) },
+        runtimeDir(),
+    )
 
     private fun ownerOnly(f: File, executable: Boolean) {
         runCatching { Files.setPosixFilePermissions(f.toPath(), PosixFilePermissions.fromString(if (executable) "rwx------" else "rw-------")) }
@@ -106,7 +138,9 @@ class DesktopCeremonyRunner(
     private val tool: () -> CeremonyToolBundle.Verified = CeremonyToolBundle::extract,
     private val toolInfo: () -> Pair<String, Long> = { CeremonyToolBuild.COMMIT to CeremonyToolBuild.SIZE_BYTES },
     private val osName: String = System.getProperty("os.name").orEmpty(),
+    private val intermediates: () -> CeremonyIntermediates = CeremonyToolBundle::bundledIntermediates,
 ) : CeremonyRunner {
+    override fun custodyIntermediates(): CeremonyIntermediates = intermediates()
     override val fs: CeremonyFs = JvmCeremonyFs
     override val bundled: Boolean get() = CeremonyToolBuild.SHA256.isNotEmpty()
 

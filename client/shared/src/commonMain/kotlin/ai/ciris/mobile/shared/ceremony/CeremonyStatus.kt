@@ -150,7 +150,10 @@ object CeremonyPreflight {
         !fs.exists(fs.join(dir, "terms.json")) -> "mobile.genesis_pre_no_terms"
         name.isBlank() -> "mobile.genesis_pre_no_name"
         !fs.exists(mldsaSeed) -> "mobile.genesis_pre_seed_missing"
-        sealedDir.isBlank() || !fs.isDirectory(sealedDir) -> "mobile.genesis_pre_sealed_missing"
+        sealedDir.isBlank() -> "mobile.genesis_pre_sealed_missing"
+        // The tool creates the folder; the holder's medium (its parent) must be mounted.
+        fs.parent(sealedDir)?.let { fs.isDirectory(it) } != true -> "mobile.genesis_pre_sealed_missing"
+        fs.exists(sealedDir) && !fs.isDirectory(sealedDir) -> "mobile.genesis_pre_sealed_missing"
         fs.isWithin(sealedDir, dir) -> "mobile.genesis_pre_sealed_in_dir"
         else -> null
     }

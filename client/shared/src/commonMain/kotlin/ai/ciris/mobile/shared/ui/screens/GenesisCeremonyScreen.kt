@@ -62,6 +62,7 @@ fun GenesisCeremonyScreen(vm: GenesisCeremonyViewModel, onClose: () -> Unit) {
     val status by vm.status.collectAsState()
     val running by vm.running.collectAsState()
     val preflight by vm.preflight.collectAsState()
+    val preflightDetail by vm.preflightDetail.collectAsState()
     LaunchedEffect(Unit) { vm.prepare() }
     val busy = running?.finished == false
     val enabled = tool is CeremonyToolState.Ready && !busy
@@ -93,6 +94,7 @@ fun GenesisCeremonyScreen(vm: GenesisCeremonyViewModel, onClose: () -> Unit) {
         }
         StatusCard(status, dir)
         preflight?.let { Text(localizedString(it), color = MaterialTheme.colorScheme.error, fontSize = 13.sp, modifier = Modifier.testable("note_genesis_preflight")) }
+        preflightDetail?.let { Mono("code_genesis_preflight_detail", it) }
 
         running?.let { RunCard(it, vm) }
 
@@ -149,7 +151,12 @@ fun GenesisCeremonyScreen(vm: GenesisCeremonyViewModel, onClose: () -> Unit) {
             var sealed by remember { mutableStateOf("") }
             var module by remember { mutableStateOf("") }
             Field("input_genesis_sign_name", "mobile.genesis_holder_name", name, enabled) { name = it }
-            Field("input_genesis_sign_mldsa_seed", "mobile.genesis_holder_seed", seed, enabled) { seed = it }
+            // The sealed halt goes on the holder's OWN medium: prefilled as a new folder beside the seed.
+            Field("input_genesis_sign_mldsa_seed", "mobile.genesis_holder_seed", seed, enabled) {
+                val before = sealedBeside(seed)
+                seed = it
+                if (sealed.isBlank() || sealed == before) sealed = sealedBeside(it)
+            }
             Field("input_genesis_sign_sealed_dir", "mobile.genesis_sealed_dir", sealed, enabled) { sealed = it }
             Field("input_genesis_sign_module", "mobile.genesis_module", module, enabled) { module = it }
             RunButton("btn_genesis_run_holder_sign", enabled) { vm.runHolderSign(name, seed, sealed, module.takeIf { it.isNotBlank() }) }
@@ -165,6 +172,13 @@ fun GenesisCeremonyScreen(vm: GenesisCeremonyViewModel, onClose: () -> Unit) {
         }
         Text(localizedString("mobile.genesis_after"), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.testable("note_genesis_after"))
     }
+}
+
+/** `<the seed's folder>/sealed`, or empty when there is no seed path yet. */
+internal fun sealedBeside(seed: String): String {
+    val s = seed.trim()
+    val cut = s.lastIndexOf('/')
+    return if (cut <= 0) "" else s.substring(0, cut) + "/sealed"
 }
 
 @Composable

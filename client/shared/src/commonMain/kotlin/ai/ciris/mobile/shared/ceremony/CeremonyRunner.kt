@@ -21,6 +21,19 @@ enum class CeremonyAnswer(val logged: String) {
     SWAPPED("swapped"),
 }
 
+/**
+ * The Yubico intermediates every holder-prep passes (PIV Attestation B 1, then Attestation
+ * Intermediate B 1): without them the custody chain stops at f9 and check/final-gate refuse
+ * `custody_chain_invalid`. Ready carries their verified paths in chain order.
+ */
+sealed interface CeremonyIntermediates {
+    data class Ready(val paths: List<String>) : CeremonyIntermediates
+    /** The build does not carry both; [detail] names what is missing. */
+    data class Missing(val detail: String) : CeremonyIntermediates
+    /** A bundled certificate's hash is not the one built in. */
+    data class Refused(val detail: String) : CeremonyIntermediates
+}
+
 /** Which tool will run, as the start screen shows it. */
 data class CeremonyToolInfo(
     /** `--version`'s answer, or null when the tool has none. */
@@ -108,6 +121,9 @@ interface CeremonyRunner {
 
     /** The files the screen reads and the log it appends to. */
     val fs: CeremonyFs
+
+    /** The bundled Yubico intermediates, copied out and verified NOW (before every holder-prep). */
+    fun custodyIntermediates(): CeremonyIntermediates
 
     /**
      * Start [step] with [args] (from [CeremonyCommands], starting at the subcommand). A

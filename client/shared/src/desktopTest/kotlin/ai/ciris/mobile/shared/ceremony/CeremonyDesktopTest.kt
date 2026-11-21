@@ -52,6 +52,48 @@ class CeremonyDesktopTest {
         assertEquals(CeremonyToolBuild.SHA256, state.info.sha256)
     }
 
+    // ── The Yubico intermediates ─────────────────────────────────────────────
+
+    private fun sha(b: ByteArray) = java.security.MessageDigest.getInstance("SHA-256").digest(b).joinToString("") { "%02x".format(it) }
+
+    @Test fun the_intermediates_are_copied_verified_and_kept_in_chain_order() {
+        val dir = tmp()
+        val piv = "PIV B 1".toByteArray(); val inter = "Intermediate B 1".toByteArray()
+        val res = mapOf("ceremony/intermediate-1.pem" to piv, "ceremony/intermediate-2.pem" to inter)
+        val r = CeremonyToolBundle.intermediates(
+            listOf("ceremony/intermediate-1.pem" to sha(piv), "ceremony/intermediate-2.pem" to sha(inter)),
+            { res[it]?.inputStream() }, dir,
+        )
+        assertIs<CeremonyIntermediates.Ready>(r)
+        assertEquals(listOf("intermediate-1.pem", "intermediate-2.pem"), r.paths.map { File(it).name })
+        assertEquals("PIV B 1", File(r.paths[0]).readText())
+    }
+
+    @Test fun an_intermediate_with_the_wrong_hash_is_refused_by_name() {
+        val dir = tmp()
+        val piv = "PIV B 1".toByteArray(); val inter = "Intermediate B 1".toByteArray()
+        val res = mapOf("ceremony/intermediate-1.pem" to piv, "ceremony/intermediate-2.pem" to inter)
+        val r = CeremonyToolBundle.intermediates(
+            listOf("ceremony/intermediate-1.pem" to sha(piv), "ceremony/intermediate-2.pem" to sha(piv)),
+            { res[it]?.inputStream() }, dir,
+        )
+        assertIs<CeremonyIntermediates.Refused>(r)
+        assertTrue("intermediate-2.pem" in r.detail)
+        assertIs<CeremonyIntermediates.Missing>(CeremonyToolBundle.intermediates(listOf("ceremony/intermediate-1.pem" to sha(piv)), { res[it]?.inputStream() }, dir))
+    }
+
+    /** With bundled intermediates (-PceremonyIntermediates), the real ones: verified, PIV Attestation B 1 first. */
+    @Test fun the_bundled_intermediates_chain_when_this_build_carries_them() {
+        if (CeremonyToolBuild.INTERMEDIATES.size != 2) return
+        val r = CeremonyToolBundle.bundledIntermediates()
+        assertIs<CeremonyIntermediates.Ready>(r, r.toString())
+        val cf = java.security.cert.CertificateFactory.getInstance("X.509")
+        val certs = r.paths.map { File(it).inputStream().use { s -> cf.generateCertificate(s) as java.security.cert.X509Certificate } }
+        assertTrue("Yubico PIV Attestation B 1" in certs[0].subjectX500Principal.name)
+        assertEquals(certs[0].issuerX500Principal, certs[1].subjectX500Principal)
+        assertTrue("Yubico Attestation Root 1" in certs[1].issuerX500Principal.name)
+    }
+
     // ── The status, from a real directory ───────────────────────────────────
 
     @Test fun the_status_reads_the_tools_layout() {

@@ -43,8 +43,11 @@ internal class MemFs : CeremonyFs {
 /** A runner whose tool echoes whatever it is sent, the PIN included: the worst case. */
 internal class EchoRunner(override val fs: CeremonyFs, override val bundled: Boolean = true) : CeremonyRunner {
     var last: EchoRun? = null
+    var lastArgs: List<String> = emptyList()
+    var intermediates: CeremonyIntermediates = CeremonyIntermediates.Ready(listOf("/rt/intermediate-1.pem", "/rt/intermediate-2.pem"))
+    override fun custodyIntermediates() = intermediates
     override suspend fun prepare(): CeremonyToolState = CeremonyToolState.Ready(CeremonyToolInfo("genesis-ceremony 0.1.0", "0dabc27e", "ab".repeat(32), 1))
-    override fun run(step: CeremonyStep, args: List<String>, externalSigner: CeremonyExternalSigner?): CeremonyRun = EchoRun().also { last = it }
+    override fun run(step: CeremonyStep, args: List<String>, externalSigner: CeremonyExternalSigner?): CeremonyRun = EchoRun().also { last = it; lastArgs = args }
 
     inner class EchoRun : CeremonyRun {
         val ch = Channel<CeremonyEvent>(Channel.UNLIMITED)
@@ -157,10 +160,36 @@ class GenesisCeremonyViewModelTest {
     @Test fun a_step_does_not_start_without_its_media() = runTest(StandardTestDispatcher()) {
         val (vm, runner, _) = setup(this)
         advanceUntilIdle()
-        vm.runHolderSign("A1", "/media/A1/mldsa65.seed", "/media/A1/nowhere", null)
+        vm.runHolderSign("A1", "/media/A1/mldsa65.seed", "/media/Z9/sealed", null)
         assertEquals("mobile.genesis_pre_sealed_missing", vm.preflight.value)
         vm.runHolderPrep(CeremonyCommands.HolderPrep(dir, "A1", "/media/A1/mldsa65.seed", false, emptyList(), "/media/A2/mldsa65.seed", false))
         assertEquals("mobile.genesis_pre_backup_medium_missing", vm.preflight.value)
+        assertEquals(null, runner.last)
+    }
+
+    @Test fun holder_prep_always_passes_the_bundled_intermediates_first_in_chain_order() = runTest(StandardTestDispatcher()) {
+        val (vm, runner, _) = setup(this)
+        advanceUntilIdle()
+        val fs = runner.fs as MemFs
+        fs.dirs += "/media/A2"
+        fs.put("/rt/intermediate-1.pem", "piv-b1"); fs.put("/rt/intermediate-2.pem", "int-b1")
+        vm.runHolderPrep(CeremonyCommands.HolderPrep(dir, "A1", "/media/A1/new.seed", true, emptyList(), "/media/A2/new.seed", true))
+        assertEquals(null, vm.preflight.value)
+        val a = runner.lastArgs
+        val i = a.indexOf("--intermediate")
+        assertEquals(listOf("--intermediate", "/rt/intermediate-1.pem", "--intermediate", "/rt/intermediate-2.pem"), a.subList(i, i + 4))
+        assertEquals("--backup-mldsa-seed", a[i + 4])
+        runner.last!!.exit(0)
+        advanceUntilIdle()
+    }
+
+    @Test fun holder_prep_refuses_without_both_intermediates_and_says_which() = runTest(StandardTestDispatcher()) {
+        val (vm, runner, _) = setup(this)
+        advanceUntilIdle()
+        runner.intermediates = CeremonyIntermediates.Missing("this build carries 0 of the 2 Yubico intermediates")
+        vm.runHolderPrep(CeremonyCommands.HolderPrep(dir, "A1", "/media/A1/mldsa65.seed", false, emptyList(), "/media/A2/x", false))
+        assertEquals("mobile.genesis_pre_intermediates_missing", vm.preflight.value)
+        assertTrue("0 of the 2" in (vm.preflightDetail.value ?: ""))
         assertEquals(null, runner.last)
     }
 }
