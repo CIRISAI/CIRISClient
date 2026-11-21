@@ -6185,7 +6185,11 @@
     "withdrawn": "其作者已撤回此文件。这些字节已不再在任何地方提供。",
     "awaiting_key": "其字节已在此，但本设备用于解密它们的密钥尚未到达。它会自行送达；请稍后重试。",
     "withheld_by_moderation": "此房间的管理员标记了此文件，因此在您选择查看之前，它将保持隐藏。",
-    "flagged_by_moderation": "此房间的管理员标记了此文件；在标记有效期间，它仍保留在房间中"
+    "flagged_by_moderation": "此房间的管理员标记了此文件；在标记有效期间，它仍保留在房间中",
+    "no_rendition": "此文件没有节点可生成的预览。",
+    "image_too_large": "此图片过大，节点无法生成预览。",
+    "image_undecodable": "节点无法读取此图片以生成预览。",
+    "unknown_rendition": "应用请求了一种节点无法生成的预览类型。"
   },
   "notes": {
     "author_signer_unavailable": "此节点当前无法以您的身份签名，因此笔记未能写入。",
@@ -6529,7 +6533,9 @@
     "share_unavailable": "此节点尚不支持屏幕共享功能。",
     "leave_reason_unknown": "这不是离开通话的有效原因。",
     "video_two_people_only": "目前，视频和屏幕共享仅支持双人通话。此次通话人数更多，因此仅支持语音。如果您的摄像头已开启，当通话恢复为双人时，它会重新开始发送画面。",
-    "relay_canonical_audio_only": "对方的视频目前无法传送到您这里：您与对方之间的路由仅支持传输声音。您仍然可以听到对方的声音。"
+    "relay_canonical_audio_only": "对方的视频目前无法传送到您这里：您与对方之间的路由仅支持传输声音。您仍然可以听到对方的声音。",
+    "share_already_live": "您已经在共享屏幕了。",
+    "no_share": "您当前没有共享屏幕。"
   },
   "decisions": {
     "not_found": "该决定对您已不再开放。",

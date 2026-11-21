@@ -351,6 +351,7 @@ call.ended	server	server	-	-	-	-	-
 call.frame_over_budget	server	server	-	-	-	-	-
 call.keep_refused	server	server	-	-	-	-	-
 call.leave_reason_unknown	server	server	-	-	-	-	-
+call.no_share	server	server	-	-	-	-	-
 call.not_a_member	server	server	-	-	-	-	-
 call.not_joined	server	server	-	-	-	-	-
 call.not_owner	server	server	-	-	-	-	-
@@ -359,6 +360,7 @@ call.plumbing	server	client,server	literal	-	-	-	-
 call.relay_canonical_audio_only	client	client	literal	-	-	-	-
 call.room_may_keep.not_yet	server	server	-	-	-	-	-
 call.session_absent	server	server	-	-	-	-	-
+call.share_already_live	server	server	-	-	-	-	-
 call.share_unavailable	server	client,server	literal	-	-	-	-
 call.socket_already_open	server	server	-	-	-	-	-
 call.video_two_people_only	server	client,server	literal	-	-	-	-
@@ -706,8 +708,11 @@ drive.field_after_file	server	server	-	-	-	-	-
 drive.filename_empty	server	server	-	-	-	-	-
 drive.flagged_by_moderation	server	server	-	-	-	-	-
 drive.format_mismatch	server	server	-	-	-	-	-
+drive.image_too_large	server	server	-	-	-	-	-
+drive.image_undecodable	server	server	-	-	-	-	-
 drive.listing_failed	server	server	-	-	-	-	-
 drive.no_node_key	server	server	-	-	61	same	-
+drive.no_rendition	server	server	-	-	-	-	-
 drive.not_a_member	server	server	-	-	-	-	-
 drive.not_author	server	server	-	-	-	-	-
 drive.not_fetched	server	client,server	literal	-	-	-	-
@@ -723,6 +728,7 @@ drive.store_unavailable	server	server	-	-	-	-	-
 drive.too_large	server	server	-	-	-	-	-
 drive.too_large_for_whole_read	server	client,server	literal	-	-	-	-
 drive.unknown_cohort	server	server	-	-	-	-	-
+drive.unknown_rendition	server	server	-	-	-	-	-
 drive.unopened	server	server	-	-	-	-	-
 drive.withdraw_failed	server	server	-	-	-	-	-
 drive.withdrawn	server	server	-	-	-	-	-

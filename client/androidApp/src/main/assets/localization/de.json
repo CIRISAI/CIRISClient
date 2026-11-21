@@ -6167,6 +6167,10 @@
     "awaiting_key": "Die Bytes dieser Datei sind hier, aber der Schlüssel dieses Geräts dafür ist noch nicht angekommen. Er kommt von selbst nach; versuchen Sie es in Kürze erneut.",
     "withheld_by_moderation": "Ein Moderator dieses Raums hat diese Datei markiert, daher bleibt sie verborgen, bis Sie sich entscheiden, sie anzusehen.",
     "flagged_by_moderation": "ein Moderator dieses Raums hat diese Datei markiert; sie bleibt im Raum, solange die Markierung besteht",
+    "no_rendition": "Für diese Datei kann der Knoten keine Vorschau erstellen.",
+    "image_too_large": "Dieses Bild ist zu groß, als dass der Knoten eine Vorschau erstellen könnte.",
+    "image_undecodable": "Der Knoten konnte dieses Bild nicht lesen, um eine Vorschau zu erstellen.",
+    "unknown_rendition": "Die App hat eine Art von Vorschau angefordert, die der Knoten nicht erstellt.",
     "store_unavailable": "Dieser Knoten konnte seinen Dateispeicher nicht erreichen.",
     "too_large": "Diese Datei ist zu groß, um hier hinzugefügt zu werden.",
     "unknown_cohort": "Das ist kein Ort, an dem Dateien abgelegt werden können. Verwenden Sie Nur ich, eine Familie oder eine Community.",
@@ -6529,7 +6533,9 @@
     "share_unavailable": "Bildschirmfreigabe ist auf diesem Knoten noch nicht verfügbar.",
     "leave_reason_unknown": "Das ist kein Grund, einen Anruf zu verlassen.",
     "video_two_people_only": "Video und Bildschirmfreigabe funktionieren vorerst nur bei Anrufen zwischen zwei Personen. Dieser Anruf hat mehr Teilnehmer, daher ist es ein reiner Sprachanruf. Wenn Ihre Kamera eingeschaltet ist, sendet sie wieder, sobald der Anruf wieder zwischen zwei Personen stattfindet.",
-    "relay_canonical_audio_only": "Ihr Video erreicht Sie gerade nicht: Die Verbindung zwischen Ihnen überträgt nur Ton. Sie können die andere Person weiterhin hören."
+    "relay_canonical_audio_only": "Ihr Video erreicht Sie gerade nicht: Die Verbindung zwischen Ihnen überträgt nur Ton. Sie können die andere Person weiterhin hören.",
+    "share_already_live": "Sie teilen Ihren Bildschirm bereits.",
+    "no_share": "Sie teilen Ihren Bildschirm nicht."
   },
   "decisions": {
     "not_found": "Diese Entscheidung steht für Sie nicht mehr offen.",

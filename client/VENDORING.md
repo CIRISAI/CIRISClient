@@ -21,7 +21,7 @@ upstream's last merged state** — the branch point the next pull starts from:
 
 | Upstream | Last merged state | Input commit | Pulled |
 |---|---|---|---|
-| `CIRISAI/CIRISServer` | `v0.5.247` (`baf41f14de21ec943fc6d93cc890adf4fcf2fd6c`) | `chore/pin-server-v0.5.247` (the release tag, the squash of CIRISServer#876: edge v45.1.1, persist v61.4.0 and verify v22.2.0; the reader pool is on again on macOS, and an offline `config set` on a new macOS home opens the store, which failed on 0.5.246; `CIRIS_NODE_IDENTITY_TTL_S` gives a harness node's identity rows a stated end, set here for CI nodes only (`testing/gate/node_env.py`, the `ciris-node` and `ciris-agent` actions); a node is erased only on its present owner's release, never a former owner's; a room's takedown route and its refusals (`moderation.nothing_to_take_down`, `moderation.takedown_needs_reason`, `moderation.takedown_failed`); `community.room_full`, which a 0.5.247 node does not send while rooms hold two people; deferrals listed on `/v1/self/decisions`; `ciris-server --version` prints a second line naming persist, edge and verify. The four ids are in the bundle. This client does NOT yet call the takedown route or read `/v1/self/decisions`: no screen offers a takedown, a deferral or a seat approval. Previous: `v0.5.246` `9fe076b0a3b6acd03f56bd4350664d64be73c2a2`, `chore/pin-server-v0.5.246`; `release/0.5.246` `b19f32acd424ee0818134927720cf22e101cff79`, `chore/pin-server-0.5.246`) | 2026-11-14 |
+| `CIRISAI/CIRISServer` | `v0.5.252` (`906ed2c70f226d96f1b0686c978f4c80b7193ac5`) | `release/0.5.242` (the release tag, after five server releases: 0.5.248 (CIRISServer#878) adopts edge v45.1.3 and persist v61.4.1, so the responder no longer wedges, and a home that adds AI keeps its node key instead of minting a new ML-DSA seed that peers refused as `pubkey_swap`; 0.5.249 (#879, #882) upgrades from 0.5.225, the oldest release on PyPI, and a partial reset starts a new node; 0.5.250 (#884, edge 45.1.7, persist 61.4.2) carries video calls on an agent install and `POST /v1/system/local-shutdown`, which this client's Reset (#316) calls to stop an attached backend; 0.5.251 (#885): an identity amendment names the link it follows (`refs.prev`); 0.5.252 (#886): a shipped template is pre-approved, so an agent on one reads anchored from first boot, and an amendment may name its derived base. Six ids 0.5.252 emits had no entry here (`call.no_share`, `call.share_already_live`, `drive.image_too_large` and three more); they are in the bundle now. Previous: `v0.5.247` `baf41f14de21ec943fc6d93cc890adf4fcf2fd6c`, `chore/pin-server-v0.5.247`; `v0.5.246` `9fe076b0a3b6acd03f56bd4350664d64be73c2a2`, `chore/pin-server-v0.5.246`; `release/0.5.246` `b19f32acd424ee0818134927720cf22e101cff79`, `chore/pin-server-0.5.246`) | 2026-11-21 |
 | `CIRISAI/CIRISAgent` | `v2.9.36-stable` (`c211a9ff330ab5821002a159c13741cdd74609bb`) | `merge/agent-v2.9.36` | 2026-08-24 |
 
 The §2 exclusion set (extended: `.ciris_keys/`, `__pycache__/`, `*.pyc`,
@@ -40,7 +40,7 @@ source is the pair a bisect wants:
 The tree's current recorded state — sha256-of-sha256s over every git-tracked
 file under `client/` except this one:
 
-**state digest:** `234315c7fd95784b480e0b787fe8ca6de35f120199f59ee93ea00adf5bfb7740`
+**state digest:** `fffdc63905bced3c89dd50a17e7f18180a99e9261392d8256ed06b4c22dde734`
 
 `packaging/check_vendoring.py` asserts it on every push, and refuses any
 tracked file matching a §2 never-vendor class. **Any commit that touches

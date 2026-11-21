@@ -6185,7 +6185,11 @@
     "withdrawn": "Penulisnya telah menarik berkas ini. Bita-bitanya tidak lagi disajikan di mana pun.",
     "awaiting_key": "Byte-nya sudah ada di sini, tetapi kunci perangkat ini untuknya belum tiba. Kunci itu akan menyusul dengan sendirinya; coba lagi sebentar lagi.",
     "withheld_by_moderation": "Seorang moderator ruang ini menandai berkas ini, sehingga tetap tersembunyi sampai Anda memilih untuk melihatnya.",
-    "flagged_by_moderation": "seorang moderator ruang ini menandai berkas ini; berkas tetap berada di ruang selama tanda tersebut berlaku"
+    "flagged_by_moderation": "seorang moderator ruang ini menandai berkas ini; berkas tetap berada di ruang selama tanda tersebut berlaku",
+    "no_rendition": "Berkas ini tidak memiliki pratinjau yang dapat dibuat oleh node.",
+    "image_too_large": "Gambar ini terlalu besar bagi node untuk membuat pratinjau.",
+    "image_undecodable": "Node tidak dapat membaca gambar ini untuk membuat pratinjau.",
+    "unknown_rendition": "Aplikasi meminta jenis pratinjau yang tidak dibuat oleh node."
   },
   "notes": {
     "author_signer_unavailable": "Node ini tidak dapat menandatangani sebagai Anda saat ini, sehingga catatan tidak ditulis.",
@@ -6529,7 +6533,9 @@
     "share_unavailable": "Berbagi layar belum tersedia di node ini.",
     "leave_reason_unknown": "Itu bukan alasan untuk meninggalkan panggilan.",
     "video_two_people_only": "Video dan berbagi layar untuk saat ini hanya berfungsi dalam panggilan antara dua orang. Panggilan ini memiliki lebih dari itu, sehingga hanya suara. Jika kamera Anda aktif, pengiriman video akan dimulai lagi saat panggilan kembali menjadi dua orang.",
-    "relay_canonical_audio_only": "Video mereka tidak dapat menjangkau Anda saat ini: jalur antara Anda dan mereka hanya membawa suara. Anda tetap dapat mendengar mereka."
+    "relay_canonical_audio_only": "Video mereka tidak dapat menjangkau Anda saat ini: jalur antara Anda dan mereka hanya membawa suara. Anda tetap dapat mendengar mereka.",
+    "share_already_live": "Anda sudah membagikan layar Anda.",
+    "no_share": "Anda tidak sedang membagikan layar Anda."
   },
   "decisions": {
     "not_found": "Keputusan itu tidak lagi terbuka untuk Anda.",
