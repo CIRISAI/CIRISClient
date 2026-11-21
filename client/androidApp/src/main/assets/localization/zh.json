@@ -4551,7 +4551,40 @@
     "call_h264_failed_load": "H.264 编解码器已下载，但此电脑无法加载它。请重试，或关闭 H.264 视频，这会将编解码器删除。",
     "call_h264_needed": "此次通话中有人正在发送 H.264 视频。请开启 H.264 视频以查看。",
     "call_h264_licence": "显示许可证",
-    "call_h264_licence_hide": "隐藏许可证"
+    "call_h264_licence_hide": "隐藏许可证",
+    "wa_identity_amendment_title": "请求更改此智能体的身份",
+    "wa_identity_base_link_title": "将此智能体的身份锚定到其模板",
+    "wa_identity_base_link_custom_note": "此智能体运行自定义模板。请批准将其作为此智能体身份的基础。",
+    "wa_identity_reapproval_title": "重新批准现有的身份修订",
+    "wa_identity_unreadable_title": "本应用无法读取的身份更改",
+    "wa_identity_unreadable_note": "本应用无法完整显示此请求，因此无法在此处批准。其摘要和详情见下方。请附上理由拒绝它，或在更新版本的应用中打开它。",
+    "wa_identity_reapproval_note": "此修订早于确切文本批准制度。在重新获得批准之前，它不具有效力。",
+    "wa_identity_exact_text": "您正在批准的确切文本",
+    "wa_identity_edited_by_wa": "由智慧权威编辑",
+    "wa_identity_why": "理由（M-1，自适应连贯性）",
+    "wa_identity_no_justification": "未说明理由。",
+    "wa_identity_objection": "智能体的 {conscience} 良知提出了异议（{type}）：{reason}",
+    "wa_identity_template_name": "模板",
+    "wa_identity_template_version": "版本",
+    "wa_identity_manifest_digest": "清单摘要",
+    "wa_identity_copy_digest": "复制摘要",
+    "wa_identity_guidance_optional": "指导意见（批准时可选，拒绝时必填）",
+    "wa_identity_reject_why": "如需拒绝，请说明理由，以便智能体提出新的表述",
+    "wa_identity_blocked_base_link_first": "请先批准此智能体的基础链接。在其身份锚定到模板之前，已批准的更改无法生效。",
+    "wa_identity_blocked_outer_whitespace": "此文本的开头或结尾含有空格或换行，而智能体会拒绝这种情况。此处不会对其进行更改，因此无法批准。请拒绝它，并要求智能体重新提出。",
+    "wa_identity_blocked_no_digest": "此请求没有完整的模板摘要，因此无法批准。",
+    "wa_identity_blocked_agent_cannot_bind": "此智能体无法将批准绑定到这一确切请求，因此无法在此处批准。",
+    "wa_identity_approved": "已批准。此智能体的各项良知将在其生效前对其进行审查。",
+    "wa_identity_rejected": "已拒绝。智能体可以提出新的表述。",
+    "wa_identity_not_resolved": "此请求尚未解决。可能已有另一位智慧权威先行做出决定。",
+    "wa_identity_failed": "无法发送该决定：{detail}",
+    "wa_identity_receipt_request": "请求回执",
+    "wa_identity_receipt_response": "您的回答的回执",
+    "wa_identity_profile_unanchored": "此智能体的身份尚未锚定。请先批准其基础链接。",
+    "wa_identity_profile_mismatch": "此智能体的身份与其已批准的模板不匹配。在此问题解决之前，任何身份更改均不会生效。",
+    "wa_identity_profile_contested": "此智能体的身份存在争议。在争议解决之前，任何身份更改均不会生效。",
+    "wa_identity_profile_unknown": "此智能体报告了一个本应用无法识别的身份状态。",
+    "wa_identity_open_base_link": "打开基础链接请求"
   },
   "moderation": {
     "ladder": {
@@ -6488,5 +6521,15 @@
   "decisions": {
     "not_found": "该决定对您已不再开放。",
     "awaiting_members": "您的回答已记录。在此更改生效前，其他成员仍需批准。"
+  },
+  "wa": {
+    "resolve_one_subject": "请只批准文本或模板摘要中的一项，不能两者都批准。",
+    "base_link_digest_requires_approve": "模板摘要只能随“批准”一起发送。",
+    "base_link_digest_mismatch": "该模板摘要与此智能体提出的不一致。请刷新后重试。",
+    "amendment_text_requires_approve": "修订文本只能随“批准”一起发送。",
+    "no_signed_request_row": "此延迟没有已签名的请求，因此您的已签名回答没有可回应的对象。"
+  },
+  "deferral": {
+    "unknown_request": "此节点不知道此延迟的请求。"
   }
 }

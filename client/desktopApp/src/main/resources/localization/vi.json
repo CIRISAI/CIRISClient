@@ -4551,7 +4551,40 @@
     "call_h264_failed_load": "Codec H.264 đã được tải xuống, nhưng máy tính này không thể nạp nó. Hãy thử lại, hoặc tắt video H.264, việc này sẽ xóa codec.",
     "call_h264_needed": "Có người trong cuộc gọi này đang gửi video H.264. Hãy bật video H.264 để xem.",
     "call_h264_licence": "Hiện giấy phép",
-    "call_h264_licence_hide": "Ẩn giấy phép"
+    "call_h264_licence_hide": "Ẩn giấy phép",
+    "wa_identity_amendment_title": "Yêu cầu thay đổi danh tính của tác nhân này",
+    "wa_identity_base_link_title": "Neo danh tính của tác nhân này vào mẫu của nó",
+    "wa_identity_base_link_custom_note": "Tác nhân này chạy một mẫu tùy chỉnh. Hãy chấp thuận nó làm cơ sở cho danh tính của tác nhân này.",
+    "wa_identity_reapproval_title": "Chấp thuận lại một sửa đổi danh tính hiện có",
+    "wa_identity_unreadable_title": "Một thay đổi danh tính mà ứng dụng này không thể đọc",
+    "wa_identity_unreadable_note": "Ứng dụng này không thể hiển thị đầy đủ yêu cầu này, nên không thể chấp thuận ở đây. Tóm tắt và chi tiết của nó ở bên dưới. Hãy từ chối kèm theo lý do, hoặc mở nó trên một ứng dụng mới hơn.",
+    "wa_identity_reapproval_note": "Sửa đổi này có trước sự chấp thuận văn bản chính xác. Nó không được tính cho đến khi được chấp thuận lại.",
+    "wa_identity_exact_text": "Văn bản chính xác mà bạn đang chấp thuận",
+    "wa_identity_edited_by_wa": "Được chỉnh sửa bởi một Cơ Quan Sáng Suốt",
+    "wa_identity_why": "Lý do (M-1, Tính Nhất Quán Thích Ứng)",
+    "wa_identity_no_justification": "Không có lý do nào được nêu ra.",
+    "wa_identity_objection": "Lương Tâm {conscience} của tác nhân đã phản đối ({type}): {reason}",
+    "wa_identity_template_name": "Mẫu",
+    "wa_identity_template_version": "Phiên bản",
+    "wa_identity_manifest_digest": "Digest manifest",
+    "wa_identity_copy_digest": "Sao chép digest",
+    "wa_identity_guidance_optional": "Hướng dẫn (tùy chọn khi chấp thuận, bắt buộc khi từ chối)",
+    "wa_identity_reject_why": "Để từ chối, hãy nêu lý do, để tác nhân có thể đề xuất một cách diễn đạt mới",
+    "wa_identity_blocked_base_link_first": "Hãy chấp thuận liên kết cơ sở của tác nhân này trước. Cho đến khi danh tính của nó được neo vào mẫu, một thay đổi đã được chấp thuận không thể có hiệu lực.",
+    "wa_identity_blocked_outer_whitespace": "Văn bản này bắt đầu hoặc kết thúc bằng một khoảng trắng hoặc ký tự xuống dòng, điều mà tác nhân từ chối. Nó không được thay đổi ở đây, nên không thể chấp thuận. Hãy từ chối nó và yêu cầu tác nhân đề xuất lại.",
+    "wa_identity_blocked_no_digest": "Yêu cầu này không có digest mẫu đầy đủ, nên không thể chấp thuận.",
+    "wa_identity_blocked_agent_cannot_bind": "Tác nhân này không thể ràng buộc một sự chấp thuận với đúng yêu cầu này, nên không thể chấp thuận ở đây.",
+    "wa_identity_approved": "Đã chấp thuận. Các Lương Tâm của tác nhân sẽ xem xét trước khi nó có hiệu lực.",
+    "wa_identity_rejected": "Đã từ chối. Tác nhân có thể đề xuất một cách diễn đạt mới.",
+    "wa_identity_not_resolved": "Yêu cầu này chưa được giải quyết. Một Cơ Quan Sáng Suốt khác có thể đã quyết định trước.",
+    "wa_identity_failed": "Không thể gửi quyết định: {detail}",
+    "wa_identity_receipt_request": "Yêu cầu biên nhận",
+    "wa_identity_receipt_response": "Biên nhận câu trả lời của bạn",
+    "wa_identity_profile_unanchored": "Danh tính của tác nhân này chưa được neo. Hãy chấp thuận liên kết cơ sở của nó trước.",
+    "wa_identity_profile_mismatch": "Danh tính của tác nhân này không khớp với mẫu đã được chấp thuận. Không có thay đổi danh tính nào có hiệu lực cho đến khi việc đó được giải quyết.",
+    "wa_identity_profile_contested": "Danh tính của tác nhân này đang bị tranh chấp. Không có thay đổi danh tính nào có hiệu lực cho đến khi việc đó được giải quyết.",
+    "wa_identity_profile_unknown": "Tác nhân này đã báo cáo một trạng thái danh tính mà ứng dụng này không biết.",
+    "wa_identity_open_base_link": "Mở yêu cầu liên kết cơ sở"
   },
   "moderation": {
     "ladder": {
@@ -6488,5 +6521,15 @@
   "decisions": {
     "not_found": "Quyết định đó không còn mở cho bạn nữa.",
     "awaiting_members": "Câu trả lời của bạn đã được ghi lại. Các thành viên khác vẫn cần chấp thuận trước khi điều này có hiệu lực."
+  },
+  "wa": {
+    "resolve_one_subject": "Hãy chấp thuận hoặc văn bản hoặc digest mẫu, không phải cả hai.",
+    "base_link_digest_requires_approve": "Digest mẫu chỉ có thể được gửi cùng với Chấp thuận.",
+    "base_link_digest_mismatch": "Digest mẫu đó không khớp với digest mà tác nhân này đã đề xuất. Hãy làm mới và thử lại.",
+    "amendment_text_requires_approve": "Văn bản sửa đổi chỉ có thể được gửi cùng với Chấp thuận.",
+    "no_signed_request_row": "Việc hoãn này không có yêu cầu đã ký, nên không có gì để câu trả lời đã ký của bạn trả lời."
+  },
+  "deferral": {
+    "unknown_request": "Nút không biết yêu cầu của việc hoãn này."
   }
 }

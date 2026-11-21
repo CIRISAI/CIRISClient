@@ -4551,7 +4551,40 @@
     "call_h264_failed_load": "H.264 kodeki indirildi, ancak bu bilgisayar onu yükleyemedi. Tekrar deneyin veya H.264 görüntüyü kapatın; kapatmak kodeki siler.",
     "call_h264_needed": "Bu aramadaki biri H.264 görüntü gönderiyor. Görmek için H.264 görüntüyü açın.",
     "call_h264_licence": "Lisansı göster",
-    "call_h264_licence_hide": "Lisansı gizle"
+    "call_h264_licence_hide": "Lisansı gizle",
+    "wa_identity_amendment_title": "Bu ajanın kimliğini değiştirme talebi",
+    "wa_identity_base_link_title": "Bu ajanın kimliğini şablonuna sabitle",
+    "wa_identity_base_link_custom_note": "Bu ajan özel bir şablon çalıştırıyor. Bunu ajanın kimliğinin temeli olarak onaylayın.",
+    "wa_identity_reapproval_title": "Mevcut bir kimlik değişikliğini yeniden onaylama",
+    "wa_identity_unreadable_title": "Bu uygulamanın okuyamadığı bir kimlik değişikliği",
+    "wa_identity_unreadable_note": "Bu uygulama bu isteği tam olarak gösteremiyor, bu yüzden burada onaylanamaz. Özeti ve ayrıntıları aşağıdadır. Bir nedenle reddedin veya daha yeni bir uygulamada açın.",
+    "wa_identity_reapproval_note": "Bu değişiklik, tam metin onayından önce yapılmış. Yeniden onaylanana kadar geçerli sayılmaz.",
+    "wa_identity_exact_text": "Onayladığınız tam metin",
+    "wa_identity_edited_by_wa": "Bir Bilge Otorite tarafından düzenlendi",
+    "wa_identity_why": "Neden (M-1, Uyarlanabilir Tutarlılık)",
+    "wa_identity_no_justification": "Hiçbir gerekçe belirtilmedi.",
+    "wa_identity_objection": "Ajanın {conscience} vicdanı itiraz etti ({type}): {reason}",
+    "wa_identity_template_name": "Şablon",
+    "wa_identity_template_version": "Sürüm",
+    "wa_identity_manifest_digest": "Manifest özeti",
+    "wa_identity_copy_digest": "Özeti kopyala",
+    "wa_identity_guidance_optional": "Rehberlik (onaylamak için isteğe bağlı, reddetmek için gerekli)",
+    "wa_identity_reject_why": "Reddetmek için nedenini belirtin, böylece ajan yeni bir ifade önerebilir",
+    "wa_identity_blocked_base_link_first": "Önce bu ajanın temel bağlantısını onaylayın. Kimliği şablonuna sabitlenene kadar, onaylanmış bir değişiklik uygulanamaz.",
+    "wa_identity_blocked_outer_whitespace": "Bu metin bir boşluk veya satır sonuyla başlıyor ya da bitiyor; ajan bunu reddediyor. Burada değiştirilmiyor, bu yüzden onaylanamaz. Reddedin ve ajandan yeniden önermesini isteyin.",
+    "wa_identity_blocked_no_digest": "Bu istekte eksiksiz bir şablon özeti yok, bu yüzden onaylanamaz.",
+    "wa_identity_blocked_agent_cannot_bind": "Bu ajan bir onayı bu tam isteğe bağlayamıyor, bu yüzden burada onaylanamaz.",
+    "wa_identity_approved": "Onaylandı. Ajanın vicdanları, uygulanmadan önce bunu inceler.",
+    "wa_identity_rejected": "Reddedildi. Ajan yeni bir ifade önerebilir.",
+    "wa_identity_not_resolved": "Bu istek çözümlenmedi. Başka bir Bilge Otorite onu önce karara bağlamış olabilir.",
+    "wa_identity_failed": "Karar gönderilemedi: {detail}",
+    "wa_identity_receipt_request": "İstek makbuzu",
+    "wa_identity_receipt_response": "Yanıtınızın makbuzu",
+    "wa_identity_profile_unanchored": "Bu ajanın kimliği henüz sabitlenmedi. Önce temel bağlantısını onaylayın.",
+    "wa_identity_profile_mismatch": "Bu ajanın kimliği, onaylanmış şablonuyla eşleşmiyor. Bu çözülene kadar hiçbir kimlik değişikliği uygulanmaz.",
+    "wa_identity_profile_contested": "Bu ajanın kimliği tartışmalı. Bu çözülene kadar hiçbir kimlik değişikliği uygulanmaz.",
+    "wa_identity_profile_unknown": "Bu ajan, bu uygulamanın bilmediği bir kimlik durumu bildirdi.",
+    "wa_identity_open_base_link": "Temel bağlantı isteğini aç"
   },
   "moderation": {
     "ladder": {
@@ -6488,5 +6521,15 @@
   "decisions": {
     "not_found": "Bu karar artık sizin için açık değil.",
     "awaiting_members": "Yanıtınız kaydedildi. Bunun yürürlüğe girmesi için diğer üyelerin hâlâ onaylaması gerekiyor."
+  },
+  "wa": {
+    "resolve_one_subject": "Ya metni ya da şablon özetini onaylayın, ikisini birden değil.",
+    "base_link_digest_requires_approve": "Bir şablon özeti yalnızca Onayla ile gönderilebilir.",
+    "base_link_digest_mismatch": "Bu şablon özeti, ajanın önerdiğiyle eşleşmiyor. Yenileyin ve tekrar deneyin.",
+    "amendment_text_requires_approve": "Değişiklik metni yalnızca Onayla ile gönderilebilir.",
+    "no_signed_request_row": "Bu ertelemenin imzalı bir isteği yok, bu yüzden imzalı yanıtınızın karşılık vereceği bir şey yok."
+  },
+  "deferral": {
+    "unknown_request": "Düğüm bu erteleme isteğini bilmiyor."
   }
 }

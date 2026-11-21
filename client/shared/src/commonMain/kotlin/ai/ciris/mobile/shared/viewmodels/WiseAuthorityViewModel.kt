@@ -119,6 +119,14 @@ class WiseAuthorityViewModel(
     private val _deferrals = MutableStateFlow<List<DeferralData>>(emptyList())
     val deferrals: StateFlow<List<DeferralData>> = _deferrals.asStateFlow()
 
+    /** The list's identity `profile` and `capabilities` (CIRISAgent v2.23.1-stable); NONE = plain view. */
+    private val _deferralMeta = MutableStateFlow(ai.ciris.mobile.shared.approvals.DeferralListMeta.NONE)
+    val deferralMeta: StateFlow<ai.ciris.mobile.shared.approvals.DeferralListMeta> = _deferralMeta.asStateFlow()
+
+    /** What the last identity resolve did, for the screen to say in the reader's language. */
+    private val _identityOutcome = MutableStateFlow<IdentityResolveOutcome?>(null)
+    val identityOutcome: StateFlow<IdentityResolveOutcome?> = _identityOutcome.asStateFlow()
+
     /** The unified pending-approval list: deferrals + unapproved ticket proposals. */
     private val _approvals = MutableStateFlow<List<PendingApproval>>(emptyList())
     val approvals: StateFlow<List<PendingApproval>> = _approvals.asStateFlow()
@@ -266,6 +274,7 @@ class WiseAuthorityViewModel(
         watchStarted = false
         _waStatus.value = null
         _deferrals.value = emptyList()
+        _deferralMeta.value = ai.ciris.mobile.shared.approvals.DeferralListMeta.NONE
         _approvals.value = emptyList()
         _pendingApprovalCount.value = 0
         _budgetCapability.value = BudgetCapability.UNKNOWN
@@ -383,8 +392,10 @@ class WiseAuthorityViewModel(
                     "pendingDeferrals=${status.pendingDeferrals}"
             )
 
-            val deferrals = api.fetchDeferrals()
+            val list = api.fetchDeferralList()
+            val deferrals = list.deferrals
             _deferrals.value = deferrals
+            _deferralMeta.value = list.meta
             logDebug(method, "Fetched ${deferrals.size} deferrals")
 
             val proposals = api.fetchProposals().mapNotNull { it.toPendingApprovalOrNull() }
@@ -462,6 +473,56 @@ class WiseAuthorityViewModel(
             }
         }
     }
+
+    /**
+     * Resolve an IDENTITY deferral: approve with exactly the [subject] the card
+     * decided (the stored amendment text byte for byte, or the base-link digest),
+     * or reject with [guidance] as the "why" so the agent can re-propose.
+     *
+     * An approval is NOT "applied": the agent's consciences review the write
+     * first, and an objection comes back as a new deferral. So the outcome says
+     * "approved", and the list is re-read either way.
+     */
+    fun resolveIdentityDeferral(
+        deferralId: String,
+        resolution: String,
+        guidance: String,
+        subject: ai.ciris.mobile.shared.approvals.ResolveSubject?,
+    ) {
+        val method = "resolveIdentityDeferral"
+        require(resolution == "approve" || subject == null) { "only an approval carries a subject" }
+        viewModelScope.launch {
+            _isResolving.value = true
+            _error.value = null
+            _identityOutcome.value = null
+            try {
+                val r = api.resolveIdentityDeferral(deferralId, resolution, guidance, subject)
+                _identityOutcome.value = if (!r.success) {
+                    IdentityResolveOutcome.NotResolved
+                } else if (resolution == "approve") {
+                    notifier?.forget(deferralId)
+                    IdentityResolveOutcome.Approved(r.requestAttestationId, r.responseAttestationId)
+                } else {
+                    notifier?.forget(deferralId)
+                    IdentityResolveOutcome.Rejected
+                }
+                logInfo(method, "identity deferral $deferralId: ${_identityOutcome.value!!::class.simpleName}")
+                fetchDataInternal()
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: ai.ciris.mobile.shared.api.NodeRefusal) {
+                logWarn(method, "refused ${e.statusCode} reason_id=${e.reasonId}")
+                _identityOutcome.value = IdentityResolveOutcome.Refused(e)
+            } catch (e: Exception) {
+                logError(method, "Failed: ${e::class.simpleName}: ${e.message}")
+                _identityOutcome.value = IdentityResolveOutcome.Failed(e.message)
+            } finally {
+                _isResolving.value = false
+            }
+        }
+    }
+
+    fun clearIdentityOutcome() { _identityOutcome.value = null }
 
     /**
      * Load the budget state (and remaining trust headroom) for an approval the
@@ -868,4 +929,16 @@ class WiseAuthorityViewModel(
         pollingJob?.cancel()
         watchJob?.cancel()
     }
+}
+
+/** What an identity resolve did. */
+sealed interface IdentityResolveOutcome {
+    /** Approved; the agent's consciences review it before it applies. Receipts may be null on an older agent. */
+    data class Approved(val requestAttestationId: String?, val responseAttestationId: String?) : IdentityResolveOutcome
+    data object Rejected : IdentityResolveOutcome
+    /** HTTP success, but the decision did not commit (another authority decided first). */
+    data object NotResolved : IdentityResolveOutcome
+    /** A typed refusal: shown by its reason id. */
+    data class Refused(val refusal: ai.ciris.mobile.shared.api.NodeRefusal) : IdentityResolveOutcome
+    data class Failed(val message: String?) : IdentityResolveOutcome
 }

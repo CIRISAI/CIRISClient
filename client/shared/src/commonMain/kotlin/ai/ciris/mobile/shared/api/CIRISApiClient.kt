@@ -11069,7 +11069,17 @@ class CIRISApiClient internal constructor(
      */
     private var deferralsUnservedLogged = false
 
-    suspend fun getDeferrals(waId: String? = null): List<DeferralData> {
+    suspend fun getDeferrals(waId: String? = null): List<DeferralData> = getDeferralList(waId).deferrals
+
+    /**
+     * `GET /v1/wa/deferrals`, with what the list carries besides the deferrals:
+     * `profile` (is the agent's identity anchored to its template) and
+     * `capabilities` (which identity approvals this agent can bind), from
+     * CIRISAgent v2.23.1-stable. The generated model predates both, so they are
+     * read from the same body; a failure to read them is the plain view
+     * ([ai.ciris.mobile.shared.approvals.DeferralListMeta.NONE]), never an error.
+     */
+    suspend fun getDeferralList(waId: String? = null): ai.ciris.mobile.shared.approvals.DeferralList {
         val method = "getDeferrals"
         // debug, not info: this is a 30-second poll, and at info it is half the
         // flood on its own even when every call succeeds.
@@ -11089,7 +11099,7 @@ class CIRISApiClient internal constructor(
                             "when the node starts serving them. Silenced until it does.",
                     )
                 }
-                return emptyList()
+                return ai.ciris.mobile.shared.approvals.DeferralList(emptyList())
             }
 
             if (!response.success) {
@@ -11124,7 +11134,16 @@ class CIRISApiClient internal constructor(
                 )
             }
             logInfo(method, "Fetched ${deferrals.size} deferrals")
-            deferrals
+            // The body is saved (Ktor 3 keeps a non-streamed body), so it reads twice.
+            val meta = try {
+                ai.ciris.mobile.shared.approvals.parseDeferralListMeta(response.response.bodyAsText())
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                logWarn(method, "profile/capabilities unreadable (${e::class.simpleName}); plain deferral view")
+                ai.ciris.mobile.shared.approvals.DeferralListMeta.NONE
+            }
+            ai.ciris.mobile.shared.approvals.DeferralList(deferrals, meta)
         } catch (e: Exception) {
             logException(method, e)
             throw e
@@ -11164,6 +11183,59 @@ class CIRISApiClient internal constructor(
         } catch (e: Exception) {
             logException(method, e, "deferralId=$deferralId")
             throw e
+        }
+    }
+
+    /**
+     * `POST /v1/wa/deferrals/{id}/resolve` for an IDENTITY change (CIRISAgent
+     * v2.23.1-stable): `{resolution, guidance}` plus at most ONE subject —
+     * `amendment_text` (the stored proposal, byte for byte: it is what will be
+     * signed, so it is never trimmed or reflowed here) or `base_link_digest`.
+     * Sending both is refused (`wa.resolve_one_subject`), so the type allows one.
+     *
+     * Written by hand because the generated request has neither field, and so
+     * that a refusal reaches the screen as its `reason_id`
+     * (`error.details.reason_id` on the agent; `reason_id` on a node) instead of
+     * "HTTP 400".
+     */
+    suspend fun resolveIdentityDeferral(
+        deferralId: String,
+        resolution: String,
+        guidance: String,
+        subject: ai.ciris.mobile.shared.approvals.ResolveSubject?,
+    ): IdentityResolveData {
+        val method = "resolveIdentityDeferral"
+        logInfo(method, "Resolving identity deferral: id=$deferralId, resolution=$resolution, subject=${subject?.let { it::class.simpleName }}")
+        val body = buildJsonObject {
+            put("resolution", JsonPrimitive(resolution))
+            put("guidance", JsonPrimitive(guidance))
+            when (subject) {
+                is ai.ciris.mobile.shared.approvals.ResolveSubject.AmendmentText -> put("amendment_text", JsonPrimitive(subject.text))
+                is ai.ciris.mobile.shared.approvals.ResolveSubject.BaseLinkDigest -> put("base_link_digest", JsonPrimitive(subject.digest))
+                null -> {}
+            }
+        }
+        val client = agentHttpClient {
+            install(io.ktor.client.plugins.HttpTimeout) {
+                requestTimeoutMillis = 30_000
+                connectTimeoutMillis = 5_000
+            }
+        }
+        try {
+            val response = client.post("$baseUrl/v1/wa/deferrals/${deferralId.encodeURLPathPart()}/resolve") {
+                authHeader()?.let { header("Authorization", it) }
+                contentType(ContentType.Application.Json)
+                setBody(body.toString())
+            }
+            val raw = response.bodyAsText()
+            if (!response.status.isSuccess()) {
+                val refusal = agentRefusal(response.status.value, raw)
+                logWarn(method, "refused ${refusal.statusCode} reason_id=${refusal.reasonId ?: "<none>"}")
+                throw refusal
+            }
+            return parseIdentityResolve(raw, deferralId)
+        } finally {
+            client.close()
         }
     }
 

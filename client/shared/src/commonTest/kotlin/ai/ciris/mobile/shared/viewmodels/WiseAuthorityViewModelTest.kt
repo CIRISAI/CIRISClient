@@ -106,6 +106,13 @@ class WiseAuthorityViewModelTest {
             return ResolveDeferralData(deferralId, true, "2026-07-31T00:00:00Z")
         }
 
+        override suspend fun resolveIdentityDeferral(
+            deferralId: String,
+            resolution: String,
+            guidance: String,
+            subject: ai.ciris.mobile.shared.approvals.ResolveSubject?,
+        ) = error("identity resolves are covered by IdentityChangeResolveTest")
+
         override suspend fun fetchProposals(): List<TicketData> {
             proposalsThrow?.let { throw it }
             return proposals

@@ -4551,7 +4551,40 @@
     "call_h264_failed_load": "Codec H.264 berhasil diunduh, tetapi komputer ini tidak dapat memuatnya. Coba lagi, atau nonaktifkan video H.264, yang akan menghapus codec tersebut.",
     "call_h264_needed": "Seseorang dalam panggilan ini mengirim video H.264. Aktifkan video H.264 untuk melihatnya.",
     "call_h264_licence": "Tampilkan lisensi",
-    "call_h264_licence_hide": "Sembunyikan lisensi"
+    "call_h264_licence_hide": "Sembunyikan lisensi",
+    "wa_identity_amendment_title": "Permintaan untuk mengubah identitas agen ini",
+    "wa_identity_base_link_title": "Tautkan identitas agen ini ke templatenya",
+    "wa_identity_base_link_custom_note": "Agen ini menjalankan template kustom. Setujui template tersebut sebagai dasar identitas agen ini.",
+    "wa_identity_reapproval_title": "Setujui kembali amendemen identitas yang sudah ada",
+    "wa_identity_unreadable_title": "Perubahan identitas yang tidak dapat dibaca oleh aplikasi ini",
+    "wa_identity_unreadable_note": "Aplikasi ini tidak dapat menampilkan permintaan ini secara lengkap, sehingga tidak dapat disetujui di sini. Ringkasan dan detailnya ada di bawah. Tolak dengan alasan, atau buka di aplikasi yang lebih baru.",
+    "wa_identity_reapproval_note": "Amendemen ini dibuat sebelum adanya persetujuan teks-persis. Amendemen ini tidak berlaku sampai disetujui kembali.",
+    "wa_identity_exact_text": "Teks persis yang Anda setujui",
+    "wa_identity_edited_by_wa": "Diedit oleh Otoritas Bijak",
+    "wa_identity_why": "Alasan (M-1, Koherensi Adaptif)",
+    "wa_identity_no_justification": "Tidak ada alasan yang disebutkan.",
+    "wa_identity_objection": "Nurani {conscience} agen keberatan ({type}): {reason}",
+    "wa_identity_template_name": "Template",
+    "wa_identity_template_version": "Versi",
+    "wa_identity_manifest_digest": "Digest manifest",
+    "wa_identity_copy_digest": "Salin digest",
+    "wa_identity_guidance_optional": "Panduan (opsional untuk menyetujui, diperlukan untuk menolak)",
+    "wa_identity_reject_why": "Untuk menolak, sebutkan alasannya, agar agen dapat mengajukan rumusan baru",
+    "wa_identity_blocked_base_link_first": "Setujui tautan dasar agen ini terlebih dahulu. Sampai identitasnya ditautkan ke templatenya, perubahan yang disetujui tidak dapat diberlakukan.",
+    "wa_identity_blocked_outer_whitespace": "Teks ini diawali atau diakhiri dengan spasi atau jeda baris, yang ditolak oleh agen. Teks ini tidak diubah di sini, sehingga tidak dapat disetujui. Tolak permintaan ini dan minta agen mengajukannya kembali.",
+    "wa_identity_blocked_no_digest": "Permintaan ini tidak memiliki digest template yang lengkap, sehingga tidak dapat disetujui.",
+    "wa_identity_blocked_agent_cannot_bind": "Agen ini tidak dapat mengaitkan persetujuan dengan permintaan persis ini, sehingga tidak dapat disetujui di sini.",
+    "wa_identity_approved": "Disetujui. Nurani agen akan meninjaunya sebelum diberlakukan.",
+    "wa_identity_rejected": "Ditolak. Agen dapat mengajukan rumusan baru.",
+    "wa_identity_not_resolved": "Permintaan ini belum diselesaikan. Otoritas Bijak lain mungkin telah memutuskannya lebih dulu.",
+    "wa_identity_failed": "Keputusan tidak dapat dikirim: {detail}",
+    "wa_identity_receipt_request": "Minta resi",
+    "wa_identity_receipt_response": "Resi jawaban Anda",
+    "wa_identity_profile_unanchored": "Identitas agen ini belum ditautkan. Setujui tautan dasarnya terlebih dahulu.",
+    "wa_identity_profile_mismatch": "Identitas agen ini tidak cocok dengan template yang telah disetujui. Tidak ada perubahan identitas yang berlaku sampai hal ini diselesaikan.",
+    "wa_identity_profile_contested": "Identitas agen ini sedang disengketakan. Tidak ada perubahan identitas yang berlaku sampai hal ini diselesaikan.",
+    "wa_identity_profile_unknown": "Agen ini melaporkan status identitas yang tidak dikenali oleh aplikasi ini.",
+    "wa_identity_open_base_link": "Buka permintaan tautan dasar"
   },
   "moderation": {
     "ladder": {
@@ -6488,5 +6521,15 @@
   "decisions": {
     "not_found": "Keputusan itu tidak lagi terbuka untuk Anda.",
     "awaiting_members": "Jawaban Anda telah tercatat. Anggota lain masih perlu menyetujui sebelum ini berlaku."
+  },
+  "wa": {
+    "base_link_digest_mismatch": "Digest template tersebut tidak cocok dengan yang diajukan oleh agen ini. Segarkan dan coba lagi.",
+    "amendment_text_requires_approve": "Teks amandemen hanya dapat dikirim dengan Setujui.",
+    "no_signed_request_row": "Penangguhan ini tidak memiliki permintaan yang ditandatangani, sehingga tidak ada yang dapat dijawab oleh jawaban Anda yang ditandatangani.",
+    "resolve_one_subject": "Setujui teks atau digest template, bukan keduanya.",
+    "base_link_digest_requires_approve": "Digest template hanya dapat dikirim dengan Setujui."
+  },
+  "deferral": {
+    "unknown_request": "Node ini tidak mengetahui permintaan dari penangguhan ini."
   }
 }

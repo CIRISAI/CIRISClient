@@ -118,11 +118,65 @@ silently fails to render is worse than one that is absent, because absence is at
 least visible. On a bare node **every** route this screen calls is missing (§3),
 and the screen draws the calm empty state.
 
+### 2.1 Identity changes (CIRISAgent v2.23.1-stable; Eric 2026-11-20)
+
+Eric: show an identity change accurately and robustly, as a request to change
+the agent's template, with the justification clear. The agent proposes a wording
+for its own identity with an M-1 (Adaptive Coherence) justification; a WA approves
+those EXACT bytes; the agent's consciences review the write and the node signs it.
+A fresh agent first asks for its *base link* (approval of the shipped template it
+runs on), and until that is approved no amendment counts.
+
+Built behind the list's `capabilities.identity_change_review`. An agent without
+it keeps the plain dialog below, unchanged.
+
+- **Banner** (`note_identity_profile`), above the status card, when `profile.status`
+  is unanchored, mismatch, contested or unknown. "Open the base-link request"
+  (`btn_identity_open_base_link`) opens the deferral `profile.proposed_base_link`
+  names, else the first base-link deferral.
+- **One dialog per kind** (`IdentityChangeDialog.kt`), titled by kind
+  (`txt_identity_change_title`):
+  - *amendment*: "Request to change this agent's identity". The text sits in a
+    selectable monospace block (`code_identity_proposed`) that is never trimmed,
+    reflowed or rendered as markdown. "Why (M-1, Adaptive Coherence)"
+    (`txt_identity_m1`) always shows, and says "No justification was stated" when
+    there is none. A conscience objection (`note_identity_objection`) sits above
+    it; `wa_edited` adds `note_identity_wa_edited`.
+  - *base_link*: "Anchor this agent's identity to its template". Template name,
+    version and the full 64-hex manifest digest (`code_identity_manifest_digest`,
+    copy: `btn_identity_copy_digest`).
+  - *reapproval*: "Re-approve an existing identity amendment". The text and M-1,
+    with the note that it predates exact-text approval.
+  - *an unknown kind, or a proposal that will not parse*: the summary and the
+    whole context, read-only, and never approvable.
+- **Actions.** Approve (`btn_identity_approve`) sends `amendment_text` (the stored
+  proposal, byte for byte) or `base_link_digest`, never both. Guidance is optional
+  for approve and is sent as "" when blank. Reject (`btn_identity_reject`) needs
+  the "why", so the agent can propose again. **Modify is not offered**: the agent
+  records it as a rejection and creates no guidance task (Eric: no
+  edit-and-approve). `identityApproval()` turns Approve off, with the reason
+  (`note_identity_approve_blocked`), when:
+  - the profile is not anchored (an approved amendment would fail with
+    `profile_unanchored` and the WA would see nothing happen);
+  - the text has outer whitespace, which the agent refuses (never trimmed);
+  - the digest is not 64 hex;
+  - the agent does not declare the matching capability.
+- **Outcome** (`note_identity_outcome`): "Approved. The agent's consciences review
+  it before it applies." It never says "applied", because an objection comes back
+  as a new deferral. The receipts (`request_attestation_id`,
+  `response_attestation_id`) are shown when sent. A refusal shows its reason id's
+  text: `wa.resolve_one_subject`, `wa.base_link_digest_requires_approve`,
+  `wa.base_link_digest_mismatch`, `wa.amendment_text_requires_approve`,
+  `wa.no_signed_request_row`, `deferral.unknown_request`, else the agent's own
+  English.
+
 ## 3. Contracts (who)
 
 | value | endpoint | owner | state |
 |---|---|---|---|
 | pending deferrals | `GET /v1/wa/deferrals` | **CIRISAgent** — `routes/wa.py:130` | live on the brain; **absent from the node** |
+| identity profile + capabilities | `GET /v1/wa/deferrals` → `profile`, `capabilities` | **CIRISAgent** v2.23.1-stable (55a2447a6) | read from the same body by `getDeferralList` (the generated model predates them); unreadable → plain view |
+| approve an identity change | `POST /v1/wa/deferrals/{id}/resolve` + `amendment_text` \| `base_link_digest` | **CIRISAgent** v2.23.1-stable; `wa.no_signed_request_row` in 2.23.2 (22e8eb94f) | `resolveIdentityDeferral`, by hand: refusals keep `error.details.reason_id` |
 | send guidance | `POST /v1/wa/deferrals/{id}/resolve` | **CIRISAgent** — `routes/wa.py:195` | live on the brain; **absent from the node**. Errors the client does not render: an already-resolved deferral is HTTP **400** (`:384`), not `success=false` — so the VM's `success=false` branch (`WiseAuthorityViewModel.kt:444-451`) is dead and the person sees "API error: HTTP 400"; 403 for an out-of-scope WA (`:288`); 503 when signing fails (`:377-385`). `modify` is stored as a rejection: CIRISAgent#1206 |
 | WA status | `GET /v1/wa/status` | **CIRISAgent** — `routes/wa.py:440` | live, and two of its five numbers are fabricated (§6); on a bare node `getWAStatus` (`CIRISApiClient.kt:8598`) answers zeros instead of raising (open) |
 | proposals awaiting a human | `GET /v1/tickets?status=…` (`fetchProposals`, `ApprovalsApi.kt:145` → generated `listAllTicketsV1TicketsGet`, `CIRISApiClient.kt:11671`) | CIRISAgent `routes/tickets.py:397` | live |
