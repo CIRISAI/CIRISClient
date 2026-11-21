@@ -269,6 +269,13 @@ python3 -m build --wheel --outdir dist packaging/node
 python3 packaging/check_wheel_size.py dist/*.whl
 ```
 
+**The genesis ceremony tool is never in a release.** A local desktop build can carry the
+offline `genesis-ceremony` binary for the v62 ceremony screen (CSD-069):
+`./gradlew -p client -PceremonyBinary=<path> -PceremonyCommit=<sha> :desktopApp:packageUberJarForCurrentOS`.
+The binary is copied into `build/generated` with its sha256 baked in, and the app verifies that
+hash before every run. Release builds never set `-PceremonyBinary`, so no wheel and no published
+jar carries it; without it the screen says the build has no tool.
+
 Without a Gradle run, `--placeholder "<reason>"` stages a payload that **raises
 on every artifact lookup and names the reason**. A build that cannot produce a
 client should say so, not produce something that installs and does nothing.

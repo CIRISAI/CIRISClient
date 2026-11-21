@@ -180,6 +180,23 @@ fun AccordScreen(
      */
     nodeEdition: NodeEdition,
 ) {
+    // THE v62 GENESIS CEREMONY (CSD-069). On a v62 node the in-app 0.5.x ceremonies are
+    // gone and the genesis is the offline tool; on desktop this screen runs it. Nothing
+    // here changes for a 0.5.x node: the runner is only asked for on EDITION_2.
+    val ceremonyRunner = remember(nodeEdition) {
+        if (nodeEdition == NodeEdition.EDITION_2) ai.ciris.mobile.shared.ceremony.platformCeremonyRunner() else null
+    }
+    var ceremonyOpen by remember { mutableStateOf(false) }
+    if (ceremonyOpen && ceremonyRunner != null) {
+        val ceremonyScope = rememberCoroutineScope()
+        val ceremonyVm = remember(ceremonyRunner) {
+            ai.ciris.mobile.shared.viewmodels.GenesisCeremonyViewModel(
+                ceremonyRunner, ceremonyScope, { ai.ciris.mobile.shared.platform.currentTimeMillis() },
+            ) { line -> ai.ciris.mobile.shared.platform.PlatformLogger.i("GenesisCeremony", line) }
+        }
+        GenesisCeremonyScreen(ceremonyVm, onClose = { ceremonyOpen = false })
+        return
+    }
     val family by viewModel.family.collectAsState()
     val holders by viewModel.holders.collectAsState()
     val invocations by viewModel.invocations.collectAsState()
@@ -345,6 +362,12 @@ fun AccordScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 6.dp).testable("note_accord_edition"),
                 )
+                if (ceremonyRunner != null) {
+                    OutlinedButton(
+                        onClick = { ceremonyOpen = true },
+                        modifier = Modifier.testableClickable("btn_accord_open_genesis_ceremony") { ceremonyOpen = true },
+                    ) { Text(localizedString("mobile.genesis_open")) }
+                }
             }
             notice?.let { msg -> Banner(msg, error = false, tag = "accord_notice") }
             error?.let { msg -> Banner(msg, error = true, tag = "accord_error") }

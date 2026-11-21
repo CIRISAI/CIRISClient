@@ -52,3 +52,8 @@ localization/hard-cases/
 
 # Subagent worktrees — transient, and each is its own git repo
 .claude/worktrees/
+
+# The genesis-ceremony binary is another repo's build artifact (VENDORING.md §2).
+# -PceremonyBinary bundles it into build/generated only; never commit a copy.
+client/shared/src/desktopMain/resources/ceremony/
+**/genesis-ceremony
