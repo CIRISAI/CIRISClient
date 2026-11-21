@@ -45,10 +45,10 @@ owner: CIRISClient
   blocked_on: 'O1'
 - id: ceremony-two-round
   card: 'the genesis is CEREMONY steps 1-5 (records, seat bindings, sealed halts, one voice per holder, the anchor)'
-  code: 'the client drives the 0.5.x two-round final-genesis and its amend for edition-1 nodes; on v62 it shows the offline-ceremony note and drives no ceremony'
+  code: 'the client drives the 0.5.x two-round final-genesis and its amend for edition-1 nodes; the v62 genesis is the offline tool CSD-069 drives'
   where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/api/CIRISApiClient.kt
   open_while: 'v1/accord/final-genesis'
-  blocked_on: 'O1, O2'
+  blocked_on: 'dropping 0.5.x (edition 1) support'
 ```
 
 **Model.** What this card draws and offers, cited from CIRISConstitution's formal model (pinned in `packaging/model/`) and held to it by `packaging/check_csd_model.py`: a modelled state the card leaves out, or a signer, policy or confirm that differs, fails CI.
@@ -130,7 +130,7 @@ path is invented here. The rows stay because the client code still calls them
 | # | Question | Decides |
 |---|---|---|
 | O1 | Every v62 server route shape (ceremony, import, bundle, halt, holders, seats, re-bind, later bundle, recovery) | CIRISServer (0.6 ceremony crate) |
-| O2 | Which card hosts the v62 ceremony: this card's `FinalGenesisSheet` or CSD-069 | Eric / CIRISClient |
+| O2 | Which card hosts the v62 ceremony: this card's `FinalGenesisSheet` or CSD-069 | Eric — **decided 2026-11-21: CSD-069**, the offline ceremony tool driven from the client (relayed by the CIRISServer session) |
 | O3 | Who signs a trust-root duty grant and a steward purge, and at what count | CIRISConstitution (+ persist reader) |
 | O5 | Transparency-service charter members and the receipt shape (SCITT, rc22) | CIRISConstitution |
 | O6 | What `GET /v1/trust-root` lists first | CIRISServer |
@@ -580,10 +580,10 @@ but a lifecycle row reaches the list only when a holder app opens one through
 `POST /v1/accord/invocation`, which this client never calls (§3). The binding
 note's tag is `txt_invocation_binding_<id>` when a fixture can put one there.
 
-**The v62 genesis ceremony.** Which card hosts it — this card's
-`FinalGenesisSheet` or CSD-069 — is **OPEN (O2, Eric / CIRISClient)**; today two
-cards claim the genesis. Its route shapes are **0.6: pending (CIRISServer)**
-(O1). What it must show, from CEREMONY §3 steps 1–5 and §5:
+**The v62 genesis ceremony lives on CSD-069** (O2, decided 2026-11-21): an offline tool the
+client runs step by step, with no route. This card's `FinalGenesisSheet` is the 0.5.x
+two-round ceremony, for edition-1 nodes only. What CSD-069 shows, from CEREMONY §3 steps
+1–5 and §5:
 
 1. **Each holder signs its own `key:record`** — one composite key (Ed25519 half
    on a FIPS YubiKey, ML-DSA-65 half `removable_offline`), from a fresh
