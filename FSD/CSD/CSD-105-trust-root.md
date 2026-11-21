@@ -23,10 +23,10 @@ owner: CIRISClient
 ```yaml csd:code_gaps
 - id: charter-quorum
   card: 'the verdict field is signer_count (a clean break, no alias)'
-  code: 'TrustRoot.kt reads charter_quorum'
+  code: 'trustRootView reads signer_count on v62 and unknown nodes, and charter_quorum only for edition-1 nodes, which still send it'
   where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/federation/TrustRoot.kt
-  open_while: 'charter_quorum'
-  blocked_on: 'persist v62 / server 0.6'
+  open_while: '"charter_quorum" // edition 1 only'
+  blocked_on: 'retiring 0.5.x support'
 - id: bake-not-adopted
   card: 'posture has no bake_not_adopted on v62.0; the arms carry {leg, detail}'
   code: 'TrustRoot.kt still models bake_not_adopted'
@@ -119,6 +119,9 @@ changes:
   break with no alias, persist `federation/trust_root.rs:596-597`). Its wording is
   "a strict majority of the standing accord roster (2·yes > N; N from the holders
   of the bundle in force)", with the numbers as the node reports them.
+  **Built:** `trustRootView(entry, edition)` reads `signer_count` on a v62 or
+  unknown-edition node and `charter_quorum` only on an edition-1 node
+  (`/v1/federation/conformance` → `edition`; `TrustRootTest`).
 * **What the confirm names.** bundle/2 has no `genesis-charter` attestation. Fact
   2 of the adopt confirm is the bundle's `family_key_id`, its holders (count N),
   its seats and its object id (Verify `genesis.rs:1-20`).

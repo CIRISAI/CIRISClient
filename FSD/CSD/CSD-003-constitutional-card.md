@@ -11,24 +11,12 @@ owner: CIRISClient
 **Code gaps.** Where this card and the client code disagree today, each proven against the tree by `packaging/check_csd_code_gaps.py`. Closing one means deleting its entry in the same commit.
 
 ```yaml csd:code_gaps
-- id: holder-threshold-default
-  card: 'm is a strict majority of N, read from the node; never a fixed 2'
-  code: 'ConstitutionalScreen''s holderThreshold defaults to 2'
-  where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/federation/ConstitutionalScreen.kt
-  open_while: 'holderThreshold:\s*Int\s*=\s*2\b'
-- id: armed-vs-halted
-  card: 'armed (a genesis in force, N holders seated, an acceptance edge) and halt standing are two fields'
-  code: 'the screen draws one kill-switch state and shows not-halted as disarmed'
-  where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/federation/ConstitutionalScreen.kt
-  open_while: 'constitutional_killswitch_disarmed'
-  blocked_on: 'O1, O13'
-- id: halt-standing-untyped
-  card: 'a lone halt (lapses at T unless a strict majority confirms) and a confirmed halt are distinct states'
-  code: 'AccordHaltStatusResponse keeps the standing latch as raw JSON; lone and confirmed are not typed'
-  where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/federation/Accord.kt
-  open_while: 'val halt: kotlinx\.serialization\.json\.JsonObject\?'
-  model: root.halt.latched_lone root.halt.confirmed
-  blocked_on: 'O1 (0.6 halt-status shape)'
+- id: armed-source
+  card: 'armed is read from the node: a genesis in force, N holders seated, and an acceptance edge for this node'
+  code: 'armed and standing are two fields (KillSwitch.kt), but armed is always unknown: no node reports it yet'
+  where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/federation/KillSwitch.kt
+  open_while: 'val armed = HaltArmed\.UNKNOWN'
+  blocked_on: 'O1, O13 (the 0.6 halt-status shape: armed vs standing)'
 ```
 
 **Model.** What this card draws and offers, cited from CIRISConstitution's formal model (pinned in `packaging/model/`) and held to it by `packaging/check_csd_model.py`: a modelled state the card leaves out, or a signer, policy or confirm that differs, fails CI.
@@ -36,13 +24,15 @@ owner: CIRISClient
 ```yaml csd:model
 - var: root.halt
   states: 'not_halted latched_lone confirmed'
-  code: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/federation/Accord.kt
-  code.not_halted: 'val halted: Boolean'
+  code: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/federation/KillSwitch.kt
+  code.not_halted: 'data object NotHalted'
+  code.latched_lone: 'data class Lone\('
+  code.confirmed: 'data object Confirmed'
 - var: node.halt_latch
   states: 'clear latched'
-  code: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/federation/Accord.kt
-  code.clear: 'val halted: Boolean'
-  code.latched: 'val halted: Boolean'
+  code: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/federation/KillSwitch.kt
+  code.clear: 'data object NotHalted'
+  code.latched: 'data class Lone\(|data object Confirmed'
 ```
 
 > Everyone › Safety carries `nav_epistemic_constitutional` (this card),
@@ -93,12 +83,12 @@ registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c3
 fields:
   - ceg: "accord:halt_status"
     use: display-only
-    type: "enum[halted,disarmed,unknown]"
+    type: "enum[halted,not_halted,lapsed,unknown]"
     example: "unknown"
     renders: "Kill-switch status UNKNOWN — the node did not answer. This is not a report that it is disarmed."
     tag: txt_killswitch_unknown
     assert:
-      one_of: {card_accord_killswitch: [halted, disarmed, unknown]}
+      one_of: {card_accord_killswitch: [halted, not_halted, lapsed, unknown]}
   - ceg: "accord:family"
     use: display-only
     type: "enum[live,not_configured]"
@@ -119,10 +109,13 @@ fields:
     tag: txt_constitutional_threshold
 ```
 
-**The `enum` has three values, not two.** Not knowing is not the same as being
-safe (`ConstitutionalScreen.kt:220`): `haltStatus` is null on first render and
-after any failed `getAccordHaltStatus()`, and a null drawn as "disarmed" would
-report a confirmed-safe state at the one moment the client has no idea.
+**The `enum` is the halt's standing, and unknown is one of its values.** Not
+knowing is not the same as being safe (`KillSwitch.read`): `haltStatus` is null
+on first render and after any failed `getAccordHaltStatus()`, and a null drawn
+as "not halted" would report a confirmed-safe state at the one moment the
+client has no idea. "Halted" is drawn as lone (with its lapse time when the node
+gives one) or confirmed. Whether a halt would reach this node at all, armed, is
+a separate line (`txt_killswitch_armed_unknown` today, §2.1a).
 
 **`accord:*` is reserved** — `accord_holder-only` at CC 3.4.1, owned by
 `registry`/CIRISRegistry — so `display-only` is enforced: this client cannot
@@ -169,11 +162,14 @@ family rows) gives standing here. What that changes on this card:
   (b) **halt standing**: `not_halted` / `halted_lone` (lapses at T) /
   `halted_confirmed` / `lapsed` / `unknown`. "Disarmed" must never mean "not
   halted": an armed switch that has not fired is the safe, nominal state, and
-  reads "armed, not fired". **Known defect:** today `accord:halt_status`
-  (`enum[halted,disarmed,unknown]`) and the string "Killswitch disarmed — All
-  systems nominal" draw not-halted as disarmed. The armed field needs
-  `GET /v1/trust-root` posture and acceptance, which this card does not call
-  today (§2); on v62 it must (0.6: pending, CIRISServer, O1).
+  reads "armed, not fired". **Built:** the two are two fields
+  (`models/federation/KillSwitch.kt`): the standing line is
+  `txt_killswitch_not_halted` / `txt_killswitch_halted` / `txt_killswitch_lapsed`
+  / `txt_killswitch_unknown`, and armed is its own line. **Still open:** armed
+  is always drawn unknown (`txt_killswitch_armed_unknown`), because no node
+  reports it: 0.5.x halt-status does not, and the v62 halt-status shape is
+  0.6: pending (CIRISServer, O1, O13). It is never derived from "not halted"
+  (the `armed-source` code gap above).
 * **Both thresholds.** "3 holders seated by the bundle in force. Any one can
   fire. Confirming or resuming a halt takes a strict majority (2 of 3 today; m
   read from the roster)" — fire = 1, lifecycle = a strict majority (CC 4.2.6).
@@ -184,21 +180,25 @@ family rows) gives standing here. What that changes on this card:
   publication (CEREMONY step 11); the card should show the due date and whether
   it happened.
 * **The two buttons.** `btn_open_accord_ceremony` opens the retired ceremony
-  (CSD-069) and `btn_open_provision_holder` the stale CSD-068 flow; both are
-  re-pointed per O2.
+  (CSD-069) and `btn_open_provision_holder` the stale CSD-068 flow. **Built:**
+  both are offered only to an edition-1 (0.5.x) node, read from
+  `/v1/federation/conformance` → `edition` (`AccordEditionGate`); on a v62 or an
+  unknown node the card shows `note_constitutional_edition` instead (the v62
+  genesis is the offline ceremony tool). Where they point on v62 is O2.
 
 * **The fuse.** A halt is no longer simply "halted". A lone halt reads
   "halted — lapses at T unless a strict majority confirms" (`halt_fuse_secs`
   from the bundle, default 86 400 s, counted from receipt on this node); a
   confirmed halt reads "halted (confirmed) — stands until resumed"; a lapsed
-  halt reads "lapsed". `disarmed` and `unknown` stay, and unknown still never
-  reads as safe (CC 4.2.1.1, 4.2.1.3; persist `edition2/halt.rs:38-60`; the
-  server's `accord_halt.rs` `HaltStanding` already has `InEffect{lapses_at}` and
-  `Lapsed`). The `accord:halt_status` enum above is what the client renders
-  today; it grows these states when the 0.6 halt-status shape exists (O1).
+  halt reads "lapsed". `unknown` stays, and still never reads as safe (CC
+  4.2.1.1, 4.2.1.3; persist `edition2/halt.rs:38-60`; the server's
+  `accord_halt.rs` `HaltStanding` already has `InEffect{lapses_at}` and
+  `Lapsed`). **Built** over the 0.5.x read: `halt.confirmed` gives confirmed,
+  `halt.lapses_at` the lone halt's time, `lapsed` the lapsed state
+  (`KillSwitch.read`); the v62 shape is 0.6: pending (O1).
 * **Five kinds, if this card shows kinds.** `constitutional`, `notify`,
   `drill`, `lifecycle:confirmed`, `lifecycle:active` (CC 4.2.1.2). The kinds
-  are CSD-067's to draw.
+  are CSD-067's to draw, and `InvocationKind` has all five.
 * **NOT CONFIGURED.** A v62 node before its genesis reads posture
   `PreGenesis{leg: anchor}` (persist `federation/genesis/posture.rs:233-250`);
   the empty state is that — "No genesis in force on this node (pre-genesis): no
@@ -212,8 +212,8 @@ family rows) gives standing here. What that changes on this card:
 ### 2.2 Localized strings
 
 `"HUMANITY_ACCORD KILL-SWITCH"`, both `ACTIVE HALT` sentences, `"Reading
-kill-switch status…"`, the UNKNOWN sentence, `"Killswitch disarmed — All
-systems nominal"`, the two family sentences, `"RESERVED PREFIX AUTHORITY"`,
+kill-switch status…"`, the UNKNOWN sentence, the not-halted, lone, confirmed and
+lapsed sentences, the three armed sentences, the two family sentences, `"RESERVED PREFIX AUTHORITY"`,
 the two holder-count lines, the reserved-prefix paragraph and the `LIVE` /
 `NOT CONFIGURED` chip are fourteen `mobile.constitutional_*` keys in `en.json`
 and its three mirrors; per `AGENTS.md` (Working in `localization/`) the other
@@ -276,14 +276,14 @@ Against a node that does not answer `halt-status`:
 expect:
   state: error
   visible: [txt_killswitch_unknown]
-  absent:  [txt_killswitch_disarmed]
+  absent:  [txt_killswitch_not_halted]
 ```
 
 Against a node that answers "not halted":
 
 ```yaml
 expect:
-  visible: [txt_killswitch_disarmed, chip_constitutional_family, txt_constitutional_threshold]
+  visible: [txt_killswitch_not_halted, txt_killswitch_armed_unknown, chip_constitutional_family, txt_constitutional_threshold]
   absent:  [txt_killswitch_unknown, txt_killswitch_halted, txt_killswitch_loading]
 ```
 
@@ -292,14 +292,22 @@ Against a node with a latched halt:
 ```yaml
 expect:
   visible: [txt_killswitch_halted]
-  absent:  [txt_killswitch_disarmed, txt_killswitch_unknown]
+  absent:  [txt_killswitch_not_halted, txt_killswitch_unknown]
 ```
 
-The two entry points:
+The two entry points, on an edition-1 node:
 
 ```yaml
 expect:
   visible: [btn_open_accord_ceremony, btn_open_provision_holder]
+```
+
+On a v62 (or an unknown-edition) node:
+
+```yaml
+expect:
+  visible: [note_constitutional_edition]
+  absent:  [btn_open_accord_ceremony, btn_open_provision_holder]
 ```
 
 *Cannot yet assert on a runner:* the loading sentence — the read is faster than
@@ -310,8 +318,9 @@ a step; the tag exists (`txt_killswitch_loading`) for a throttled fixture.
 **Platforms.** All five. The hop is derived and identical on each.
 
 **Acceptance — functional**
-1. Armed, disarmed and unknown are three renderings, and unknown never reads as
-   safe.
+1. The halt's standing (not halted, halted lone or confirmed, lapsed, unknown)
+   and armed are two lines; unknown never reads as safe, and not halted never
+   reads as disarmed.
 2. The threshold shown is the node's, never a printed number: on v62 a strict
    majority of the standing roster, with N and m from the node.
 3. Both entry points open their ceremonies rather than merely existing.
@@ -320,12 +329,12 @@ a step; the tag exists (`txt_killswitch_loading`) for a throttled fixture.
 * **Acceptance 1 against a real latch** — the tag exists (§2.1) and the flow
   asserts it against a fixture; a latched production node is not a fixture
   anyone should make.
-* **Acceptance 2.** **Known defect:** `holderThreshold` defaults to `2` in the
-  composable's signature. Under the strict-majority ruling the default must be
-  "unknown", never 2 (audit of 2026-11-21, §6(a)); the Kotlin is not changed by
-  this card revision. The roster line only prints a threshold when
-  `holders.isNotEmpty()`; `txt_constitutional_threshold` makes the printed
-  value assertable, and nothing asserts which source a given render used.
+* **Acceptance 2.** `holderThreshold` is `Int?`: null until the node serves a
+  threshold (0 on the wire is unknown), never a default 2 (audit of
+  2026-11-21, §6(a)). With holders and no threshold the line says the node did
+  not report how many must agree (`constitutional_holders_count_m_unknown`).
+  `txt_constitutional_threshold` makes the printed value assertable; nothing
+  asserts which source a given render used.
 * **Acceptance 3.** The buttons are tagged; what they open is asserted in
   CSD-068 and CSD-069, not here.
 * **That the reserved-prefix sentence is true.** "All attempts to forge

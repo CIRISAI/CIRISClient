@@ -46,8 +46,9 @@ class AccordViewModel(
     private val _holders = MutableStateFlow<List<AccordHolderDto>>(emptyList())
     val holders: StateFlow<List<AccordHolderDto>> = _holders.asStateFlow()
 
-    private val _holderThreshold = MutableStateFlow(2)
-    val holderThreshold: StateFlow<Int> = _holderThreshold.asStateFlow()
+    /** m as the node serves it; null until it says (0 on the wire = unknown). Never a guessed 2. */
+    private val _holderThreshold = MutableStateFlow<Int?>(null)
+    val holderThreshold: StateFlow<Int?> = _holderThreshold.asStateFlow()
 
     private val _invocations = MutableStateFlow<List<AccordInvocationDto>>(emptyList())
     val invocations: StateFlow<List<AccordInvocationDto>> = _invocations.asStateFlow()
@@ -137,7 +138,7 @@ class AccordViewModel(
                 _family.value = apiClient.getAccordFamily()
                 val holders = apiClient.getAccordHolders()
                 _holders.value = holders.holders
-                _holderThreshold.value = holders.threshold
+                _holderThreshold.value = holders.threshold.takeIf { it > 0 }
                 _invocations.value = apiClient.getAccordInvocations()
                 // The enforceable kill-switch state + the surfaced non-binding events.
                 _haltStatus.value = try {

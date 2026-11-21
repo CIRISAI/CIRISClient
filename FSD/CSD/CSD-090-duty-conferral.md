@@ -13,7 +13,7 @@ owner: CIRISClient
 ```yaml csd:code_gaps
 - id: duty-from-accord
   card: 'duties come from the trust root (trust:confers:v1), not the accord'
-  code: 'the client confers duties through accord duty/propose and duty/cosign'
+  code: 'the client confers duties through accord duty/propose and duty/cosign on edition-1 nodes; on v62 and unknown nodes the card is not offered and the screen shows the edition note (AccordEditionGate), and no trust-root conferral is built'
   where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/api/CIRISApiClient.kt
   open_while: 'v1/accord/duty/(propose|cosign)'
   blocked_on: 'O3, O14'

@@ -173,6 +173,12 @@ data class Attestation(
      * the routes. Only consulted for kinds whose ops the node gates per row.
      */
     val allowedOps: Set<AttOp>? = null,
+    /**
+     * Ops this client withholds on this row whatever the kind would allow: a
+     * door the node's edition does not have (a canonical's withdraw and
+     * supersede on v62, `AccordEditionGate`). Checked before anything else.
+     */
+    val withheldOps: Set<AttOp> = emptySet(),
 )
 
 /** Resolved per-kind colors (the generalization of the old `invocationStyle`). */
@@ -198,7 +204,7 @@ fun attestationStyle(kind: AttKind, styleKey: String?, status: AttStatus): AttSt
         return AttStyle(cs.surfaceVariant, cs.onSurfaceVariant, cs.outlineVariant, false)
     }
     return when (kind) {
-        // Exhaustive over the four CC 4.2.1.2 kinds + UNKNOWN: no `else`, so a
+        // Exhaustive over the five CC 4.2.1.2 kinds + UNKNOWN: no `else`, so a
         // resumption can never inherit notify's colour by falling through.
         AttKind.Invocation -> when (InvocationKind.fromWire(styleKey)) {
             InvocationKind.CONSTITUTIONAL -> AttStyle(cs.errorContainer, cs.onErrorContainer, cs.error, true)
@@ -206,6 +212,9 @@ fun attestationStyle(kind: AttKind, styleKey: String?, status: AttStatus): AttSt
             InvocationKind.NOTIFY -> AttStyle(cs.secondaryContainer, cs.onSecondaryContainer, cs.secondary, false)
             // Reactivated: the halt's opposite — its own tertiary tone, never red, never notify's.
             InvocationKind.LIFECYCLE_ACTIVE -> AttStyle(cs.tertiaryContainer, cs.onTertiaryContainer, cs.tertiary, false)
+            // Confirmed: about the halt in force, so the halt's colour on its line and
+            // border, but never the halt's filled, banner-strength container.
+            InvocationKind.LIFECYCLE_CONFIRMED -> AttStyle(cs.surface, cs.error, cs.error, false)
             // Unknown kind: plain surface with the strong outline, so it reads as "unrecognised", not as a notice.
             InvocationKind.UNKNOWN -> AttStyle(cs.surface, cs.onSurface, cs.outline, false)
         }
@@ -218,7 +227,10 @@ fun attestationStyle(kind: AttKind, styleKey: String?, status: AttStatus): AttSt
 }
 
 /** Which hamburger ops light up for a given `(kind, status, viewer)`. */
-internal fun AttOp.enabledFor(att: Attestation, viewer: ViewerAuthority): Boolean = when (this) {
+internal fun AttOp.enabledFor(att: Attestation, viewer: ViewerAuthority): Boolean =
+    this !in att.withheldOps && enabledForKind(att, viewer)
+
+private fun AttOp.enabledForKind(att: Attestation, viewer: ViewerAuthority): Boolean = when (this) {
     AttOp.ViewDetails, AttOp.History -> true
     AttOp.Evidence -> att.evidenceCount > 0
     // Copy the co-scrub partial JSON to the clipboard so a holder can hand it to the

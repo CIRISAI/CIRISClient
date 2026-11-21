@@ -13,13 +13,13 @@ owner: CIRISClient
 ```yaml csd:code_gaps
 - id: custody-tier
   card: 'custody is hardware_class + pq_custody: removable_offline + a DER chain, inside the self-signed key:record'
-  code: 'the provisioning screen reads custody_tier (portable_2fa) from a separate custody attestation'
+  code: 'the provisioning screen reads custody_tier (portable_2fa) from a separate custody attestation; it is offered to edition-1 nodes only (AccordEditionGate)'
   where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/viewmodels/ProvisionAccordHolderViewModel.kt
   open_while: 'custody_tier'
   blocked_on: 'O1'
 - id: holder-registration
   card: 'there is no registration: a holder is seated only by a bundle that names its record'
-  code: 'the client still has POST /v1/accord/holder'
+  code: 'the client still has POST /v1/accord/holder, used for edition-1 nodes only'
   where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/api/CIRISApiClient.kt
   open_while: 'v1/accord/holder\b'
 ```

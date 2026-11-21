@@ -13,7 +13,7 @@ owner: CIRISClient
 ```yaml csd:code_gaps
 - id: family-envelope-ceremony
   card: 'obsolete on v62: no family envelope, no co-signed family, no assembled genesis'
-  code: 'the client calls genesis/envelope, genesis/assemble and family/cosign'
+  code: 'the client still calls genesis/envelope, genesis/assemble and family/cosign, for edition-1 nodes only; a v62 or unknown node gets the offline-ceremony note instead of the screen (AccordEditionGate)'
   where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/api/CIRISApiClient.kt
   open_while: 'v1/accord/(genesis/(envelope|assemble)|family/cosign)'
   blocked_on: 'O1, O2'

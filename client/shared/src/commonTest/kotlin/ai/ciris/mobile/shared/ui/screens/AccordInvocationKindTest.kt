@@ -23,6 +23,16 @@ class AccordInvocationKindTest {
     }
 
     @Test
+    fun aConfirmationIsTheFifthKindNeverAFreshHaltOrANotify() {
+        // CC 4.2.1.2: lifecycle:confirmed confirms the named halt in force.
+        assertEquals(InvocationKind.LIFECYCLE_CONFIRMED, InvocationKind.fromWire("lifecycle:confirmed"))
+        assertEquals("mobile.accord_kind_confirmed", badgeFor("lifecycle:confirmed"))
+        assertNotEquals("mobile.accord_kind_constitutional", badgeFor("lifecycle:confirmed"))
+        assertNotEquals("mobile.accord_kind_notify", badgeFor("lifecycle:confirmed"))
+        assertEquals("mobile.accord_binding_confirmed", invocationBindingKey(InvocationKind.LIFECYCLE_CONFIRMED))
+    }
+
+    @Test
     fun theThreeInvokeKindsKeepTheirBadgesInEitherCase() {
         assertEquals("mobile.accord_kind_constitutional", badgeFor("CONSTITUTIONAL"))
         assertEquals("mobile.accord_kind_notify", badgeFor("notify"))

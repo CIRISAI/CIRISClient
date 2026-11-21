@@ -24,6 +24,11 @@ import ai.ciris.mobile.shared.localization.localizedString
 import ai.ciris.mobile.shared.models.federation.AccordFamilyDto
 import ai.ciris.mobile.shared.models.federation.AccordHaltStatusResponse
 import ai.ciris.mobile.shared.models.federation.AccordHolderDto
+import ai.ciris.mobile.shared.models.federation.AccordEditionGate
+import ai.ciris.mobile.shared.models.federation.HaltArmed
+import ai.ciris.mobile.shared.models.federation.HaltStanding
+import ai.ciris.mobile.shared.models.federation.KillSwitch
+import ai.ciris.mobile.shared.models.capability.NodeEdition
 import ai.ciris.mobile.shared.platform.rememberTestableScrollState
 import ai.ciris.mobile.shared.platform.testable
 import ai.ciris.mobile.shared.platform.testableWithHandler
@@ -48,7 +53,8 @@ import ai.ciris.mobile.shared.ui.shell.ScreenTopBar
 fun ConstitutionalScreen(
     family: AccordFamilyDto? = null,
     holders: List<AccordHolderDto> = emptyList(),
-    holderThreshold: Int = 2,
+    /** m as the node serves it; null = the node has not said. Never defaulted to 2. */
+    holderThreshold: Int? = null,
     haltStatus: AccordHaltStatusResponse? = null,
     isLoading: Boolean = false,
     onRefresh: () -> Unit = {},
@@ -56,6 +62,8 @@ fun ConstitutionalScreen(
     onOpenAccordCeremony: () -> Unit = {},
     onOpenProvisionHolder: () -> Unit = {},
     onIssueClick: (String) -> Unit = {},
+    /** Which mesh the node is on; the in-app 0.5.x ceremonies are offered only on edition 1. */
+    nodeEdition: NodeEdition = NodeEdition.UNKNOWN,
 ) {
     val scroll = rememberTestableScrollState()
 
@@ -203,91 +211,70 @@ fun ConstitutionalScreen(
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.0.sp,
                         )
-                        if (haltStatus?.halted == true) {
-                            Surface(
-                                color = CIRISColors.StatusWarn.copy(alpha = 0.18f),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                // The armed state — the reason this card exists — carries
-                                // its own tag, so the three arms are three assertions.
-                                Text(
-                                    text = haltStatus.record?.invocationId?.let { id ->
-                                        localizedString("mobile.constitutional_halt_active_invocation", "id", id)
-                                    } ?: localizedString("mobile.constitutional_halt_active"),
-                                    color = CIRISColors.StatusWarn,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier
-                                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                                        .testable("txt_killswitch_halted"),
-                                )
-                            }
-                        } else if (haltStatus?.halted == null) {
-                            // haltStatus itself null (not read yet / read failed) OR
-                            // `halted: null` — the node has a latch it cannot read
-                            // (CIRISServer 0.5.225). Both are "unknown", never "disarmed".
-                            // NOT KNOWING IS NOT THE SAME AS BEING SAFE.
-                            //
-                            // `haltStatus` is null on first render and after any
-                            // failed getAccordHaltStatus(). This branch used to
-                            // fall in with "disarmed", so a SAFETY control
-                            // reported a confirmed-safe state at the one moment
-                            // it had no idea — and `isLoading` was threaded in
-                            // and never read. Three states, not two.
-                            Surface(
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                // "Reading" and "unknown" are drawn apart AND tagged apart:
-                                // a flow must be able to tell a slow read from a failed one.
-                                if (isLoading) {
-                                    Text(
-                                        text = localizedString("mobile.constitutional_killswitch_loading"),
-                                        color = CIRISColors.TextDim,
-                                        fontSize = 12.sp,
-                                        fontFamily = FontFamily.Monospace,
-                                        modifier = Modifier
-                                            .padding(horizontal = 12.dp, vertical = 8.dp)
-                                            .testable("txt_killswitch_loading"),
-                                    )
-                                } else {
-                                    Text(
-                                        text = localizedString("mobile.constitutional_killswitch_unknown"),
-                                        color = CIRISColors.TextDim,
-                                        fontSize = 12.sp,
-                                        fontFamily = FontFamily.Monospace,
-                                        modifier = Modifier
-                                            .padding(horizontal = 12.dp, vertical = 8.dp)
-                                            .testable("txt_killswitch_unknown"),
-                                    )
+                        // TWO FACTS (CSD-003 §2.1a): whether a halt is in force (standing)
+                        // and whether a halt would reach this node at all (armed). Not
+                        // halted is never drawn as "disarmed".
+                        val reading = KillSwitch.read(haltStatus, isLoading)
+                        val (standingKey, standingTag, standingColor) = when (val st = reading.standing) {
+                            HaltStanding.Reading -> Triple(localizedString("mobile.constitutional_killswitch_loading"), "txt_killswitch_loading", CIRISColors.TextDim)
+                            HaltStanding.Unknown -> Triple(localizedString("mobile.constitutional_killswitch_unknown"), "txt_killswitch_unknown", CIRISColors.TextDim)
+                            HaltStanding.NotHalted -> Triple(localizedString("mobile.constitutional_halt_not_halted"), "txt_killswitch_not_halted", CIRISColors.SignetTeal)
+                            HaltStanding.Lapsed -> Triple(localizedString("mobile.constitutional_halt_lapsed"), "txt_killswitch_lapsed", CIRISColors.TextSecondary)
+                            is HaltStanding.Lone, HaltStanding.Confirmed -> {
+                                val head = haltStatus?.record?.invocationId?.let { id ->
+                                    localizedString("mobile.constitutional_halt_active_invocation", "id", id)
+                                } ?: localizedString("mobile.constitutional_halt_active")
+                                val tail = when (st) {
+                                    is HaltStanding.Lone -> st.lapsesAt?.let {
+                                        localizedString("mobile.constitutional_halt_lone_lapses", "time", it)
+                                    } ?: localizedString("mobile.constitutional_halt_lone")
+                                    else -> localizedString("mobile.constitutional_halt_confirmed")
                                 }
-                            }
-                        } else {
-                            Surface(
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Text(
-                                    text = localizedString("mobile.constitutional_killswitch_disarmed"),
-                                    color = CIRISColors.SignetTeal,
-                                    fontSize = 12.sp,
-                                    fontFamily = FontFamily.Monospace,
-                                    modifier = Modifier
-                                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                                        .testable("txt_killswitch_disarmed"),
-                                )
+                                Triple("$head\n$tail", "txt_killswitch_halted", CIRISColors.StatusWarn)
                             }
                         }
+                        Surface(
+                            color = if (standingTag == "txt_killswitch_halted") CIRISColors.StatusWarn.copy(alpha = 0.18f)
+                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text(
+                                text = standingKey,
+                                color = standingColor,
+                                fontSize = 12.sp,
+                                fontWeight = if (standingTag == "txt_killswitch_halted") FontWeight.Bold else FontWeight.Normal,
+                                fontFamily = if (standingTag == "txt_killswitch_halted") FontFamily.Default else FontFamily.Monospace,
+                                modifier = Modifier
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                                    .testable(standingTag),
+                            )
+                        }
+                        Text(
+                            text = localizedString(
+                                when (reading.armed) {
+                                    HaltArmed.ARMED -> "mobile.constitutional_armed_yes"
+                                    HaltArmed.NOT_ARMED -> "mobile.constitutional_armed_no"
+                                    HaltArmed.UNKNOWN -> "mobile.constitutional_armed_unknown"
+                                },
+                            ),
+                            color = CIRISColors.TextSecondary,
+                            fontSize = 12.sp,
+                            modifier = Modifier.testable(
+                                when (reading.armed) {
+                                    HaltArmed.ARMED -> "txt_killswitch_armed"
+                                    HaltArmed.NOT_ARMED -> "txt_killswitch_not_armed"
+                                    HaltArmed.UNKNOWN -> "txt_killswitch_armed_unknown"
+                                },
+                            ),
+                        )
                         Text(
                             // The live threshold when the node has told us one,
                             // the design's shape when it has not. A fixed
                             // "2-of-3" printed over a family with a different
                             // threshold is a statement about the constitution
                             // that the constitution does not make.
-                            text = if (holders.isNotEmpty()) {
+                            text = if (holders.isNotEmpty() && holderThreshold != null) {
                                 localizedString(
                                     "mobile.constitutional_family_desc_threshold",
                                     mapOf("m" to holderThreshold.toString(), "n" to holders.size.toString()),
@@ -298,7 +285,15 @@ fun ConstitutionalScreen(
                             color = CIRISColors.TextSecondary,
                             fontSize = 13.sp,
                         )
-                        Row(
+                        AccordEditionGate.noteKey(nodeEdition)?.let { key ->
+                            Text(
+                                text = localizedString(key),
+                                color = CIRISColors.TextSecondary,
+                                fontSize = 12.sp,
+                                modifier = Modifier.testable("note_constitutional_edition"),
+                            )
+                        }
+                        if (AccordEditionGate.offersInAppCeremony(nodeEdition)) Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                         ) {
@@ -359,10 +354,15 @@ fun ConstitutionalScreen(
                             // The threshold is the node's (`GET /v1/accord-holders`
                             // `threshold`), printed only beside a real roster.
                             Text(
-                                text = if (holders.isNotEmpty()) {
+                                text = if (holders.isNotEmpty() && holderThreshold != null) {
                                     localizedString(
                                         "mobile.constitutional_holders_count",
                                         mapOf("m" to holderThreshold.toString(), "n" to holders.size.toString()),
+                                    )
+                                } else if (holders.isNotEmpty()) {
+                                    localizedString(
+                                        "mobile.constitutional_holders_count_m_unknown",
+                                        mapOf("n" to holders.size.toString()),
                                     )
                                 } else {
                                     localizedString("mobile.constitutional_holders_none")

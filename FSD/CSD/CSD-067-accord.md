@@ -19,42 +19,36 @@ owner: CIRISClient
 **Code gaps.** Where this card and the client code disagree today, each proven against the tree by `packaging/check_csd_code_gaps.py`. Closing one means deleting its entry in the same commit.
 
 ```yaml csd:code_gaps
-- id: new-menu-removed-acts
-  card: '[+ New] on v62 offers drill, announce, halt, confirm/resume, a later bundle, recovery and a re-bind; admit, add-canonical, bless-CI, re-mint and confer-duty are removed'
-  code: 'AccordScreen still offers admit_node, add_canonical, bless_ci_workers, remint_trust_root and confer_duty'
+- id: v62-menu-acts-missing
+  card: '[+ New] on v62 offers drill, announce, halt, confirm/resume, a later bundle, recovery and a re-bind'
+  code: 'on a v62 node [+ New] offers drill, announce and halt only, still wired to the 0.5.x routes; confirm/resume, a later bundle, recovery and a re-bind are not built'
   where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/ui/screens/AccordScreen.kt
-  open_while: 'NewAttestationAction\("(admit_node|add_canonical|bless_ci_workers|remint_trust_root)"|"confer_duty"'
+  open_until: 'NewAttestationAction\("(later_bundle|recovery|rebind_seat)"'
   blocked_on: 'O1 (0.6 route shapes)'
-- id: halt-kinds-five
-  card: 'five kinds; lifecycle:confirmed is the confirmation of the halt in force, never a fresh halt'
-  code: 'InvocationKind has four kinds and no LIFECYCLE_CONFIRMED'
-  where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/federation/Accord.kt
-  open_until: 'LIFECYCLE_CONFIRMED'
-  blocked_on: 'O1, O12'
+- id: edition1-retired-acts
+  card: 'admit, add-canonical, bless-CI, re-mint, re-scrub, co-scrub paste, found-accord and confer-duty are removed on v62'
+  code: 'they are removed for edition-2 and unknown nodes (AccordEditionGate) and still offered to edition-1 (0.5.x) nodes, which serve them'
+  where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/federation/AccordEditionGate.kt
+  open_while: 'val RETIRED_NEW_ACTIONS'
+  blocked_on: 'retiring 0.5.x support'
 - id: canonical-doors-deleted
   card: 'the canonical withdraw and supersede doors are deleted; only a later bundle un-seats a canonical'
-  code: 'the client calls canonical/withdraw, /withdrawals and /supersede'
-  where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/api/CIRISApiClient.kt
-  open_while: 'v1/accord/canonical/(withdraw|withdrawals|supersede)'
+  code: 'withheld on edition-2 and unknown nodes; still offered to edition-1 nodes (canonical/withdraw, /withdrawals, /supersede)'
+  where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/federation/AccordEditionGate.kt
+  open_while: 'fun offersCanonicalDoors'
+  blocked_on: 'retiring 0.5.x support'
 - id: retired-accord-routes
   card: 'admit, canonical add/propose/cosign/pending, CI-key blessing and the re-mint are retired on v62'
-  code: 'the client calls admit-node, canonical/{add,propose,cosign,pending}, ci-key/* and genesis/{remint-source,propose,cosign}'
+  code: 'the client still calls admit-node, canonical/{add,propose,cosign,pending}, ci-key/* and genesis/{remint-source,propose,cosign}, for edition-1 nodes only'
   where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/api/CIRISApiClient.kt
   open_while: 'v1/accord/(admit-node|canonical/(add|propose|cosign|pending)|ci-key/|genesis/(remint-source|propose|cosign))'
   blocked_on: 'O1'
 - id: ceremony-two-round
   card: 'the genesis is CEREMONY steps 1-5 (records, seat bindings, sealed halts, one voice per holder, the anchor)'
-  code: 'the client drives the 0.5.x two-round final-genesis and its amend'
+  code: 'the client drives the 0.5.x two-round final-genesis and its amend for edition-1 nodes; on v62 it shows the offline-ceremony note and drives no ceremony'
   where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/api/CIRISApiClient.kt
   open_while: 'v1/accord/final-genesis'
   blocked_on: 'O1, O2'
-- id: halt-standing-untyped
-  card: 'a lone halt (lapses at T unless a strict majority confirms) and a confirmed halt are distinct states'
-  code: 'AccordHaltStatusResponse keeps the standing latch as raw JSON; lone and confirmed are not typed'
-  where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/federation/Accord.kt
-  open_while: 'val halt: kotlinx\.serialization\.json\.JsonObject\?'
-  model: root.halt.latched_lone root.halt.confirmed
-  blocked_on: 'O1 (0.6 halt-status shape)'
 ```
 
 **Model.** What this card draws and offers, cited from CIRISConstitution's formal model (pinned in `packaging/model/`) and held to it by `packaging/check_csd_model.py`: a modelled state the card leaves out, or a signer, policy or confirm that differs, fails CI.
@@ -62,8 +56,10 @@ owner: CIRISClient
 ```yaml csd:model
 - var: root.halt
   states: 'not_halted latched_lone confirmed'
-  code: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/federation/Accord.kt
-  code.not_halted: 'val halted: Boolean'
+  code: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/federation/KillSwitch.kt
+  code.not_halted: 'data object NotHalted'
+  code.latched_lone: 'data class Lone\('
+  code.confirmed: 'data object Confirmed'
 - act: 'accord:invoke:constitutional:{halt_id} attest'
   roles: 'holder'
   policy: 'mirror'
@@ -168,8 +164,8 @@ resumed from constitutional halt" state, never conflated with an active halt
 (its opposite) nor with a `notify`.
 
 The badge, the card tone and the binding sentence under the card are each
-exhaustive over the four kinds the built code knows; the fifth is a gap (§2.2),
-and §2.2 also records the one deviation that remains.
+exhaustive over the five kinds (`InvocationKind` has `LIFECYCLE_CONFIRMED`),
+and §2.2 records the one deviation that remains.
 
 ## 2. Surface (what)
 
@@ -305,10 +301,13 @@ treatment that is fully implemented, tagged and assertable.
 
 ### 2.2 The CC 4.2.1.2 kinds (five on v62), and one deviation
 
-**v62 gap: the fifth kind and the fuse.** `lifecycle:confirmed` is new on v62:
-the confirmation of the named halt already in force, never a fresh halt (CC
-4.2.1.2). The built `InvocationKind` has four arms, so the client needs a fifth
-badge, tone and binding sentence. A halt also has a fuse on v62: a lone halt
+**The fifth kind, built; the fuse.** `lifecycle:confirmed` is new on v62: the
+confirmation of the named halt already in force, never a fresh halt (CC
+4.2.1.2). `InvocationKind.LIFECYCLE_CONFIRMED` has its own badge
+(`mobile.accord_kind_confirmed`), tone (the halt's colour on line and border,
+never its filled banner container) and binding sentence
+(`mobile.accord_binding_confirmed`), pinned by `AccordInvocationKindTest`. A
+halt also has a fuse on v62: a lone halt
 shows "lapses at T unless a strict majority confirms" (the bundle's
 `halt_fuse_secs`, default 86 400 s, counted from receipt on this node); a
 confirmed halt shows "stands until resumed"; a lapsed halt shows "lapsed" (CC
@@ -555,9 +554,12 @@ Open `btn_accord_new` → on v62 the menu offers drill / announce / halt; confir
 or resume a halt (a counted voice); a later bundle (a roster change, adding or
 removing a seat); recovery; and re-binding a seat's transit key. **Removed on
 v62:** admit, add-canonical, bless-CI (deferred to v62.1, held), re-mint and
-confer-duty (the trust root confers duties, not the accord). The built menu
-still offers the removed items (`AccordScreen.kt:241`); taking them out is
-client work for the v62 build.
+confer-duty (the trust root confers duties, not the accord). **Built:** the
+menu is gated on the node's edition (`/v1/federation/conformance` → `edition`,
+`AccordEditionGate`): an edition-1 (0.5.x) node is offered every act as before;
+a v62 or an unknown node is offered drill / announce / halt, and
+`note_accord_edition` says why the rest are absent. Confirm/resume, a later
+bundle, recovery and a re-bind are not built (0.6: pending, O1).
 
 ```yaml
 expect:
