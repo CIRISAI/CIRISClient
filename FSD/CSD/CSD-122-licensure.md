@@ -38,8 +38,15 @@ the box and why the root is never the only trust knob.
 is the root community `ciris-canonical`'s authority set. The accord itself
 signs no licence: CC 4.2.1, "accord keys cannot sign grants or licenses"; its
 signatures are valid only on the enumeration (halts, lifecycle, re-bind,
-bundles). Whether holders signing as `ciris-canonical`'s founders is the accord
-signing is **OPEN — CIRISConstitution (O10)**. `ciris-canonical` is founded by the holders of the genesis bundle in force,
+bundles). Holders signing `ciris-canonical`'s rows act as its **founders**, not
+with accord authority: the accord's powers are closed (CC 4.2.1, restated at CC
+3.2). The count is the community's `consensus_protocol`, `quorum:M/N` over the
+founders, with M their strict majority (CC 3.2, CC 4.4.3.18; any other M is
+refused at founding and at a supersedes,
+`federation_community_consensus_protocol_violation`). A licence is issued by the
+authority's own authority set (CC 2.4.1.3) and reviewed by it (CC 4.5.4). (O10,
+answered: CIRISConstitution's reading, relayed 2026-11-21 (rc22 `3004759`).) Say "the founders of `ciris-canonical`, at its quorum", never
+"the accord". `ciris-canonical` is founded by the holders of the genesis bundle in force,
 every founder signing its founding record (CEREMONY step 10; CC 3.2,
 `CLM-canonical-founders-accord`). So the dimension is
 **`licensure:ciris-canonical:v1`** — the root community's `community_key_id`,

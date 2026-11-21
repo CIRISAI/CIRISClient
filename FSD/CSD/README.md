@@ -20,7 +20,7 @@ reserved. **A retired number is never reused.**
 **Code gaps** counts the places a card and the code are known to disagree, each
 declared in the card's `csd:code_gaps` block and proven against the tree by
 `packaging/check_csd_code_gaps.py` (`--list` prints them). A card with gaps is
-ahead of, or behind, its code: **11 cards, 22 gaps** today.
+ahead of, or behind, its code: **11 cards, 21 gaps** today.
 
 | CSD | Card | Stage | Code gaps | Flow |
 |---|---|---|---|---|
@@ -101,7 +101,7 @@ ahead of, or behind, its code: **11 cards, 22 gaps** today.
 | [CSD-102](CSD-102-communities.md) | Communities and affiliations: the community itself (Rules) | `building` | — | `testing/flows/drafts/csd-102-communities.yaml` |
 | [CSD-103](CSD-103-community-roster-and-rooms.md) | Communities and affiliations: who is in it (People) and the rooms (Chats) | `building` | — | `testing/flows/drafts/csd-103-community-roster.yaml` |
 | [CSD-104](CSD-104-key-verification.md) | Verify someone's key (the peer detail's short-code ceremony) | `building` | — | `testing/flows/drafts/csd-104-key-verification.yaml` |
-| [CSD-105](CSD-105-trust-root.md) | This node's trust root (the Accord card's detail: posture, adopt a seed, un-trust) | `building` | **4** | `testing/flows/drafts/csd-105-trust-root.yaml` |
+| [CSD-105](CSD-105-trust-root.md) | This node's trust root (the Accord card's detail: posture, adopt a seed, un-trust) | `building` | **3** | `testing/flows/drafts/csd-105-trust-root.yaml` |
 | [CSD-106](CSD-106-membership-invites.md) | Invitations to a household or a community (nobody joins without saying yes) | `building` | — | `testing/flows/drafts/csd-106-membership-invites.yaml` |
 | [CSD-107](CSD-107-file-custody.md) | Where is this file (file custody, one card from every file surface) | `building` | — | `testing/flows/drafts/csd-107-file-custody.yaml` |
 | [CSD-108](CSD-108-steward-purge.md) | Steward purge (remove rows that never belonged, under the global trust root) | `sketched` | — | none yet |

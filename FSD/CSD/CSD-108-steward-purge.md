@@ -44,11 +44,13 @@ owner: CIRISClient
 > * the entry `btn_accord_open_steward_purge` moves from the Accord card to the
 >   root community's surface: Accord is for accord acts only (CC 4.2.1).
 >
-> Still **OPEN — CIRISConstitution (O3, O4, O10):** whether a takedown needs a
-> count at all or one duty holder suffices ([CC-T] names one signer, "the holder
-> of the duty"); if `ciris-canonical`'s own rule applies, that is O4; and whether
-> holders acting as its founders is an accord act (O10). No literal count. The
-> descend quorum is CSD-065's (OPEN — CIRISServer). Until settled, read §1.1's
+> **Who signs, answered (O3 for takedown, O10; CIRISConstitution's reading, relayed 2026-11-21 (rc22 `3004759`)):** a takedown is signed
+> by ONE holder of the `takedown` duty over the target, conferred by the
+> content's subject or the community's authority set, with **no count** (CC
+> 3.4.7.3, `takedown_notice:{basis}`; refused `takedown_unauthorised`). The
+> community's members may lift it (CC 4.5.13). Holders acting for
+> `ciris-canonical` act as its founders, not with accord authority (CC 4.2.1, CC
+> 3.2). The descend quorum is CSD-065's (OPEN — CIRISServer). Read §1.1's
 > "parents" below as history.
 
 ## 1. Mission (why)

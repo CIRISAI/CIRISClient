@@ -35,7 +35,11 @@ owner: CIRISClient
 > confers only what its charter names (halts, lifecycle, re-bind, bundles). So
 > "the trust root" here reads as the trust-root community's (`ciris-canonical`'s)
 > authority set for root-scope duties, and each community's own authority set
-> for its own: **OPEN — Eric (O14)** to confirm. A delegation onto a minor-band
+> for its own: CIRISConstitution's reading, relayed 2026-11-21 (rc22 `3004759`) is this
+> narrow one: `ciris-canonical`'s authority set covers `infra:serve`,
+> `infra:attest` and the root's own room; every other community's duties come
+> from its own authority set (CC 3.4.7.3; CC 4.5.4 laws iv and v). **OPEN —
+> Eric (O14)** to confirm. A delegation onto a minor-band
 > user confers no duty (CC `bf02d42`, `minor_cannot_hold_duty`).
 >
 > What no longer holds, read everything below as the 0.5.x card:

@@ -55,6 +55,10 @@ owner: CIRISClient
   roles: 'slash'
   policy: 'cosigned'
   confirm: 'true'
+# slashing:{outcome} is signed by the slash holder (CC 3.4.7.3; CC 4.5.5). The pinned
+# transitions.json says roles ['registered'], which records persist's shipped door, a
+# known divergence (C447, C458) being fixed in v62 (CIRISConstitution, 2026-11-21).
+# Cited once the manifest says slash.
 ```
 
 ## 1. Mission (why)

@@ -72,7 +72,7 @@ fields:
     use: display-only
     type: string
     example: "CIRIS-V1-…"
-    renders: "THIS node's code, from the node itself, with a copy control — the key it signs with above, not the agent's. On v62 the code is CIRIS-V4-… (version 0x04): the composite key's thumbprint, the transport identity and up to 4 ordered hints; no code of the earlier form (V1) converts to it (CC 2.6.8, CC 7f0cc76)"
+    renders: "THIS node's code, from the node itself, with a copy control — the key it signs with above, not the agent's. On v62 the code is CIRIS-V4-… (version 0x04): the composite key's thumbprint, the transport identity and up to 8 ordered hints (CC rc22 `3004759`; a `ble` hint names no device); no code of the earlier form (V1) converts to it (CC 2.6.8, CC 7f0cc76)"
     tag: text_my_node_code
 ```
 

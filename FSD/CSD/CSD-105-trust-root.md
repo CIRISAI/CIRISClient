@@ -40,13 +40,6 @@ owner: CIRISClient
   open_until: 'STALLED'
   model: root.standing.Stalled
   blocked_on: 'O1'
-- id: root-head-untyped
-  card: 'the root head is none, witnessed and fresh, stale, or frozen (two heads at one size)'
-  code: 'TrustRoot.kt models no head freshness'
-  where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/federation/TrustRoot.kt
-  open_until: '(?i)witness'
-  model: root.head.none root.head.witnessed_fresh root.head.stale root.head.frozen
-  blocked_on: 'O1, O5 (SCITT)'
 ```
 
 **Model.** What this card draws and offers, cited from CIRISConstitution's formal model (pinned in `packaging/model/`) and held to it by `packaging/check_csd_model.py`: a modelled state the card leaves out, or a signer, policy or confirm that differs, fails CI.
@@ -57,10 +50,9 @@ owner: CIRISClient
   code: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/federation/TrustRoot.kt
   code.NotRooted: 'PRE_GENESIS'
   code.Rooted: 'ENTRENCHED'
-- var: root.head
-  states: 'none witnessed_fresh stale frozen'
-  code: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/federation/TrustRoot.kt
 ```
+
+**Root head, with witnessing off.** For the genesis lineage the head is `none`, `current` (a founder-quorum signature descending by `prev_head_digest` from the anchored head) or `frozen` on equivocation; `witnessed_fresh` and `stale` never occur in it (CC 3.2 T6, CC 5.3.4; CIRISConstitution's reading, 2026-11-21). The pinned STATE_TABLE has no `current` yet and CC will add it, so `root.head` is not cited here until it does: citing it now would card witness states this lineage cannot reach.
 
 ## 1. Mission (why)
 
@@ -131,7 +123,7 @@ changes:
   2 of the adopt confirm is the bundle's `family_key_id`, its holders (count N),
   its seats and its object id (Verify `genesis.rs:1-20`).
 * **The seats' dial hints** are the cold-start seed: each seat's binding carries
-  signed, ordered `dial_hints` (at most 4, at least one `tcp`; a host is a DNS
+  signed, ordered `dial_hints` (at most 8, CC rc22 `3004759`; at least one `tcp`; a host is a DNS
   name or an IP literal), signed by the seat's own custody. Once a link is up
   the seat's live signed route row supersedes them (CC part_5:738; CC 2.6.8;
   refusals `seat_dial_hints_missing`, `dial_hint_malformed`).

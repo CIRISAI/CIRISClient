@@ -217,7 +217,9 @@ envelope route returns. Calling both would sign the same change twice.
   founder-rooted `delegates_to` scoped `moderate`. On v62 the accord confers no
   duty: a community's duties come from its own authority set (CC 3.4.7.3 "Who
   confers"); root-scope duties come from the trust-root community (Eric's
-  ruling; that reading is OPEN — Eric, O14). CSD-090's accord route
+  ruling; CIRISConstitution reads it narrowly, `ciris-canonical`'s authority set
+  covering `infra:serve`, `infra:attest` and the root's own room, CC 4.5.4 iv–v;
+  OPEN — Eric, O14, to confirm). CSD-090's accord route
   (`/v1/accord/duty/propose`) is retired and that card is to be re-homed (O3).
   A minor cannot be appointed: a delegation onto a minor-band user confers no
   duty (CC `bf02d42`, `minor_cannot_hold_duty`).

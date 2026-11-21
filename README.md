@@ -68,7 +68,7 @@ So the distance between what the model says and what the client does is a list i
 
 - **Gaps are declared, not discovered.** A mismatch nobody wrote down is invisible, except where `csd:model` forces it: a cited modelled state the code cannot show must be declared.
 - **The code side is pattern-based.** A gap's pattern, and a model state's code pattern, are regular expressions over source files, not a semantic check.
-- **Some cards cite nothing yet.** `csd:model` covers six trust-root cards (13 citations) and `csd5` covers one card. Every other card cites the registry and its routes only.
+- **Some cards cite nothing yet.** `csd:model` covers six trust-root cards (12 citations) and `csd5` covers one card. Every other card cites the registry and its routes only.
 - **The model pin is states and transitions.** Rules in the text that no model or manifest carries are checked by review, not by CI.
 - **Live behaviour across many nodes is not checked here.** Each check above runs on source; the walk tests start the app against one or two nodes.
 
