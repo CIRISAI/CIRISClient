@@ -140,7 +140,7 @@ path is invented here. The rows stay because the client code still calls them
 | O11 | Which moderation rungs refuse a node signer on v62, and the moderator-signed route shape (CSD-065) | CIRISConstitution (families), CIRISServer (route) |
 | O12 | Tokens for "lifecycle names no halt in force" and "confirmed after the fuse" | persist / CIRISConstitution |
 | O13 | Whether the server publishes ceremony halt-coverage evidence for CSD-003's "armed" | CIRISServer / CIRISConstitution |
-| O14 | The reading of "duties come from the trust root": the trust-root community's authority set for root-scope duties, each community's own authority set for its own (CC 3.4.7.3) | Eric (CIRISConstitution reads it narrowly: `ciris-canonical`'s set covers `infra:serve`, `infra:attest` and the root's room; CC 4.5.4 iv–v) |
+| O14 | The reading of "duties come from the trust root": the trust-root community's authority set for root-scope duties, each community's own authority set for its own (CC 3.4.7.3) | Eric — **ruled 2026-11-21: the narrow reading.** `ciris-canonical`'s authority set covers `infra:serve`, `infra:attest` and the root's own room; every other community's duties come from its own authority set (CC 3.4.7.3; CC 4.5.4 iv–v) |
 | O15 | Whether a goals declaration is an act a constitutional halt stops (CSD-130) | CIRISConstitution |
 | O16 | The emergency composite shutdown's names and compose route | persist, CIRISServer |
 

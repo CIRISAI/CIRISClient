@@ -16,7 +16,7 @@ owner: CIRISClient
   code: 'the client confers duties through accord duty/propose and duty/cosign on edition-1 nodes; on v62 and unknown nodes the card is not offered and the screen shows the edition note (AccordEditionGate), and no trust-root conferral is built'
   where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/api/CIRISApiClient.kt
   open_while: 'v1/accord/duty/(propose|cosign)'
-  blocked_on: 'O3, O14'
+  blocked_on: 'O3'
 ```
 
 > ## Obsolete on v62: duties come from the trust root, not the accord
@@ -35,11 +35,10 @@ owner: CIRISClient
 > confers only what its charter names (halts, lifecycle, re-bind, bundles). So
 > "the trust root" here reads as the trust-root community's (`ciris-canonical`'s)
 > authority set for root-scope duties, and each community's own authority set
-> for its own: CIRISConstitution's reading, relayed 2026-11-21 (rc22 `3004759`) is this
-> narrow one: `ciris-canonical`'s authority set covers `infra:serve`,
-> `infra:attest` and the root's own room; every other community's duties come
-> from its own authority set (CC 3.4.7.3; CC 4.5.4 laws iv and v). **OPEN —
-> Eric (O14)** to confirm. A delegation onto a minor-band
+> for its own: the narrow reading (O14, ruled by Eric 2026-11-21):
+> `ciris-canonical`'s authority set covers `infra:serve`, `infra:attest` and the
+> root's own room; every other community's duties come from its own authority
+> set (CC 3.4.7.3; CC 4.5.4 laws iv and v). A delegation onto a minor-band
 > user confers no duty (CC `bf02d42`, `minor_cannot_hold_duty`).
 >
 > What no longer holds, read everything below as the 0.5.x card:

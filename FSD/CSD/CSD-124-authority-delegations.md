@@ -67,11 +67,10 @@ owner confers what the node reports. The accord confers nothing but what its
 charter names: halts, lifecycle, re-bind and bundles. Eric's ruling "duties come
 from the trust root, not the accord" reads, on this table, as the trust-root
 community's (`ciris-canonical`'s) authority set for duties over what that root
-anchors, and each community's own authority set for its own duties: CIRISConstitution's reading, relayed 2026-11-21 (rc22 `3004759`) is this narrow one:
+anchors, and each community's own authority set for its own duties: the narrow reading (O14, ruled by Eric 2026-11-21):
 `ciris-canonical`'s authority set covers `infra:serve`, `infra:attest` and the
 root's own room; every other community's duties come from its own authority set
-(CC 3.4.7.3 "Who confers"; CC 4.5.4 laws iv and v). **OPEN — Eric (O14)**, to
-confirm. A delegation onto a minor-band user
+(CC 3.4.7.3 "Who confers"; CC 4.5.4 laws iv and v). A delegation onto a minor-band user
 confers no duty (CC `bf02d42`, `minor_cannot_hold_duty`). The `license` and
 `grant` chain rules on this card root at an affiliation's authority, not the
 accord, so v62's accord changes leave them as they are.

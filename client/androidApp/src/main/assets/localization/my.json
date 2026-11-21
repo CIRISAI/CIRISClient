@@ -1704,7 +1704,7 @@
     "wa_identity_no_justification": "အကြောင်းပြချက် မဖော်ပြခဲ့ပါ။",
     "wa_identity_objection": "Agent ၏ {conscience} အသိစိတ်က ကန့်ကွက်ခဲ့သည် ({type})- {reason}",
     "wa_identity_template_name": "Template",
-    "wa_identity_template_version": "Version",
+    "wa_identity_template_version": "ဗားရှင်း",
     "wa_identity_manifest_digest": "Manifest digest",
     "wa_identity_copy_digest": "Digest ကို ကူးယူပါ",
     "wa_identity_guidance_optional": "လမ်းညွှန်ချက် (အတည်ပြုရန် မဖြစ်မနေ မလိုအပ်၊ ငြင်းပယ်ရန် လိုအပ်သည်)",
