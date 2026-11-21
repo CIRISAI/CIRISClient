@@ -31,7 +31,8 @@ block, and this check proves every entry against the tree:
 - The gate FAILS when a gap has closed and the entry is still there. Closing a
   gap means deleting its entry in the same commit, so the list is always the
   list of real mismatches and never a history of old ones.
-- `blocked_on` and `owner` are optional and only rendered.
+- `blocked_on` and `owner` are optional and only rendered. `model` names the
+  modelled states (`<var>.<state>`, space-separated; check_csd_model.py) the code cannot represent yet.
 
 What this does NOT do: find a mismatch nobody declared. It makes a declared
 mismatch visible (the roster's Code gaps column, `--list`) and keeps it honest.
@@ -54,7 +55,7 @@ BLOCK_RE = re.compile(r"^```yaml csd:code_gaps[ \t]*\n(.*?)^```", re.S | re.M)
 ENTRY_START = re.compile(r"^- id:\s*(.+?)\s*$")
 FIELD = re.compile(r"^  ([a-z_]+):\s*(.*?)\s*$")
 REQUIRED = ("id", "card", "code", "where")
-OPTIONAL = ("open_while", "open_until", "blocked_on", "owner")
+OPTIONAL = ("open_while", "open_until", "blocked_on", "owner", "model")
 
 
 class GapError(Exception):

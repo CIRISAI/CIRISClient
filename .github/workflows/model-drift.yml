@@ -1,0 +1,27 @@
+name: model drift
+
+# The cards cite CIRISConstitution's formal model through a pin
+# (packaging/model/PIN.tsv), and build.yml holds every card to that pin. This
+# job asks the other half: has the model moved on without us? It fails when the
+# pinned STATE_TABLE.tsv or transitions.json no longer equals the model
+# branch's, so drift is visible within a day instead of at the next audit.
+# It does not block PRs: a PR cannot be made red by a commit in another repo.
+# To clear it: `python3 packaging/check_csd_model.py --vendor <commit>`, then
+# fix every card the gate names, in one PR.
+
+on:
+  schedule:
+    - cron: "17 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  upstream:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Is the model pin behind CIRISConstitution?
+        run: python3 packaging/check_csd_model.py --upstream

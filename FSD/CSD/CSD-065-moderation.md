@@ -48,6 +48,15 @@ owner: CIRISClient
   blocked_on: '0.6: pending (CIRISServer), O11'
 ```
 
+**Model.** What this card draws and offers, cited from CIRISConstitution's formal model (pinned in `packaging/model/`) and held to it by `packaging/check_csd_model.py`: a modelled state the card leaves out, or a signer, policy or confirm that differs, fails CI.
+
+```yaml csd:model
+- act: 'quarantine:{state} attest'
+  roles: 'slash'
+  policy: 'cosigned'
+  confirm: 'true'
+```
+
 ## 1. Mission (why)
 
 **A member of a community can ask whether that community has a moderator at all,

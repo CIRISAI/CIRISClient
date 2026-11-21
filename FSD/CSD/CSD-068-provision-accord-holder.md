@@ -24,6 +24,15 @@ owner: CIRISClient
   open_while: 'v1/accord/holder\b'
 ```
 
+**Model.** What this card draws and offers, cited from CIRISConstitution's formal model (pinned in `packaging/model/`) and held to it by `packaging/check_csd_model.py`: a modelled state the card leaves out, or a signer, policy or confirm that differs, fails CI.
+
+```yaml csd:model
+- act: 'key:record attest'
+  roles: 'self'
+  policy: 'cosigned'
+  confirm: 'true'
+```
+
 > **On v62 (audit of 2026-11-21): stale.** The screen's purpose survives: a
 > person mints a hardware-custodied holder key and is told plainly what failed.
 > Its custody shape, its next step and its routes change. v62 is a total

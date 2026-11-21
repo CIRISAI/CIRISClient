@@ -33,6 +33,33 @@ owner: CIRISClient
   where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/federation/TrustRoot.kt
   open_while: 'bake_not_adopted'
   blocked_on: 'O1'
+- id: standing-stalled
+  card: 'Stalled (revocations leave too few active founders) is its own standing, neither Rooted nor NotRooted'
+  code: 'GenesisState has no stalled arm'
+  where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/federation/TrustRoot.kt
+  open_until: 'STALLED'
+  model: root.standing.Stalled
+  blocked_on: 'O1'
+- id: root-head-untyped
+  card: 'the root head is none, witnessed and fresh, stale, or frozen (two heads at one size)'
+  code: 'TrustRoot.kt models no head freshness'
+  where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/federation/TrustRoot.kt
+  open_until: '(?i)witness'
+  model: root.head.none root.head.witnessed_fresh root.head.stale root.head.frozen
+  blocked_on: 'O1, O5 (SCITT)'
+```
+
+**Model.** What this card draws and offers, cited from CIRISConstitution's formal model (pinned in `packaging/model/`) and held to it by `packaging/check_csd_model.py`: a modelled state the card leaves out, or a signer, policy or confirm that differs, fails CI.
+
+```yaml csd:model
+- var: root.standing
+  states: 'NotRooted Stalled Rooted'
+  code: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/federation/TrustRoot.kt
+  code.NotRooted: 'PRE_GENESIS'
+  code.Rooted: 'ENTRENCHED'
+- var: root.head
+  states: 'none witnessed_fresh stale frozen'
+  code: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/federation/TrustRoot.kt
 ```
 
 ## 1. Mission (why)

@@ -20,12 +20,12 @@ reserved. **A retired number is never reused.**
 **Code gaps** counts the places a card and the code are known to disagree, each
 declared in the card's `csd:code_gaps` block and proven against the tree by
 `packaging/check_csd_code_gaps.py` (`--list` prints them). A card with gaps is
-ahead of, or behind, its code: **11 cards, 18 gaps** today.
+ahead of, or behind, its code: **11 cards, 22 gaps** today.
 
 | CSD | Card | Stage | Code gaps | Flow |
 |---|---|---|---|---|
 | [CSD-002](CSD-002-environment-card.md) | Environment graph (what this circle has, wants and can lend) | `building` | — | none yet |
-| [CSD-003](CSD-003-constitutional-card.md) | Constitutional card — is the halt authority armed, and who holds it | `building` | **2** | none yet |
+| [CSD-003](CSD-003-constitutional-card.md) | Constitutional card — is the halt authority armed, and who holds it | `building` | **3** | none yet |
 | [CSD-004](CSD-004-capacity-attestations.md) | Federation capacity attestations (Health & Reputation) | `building` | — | none yet |
 | [CSD-005](CSD-005-people.md) | People (the Contacts surface, rebuilt on the primitives) | `testable` | — | `testing/flows/csd-005-people.yaml` |
 | [CSD-006](CSD-006-receipt.md) | The receipt (the template every CEG item asserts) | `testable` | — | `testing/flows/csd-006-receipt.yaml` |
@@ -76,7 +76,7 @@ ahead of, or behind, its code: **11 cards, 18 gaps** today.
 | [CSD-057](CSD-057-wallet.md) | Wallet (real money, in a circle, bound to a family that does not exist) | `testable` | — | `testing/flows/csd-057-wallet.yaml` |
 | [CSD-065](CSD-065-moderation.md) | Moderation (the duty, the existence invariant, and the brake) | `building` | **1** | none yet |
 | [CSD-066](CSD-066-child-safety.md) | Child Safety (the protective posture, and the opt-in that must never be silent) | `building` | — | `testing/flows/drafts/csd-066-child-safety.yaml` |
-| [CSD-067](CSD-067-accord.md) | Accord (Trust Root) — the kill switch, its roster, and the five kinds | `building` | **5** | none yet |
+| [CSD-067](CSD-067-accord.md) | Accord (Trust Root) — the kill switch, its roster, and the five kinds | `building` | **6** | none yet |
 | [CSD-068](CSD-068-provision-accord-holder.md) | Provision Accord Holder (the custody floor, in three steps) | `testable` | **2** | `testing/flows/csd-068-provision-accord-holder.yaml` |
 | [CSD-069](CSD-069-accord-ceremony.md) | Accord Genesis Ceremony (six keys, three humans, one artifact) | `building` | **1** | `testing/flows/drafts/csd-069-accord-ceremony.yaml` |
 | [CSD-070](CSD-070-commons.md) | Commons (1-of-N to protect, m-of-n to undo — and eight distinct zeroes) | `building` | — | none yet |
@@ -101,7 +101,7 @@ ahead of, or behind, its code: **11 cards, 18 gaps** today.
 | [CSD-102](CSD-102-communities.md) | Communities and affiliations: the community itself (Rules) | `building` | — | `testing/flows/drafts/csd-102-communities.yaml` |
 | [CSD-103](CSD-103-community-roster-and-rooms.md) | Communities and affiliations: who is in it (People) and the rooms (Chats) | `building` | — | `testing/flows/drafts/csd-103-community-roster.yaml` |
 | [CSD-104](CSD-104-key-verification.md) | Verify someone's key (the peer detail's short-code ceremony) | `building` | — | `testing/flows/drafts/csd-104-key-verification.yaml` |
-| [CSD-105](CSD-105-trust-root.md) | This node's trust root (the Accord card's detail: posture, adopt a seed, un-trust) | `building` | **2** | `testing/flows/drafts/csd-105-trust-root.yaml` |
+| [CSD-105](CSD-105-trust-root.md) | This node's trust root (the Accord card's detail: posture, adopt a seed, un-trust) | `building` | **4** | `testing/flows/drafts/csd-105-trust-root.yaml` |
 | [CSD-106](CSD-106-membership-invites.md) | Invitations to a household or a community (nobody joins without saying yes) | `building` | — | `testing/flows/drafts/csd-106-membership-invites.yaml` |
 | [CSD-107](CSD-107-file-custody.md) | Where is this file (file custody, one card from every file surface) | `building` | — | `testing/flows/drafts/csd-107-file-custody.yaml` |
 | [CSD-108](CSD-108-steward-purge.md) | Steward purge (remove rows that never belonged, under the global trust root) | `sketched` | — | none yet |

@@ -14,6 +14,15 @@ stage: sketched
 owner: CIRISClient
 ```
 
+**Model.** What this card draws and offers, cited from CIRISConstitution's formal model (pinned in `packaging/model/`) and held to it by `packaging/check_csd_model.py`: a modelled state the card leaves out, or a signer, policy or confirm that differs, fails CI.
+
+```yaml csd:model
+- act: 'takedown_notice:{basis} attest'
+  roles: 'takedown'
+  policy: 'cosigned'
+  confirm: 'true'
+```
+
 > **On v62 (audit of 2026-11-21): stale, and its authority is OPEN.** This card
 > was built on CSD-067's co-scrub and the canonical withdraw door. v62 has
 > neither: there is no co-scrub, and the withdraw and supersede doors are

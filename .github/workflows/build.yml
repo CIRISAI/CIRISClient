@@ -257,6 +257,9 @@ jobs:
           python3 packaging/gen_csd_roster.py --check
           python3 packaging/check_csd_code_gaps.py --self-test
           python3 packaging/check_csd_code_gaps.py
+          python3 packaging/check_csd_model.py --self-test
+          python3 packaging/check_csd_model.py --verify-pin
+          python3 packaging/check_csd_model.py
 
       - name: Every route a screen calls is cited by its CSD; no new duplicate mutations
         # Cards were proposed for things that already existed under another

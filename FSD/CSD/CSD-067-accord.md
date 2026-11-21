@@ -48,6 +48,42 @@ owner: CIRISClient
   where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/api/CIRISApiClient.kt
   open_while: 'v1/accord/final-genesis'
   blocked_on: 'O1, O2'
+- id: halt-standing-untyped
+  card: 'a lone halt (lapses at T unless a strict majority confirms) and a confirmed halt are distinct states'
+  code: 'AccordHaltStatusResponse keeps the standing latch as raw JSON; lone and confirmed are not typed'
+  where: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/federation/Accord.kt
+  open_while: 'val halt: kotlinx\.serialization\.json\.JsonObject\?'
+  model: root.halt.latched_lone root.halt.confirmed
+  blocked_on: 'O1 (0.6 halt-status shape)'
+```
+
+**Model.** What this card draws and offers, cited from CIRISConstitution's formal model (pinned in `packaging/model/`) and held to it by `packaging/check_csd_model.py`: a modelled state the card leaves out, or a signer, policy or confirm that differs, fails CI.
+
+```yaml csd:model
+- var: root.halt
+  states: 'not_halted latched_lone confirmed'
+  code: client/shared/src/commonMain/kotlin/ai/ciris/mobile/shared/models/federation/Accord.kt
+  code.not_halted: 'val halted: Boolean'
+- act: 'accord:invoke:constitutional:{halt_id} attest'
+  roles: 'holder'
+  policy: 'mirror'
+  confirm: 'true'
+- act: 'accord:invoke:drill:{drill_id} attest'
+  roles: 'holder'
+  policy: 'selfAct'
+  confirm: 'true'
+- act: 'accord:invoke:notify:{notify_id} attest'
+  roles: 'holder'
+  policy: 'selfAct'
+  confirm: 'true'
+- act: 'accord:lifecycle:{kind} attest'
+  roles: 'holder'
+  policy: 'mirror'
+  confirm: 'true'
+- act: 'transport:canonical_rebind attest'
+  roles: 'holder'
+  policy: 'cosigned'
+  confirm: 'true'
 ```
 
 ## 0. v62 (re-genesis) status

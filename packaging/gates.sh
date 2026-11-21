@@ -62,6 +62,11 @@ python3 packaging/gen_csd_roster.py --check
 # (csd:code_gaps) and still true of the tree; a closed gap must be deleted.
 python3 packaging/check_csd_code_gaps.py --self-test
 python3 packaging/check_csd_code_gaps.py
+# Cards cite the mesh's formal model (CIRISConstitution, pinned in packaging/model/);
+# a card's states, signers, policies and confirms must equal the pin's.
+python3 packaging/check_csd_model.py --self-test
+python3 packaging/check_csd_model.py --verify-pin
+python3 packaging/check_csd_model.py
 # Every route a screen calls is cited in a CSD on that screen, and no two
 # screens newly share a mutating route (the same card under two names).
 python3 packaging/check_csd_routes.py --self-test
