@@ -84,7 +84,7 @@ never "does the release fit" but "should this consumer download this payload".
 
 | distribution | carries | size | who wants it |
 |---|---|---|---|
-| `ciris-client` | that OS's desktop uber-jar | 67–74% of the limit | anyone launching the desktop client |
+| `ciris-client` | that OS's desktop uber-jar | 96–100% of the limit (0.5.242) | anyone launching the desktop client |
 | `ciris-client-wasm` | the WebAssembly browser bundle | 7.4 MiB | CIRISHome, and any node serving the web UI |
 
 `ciris-client` ships one wheel per OS — Linux x86-64, macOS arm64, macOS
@@ -164,7 +164,11 @@ is hand back a path to a placeholder.
 ### The size arithmetic
 
 PyPI's per-file limit is 104,857,600 bytes (100 MiB). The 0.5.234 platform
-wheels are 70.3–77.3 MB, 67–74% of it. ProGuard would cut most of the jar and is
+wheels were 67–74% of it; the bundled FFmpeg for calls took them to 96–100% by
+0.5.242, whose first macOS x86-64 wheel was 194,232 bytes over. Staging now
+re-deflates each jar at level 9 (`stage_artifacts.py`, `recompress_jar`): about
+0.5% smaller, every entry byte-identical. That is one release of headroom, not
+a budget. ProGuard would cut most of the jar and is
 blocked on ktor 3.x (CIRISServer#379), so treat the size as fixed. Two desktop
 builds in one wheel would not fit, which is one more reason there is one build
 with the agent surfaces gated at runtime.

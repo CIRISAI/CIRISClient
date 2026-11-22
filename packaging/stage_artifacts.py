@@ -32,6 +32,7 @@ import json
 import os
 import shutil
 import sys
+import zipfile
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -141,6 +142,40 @@ def tree_sha256(path: Path) -> str:
     for f in sorted(p for p in path.rglob("*") if p.is_file()):
         outer.update(f"{sha256(f)}  {f.relative_to(path).as_posix()}\n".encode())
     return outer.hexdigest()
+
+
+def recompress_jar(src: Path, target: Path) -> None:
+    """Copy a jar, deflating every compressed entry at level 9.
+
+    The desktop jars sit within 0.2% of PyPI's per-file limit (0.5.242: the
+    macOS x86-64 wheel was 194,232 bytes over). Gradle writes jars at zlib's
+    default level 6; level 9 saves about 0.5% and changes no entry's bytes,
+    name, order, timestamp or method (stored entries stay stored), so the
+    classes and native libraries that load are identical. A signed jar stays
+    valid: signatures cover entry contents, not their compression.
+
+    The copy is checked entry by entry (name, CRC, size) before it is kept.
+    It buys one release of headroom, not a budget; the README's size
+    arithmetic says what does.
+    """
+    tmp = target.with_name(target.name + ".tmp")
+    with zipfile.ZipFile(src) as a, zipfile.ZipFile(tmp, "w") as b:
+        b.comment = a.comment
+        for info in a.infolist():
+            data = a.read(info)
+            if info.compress_type == zipfile.ZIP_STORED:
+                b.writestr(info, data)
+            else:
+                b.writestr(info, data, compress_type=zipfile.ZIP_DEFLATED,
+                           compresslevel=9)
+    with zipfile.ZipFile(src) as a, zipfile.ZipFile(tmp) as b:
+        before = [(i.filename, i.CRC, i.file_size) for i in a.infolist()]
+        after = [(i.filename, i.CRC, i.file_size) for i in b.infolist()]
+        if before != after or b.testzip() is not None:
+            tmp.unlink()
+            sys.exit(f"[FAIL] recompressing {src} changed its entries")
+    os.replace(tmp, target)
+    shutil.copystat(src, target)
 
 
 def main() -> int:
@@ -271,10 +306,15 @@ def main() -> int:
             target = dest / (kind if src.is_dir() else src.name)
             if src.is_dir():
                 shutil.copytree(src, target)
+            elif src.suffix == ".jar":
+                recompress_jar(src, target)
             else:
                 shutil.copy2(src, target)
             size = tree_bytes(target)
             total += size
+            if src.suffix == ".jar":
+                saved = src.stat().st_size - size
+                print(f"[deflate9] {src.name}: {saved:,} bytes smaller at level 9")
             entry = {
                 "kind": kind,
                 "path": target.name,
