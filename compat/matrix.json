@@ -2575,7 +2575,7 @@
         "languages": 29,
         "keys": 6072
       },
-      "notes": "For CIRISServer 0.5.253 (the LTS) and CIRISAgent 2.23.1. Tested: TODO(five-platform run with AI on the release commit: run id, legs, results). The v62 paths (edition 2) are covered by unit tests only: no released node reports edition 2 yet. New strings are machine-translated and reviewed by a judge of a different model family: draft / machine_reviewed, with no native-fluency review.",
+      "notes": "For CIRISServer 0.5.253 (the LTS) and CIRISAgent 2.23.1. Tested: the five-platform run with AI 44961924902 on the release commit d7541faa, against ciris-server v0.5.253: windows, linux + android emulator, macos + ios simulator all pass; the with-AI legs (windows, linux, ios simulator) pass on ciris-agent 2.23.1 through OpenRouter (anthropic/claude-sonnet-5), whose own node is 0.5.250. Two earlier runs on 0.5.252 (44867953009, 44907474551) each failed one leg that passed here: the iOS peer's self-registration (fixed in 0.5.253, #887) and macOS csd_006_receipt's seeded contact row (did not recur); an iOS-with-AI /screen timeout after startup did not recur either. Known: the iOS SIGSEGV after the contact code (#239, intermittent). The v62 paths (edition 2) are covered by unit tests only: no released node reports edition 2 yet. New strings are machine-translated and reviewed by a judge of a different model family: draft / machine_reviewed, with no native-fluency review.",
       "published": null
     }
   ]
