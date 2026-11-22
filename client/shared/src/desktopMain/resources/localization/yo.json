@@ -6164,6 +6164,10 @@
     "awaiting_key": "Àwọn bytes rẹ̀ wà níhìn-ín, ṣùgbọ́n kọ́kọ́rọ́ ẹ̀rọ yìí fún wọn kò tíì dé. Ó ń tẹ̀lé fúnra rẹ̀; gbìyànjú lẹ́ẹ̀kansi láìpẹ́.",
     "withheld_by_moderation": "Olùdarí yàrá yìí ti fi àmì sí fáìlì yìí, nítorí náà yóò farapamọ́ títí tí o fi yàn láti rí i.",
     "flagged_by_moderation": "olùdarí yàrá yìí ti fi àmì sí fáìlì yìí; yóò dúró nínú yàrá náà níwọ̀n ìgbà tí àmì náà bá dúró",
+    "no_rendition": "Fáìlì yìí kò ní àwòrán ìṣáájú tí nódù lè ṣe.",
+    "image_too_large": "Àwòrán yìí tóbi jù fún nódù láti ṣe àwòrán ìṣáájú.",
+    "image_undecodable": "Nódù náà kò lè ka àwòrán yìí láti ṣe àwòrán ìṣáájú.",
+    "unknown_rendition": "Ohun èlò náà béèrè fún irú àwòrán ìṣáájú kan tí nódù kò ṣe.",
     "family_id_required": "Fáìlì Ìdílé nílò láti dárúkọ ìdílé rẹ̀. Kò sí ìdílé aládàánidá kan.",
     "listing_failed": "Nódù yìí kò lè ṣe àkọsílẹ̀ àwọn fáìlì tí ó wà nínú yàrá yẹn.",
     "no_node_key": "Nódù yìí kò lè rí kọ́kọ́rọ́ tirẹ̀.",
@@ -6529,7 +6533,9 @@
     "share_unavailable": "Pínpín ojú ìbòjú rẹ kò tíì sí lórí nódù yìí síi.",
     "leave_reason_unknown": "Ìdí yẹn kì í ṣe ìdí fún yíyọ kúrò nínú ìpè.",
     "video_two_people_only": "Fídíò àti pínpín ojú-ìwé ń ṣiṣẹ́ nínú àwọn ìpè láàrin ènìyàn méjì fún ìsinsìnyí. Ìpè yìí ní ju bẹ́ẹ̀ lọ, nítorí náà ohùn nìkan ni. Bí kámẹ́rà rẹ bá wà ní títan, yóò tún bẹ̀rẹ̀ sí í fi ránṣẹ́ nígbà tí ìpè náà bá padà sí ènìyàn méjì.",
-    "relay_canonical_audio_only": "Fídíò wọn kò lè dé ọ̀dọ̀ rẹ ní ìsinsìnyí: ọ̀nà tí ó wà láàrin yín gbé ohùn nìkan. O ṣì lè gbọ́ wọn."
+    "relay_canonical_audio_only": "Fídíò wọn kò lè dé ọ̀dọ̀ rẹ ní ìsinsìnyí: ọ̀nà tí ó wà láàrin yín gbé ohùn nìkan. O ṣì lè gbọ́ wọn.",
+    "share_already_live": "O ti ń pín ojú ìbòjú rẹ tẹ́lẹ̀.",
+    "no_share": "O kò pín ojú ìbòjú rẹ lọ́wọ́lọ́wọ́."
   },
   "decisions": {
     "not_found": "Ìpinnu yẹn kò sí ní ṣíṣí fún ọ mọ́.",

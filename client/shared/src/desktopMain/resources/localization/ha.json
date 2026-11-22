@@ -6185,6 +6185,10 @@
     "awaiting_key": "Bytes nasa suna nan, amma maɓallin wannan na'urar dominsu bai isa ba tukuna. Yana biye da kansa; sake gwadawa nan da ƴan lokaci.",
     "withheld_by_moderation": "Mai kula da wannan ɗaki ya yiwa wannan fayil ɗin alama, don haka yana zama a ɓoye har sai kun zaɓi ganin shi.",
     "flagged_by_moderation": "mai kula da wannan ɗaki ya yiwa wannan fayil ɗin alama; yana zama a cikin ɗakin muddin alamar take nan",
+    "no_rendition": "Wannan fayil ba shi da preview da kumburi zai iya yi masa.",
+    "image_too_large": "Wannan hoto ya girma sosai don kumburi ya iya yin preview nasa.",
+    "image_undecodable": "Kumburi bai iya karanta wannan hoto don yin preview ba.",
+    "unknown_rendition": "Manhajar ta nemi irin preview wanda kumburi ba ya yi.",
     "not_a_member": "Ba ku cikin mambobin wannan ɗakin ba."
   },
   "notes": {
@@ -6529,7 +6533,9 @@
     "share_unavailable": "Raba allon ku ba ya samuwa a wannan kumburi tukuna.",
     "leave_reason_unknown": "Wannan ba dalili ba ne na barin kiran.",
     "video_two_people_only": "Bidiyo da raba allo suna aiki ne kawai a kiraye-kiraye tsakanin mutane biyu a yanzu. Wannan kiran yana da fiye da haka, don haka murya ne kawai. Idan kyamararku a kunne take, za ta sake fara aikawa idan kiran ya koma mutane biyu.",
-    "relay_canonical_audio_only": "Bidiyonsu ba zai iya isa gare ku a yanzu ba: hanyar da ke tsakaninku tana ɗauke da sauti kawai. Har yanzu kuna iya jin su."
+    "relay_canonical_audio_only": "Bidiyonsu ba zai iya isa gare ku a yanzu ba: hanyar da ke tsakaninku tana ɗauke da sauti kawai. Har yanzu kuna iya jin su.",
+    "share_already_live": "Kuna raba allon ku tuni.",
+    "no_share": "Ba ku raba allon ku ba."
   },
   "decisions": {
     "not_found": "Wannan shawarar ba ta ƙara buɗewa gare ku ba.",

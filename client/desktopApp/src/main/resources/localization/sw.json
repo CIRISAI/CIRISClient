@@ -6164,6 +6164,10 @@
     "awaiting_key": "Baiti zake zipo hapa, lakini ufunguo wa kifaa hiki kwa ajili yao haujafika bado. Unafuata wenyewe; jaribu tena baada ya muda mfupi.",
     "withheld_by_moderation": "Msimamizi wa chumba hiki ameweka alama kwenye faili hili, hivyo linabaki limefichwa mpaka uchague kuliona.",
     "flagged_by_moderation": "msimamizi wa chumba hiki ameweka alama kwenye faili hili; linabaki kwenye chumba wakati alama hiyo ipo",
+    "no_rendition": "Faili hii haina hakikisho ambalo nodi hii inaweza kutengeneza.",
+    "image_too_large": "Picha hii ni kubwa mno kwa nodi hii kutengeneza hakikisho.",
+    "image_undecodable": "Nodi hii haikuweza kusoma picha hii ili kutengeneza hakikisho.",
+    "unknown_rendition": "Programu iliomba aina ya hakikisho ambayo nodi hii haitengenezi.",
     "family_id_required": "Faili la familia linahitaji kutaja familia yake. Hakuna familia chaguo-msingi.",
     "listing_failed": "Nodi hii haikuweza kuorodhesha faili katika chumba hicho.",
     "no_node_key": "Nodi hii haikuweza kupata ufunguo wake yenyewe.",
@@ -6529,7 +6533,9 @@
     "share_unavailable": "Kushiriki skrini yako hakupatikani bado kwenye nodi hii.",
     "leave_reason_unknown": "Hiyo si sababu ya kuondoka kwenye simu.",
     "video_two_people_only": "Video na kushiriki skrini hufanya kazi kwenye simu kati ya watu wawili kwa sasa. Simu hii ina watu zaidi, hivyo ni ya sauti pekee. Ikiwa kamera yako imewashwa, itaanza kutuma tena wakati simu itakaporudi kuwa ya watu wawili.",
-    "relay_canonical_audio_only": "Video yao haiwezi kukufikia kwa sasa: njia iliyo baina yenu inabeba sauti pekee. Bado unaweza kuwasikia."
+    "relay_canonical_audio_only": "Video yao haiwezi kukufikia kwa sasa: njia iliyo baina yenu inabeba sauti pekee. Bado unaweza kuwasikia.",
+    "share_already_live": "Tayari unashiriki skrini yako.",
+    "no_share": "Hushiriki skrini yako kwa sasa."
   },
   "decisions": {
     "not_found": "Uamuzi huo haupo wazi kwako tena.",
