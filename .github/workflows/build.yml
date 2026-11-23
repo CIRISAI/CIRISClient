@@ -859,11 +859,13 @@ jobs:
           else:
               print("desktop-uber-jar ->", c.artifact_path("desktop-uber-jar"))
           PY
+          # The heredoc above ran after `cd /tmp/verify`, and that cd holds for the rest
+          # of this step: paths below are absolute.
           if ! (cd /tmp/verify && /tmp/consumer/bin/python -c 'import ciris_client as c, sys; sys.exit(1 if c.manifest().get("placeholder") else 0)'); then
             echo "placeholder: no jar to check against ciris-holon"
           else
             jar=$(cd /tmp/verify && /tmp/consumer/bin/python -c 'import ciris_client as c; print(c.artifact_path("desktop-uber-jar"))')
-            /tmp/consumer/bin/python packaging/check_holon_classpath.py "$jar"
+            /tmp/consumer/bin/python "$GITHUB_WORKSPACE/packaging/check_holon_classpath.py" "$jar"
           fi
 
       - name: Say plainly what shipped

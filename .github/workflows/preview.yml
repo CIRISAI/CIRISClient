@@ -210,8 +210,9 @@ jobs:
               assert p.exists(), f"{a['kind']} listed but missing at {p}"
               print(f"  {a['kind']:<18} {p.name}  {a['bytes']:,} bytes")
           PY
-          jar=$(cd verify && "$PY" -c 'import ciris_client as c; print(c.artifact_path("desktop-uber-jar"))')
-          "$PY" packaging/check_holon_classpath.py "$jar"
+          # The heredoc above ran after `cd verify`, which holds for the rest of the step.
+          jar=$("$PY" -c 'import ciris_client as c; print(c.artifact_path("desktop-uber-jar"))')
+          "$PY" "$GITHUB_WORKSPACE/packaging/check_holon_classpath.py" "$jar"
 
       - uses: actions/upload-artifact@v4
         with:

@@ -301,8 +301,9 @@ jobs:
           # The jar leaves FFmpeg out and names it in ciris-holon by Class-Path.
           # A missing entry is silently ignored by the JVM (calls go audio-only),
           # so check the installed layout and the digests here, on this OS.
-          jar=$(cd verify && "$PY" -c 'import ciris_client as c; print(c.artifact_path("desktop-uber-jar"))')
-          "$PY" packaging/check_holon_classpath.py "$jar"
+          # The heredoc above ran after `cd verify`, which holds for the rest of the step.
+          jar=$("$PY" -c 'import ciris_client as c; print(c.artifact_path("desktop-uber-jar"))')
+          "$PY" "$GITHUB_WORKSPACE/packaging/check_holon_classpath.py" "$jar"
 
       - uses: actions/upload-artifact@v4
         with:
