@@ -165,10 +165,16 @@ is hand back a path to a placeholder.
 
 PyPI's per-file limit is 104,857,600 bytes (100 MiB). The 0.5.234 platform
 wheels were 67–74% of it; the bundled FFmpeg for calls took them to 96–100% by
-0.5.242, whose first macOS x86-64 wheel was 194,232 bytes over. Staging now
+0.5.242, whose first macOS x86-64 wheel was 194,232 bytes over. Staging
 re-deflates each jar at level 9 (`stage_artifacts.py`, `recompress_jar`): about
-0.5% smaller, every entry byte-identical. That is one release of headroom, not
-a budget. ProGuard would cut most of the jar and is
+0.5% smaller, every entry byte-identical. That was one release of headroom, not
+a budget. From 0.5.243 the FFmpeg natives (18.6–24.4 MiB per OS) are not in
+the wheel: ciris-client depends on `ciris-holon>=0.1,<0.2`, which carries the
+bytedeco jars byte-identical, and the uber-jar's manifest `Class-Path` names
+them at `../../ciris_holon/media/jars/`, beside this package in site-packages.
+`java -jar` is unchanged. `packaging/check_holon_classpath.py` checks the
+installed layout and digests on every OS; `packaging/check_pins.py` checks the
+range carries the FFmpeg the build names. ProGuard would cut most of the jar and is
 blocked on ktor 3.x (CIRISServer#379), so treat the size as fixed. Two desktop
 builds in one wheel would not fit, which is one more reason there is one build
 with the agent surfaces gated at runtime.

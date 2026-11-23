@@ -127,3 +127,53 @@ kotlin {
 // The four in-tree bundles are kept identical by
 // client/tools/check_localization_sync.py, which runs in CI. See
 // client/VENDORING.md §5.
+
+// ─── CALL VIDEO NATIVES COME FROM ciris-holon ───────────────────────────────
+//
+// FFmpeg's natives are 18-24 MiB per OS, and with them inside the uber-jar the
+// 0.5.242 macOS x86-64 wheel was 0.18 MiB under PyPI's 100 MiB file limit. They
+// are published once, separately, as `ciris-holon` (CIRISHolon, media/jars/,
+// the bytedeco jars byte-identical), and ciris-client depends on it.
+//
+// So the uber-jar leaves this OS's natives out and names them in its manifest
+// `Class-Path`, relative to where the jar sits once installed:
+//
+//   site-packages/ciris_client/_artifacts/<this jar>
+//   site-packages/ciris_holon/media/jars/<the bytedeco jars>
+//
+// `java -jar <jar>` is unchanged (CIRISServer and CIRISAgent launch exactly
+// that). A Class-Path entry that does not exist is ignored by the JVM; FFmpeg
+// then fails to load and the call is audio-only from this side, which
+// Video.desktop.kt already does and says why. The Java bindings (small) stay in.
+//
+// The same bytedeco jars Gradle resolved are copied to build/ciris_holon/media/
+// jars/, the same relative place from build/compose/jars/, so a jar run from the
+// build tree (the five-platform run, a developer) loads them through the very
+// Class-Path the wheel uses rather than a second mechanism.
+evaluationDependsOn(":shared")
+val bytedecoClassifier = project(":shared").extra["bytedecoHostClassifier"] as String
+val bytedecoNativeJars = listOf(
+    "javacpp-${project(":shared").extra["bytedecoJavacppVersion"]}-$bytedecoClassifier.jar",
+    "ffmpeg-${project(":shared").extra["bytedecoFfmpegVersion"]}-$bytedecoClassifier.jar",
+)
+val holonJarsRelative = "../../ciris_holon/media/jars"
+
+val stageHolonJars by tasks.registering(Sync::class) {
+    description = "Places the bytedeco native jars where the uber-jar's Class-Path looks, for build-tree runs."
+    from(configurations.named("runtimeClasspath").map { cp -> cp.filter { it.name in bytedecoNativeJars } })
+    into(layout.buildDirectory.dir("ciris_holon/media/jars"))
+    doLast {
+        val got = destinationDir.list()?.toSet().orEmpty()
+        val missing = bytedecoNativeJars.filterNot { it in got }
+        if (missing.isNotEmpty()) throw GradleException("bytedeco native jars not on the runtime classpath: $missing")
+    }
+}
+
+tasks.matching { it.name == "packageUberJarForCurrentOS" }.configureEach {
+    this as org.gradle.jvm.tasks.Jar
+    exclude("org/bytedeco/ffmpeg/$bytedecoClassifier/**", "org/bytedeco/javacpp/$bytedecoClassifier/**")
+    manifest {
+        attributes("Class-Path" to bytedecoNativeJars.joinToString(" ") { "$holonJarsRelative/$it" })
+    }
+    finalizedBy(stageHolonJars)
+}

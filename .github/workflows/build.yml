@@ -834,7 +834,8 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m venv /tmp/consumer
-          /tmp/consumer/bin/pip install --no-index dist/ciris_client-*.whl
+          # Not --no-index: ciris-holon (the call-video natives) resolves from PyPI.
+          /tmp/consumer/bin/pip install dist/ciris_client-*.whl
           # Run from a directory that is NOT the checkout. `python -` puts the
           # CWD first on sys.path, so run here and `ciris_client/` in the repo
           # root shadows the wheel — this step then grades the source tree and
@@ -858,6 +859,12 @@ jobs:
           else:
               print("desktop-uber-jar ->", c.artifact_path("desktop-uber-jar"))
           PY
+          if ! (cd /tmp/verify && /tmp/consumer/bin/python -c 'import ciris_client as c, sys; sys.exit(1 if c.manifest().get("placeholder") else 0)'); then
+            echo "placeholder: no jar to check against ciris-holon"
+          else
+            jar=$(cd /tmp/verify && /tmp/consumer/bin/python -c 'import ciris_client as c; print(c.artifact_path("desktop-uber-jar"))')
+            /tmp/consumer/bin/python packaging/check_holon_classpath.py "$jar"
+          fi
 
       - name: Say plainly what shipped
         if: always()

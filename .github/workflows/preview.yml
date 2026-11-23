@@ -196,7 +196,8 @@ jobs:
           set -euo pipefail
           python3 -m venv consumer-venv
           if [ -d consumer-venv/Scripts ]; then PY=$PWD/consumer-venv/Scripts/python; else PY=$PWD/consumer-venv/bin/python; fi
-          "$PY" -m pip install --quiet --no-index dist/*.whl
+          # Not --no-index: ciris-holon (the call-video natives) resolves from PyPI.
+          "$PY" -m pip install --quiet dist/*.whl
           mkdir -p verify && cd verify && "$PY" - <<'PY'
           import ciris_client as c
           assert "site-packages" in c.__file__, f"resolved the source tree: {c.__file__}"
@@ -209,6 +210,8 @@ jobs:
               assert p.exists(), f"{a['kind']} listed but missing at {p}"
               print(f"  {a['kind']:<18} {p.name}  {a['bytes']:,} bytes")
           PY
+          jar=$(cd verify && "$PY" -c 'import ciris_client as c; print(c.artifact_path("desktop-uber-jar"))')
+          "$PY" packaging/check_holon_classpath.py "$jar"
 
       - uses: actions/upload-artifact@v4
         with:
