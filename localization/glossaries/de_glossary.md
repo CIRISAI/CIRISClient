@@ -288,6 +288,7 @@ Decided for client 0.5.239 so these terms stop being left in English. "corpus" m
 | rubric review | Rubrik-Überprüfung | - | corpus: a review of an agent's behaviour against a scoring rubric |
 | delegation scope | Delegationsbereich | - | corpus: the set of actions a delegate is allowed to perform |
 | canonical node | kanonischer Knoten | - | corpus: a node chosen as the reference copy a family's other nodes follow |
+| CIRIS public servers | die öffentlichen CIRIS-Server | - | person-facing name for ciris-canonical and any canonical seat: the servers anyone can reach. Plural. Never a family's canonical node (row above). Taken from the reviewed mobile.call_relay_refused_by_policy, 2026-11-22 |
 | serve node | Serverknoten | - | corpus: a node that serves others on the mesh (always on, reachable) |
 | genesis seed | Genesis-Seed | - | corpus: the starting material from which a family's first records are created |
 | circuit breaker | Circuit-Breaker | - | corpus: a safeguard that stops a failing service from being called until it recovers |

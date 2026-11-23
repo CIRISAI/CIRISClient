@@ -42,10 +42,49 @@ class CallViewModel(
     private val newEncoder: (width: Int, height: Int, fps: Int, bitrate: Int) -> ai.ciris.mobile.shared.calls.media.VideoEncoder? =
         { w, h, fps, bitrate -> ai.ciris.mobile.shared.calls.media.createVideoEncoder(w, h, fps, bitrate) },
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + kotlinx.coroutines.Dispatchers.Default),
+    /** Where the person's relay choice is remembered; a test passes its own. */
+    private val relayStore: ai.ciris.mobile.shared.calls.RelayChoiceStore = ai.ciris.mobile.shared.calls.RelayChoiceStore.device(),
+    /** Whether this connection is metered or mobile data; a test passes its own. */
+    private val metered: () -> Boolean = { ai.ciris.mobile.shared.calls.networkIsMetered() },
 ) {
     private val transportRef: CallTransport = transport(scope)
     val session = CallSession(room, transportRef, scope)
     val state: StateFlow<CallState> = session.state
+
+    private val _relayChoice = MutableStateFlow<Boolean?>(null)
+    /** The person's own relay choice on this device, or null where they made none. */
+    val relayChoice: StateFlow<Boolean?> = _relayChoice.asStateFlow()
+
+    private val _meteredNetwork = MutableStateFlow(false)
+    /** True when this device joined on a metered or mobile connection: relaying is off unless chosen. */
+    val meteredNetwork: StateFlow<Boolean> = _meteredNetwork.asStateFlow()
+
+    /** What the last join sent as `relay`, so a choice read late can be put right live. */
+    private var relaySent: Boolean? = null
+
+    init {
+        metered() // starts the platform's network watch early, where it has one
+        scope.launch {
+            val stored = runCatching { relayStore.load() }.getOrNull()
+            _relayChoice.value = stored
+            // Read after the join went out: say it now, live, rather than at the next join.
+            if (stored != null && stored != relaySent && session.state.value is CallState.InCall) session.setRelay(stored)
+        }
+    }
+
+    private fun relayForJoin(): Boolean? {
+        val m = metered()
+        _meteredNetwork.value = m
+        return ai.ciris.mobile.shared.calls.RelayChoice.forJoin(_relayChoice.value, m).also { relaySent = it }
+    }
+
+    /** The relay switch: remembered on this device, and applied to this call at once. */
+    fun setRelay(on: Boolean) {
+        _relayChoice.value = on
+        relaySent = on
+        scope.launch { runCatching { relayStore.save(on) } }
+        session.setRelay(on)
+    }
 
     private var audio: CallAudio? = null
     private var starting = false
@@ -148,7 +187,7 @@ class CallViewModel(
 
     fun join(video: Boolean) {
         wantsVideo = video
-        session.join(video)
+        session.join(video, relayForJoin())
     }
 
     fun setCameraOff(value: Boolean) {
@@ -304,7 +343,7 @@ class CallViewModel(
     /** A new stream after leaving: rejoining is never the old stream resumed. */
     fun rejoin() {
         starting = false
-        session.join(wantsVideo)
+        session.join(wantsVideo, relayForJoin())
     }
 
     fun close() {

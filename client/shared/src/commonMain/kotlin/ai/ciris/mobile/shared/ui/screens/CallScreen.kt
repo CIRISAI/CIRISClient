@@ -311,8 +311,9 @@ private fun LiveCall(
                 localizedString(youLeftKey(s.reason)),
                 modifier = Modifier.testable("state_call_left", s.reason.wire),
             )
-            // Removed from the room is not something a tap undoes.
-            if (s.reason != ai.ciris.mobile.shared.calls.LeaveReason.REMOVED) {
+            // Removed from the room, a setting that refuses calls, or an expired room: not
+            // something a tap undoes.
+            if (s.reason !in NO_REJOIN) {
                 Button(
                     onClick = { call.rejoin() },
                     modifier = Modifier.testableClickable("btn_call_rejoin") { call.rejoin() },
@@ -408,6 +409,32 @@ private fun LiveCall(
                     }
                 }
             }
+            // CSD-134 §2.1: a member this device could not reach directly, and why. They
+            // stay in the call; a restore clears the panel.
+            // The node names the owner when it can (CIRISServer 0.5.254); else the attendee map does.
+            fun personOf(member: String, sent: String? = null) =
+                (sent ?: s.attendees[member]?.person)?.let { nameOf(it) }
+            s.pathFailures.values.sortedBy { it.member }.forEach { f ->
+                MediaPathPanel(
+                    failure = f,
+                    person = personOf(f.member, f.person) ?: localizedString("mobile.call_path_unnamed"),
+                    onRetry = { call.leave(); call.rejoin() },
+                )
+            }
+            s.pathRestored.filterKeys { it !in s.pathFailures }.entries.sortedBy { it.key }.forEach { (member, r) ->
+                val line = ai.ciris.mobile.shared.calls.MediaPathText.restored(
+                    r,
+                    personOf(member, r.person) ?: localizedString("mobile.call_path_unnamed"),
+                    r.through?.let { personOf(it, r.throughPerson) } ?: localizedString("mobile.call_path_relayer_unnamed"),
+                )
+                Text(
+                    localizedString(line.key, line.params),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testable("row_call_path_restored.$member", r.via ?: ""),
+                )
+            }
+            if (!s.relaySeat) RelayRow(call, s)
             // Sharing is video: in a call that carries none, the line above says why there is no button.
             if (s.videoAllowed) ShareControls(call)
             s.departed.forEach { (member, reason) ->
@@ -438,20 +465,82 @@ private fun LiveCall(
     }
 }
 
-/** Why this device left, as a literal key each, so every one is checked and translated. */
+private val NO_REJOIN = setOf(
+    ai.ciris.mobile.shared.calls.LeaveReason.REMOVED,
+    ai.ciris.mobile.shared.calls.LeaveReason.EXPIRED,
+    ai.ciris.mobile.shared.calls.LeaveReason.SHAPED_ONLY,
+    ai.ciris.mobile.shared.calls.LeaveReason.ANONYMOUS,
+)
+
+/**
+ * Why this device left, as a literal key each, so every one is checked and
+ * translated. A setting that ends a call says what its join refusal says (edge 45.2.0).
+ */
 private fun youLeftKey(r: ai.ciris.mobile.shared.calls.LeaveReason) = when (r) {
     ai.ciris.mobile.shared.calls.LeaveReason.LEFT -> "mobile.call_you_left"
     ai.ciris.mobile.shared.calls.LeaveReason.BACKGROUNDED -> "mobile.call_you_backgrounded"
     ai.ciris.mobile.shared.calls.LeaveReason.REMOVED -> "mobile.call_you_removed"
     ai.ciris.mobile.shared.calls.LeaveReason.LOST -> "mobile.call_you_lost"
+    ai.ciris.mobile.shared.calls.LeaveReason.EXPIRED -> "call.end.expired"
+    ai.ciris.mobile.shared.calls.LeaveReason.SHAPED_ONLY -> "call.shaped_only"
+    ai.ciris.mobile.shared.calls.LeaveReason.ANONYMOUS -> "call.anonymous_mode"
 }
 
-/** Why someone else left. */
+/** Why someone else left. The node sends only the first four about others; the rest read as "left". */
 private fun memberLeftKey(r: ai.ciris.mobile.shared.calls.LeaveReason) = when (r) {
     ai.ciris.mobile.shared.calls.LeaveReason.LEFT -> "mobile.call_member_left"
     ai.ciris.mobile.shared.calls.LeaveReason.BACKGROUNDED -> "mobile.call_member_backgrounded"
     ai.ciris.mobile.shared.calls.LeaveReason.REMOVED -> "mobile.call_member_removed"
     ai.ciris.mobile.shared.calls.LeaveReason.LOST -> "mobile.call_member_lost"
+    ai.ciris.mobile.shared.calls.LeaveReason.EXPIRED,
+    ai.ciris.mobile.shared.calls.LeaveReason.SHAPED_ONLY,
+    ai.ciris.mobile.shared.calls.LeaveReason.ANONYMOUS -> "mobile.call_member_left"
+}
+
+/**
+ * The relay switch (CSD-134 §2.1): let others in the call connect through this
+ * device. Remembered per device. On a metered or mobile connection it is off
+ * unless the person turns it on, and says why. Not shown on a CIRIS public
+ * server, which never relays calls.
+ */
+@Composable
+private fun RelayRow(call: ai.ciris.mobile.shared.viewmodels.CallViewModel, s: ai.ciris.mobile.shared.calls.CallState.InCall) {
+    val choice by call.relayChoice.collectAsState()
+    val metered by call.meteredNetwork.collectAsState()
+    val on = s.relaying ?: (choice == true)
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.fillMaxWidth()) {
+        Row(
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Text(
+                localizedString("mobile.call_relay_switch"),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            androidx.compose.material3.Switch(
+                checked = on,
+                onCheckedChange = { call.setRelay(it) },
+                modifier = Modifier.testableClickable("row_call_relay__act.self", if (on) "on" else "off") { call.setRelay(!on) },
+            )
+        }
+        if (metered && choice != true) {
+            Text(
+                localizedString("mobile.call_relay_metered_note"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        if (on && s.relayingFor > 0) {
+            Text(
+                localizedString("mobile.call_relaying_for", mapOf("count" to s.relayingFor.toString())),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.testable("row_call_relay.self", s.relayingFor.toString()),
+            )
+        }
+    }
 }
 
 /**
@@ -523,3 +612,51 @@ private fun ShareControls(call: ai.ciris.mobile.shared.viewmodels.CallViewModel)
     }
 }
 
+/**
+ * CSD-134 §2.1: why the media path to one member could not be set up, as sentences
+ * built from translated parts ([ai.ciris.mobile.shared.calls.MediaPathText]); the
+ * node's raw tokens sit under Details. "Try again" rejoins, and is offered only
+ * where edge says trying again could help.
+ */
+@Composable
+private fun MediaPathPanel(
+    failure: ai.ciris.mobile.shared.calls.MediaPathFailure,
+    person: String,
+    onRetry: () -> Unit,
+) {
+    val t = ai.ciris.mobile.shared.calls.MediaPathText
+    val m = failure.member
+    var open by remember(m) { mutableStateOf(false) }
+    Column(
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+        modifier = Modifier.fillMaxWidth().testable("row_call_path.$m", failure.cause),
+    ) {
+        val head = t.headline(failure, person)
+        Text(localizedString(head.key, head.params), color = MaterialTheme.colorScheme.error)
+        val mine = localizedString(t.natKey(failure.localNat?.legacyClass))
+        val theirs = failure.peerNat?.let { localizedString(t.natKey(it.legacyClass)) }
+        listOfNotNull(t.relay(failure), t.networks(failure, person, mine, theirs), t.portOpen(failure), t.advice(failure, person))
+            .forEach { line -> Text(localizedString(line.key, line.params), style = MaterialTheme.typography.bodySmall) }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (t.offersRetry(failure)) {
+                OutlinedButton(
+                    onClick = onRetry,
+                    modifier = Modifier.testableClickable("row_call_path__act.$m") { onRetry() },
+                ) { Text(localizedString("mobile.call_path_try_again")) }
+            }
+            androidx.compose.material3.TextButton(onClick = { open = !open }) {
+                Text(localizedString(if (open) "mobile.call_path_details_hide" else "mobile.call_path_details"))
+            }
+        }
+        if (open) {
+            t.details(failure).forEach { d ->
+                Text(
+                    d,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}

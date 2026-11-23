@@ -191,6 +191,7 @@ Decided for client 0.5.239 so these terms stop being left in English. "corpus" m
 | rubric review | binciken rubric | - | corpus: a review of an agent's behaviour against a scoring rubric |
 | delegation scope | iyakar wakilci | - | corpus: the set of actions a delegate is allowed to perform |
 | canonical node | kumburin misali | - | by hand: a node chosen as the reference copy a family's other nodes follow |
+| CIRIS public servers | sabobin jama'a na CIRIS | - | person-facing name for ciris-canonical and any canonical seat: the servers anyone can reach. Plural. Never a family's canonical node (row above). Taken from the reviewed mobile.call_relay_refused_by_policy, 2026-11-22 |
 | serve node | kumburin hidima | - | corpus: a node that serves others on the mesh (always on, reachable) |
 | genesis seed | irin genesis | - | corpus: the starting material from which a family's first records are created |
 | circuit breaker | ketaren kadera | - | corpus: a safeguard that stops a failing service from being called until it recovers |

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -52,12 +53,16 @@ class CallSession(
     private var socket: CallSocket? = null
     private var reader: Job? = null
 
-    fun join(video: Boolean) {
+    /**
+     * [relay] is this device's choice to carry others' media (CSD-134 §2.1, the
+     * relay switch): null leaves it to the node, which decides by what it is.
+     */
+    fun join(video: Boolean, relay: Boolean? = null) {
         if (_state.value is CallState.Joining || _state.value is CallState.InCall) return
         _state.value = CallState.Joining
         scope.launch {
             val answer = try {
-                transport.join(room, video)
+                transport.join(room, video, relay)
             } catch (e: CallRefusal) {
                 PlatformLogger.w(TAG, "[join] refused reason_id=${e.reasonId}")
                 _state.value = CallState.Refused(e.reasonId)
@@ -105,6 +110,26 @@ class CallSession(
     }
 
     /**
+     * Turn relaying for others on or off, live (POST …/call/relay; edge
+     * `Call::set_relay`). The node's answer is the truth: on a CIRIS public
+     * server it stays off and says `serve_seat`, and the switch goes away.
+     */
+    fun setRelay(on: Boolean) {
+        if (_state.value !is CallState.InCall) return
+        scope.launch {
+            try {
+                val a = transport.setRelay(room, on)
+                PlatformLogger.i(TAG, "[relay] asked=$on relaying=${a.relaying} for=${a.relayingFor} serve_seat=${a.serveSeat}")
+                updateCall { it.copy(relaying = a.relaying, relayingFor = a.relayingFor, relaySeat = a.serveSeat) }
+            } catch (e: CallRefusal) {
+                PlatformLogger.w(TAG, "[relay] refused reason_id=${e.reasonId}")
+            } catch (e: Exception) {
+                PlatformLogger.w(TAG, "[relay] failed: ${e::class.simpleName}")
+            }
+        }
+    }
+
+    /**
      * Publish one frame. Over the call's budget it is not sent, and the state says
      * so: the node would refuse it, and a frame cut to fit is a corrupt one.
      */
@@ -128,7 +153,8 @@ class CallSession(
             is CallSocketMessage.Closed -> {
                 PlatformLogger.w(TAG, "[socket] closed by the node, reason=${message.reason}")
                 socket = null
-                _state.value = CallState.Left(LeaveReason.of(message.reason))
+                // A `call_ended` already said why; the close that follows must not blur it to "lost".
+                if (_state.value !is CallState.Left) _state.value = CallState.Left(LeaveReason.of(message.reason))
             }
         }
     }
@@ -152,6 +178,15 @@ class CallSession(
     }
 
     private fun onEvent(event: CallEvent) {
+        if (event is CallEvent.CallEnded) {
+            // Before the socket closes: the event names why; the close reason only repeats it.
+            PlatformLogger.i(TAG, "[ended] ended=${event.ended} reason_id=${event.reasonId ?: "-"}")
+            reader?.cancel()
+            socket?.close()
+            socket = null
+            _state.value = CallState.Left(LeaveReason.of(event.ended))
+            return
+        }
         updateCall { call ->
             when (event) {
                 is CallEvent.Ready -> call.copy(ready = true, frameBudgetBytes = event.frameBudgetBytes, fragmenting = event.fragmenting)
@@ -186,6 +221,30 @@ class CallSession(
                 is CallEvent.ShareStarted ->
                     call.copy(shares = call.shares + (event.streamId.orEmpty() to Share(event.member, event.person)))
                 is CallEvent.ShareStopped -> call.copy(shares = call.shares - event.streamId.orEmpty())
+                is CallEvent.MediaPathFailed -> {
+                    val f = event.failure
+                    PlatformLogger.w(
+                        TAG,
+                        "[path] no media path to ${f.member}: cause=${f.cause} detail=${f.detail ?: "-"} retryable=${f.retryable} " +
+                            "local=${f.localNat?.legacyClass ?: "-"} peer=${f.peerNat?.legacyClass ?: "-"} relay=${f.relay ?: "-"} " +
+                            "tried=" + f.tried.joinToString(",") { "${it.kind}:${it.outcome}" },
+                    )
+                    call.copy(pathFailures = call.pathFailures + (f.member to f), pathRestored = call.pathRestored - f.member)
+                }
+                is CallEvent.MediaPathRestored -> {
+                    val r = event.restored
+                    PlatformLogger.i(TAG, "[path] media path to ${r.member} restored via=${r.via ?: "-"} through=${r.through ?: "-"}")
+                    call.copy(
+                        pathFailures = call.pathFailures - r.member,
+                        pathRestored = call.pathRestored + (r.member to r),
+                    )
+                }
+                is CallEvent.RelayStatus -> {
+                    PlatformLogger.i(TAG, "[relay] relaying=${event.relaying} for=${event.relayingFor} people")
+                    call.copy(relaying = event.relaying, relayingFor = event.relayingFor)
+                }
+                // Handled before this: the call is over, so the state is not InCall.
+                is CallEvent.CallEnded -> call
                 is CallEvent.StreamReplaced -> {
                     val prior = call.attendees[event.member] ?: Attendee(event.member)
                     call.copy(attendees = call.attendees + (event.member to prior.copy(streamId = streamIdBytes(event.newStreamId))))
@@ -257,6 +316,20 @@ sealed interface CallState {
         val videoAllowed: Boolean = true,
         /** How many people a call may have and still carry video, when the node says. */
         val videoMaxPeople: Int? = null,
+        /**
+         * Members this device could not reach directly, and why (CSD-134 §2.1; edge
+         * 45.1.11 via CIRISServer 0.5.254). The latest report per member; a restore
+         * clears it. Nobody is removed from the call for it: a leg can come back.
+         */
+        val pathFailures: Map<String, MediaPathFailure> = emptyMap(),
+        /** Members whose path came back, and how: direct, or through another member. */
+        val pathRestored: Map<String, PathRestored> = emptyMap(),
+        /** Whether this device is relaying others' media, once the node says; null before. */
+        val relaying: Boolean? = null,
+        /** How many PEOPLE (not nodes) this device relays for; the node maps nodes to owners. */
+        val relayingFor: Int = 0,
+        /** This node is a CIRIS public server: it never relays calls, so there is no switch. */
+        val relaySeat: Boolean = false,
     ) : CallState
 
     /** The node said no, by id (`call.not_a_member`, `call.anonymous_mode`, …). */
@@ -296,14 +369,103 @@ sealed interface CallNotice {
     data class PublishRefused(val reason: String, val budget: Int?) : CallNotice
 }
 
+/**
+ * CSD-134 §2.1: why the media path to one member could not be set up. Every field
+ * is the node's token, verbatim; the screen turns them into sentences by literal
+ * key and shows anything it does not recognise raw, under Details.
+ */
+data class MediaPathFailure(
+    val member: String,
+    /** A closed set ([MediaPathText.CAUSES]); one this client does not know reads as `other`. */
+    val cause: String,
+    val reasonId: String?,
+    /** Edge's own reading of whether trying again could help. */
+    val retryable: Boolean,
+    val retryAfterS: Int?,
+    /** A stable snake_case token, always set for `other`; shown raw, never as a sentence. */
+    val detail: String?,
+    val localNat: NatReport?,
+    /** The PEER's own claim about its network, on its clock: "as they report it". */
+    val peerNat: NatReport?,
+    /** `none_available`, `refused_by_policy` (only a server offered; servers never relay calls), or a newer token. */
+    val relay: String?,
+    val tried: List<PathAttempt>,
+    /** The node's name for the member's owner, when it sends one; else the attendee map names them. */
+    val person: String? = null,
+)
+
+/** One network's NAT behaviour (RFC 4787 axes), as edge measured or the peer reported it. */
+data class NatReport(
+    /** The one the sentence uses: open, full_cone, restricted, port_restricted, symmetric, unknown. */
+    val legacyClass: String,
+    val mapping: String? = null,
+    val allocation: String? = null,
+    val filtering: String? = null,
+    val portPreserving: Boolean? = null,
+    /** held_pcp, held_nat_pmp, held_upnp, none, not_tried. */
+    val routerMapping: String? = null,
+    val family: String? = null,
+    val evidence: String? = null,
+    val measuredAt: Long? = null,
+) {
+    val portHeld: Boolean get() = routerMapping?.startsWith("held_") == true
+}
+
+/** One way edge tried to reach the member, and what came of it. Details only. */
+data class PathAttempt(
+    val kind: String,
+    val outcome: String,
+    val attempts: Int? = null,
+    val elapsedMs: Long? = null,
+    val knocksSent: Int? = null,
+    val sockets: Int? = null,
+)
+
 /** CSD-134: why someone left. A word this client does not know reads as [LOST], never as a choice. */
 enum class LeaveReason(val wire: String) {
-    LEFT("left"), BACKGROUNDED("backgrounded"), REMOVED("removed"), LOST("lost");
+    LEFT("left"), BACKGROUNDED("backgrounded"), REMOVED("removed"), LOST("lost"),
+
+    /** Edge 45.2.0 `ended:expired`: an ad-hoc call's community expired. */
+    EXPIRED("expired"),
+
+    /**
+     * This device stopped carrying call media mid-call (edge 45.2.0
+     * `ended:<token>`): it was set to shaped links only, or to anonymous mode.
+     * Said with the same words as the join refusal, and not undone by a tap.
+     */
+    SHAPED_ONLY("shaped_only_no_media"),
+    ANONYMOUS("onion_anonymous_no_media");
 
     companion object {
-        fun of(wire: String?): LeaveReason = entries.firstOrNull { it.wire == wire } ?: LOST
+        /**
+         * Reads this client's words, edge's end tokens (`hung_up`, `revoked`, with or
+         * without `ended:`) and the socket's close reason, which is the bare token.
+         */
+        fun of(wire: String?): LeaveReason = when (val w = wire?.removePrefix("ended:")) {
+            "hung_up" -> LEFT
+            "revoked" -> REMOVED
+            else -> entries.firstOrNull { it.wire == w } ?: LOST
+        }
     }
 }
+
+/** A path to [member] came back (edge 45.2.0): direct, or relayed by the member [through]. */
+data class PathRestored(
+    val member: String,
+    /** A path kind; `peer_relay` means another member relays it, anything else reads "direct". */
+    val via: String?,
+    /** The relaying member's node key id, the same id space as attendees; null when direct. */
+    val through: String? = null,
+    /** The node's name for [member]'s owner, when it sends one. */
+    val person: String? = null,
+    /** The node's name for [through]'s owner, when it sends one. */
+    val throughPerson: String? = null,
+) {
+    val direct: Boolean get() = via != "peer_relay"
+}
+
+/** `POST …/call/relay` answer: what the node is doing now, not what was asked. */
+data class RelayAnswer(val relaying: Boolean, val relayingFor: Int, val serveSeat: Boolean)
 
 /** The socket's text events (CSD-134 §3): one JSON object each, members as key ids only. */
 sealed interface CallEvent {
@@ -336,9 +498,64 @@ sealed interface CallEvent {
     /** A member started sharing: a second stream and a second tile, "Ada's screen". */
     data class ShareStarted(val member: String, val streamId: String?, val person: String?) : CallEvent
     data class ShareStopped(val member: String, val streamId: String?) : CallEvent
+    /** No media path to [failure].member could be set up (CSD-134 §2.1). Sent once per member, again only with changed facts. */
+    data class MediaPathFailed(val failure: MediaPathFailure) : CallEvent
+    /** A path came up after all; re-sent when the relaying member changes. */
+    data class MediaPathRestored(val restored: PathRestored) : CallEvent
+    /** Whether this device relays others' media, and for how many people. */
+    data class RelayStatus(val relaying: Boolean, val relayingFor: Int) : CallEvent
+    /** The call is over for this device ([ended] is edge's token); the socket closes next. */
+    data class CallEnded(val ended: String, val reasonId: String?) : CallEvent
 
     companion object {
         private val json = Json { ignoreUnknownKeys = true }
+
+        private fun JsonObject.s(k: String) = (this[k] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
+        private fun JsonObject.l(k: String) = (this[k] as? JsonPrimitive)?.takeIf { !it.isString }?.longOrNull
+        private fun JsonObject.b(k: String) = (this[k] as? JsonPrimitive)?.takeIf { !it.isString }?.contentOrNull?.toBooleanStrictOrNull()
+
+        internal fun natReport(o: JsonObject?): NatReport? = o?.let {
+            NatReport(
+                legacyClass = it.s("legacy_class") ?: "unknown",
+                mapping = it.s("mapping"), allocation = it.s("allocation"), filtering = it.s("filtering"),
+                portPreserving = it.b("port_preserving"), routerMapping = it.s("router_mapping"),
+                family = it.s("family"), evidence = it.s("evidence"), measuredAt = it.l("measured_at"),
+            )
+        }
+
+        /**
+         * Lenient on purpose: a missing or odd field never drops the event, because a
+         * call that fails silently is the defect this event exists to end. A missing
+         * `retryable` reads as false, so nothing offers a retry edge did not.
+         */
+        internal fun mediaPathFailure(member: String, o: JsonObject): MediaPathFailure {
+            // CIRISServer 0.5.254 nests the diagnostics under `diag`; 45.1.11's were top level.
+            val d = (o["diag"] as? JsonObject) ?: o
+            val peer = d["peer_nat"] as? JsonObject
+            return MediaPathFailure(
+                member = member,
+                person = o.s("person"),
+                cause = o.s("cause") ?: o.s("reason_id")?.substringAfterLast('.') ?: "other",
+                reasonId = o.s("reason_id"),
+                retryable = o.b("retryable") ?: false,
+                retryAfterS = o.l("retry_after_s")?.toInt(),
+                detail = d.s("detail") ?: o.s("detail"),
+                localNat = natReport(d["local_nat"] as? JsonObject),
+                // Frozen shape: {report, source: "self_reported"}; a bare report is read too.
+                peerNat = natReport((peer?.get("report") as? JsonObject) ?: peer?.takeIf { "legacy_class" in it }),
+                relay = o.s("relay"),
+                tried = (d["tried"] as? JsonArray).orEmpty().mapNotNull { e ->
+                    (e as? JsonObject)?.let {
+                        PathAttempt(
+                            kind = it.s("kind") ?: return@let null,
+                            outcome = it.s("outcome") ?: "unknown",
+                            attempts = it.l("attempts")?.toInt(), elapsedMs = it.l("elapsed_ms"),
+                            knocksSent = it.l("knocks_sent")?.toInt(), sockets = it.l("sockets")?.toInt(),
+                        )
+                    }
+                },
+            )
+        }
 
         /** Null for an unreadable or unknown event: a newer node's event is skipped, never fatal. */
         fun parse(text: String): CallEvent? {
@@ -375,6 +592,14 @@ sealed interface CallEvent {
                 "stream_ended" -> str("member")?.let { ShareStopped(it, str("stream_id")) }
                 "stranded" -> Stranded((o["epoch"] as? JsonPrimitive)?.longOrNull, str("reason"))
                 "share_stopped" -> str("member")?.let { ShareStopped(it, str("stream_id")) }
+                "media_path_failed" -> str("member")?.let { m -> MediaPathFailed(mediaPathFailure(m, o)) }
+                "media_path_restored" -> str("member")?.let {
+                    MediaPathRestored(PathRestored(it, str("via"), str("through"), str("person"), str("through_person")))
+                }
+                // `relaying_for` is PEOPLE (the server maps nodes to owners); `relaying_for_nodes` is diag.
+                "relay_status" -> (o["relaying"] as? JsonPrimitive)?.takeIf { !it.isString }?.contentOrNull?.toBooleanStrictOrNull()
+                    ?.let { RelayStatus(it, int("relaying_for") ?: 0) }
+                "call_ended" -> str("ended")?.let { CallEnded(it, str("reason_id")) }
                 else -> null
             }
         }
@@ -425,7 +650,13 @@ class CallRefusal(val reasonId: String, detail: String? = null) : Exception(deta
 /** The node side, injected so the session is driven by a fake in tests. */
 interface CallTransport {
     suspend fun join(room: String, video: Boolean): CallJoinAnswer
+
+    /** Join, saying whether this device relays for others; null leaves it to the node. */
+    suspend fun join(room: String, video: Boolean, relay: Boolean?): CallJoinAnswer = join(room, video)
     suspend fun leave(room: String)
+
+    /** POST …/call/relay `{relay}`: switch relaying live. A node without the route refuses by name. */
+    suspend fun setRelay(room: String, relay: Boolean): RelayAnswer = throw CallRefusal(RELAY_UNAVAILABLE)
 
     /** Leave, saying why: the node passes `backgrounded` on to the others (CSD-134). */
     suspend fun leave(room: String, reason: LeaveReason) = leave(room)
@@ -442,6 +673,7 @@ interface CallTransport {
 
     companion object {
         const val SHARE_UNAVAILABLE = "call.share_unavailable"
+        const val RELAY_UNAVAILABLE = "call.relay_unavailable"
     }
 }
 

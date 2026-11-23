@@ -202,6 +202,100 @@ shown at `txt_call_share_refused`) until Edge 45.1. Where this device cannot sha
 (`opt_call_save_mine` disabled, `txt_call_save_unavailable`, until CIRISPersist#1067).
 Desktop brings its own echo cancellation, since Java Sound has none: a partitioned frequency-domain adaptive filter with Valin's double-talk step (the filter SpeexDSP and Mumble use), a per-bin residual-echo suppressor that never sends a bin louder than the microphone heard it, and a delay estimator that finds the speaker-to-microphone lag from the two energy envelopes (`EchoCanceller.kt`). The speaker is one line the app mixes, so the canceller knows exactly what was played. Measured on a simulated room (`EchoCancellerTest`): 41.5 dB of echo removed after 6 s, 26.4 dB by the third second, the near end kept at 0.85 of its amplitude while both talk. On the Linux runner's virtual device (`DesktopAudioLoopbackTest`) it must take 25 dB off. Not measured: real rooms, real laptop speakers, Bluetooth latency. Headphones still beat any canceller.
 
+### 2.1 A call that can't connect says why
+
+**Ruling (Eric, 2026-11-22, for the LTS calls cut, relayed by CIRISServer):** when the media
+path to someone cannot be set up, the person is told the actual reason, not a silent
+failure and not a generic leave. The facts are edge's: the token set frozen for 45.x in
+edge 45.2.0 (`docs/calls_relay_tokens.md`; later 45.x only adds tokens, and an unknown one
+is shown as the generic case). CIRISServer 0.5.254 forwards them on the frames socket (§3).
+The event fires only when there is neither a direct leg nor a member relaying, and only
+about people actually in the call.
+
+| What happens | What the screen shows |
+|---|---|
+| No path to a member | A panel for that member (`row_call_path.<member>`, value = the cause): a headline naming them, then the relay clause, both networks, a port held on this router if there is one, and what the person can do. The member is **not** removed from the call; a leg can still come up |
+| The same member again, with changed facts | The panel is replaced: the latest report per member stands |
+| The path comes up | The panel goes; a short line says how (`row_call_path_restored.<member>`, value = `via`): "Connected to Ada through Ben." when another member relays it (`via: peer_relay`, `through` named from the node's `through_person` or the attendee map, else "another member"); every other path kind reads "directly", `direct_lan` as "over your local network". Re-sent when the relaying member changes |
+| Edge says trying again could help (`retryable`) | **Try again** (`row_call_path__act.<member>`) leaves and rejoins, as a new stream. Never offered where edge says it cannot help |
+| Rate-limited (`budget_refused`) | "Try again in {seconds} s." from `retry_after_s`, or "Try again shortly." when edge gives none |
+| Details | The node's tokens, verbatim and untranslated (cause, `detail`, relay, both NAT reports axis by axis, each attempt with its counts), behind a Details toggle and in the call log |
+
+**The sentences are built from translated parts, never from the node's English**
+(`calls/MediaPathText.kt`, each key written out literally): one headline per cause, one
+clause per relay value, one word per network class, one line of advice. A cause or class
+this client does not know reads as the generic one ("Couldn't connect to {person}." /
+"unknown"), with the raw token still under Details, so nothing is dropped silently.
+
+**What the words may and may not claim:**
+
+- **The other person's network is their own claim.** `peer_nat.source` is
+  `self_reported`, on the peer's clock, so it reads "as they report it". With no claim
+  it reads "The network type of {person} isn't known", never a guess.
+- **A refusal is never worded as the person's choice.** Edge cannot tell a person's
+  choice from their node's policy, so `refused_by_peer_policy` reads "Direct connections
+  aren't accepted by the node of {person}" and `peer_unsupported` "their app doesn't
+  support it". No sentence says "{person} isn't accepting direct calls".
+- **`refused_by_policy` is the canonical's rule, and only the canonical's** (Eric,
+  2026-11-22: "we are only denying relaying on canonicals"): "Calls aren't relayed through
+  the CIRIS public servers", not "this node". "The CIRIS public servers" is the
+  person-facing name for any canonical seat (glossary row, all 28 languages), never a
+  family's canonical node. A member who can't reach another directly gets media through a
+  third member; only when none could is there a panel, and `no_member_could_relay` says so
+  ("…and no one else in the call could pass the connection along"), with `relay:
+  none_available` as its second line. `peer_relay_in_use` is reserved and never on a
+  failure, so it, and any standing this client does not know, adds no line.
+- **Anonymous mode is the reason, not the network** (`anonymous_no_direct`): anonymous mode
+  never connects directly, because a direct path reveals the address, so the panel gives
+  no network advice.
+- **Advice is about the side that blocks.** This network is symmetric or port-restricted:
+  "Try a different network, for example Wi-Fi instead of mobile data." Only theirs: "The
+  network of {person} blocks direct calls", with nothing to press. The open-a-port
+  wizard is 0.6 work (`/v1/self/network/port-mapping` is refactor-cut), so the LTS
+  never offers it. A held router mapping is said only when `router_mapping` is
+  `held_*`, which is always `not_tried` on the LTS.
+- `nat_undetermined` says plainly that this network's type couldn't be fully
+  determined; `both_nats_random` says at once that a direct call isn't possible
+  between these two networks.
+
+**A setting that refuses calls** (edge 45.2.0). Anonymous mode (`call.anonymous_mode`) and
+"Always hide when I talk" (`call.shaped_only`, the CSD-088 rung-3 option, named as the
+person chose it; "shaped" never reaches the screen) refuse a join before anything starts.
+Turning either on mid-call ends the call: `call_ended {ended, reason_id}`, then the socket
+closes with the bare token, and the screen says what the join refusal says, with no
+Rejoin. `ended: hung_up | revoked | expired` read as "you left", "you were removed" and
+`call.end.expired`. The close that follows never blurs a stated reason to "lost".
+
+**Relaying for others (Eric, 2026-11-22).** Relay is meant on by default on a desktop, a
+home node and a phone on Wi-Fi; a phone on metered or mobile data does not relay unless the
+person turns it on. **The node holds the default** (CIRISServer 0.5.254: always off on a
+CIRIS public server; off on a member node until edge's relay gate passes, then on, with no
+wire change), so the client sends `relay` on join only with a reason: the person's
+remembered choice, or `false` on a metered or mobile connection without an opt-in
+(`calls/RelayChoice.kt`). The switch "Help others in this call connect through this device"
+(`row_call_relay__act.self`) is remembered per device and applied live with
+`POST /v1/chat/{room}/call/relay {relay}`; the node's answer, not the ask, sets the
+switch, and a `serve_seat: true` answer removes it. While relaying for anyone,
+`relay_status.relaying_for` (people, mapped by the node; `relaying_for_nodes` is diag)
+shows as "People connected through this device: N" (`row_call_relay.self`). Metered is
+per platform: Android `isActiveNetworkMetered`, iOS `NWPathMonitor` `isExpensive` or
+`isConstrained`, web `navigator.connection` (cellular or data saver), desktop never.
+
+**Built (client 0.5.243), not observed on a node:** CIRISServer 0.5.254 and edge 45.2.0
+are not released. The parser, the state and the sentence choice are read from the frozen
+token set and the server's wire shapes (`MediaPathFailedTest`: 45.1.11's top-level form
+and 0.5.254's `diag` form, a sparse event, latest per member, restore direct and through a
+member, one sentence per cause, retry only where edge says, advice by side and none for
+anonymous mode, the peer's claim, relay standings, Details, `relay_status`, `call_ended`
+and the close after it, the end tokens, the join's `relay`, the switch's answer). The iOS
+metered watch is not compiled here (no Mac); the publish iOS leg is its first build. A
+node that never sends these events changes nothing: an unknown event type is skipped.
+
+**CSD/5:** this card is CSD/3. The panel's tags are already in CSD/5 form (`row_` is the
+ItemRow prefix, keyed by member, `__act` its slot), so adopting the card later renames
+none of them. The rest of the screen's tags predate CSD/5 and are driven by the
+five-platform flows in CIRISAgent; converting them is its own change.
+
 ## 3. Contracts (who)
 
 | value | endpoint | owner | state |
@@ -221,6 +315,9 @@ Desktop brings its own echo cancellation, since Java Sound has none: a partition
 | the save choice item, and whether this room forbids keeping | the room's policy row | CIRISServer | **missing** |
 | capture, encode, decode, render | platform code in the client (§2, Built) | CIRISClient | **built** on Android, iOS, desktop and web; no call between two real devices has been run |
 | video only for two people | `video_allowed`, `video_max_people` on the join answer and the `video_allowed` event; `publish_refused {reason: call.video_two_people_only}` | CIRISServer | **live** on release/0.5.246 (`fe0a93ec`); lifted at Edge 45.1 |
+| why a member can't be reached directly | frames socket text events: `media_path_failed {member, person, cause, reason_id: call.media_path_failed.<cause>, retryable, retry_after_s, relay, relay_reason_id: call.relay_standing.<relay>, diag: {detail, tried: [{kind, outcome, attempts, elapsed_ms, knocks_sent, sockets}], local_nat: NatReport, peer_nat: {report: NatReport, source: self_reported} \| null}}` (45.1.11's top-level diagnostics are still read); `media_path_restored {member, person, via: <path_kind>, direct, through: <node key id> \| null, through_person}`. `cause` ∈ both_nats_random, punch_no_answer, punch_one_way, nat_undetermined, no_facilitator, refused_by_peer_policy, peer_unsupported, budget_refused, not_trusted, no_member_could_relay, anonymous_no_direct, other. `relay` ∈ none_available, refused_by_policy, peer_relay_in_use (reserved). NatReport: RFC 4787 axes plus `legacy_class` ∈ open, full_cone, restricted, port_restricted, symmetric, unknown | CIRISEdge 45.2.0 · CIRISServer 0.5.254 | **frozen for 45.x by edge** (`docs/calls_relay_tokens.md`, release/45.2.0 @60218cf), **not released**; the wire shapes are the server session's (2026-11-23), its vectors in `tests/vectors/call_frames_v1.json` not yet landed |
+| relaying for others | `POST …/call {video?, relay?}` (omitted: the node decides); `POST /v1/chat/{room}/call/relay {relay}` → 200 `{room, relaying, relaying_for, relaying_for_nodes, serve_seat}`, 409 `call.not_joined`; event `relay_status {relaying, relaying_for, relaying_for_nodes}` on change, at most every ~250 ms | CIRISEdge 45.2.0 (`Call::set_relay`) · CIRISServer 0.5.254 | **not released**; built to the server's shapes (§2.1) |
+| why the call ended | event `call_ended {ended: hung_up \| revoked \| expired \| shaped_only_no_media \| onion_anonymous_no_media, reason_id: call.end.<token> \| call.shaped_only \| call.anonymous_mode}`, then the socket closes with the bare token; join refusal 403 `call.shaped_only` / `call.anonymous_mode` with edge's `token` | CIRISEdge 45.2.0 · CIRISServer 0.5.254 | **not released**; built to the server's shapes |
 
 **Where frames run (recommended).** Capture and encode in the client, then encoded frames
 over a local server socket to the node, which hands them to Edge.

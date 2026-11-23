@@ -168,6 +168,7 @@ Decided for client 0.5.239 so these terms stop being left in English. "corpus" m
 | rubric review | စံနှုန်း သုံးသပ်ချက် | san-hnon thone-that-chet | corpus: a review of an agent's behaviour against a scoring rubric |
 | delegation scope | ကိုယ်စားလွှဲအပ်မှု နယ်ပယ် | koe-sa-hlwe-ut-hmu nae-pae | corpus: the set of actions a delegate is allowed to perform |
 | canonical node | ကိုးကားစံ node | ko-kar san node | coined: a node chosen as the reference copy a family's other nodes follow |
+| CIRIS public servers | CIRIS အများသုံး ဆာဗာများ | - | person-facing name for ciris-canonical and any canonical seat: the servers anyone can reach. Plural. Never a family's canonical node (row above). Taken from the reviewed mobile.call_relay_refused_by_policy, 2026-11-22 |
 | serve node | ဝန်ဆောင်မှုပေးသည့် node | wun-saung-hmu-pay-thi node | corpus: a node that serves others on the mesh (always on, reachable) |
 | genesis seed | မူလ မျိုးစေ့ | mula myo-say | coined: the starting material from which a family's first records are created |
 | circuit breaker | အလိုအလျောက် ဖြတ်တောက်ကာကွယ်စနစ် | alo-alyauk hpyat-tauk ka-kwe sa-nit | coined: a safeguard that stops a failing service from being called until it recovers |
