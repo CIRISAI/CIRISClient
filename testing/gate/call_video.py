@@ -74,8 +74,11 @@ AGENT_WS_FLOOR = (2, 23, 2)
 PEER_CLIENT_PORT = 9092
 PEER_NODE_PORT = 5262
 
-#: Pitch the tone is judged at: TestModeDevices sends 440 Hz.
-TONE_HZ, TONE_TOLERANCE = 440, 25
+#: Pitch the tone is judged at: TestModeDevices sends 440 Hz. The pitch is a
+#: zero-crossing count over decoded Opus frames, so it wanders: run 45304697279
+#: read 425-475 Hz from a clean tone. 60 Hz still tells the tone from silence,
+#: noise (thousands) and an octave slip (880).
+TONE_HZ, TONE_TOLERANCE = 440, 60
 
 #: Where a desktop client lands once it can be driven (run_platform's walk).
 ENTRY_SCREENS = {"Login", "Setup", "Interact", "Contacts", "ManageNodes"}
@@ -166,16 +169,19 @@ def agent_verdict(agent_version: str, status: int, line: str) -> Check:
                                    f"node, which answered {line} (no ticket was sent)")
 
 
-def probe_agent(drv: TestAutomationServer, agent_version: str) -> List[Check]:
+def probe_agent(drv: TestAutomationServer, agent_version: str,
+                agent_url: str = "http://127.0.0.1:8080") -> List[Check]:
+    """Probe the AGENT's port, not the client's node URL. On these legs the
+    client reaches its node on :4243 directly, so its own calls never cross the
+    agent (run 45304697279 probed :4243 and got the node's 401); the agent's
+    forwarding is what a client attached through the agent's port depends on."""
     try:
-        base = str(drv.state().get("nodeUrl") or "")
-    except DriverError as e:
-        return [Check("agent-ws", FAIL, f"the client's /state did not answer: {e}")]
-    if not base:
-        return [Check("agent-ws", FAIL, "the client reports no node URL to probe")]
-    status, line = ws_upgrade_status(base, "/v1/chat/gate-probe/call/frames")
+        client_node = str(drv.state().get("nodeUrl") or "?")
+    except DriverError:
+        client_node = "?"
+    status, line = ws_upgrade_status(agent_url, "/v1/chat/gate-probe/call/frames")
     out = agent_verdict(agent_version, status, line)
-    out.detail += f" [probed {base}]"
+    out.detail += f" [probed the agent at {agent_url}; this client's own node URL is {client_node}]"
     return [out, Check("call", REFUSED, "a two-client call through an agent is not run: the agent "
                                         "legs have no peer node yet")]
 
@@ -313,11 +319,14 @@ def legs_joined(party: Party, room: str) -> bool:
 
 def judge(side: str, seen: Seen, video_gated: bool, server: str) -> List[Check]:
     out: List[Check] = []
-    if seen.audio_unavailable:
-        out.append(Check(f"{side}-audio", REFUSED, f"{side}: this device reports no audio output, "
-                                                   f"so the tone cannot be measured ({seen.tile})"))
-    elif seen.frames > 0 and abs(seen.hz - TONE_HZ) <= TONE_TOLERANCE:
+    # THE MEASUREMENT FIRST. MeasuringSink counts what was decoded BEFORE the
+    # speaker, so a runner with no audio output still measures the tone (run
+    # 45304697279, Windows: frames=82 hz=425 beside "no audio").
+    if seen.frames > 0 and abs(seen.hz - TONE_HZ) <= TONE_TOLERANCE:
         out.append(Check(f"{side}-audio", PASS, f"{side} heard the other side's tone: {seen.tile}"))
+    elif seen.audio_unavailable and seen.frames == 0:
+        out.append(Check(f"{side}-audio", REFUSED, f"{side}: this device reports no audio output and "
+                                                   f"decoded nothing to measure ({seen.tile})"))
     else:
         out.append(Check(f"{side}-audio", FAIL, f"{side} did not hear a {TONE_HZ} Hz tone: "
                                                 f"{seen.tile or 'no tile for the other person'}"))
@@ -412,7 +421,8 @@ def run_node_call(drv: TestAutomationServer, *, binary: Path, jar: Path, node_ur
 def run(drv: TestAutomationServer, args, leg: str) -> List[Check]:
     """The step run_platform calls after the flows."""
     if getattr(args, "with_ai", False):
-        return probe_agent(drv, getattr(args, "agent_version", ""))
+        return probe_agent(drv, getattr(args, "agent_version", ""),
+                           getattr(args, "agent_url", None) or "http://127.0.0.1:8080")
     binary = getattr(args, "node_binary", None)
     jar = getattr(args, "peer_client_jar", None) or getattr(args, "jar", None)
     if not binary or not jar:

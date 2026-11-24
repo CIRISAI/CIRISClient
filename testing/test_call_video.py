@@ -72,6 +72,15 @@ class Judge(unittest.TestCase):
     def test_no_audio_device_is_said_not_failed(self):
         self.assertEqual(cv.judge("leg", cv.Seen(audio_unavailable=True), False, "")[0].status, cv.REFUSED)
 
+    def test_a_measured_tone_passes_without_a_speaker(self):
+        # Run 45304697279, Windows: decoded and measured, no audio output device.
+        got = cv.judge("leg", cv.Seen(frames=82, hz=425, audio_unavailable=True), False, "")
+        self.assertEqual(got[0].status, cv.PASS)
+
+    def test_the_tone_wanders_but_noise_does_not_pass(self):
+        self.assertEqual(cv.judge("leg", cv.Seen(frames=26, hz=475), False, "")[0].status, cv.PASS)
+        self.assertEqual(cv.judge("leg", cv.Seen(frames=26, hz=1800), False, "")[0].status, cv.FAIL)
+
 
 class UpgradeProbe(unittest.TestCase):
     def test_reads_the_status_a_server_answers_the_upgrade_with(self):

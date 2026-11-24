@@ -310,6 +310,8 @@ def main() -> int:
                     help="after the flows, run the two-client call check (CSD-134)")
     ap.add_argument("--peer-client-jar", type=Path,
                     help="the desktop jar the call check's second client runs (default: --jar)")
+    ap.add_argument("--agent-url", default="http://127.0.0.1:8080",
+                    help="with-AI legs: the agent whose call-WebSocket forwarding the call check probes")
     ap.add_argument("--call-work", type=Path,
                     help="where the call check's peer node and client keep their homes and logs")
     args = ap.parse_args()
