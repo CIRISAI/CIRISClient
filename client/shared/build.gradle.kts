@@ -112,10 +112,11 @@ val generateBuildFlavor by tasks.registering {
     }
 }
 
-// The JavaCPP classifier of the machine running this build: the desktop uber-jar
-// carries only this OS's FFmpeg natives (call video, CSD-134), so Linux, Windows
-// and macOS CI each package their own. Fails loudly on a host with no FFmpeg build
-// rather than producing a jar that has no video.
+// The JavaCPP classifier of the machine running this build. The natives resolve
+// for this OS only (call video, CSD-134): tests and `run` load them from here, and
+// :desktopApp's uber-jar leaves them OUT and names them in its Class-Path, because
+// in a wheel they come from the separate `ciris-holon` distribution. Fails loudly
+// on a host with no FFmpeg build rather than producing a jar that has no video.
 val bytedecoHostClassifier: String = run {
     val os = System.getProperty("os.name").lowercase()
     val arch = System.getProperty("os.arch").lowercase()
@@ -131,6 +132,15 @@ val bytedecoHostClassifier: String = run {
         else -> throw GradleException("no bytedeco FFmpeg build for OS $os")
     }
 }
+// Read by :desktopApp (evaluationDependsOn) to exclude these natives from the
+// uber-jar and write its Class-Path. The versions are the jar NAMES ciris-holon
+// carries, so a bump here needs a ciris-holon that carries the new ones
+// (packaging/check_pins.py).
+val bytedecoJavacppVersion = "1.5.11"
+val bytedecoFfmpegVersion = "7.1-1.5.11"
+extra["bytedecoHostClassifier"] = bytedecoHostClassifier
+extra["bytedecoJavacppVersion"] = bytedecoJavacppVersion
+extra["bytedecoFfmpegVersion"] = bytedecoFfmpegVersion
 
 kotlin {
     // Suppress expect/actual beta warnings - feature is stable enough for production use
@@ -359,12 +369,13 @@ kotlin {
                 // Call video, camera and screen share (CSD-134): FFmpeg via JavaCPP,
                 // the LGPL build (no -gpl classifier): openh264, libaom (AV1 decode),
                 // SVT-AV1 (AV1 encode), and avdevice for capture. Natives for the
-                // BUILD HOST's OS only, so each OS's uber-jar carries its own and no
-                // other's (~18-24 MiB each); CI builds each OS on that OS.
-                implementation("org.bytedeco:javacpp:1.5.11")
-                implementation("org.bytedeco:ffmpeg:7.1-1.5.11")
-                implementation("org.bytedeco:javacpp:1.5.11:$bytedecoHostClassifier")
-                implementation("org.bytedeco:ffmpeg:7.1-1.5.11:$bytedecoHostClassifier")
+                // BUILD HOST's OS only (~18-24 MiB each); CI builds each OS on that
+                // OS. They are on this runtime classpath for tests and `run`, but
+                // NOT in the uber-jar: the wheel gets them from ciris-holon.
+                implementation("org.bytedeco:javacpp:$bytedecoJavacppVersion")
+                implementation("org.bytedeco:ffmpeg:$bytedecoFfmpegVersion")
+                implementation("org.bytedeco:javacpp:$bytedecoJavacppVersion:$bytedecoHostClassifier")
+                implementation("org.bytedeco:ffmpeg:$bytedecoFfmpegVersion:$bytedecoHostClassifier")
                 // Call video's H.264 (CSD-134): JNA calls Cisco's OpenH264 library, which
                 // is NOT a dependency. The person turns it on and it is downloaded from
                 // Cisco onto their machine (calls/media/OpenH264.desktop.kt). JNA is

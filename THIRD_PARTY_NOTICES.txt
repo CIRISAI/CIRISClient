@@ -74,7 +74,10 @@ FFmpeg is shipped as separate shared libraries (libavcodec, libavformat,
 libavdevice, libavutil, libswscale, libswresample, libavfilter) inside the
 per-OS bytedeco jar, loaded at run time by JavaCPP; they can be replaced with a
 modified build of the same version. The corresponding source is at the URLs
-above.
+above. From 0.5.243 that jar is not inside the ciris-client wheel: it is
+installed with it, byte-identical, from the ciris-holon distribution
+(ciris_holon/media/jars/), and the desktop jar loads it from there through its
+manifest Class-Path, so replacing the file there replaces the libraries.
 
 The FFmpeg libraries in this build also contain, statically linked, the
 following libraries under their own licences: libopenh264, libaom, SVT-AV1

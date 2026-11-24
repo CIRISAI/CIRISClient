@@ -119,7 +119,11 @@ internal object Ffmpeg {
             av_log_set_level(AV_LOG_ERROR)
             true
         } catch (t: Throwable) { // UnsatisfiedLinkError, NoClassDefFoundError: no natives for this OS
-            error = t.toString()
+            // The natives are not in the uber-jar: its Class-Path names them in the
+            // ciris-holon distribution installed beside ciris-client. Say so, since
+            // the usual cause is that package missing or installed somewhere else.
+            error = "$t (the FFmpeg natives come from the ciris-holon package, " +
+                "expected at ../../ciris_holon/media/jars/ beside this jar)"
             false
         }
     }

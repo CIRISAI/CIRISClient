@@ -6,9 +6,19 @@ readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "AGPL-3.0-or-later" }
 
-# Nothing at runtime: the client is JVM bytecode staged in by the build, and
-# this package's job is to find it and say which node version it pairs with.
-dependencies = []
+# The client is JVM bytecode staged in by the build, and this package's job is
+# to find it and say which node version it pairs with. The one runtime
+# dependency is the desktop call-video natives (FFmpeg + JavaCPP, 18-24 MiB per
+# OS), published separately as ciris-holon so the per-OS wheels fit PyPI's file
+# limit. The uber-jar's manifest Class-Path names them at
+# ../../ciris_holon/media/jars/, beside this package in site-packages
+# (client/desktopApp/build.gradle.kts). Only the four desktop targets have
+# them; elsewhere the universal wheel carries no jar and needs nothing.
+# The range is ciris-holon's contract: the minor moves only when a consumer
+# must change. Which FFmpeg it carries is checked by packaging/check_pins.py.
+dependencies = [
+    'ciris-holon>=0.1,<0.2; (sys_platform == "linux" and platform_machine == "x86_64") or sys_platform == "darwin" or (sys_platform == "win32" and platform_machine == "AMD64")',
+]
 
 [project.optional-dependencies]
 # The browser bundle, in its own distribution: it is host-independent and its

@@ -263,7 +263,10 @@ jobs:
           set -euo pipefail
           python3 -m venv consumer-venv
           if [ -d consumer-venv/Scripts ]; then PY=$PWD/consumer-venv/Scripts/python; else PY=$PWD/consumer-venv/bin/python; fi
-          "$PY" -m pip install --quiet --no-index dist/*.whl
+          # Not --no-index: the wheel under test is the file named here, and its
+          # one dependency, ciris-holon (the call-video natives), resolves from
+          # PyPI exactly as it does for a consumer.
+          "$PY" -m pip install --quiet dist/*.whl
           # Run from a directory that is NOT the checkout, so the INSTALLED
           # package answers rather than the source tree sitting beside it.
           mkdir -p verify && cd verify && "$PY" - <<'PY'
@@ -295,6 +298,12 @@ jobs:
           else:
               raise SystemExit("wasm resolved from the desktop wheel")
           PY
+          # The jar leaves FFmpeg out and names it in ciris-holon by Class-Path.
+          # A missing entry is silently ignored by the JVM (calls go audio-only),
+          # so check the installed layout and the digests here, on this OS.
+          # The heredoc above ran after `cd verify`, which holds for the rest of the step.
+          jar=$("$PY" -c 'import ciris_client as c; print(c.artifact_path("desktop-uber-jar"))')
+          "$PY" "$GITHUB_WORKSPACE/packaging/check_holon_classpath.py" "$jar"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -361,7 +370,9 @@ jobs:
         run: |
           set -euo pipefail
           python3 -m venv consumer-venv
-          consumer-venv/bin/pip install --quiet --no-index dist/*.whl
+          # Not --no-index: on this runner the ciris-holon marker matches, and
+          # it resolves from PyPI as it would for a consumer.
+          consumer-venv/bin/pip install --quiet dist/*.whl
           mkdir -p verify && cd verify && ../consumer-venv/bin/python - <<'PY'
           import ciris_client as c
           assert "site-packages" in c.__file__, f"resolved the source tree: {c.__file__}"
