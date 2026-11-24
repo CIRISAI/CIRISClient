@@ -470,6 +470,8 @@ jobs:
             logcat.txt
             ${{ runner.temp }}/two-node-*/peer.log
             ${{ runner.temp }}/two-node-*/values.json
+            ${{ runner.temp }}/call-*/peer.log
+            ${{ runner.temp }}/call-*/peer-client.log
 
   macos-ios:
     name: macos desktop + ios simulator
@@ -681,6 +683,8 @@ jobs:
             ios-logs/kotlin_crash.log
             ${{ runner.temp }}/two-node-*/peer.log
             ${{ runner.temp }}/two-node-*/values.json
+            ${{ runner.temp }}/call-*/peer.log
+            ${{ runner.temp }}/call-*/peer-client.log
             client/iosApp/app_packages_native_sim/MANIFEST.txt
             client/iosApp/substrate.lock.json
 
@@ -743,6 +747,8 @@ jobs:
             *-app.log
             ${{ runner.temp }}/two-node-*/peer.log
             ${{ runner.temp }}/two-node-*/values.json
+            ${{ runner.temp }}/call-*/peer.log
+            ${{ runner.temp }}/call-*/peer-client.log
 
   # ── WITH AI: THE RELEASE GATE (CIRISClient#166) ────────────────────────────
   #

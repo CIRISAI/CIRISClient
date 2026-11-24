@@ -427,8 +427,11 @@ def flows(drv: TestAutomationServer, rep: Report, specs, args, platform) -> None
 def call_video(drv: TestAutomationServer, rep: Report, args) -> None:
     """One board line per check: `call-video:<name>`. An expected failure
     (xfail) and a refusal by floor are green and say so; anything else red."""
-    if not all(s.ok for s in rep.steps):
-        rep.add("call-video", False, "not run — a step above failed, so there is no app to call from")
+    # The app must be up and walked; a failed FLOW does not stop a call (the
+    # flows have their own lines, and a model out of credit is not a call bug).
+    needed = [s for s in rep.steps if s.name not in ("flows", "optional-skips")]
+    if not all(s.ok for s in needed):
+        rep.add("call-video", False, "not run — the bring-up or walk failed, so there is no app to call from")
         return
     from testing.gate import call_video as cv  # noqa: PLC0415
     leg = args.report.stem if args.report else args.platform

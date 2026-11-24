@@ -77,6 +77,9 @@ PEER_NODE_PORT = 5262
 #: Pitch the tone is judged at: TestModeDevices sends 440 Hz.
 TONE_HZ, TONE_TOLERANCE = 440, 25
 
+#: Where a desktop client lands once it can be driven (run_platform's walk).
+ENTRY_SCREENS = {"Login", "Setup", "Interact", "Contacts", "ManageNodes"}
+
 PASS, FAIL, XFAIL, REFUSED = "pass", "fail", "xfail", "refused"
 GREEN = {PASS, XFAIL, REFUSED}
 
@@ -221,7 +224,17 @@ class PeerClient:
         drv = TestAutomationServer(base_url=f"http://127.0.0.1:{PEER_CLIENT_PORT}")
         drv.wait_for_server(timeout=120)
         drv.wait_for_ui(timeout=120)
-        return drv
+        # COMPOSED IS NOT ARRIVED. The first screen is Startup, with nothing to
+        # press; run 45298429162 clicked `btn_local_login` there on all three
+        # desktops. Wait for the screens the leg's own walk waits for.
+        deadline = time.monotonic() + 180
+        while time.monotonic() < deadline:
+            if self.proc is not None and self.proc.poll() is not None:
+                raise FixtureUnavailable(f"the peer client exited with {self.proc.returncode}; see {self.log}")
+            if (drv.screen() or "") in ENTRY_SCREENS:
+                return drv
+            time.sleep(1.0)
+        raise FixtureUnavailable(f"the peer client never reached Login or Setup (on {drv.screen()!r}); see {self.log}")
 
     def stop(self) -> None:
         if self.proc is not None:
