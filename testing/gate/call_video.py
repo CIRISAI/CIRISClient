@@ -174,7 +174,7 @@ def agent_verdict(agent_version: str, status: int, line: str) -> Check:
 
 
 def probe_agent(drv: TestAutomationServer, agent_version: str,
-                agent_url: str = "http://127.0.0.1:8080") -> List[Check]:
+                agent_url: str = "http://127.0.0.1:8080", platform: str = "desktop") -> List[Check]:
     """Probe the AGENT's port, not the client's node URL. On these legs the
     client reaches its node on :4243 directly, so its own calls never cross the
     agent (run 45304697279 probed :4243 and got the node's 401); the agent's
@@ -184,6 +184,16 @@ def probe_agent(drv: TestAutomationServer, agent_version: str,
     except DriverError:
         client_node = "?"
     status, line = ws_upgrade_status(agent_url, "/v1/chat/gate-probe/call/frames")
+    if platform in ("android", "ios"):
+        # THE PHONE NEVER CALLS THROUGH ITS AGENT: its call routes and frames
+        # socket go to the node it is (127.0.0.1:4243, CIRISApp.kt:4615). The
+        # mobile agent bundles carry no WebSocket library (CIRISAgent, 2026-11-24),
+        # so :8080 answers a plain-HTTP 400 — true, but not on this client's path.
+        out = Check("agent-ws", REFUSED,
+                    f"not gated on {platform}: this client's calls go to its node directly "
+                    f"({client_node}), not through the agent; for the record the agent answered {line or status}")
+        return [out, Check("call", REFUSED, "a two-client call through an agent is not run: the agent "
+                                            "legs have no peer node yet")]
     out = agent_verdict(agent_version, status, line)
     out.detail += f" [probed the agent at {agent_url}; this client's own node URL is {client_node}]"
     return [out, Check("call", REFUSED, "a two-client call through an agent is not run: the agent "
@@ -453,7 +463,8 @@ def run(drv: TestAutomationServer, args, leg: str) -> List[Check]:
     """The step run_platform calls after the flows."""
     if getattr(args, "with_ai", False):
         return probe_agent(drv, getattr(args, "agent_version", ""),
-                           getattr(args, "agent_url", None) or "http://127.0.0.1:8080")
+                           getattr(args, "agent_url", None) or "http://127.0.0.1:8080",
+                           platform=getattr(args, "platform", "desktop"))
     binary = getattr(args, "node_binary", None)
     jar = getattr(args, "peer_client_jar", None) or getattr(args, "jar", None)
     if not binary or not jar:

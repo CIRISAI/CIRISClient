@@ -82,6 +82,21 @@ class Judge(unittest.TestCase):
         self.assertEqual(cv.judge("leg", cv.Seen(frames=26, hz=1800), False, "")[0].status, cv.FAIL)
 
 
+class MobileAgentLegs(unittest.TestCase):
+    def test_a_phone_does_not_gate_on_its_agent_port(self):
+        class Drv:
+            def state(self):
+                return {"nodeUrl": "http://127.0.0.1:4243"}
+        s = socket.socket()
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+        s.close()
+        got = cv.probe_agent(Drv(), "2.23.1", f"http://127.0.0.1:{port}", platform="ios")
+        self.assertEqual(got[0].status, cv.REFUSED)
+        self.assertIn("directly", got[0].detail)
+        self.assertTrue(all(c.ok for c in got))
+
+
 class UpgradeProbe(unittest.TestCase):
     def test_reads_the_status_a_server_answers_the_upgrade_with(self):
         srv = socket.socket()
