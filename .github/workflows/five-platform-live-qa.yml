@@ -340,13 +340,21 @@ jobs:
       # refused by its `client:` floor is reported and does not redden the leg;
       # a flow that fails, or never reaches its first screen, does. See
       # testing/flows/README.md. Every leg below passes the same flag.
+      #
+      # `--call-video` (testing/gate/call_video.py): after the flows, a second
+      # desktop client on a second node joins a video call with the leg's
+      # client, and each must hear the other's 440 Hz tone and, on ciris-server
+      # >= 0.5.254, show the other's decoded picture (video is refused, and
+      # said, below it). On the with-AI legs it probes the agent's forwarding of
+      # the call WebSocket: an expected failure (403) until ciris-agent 2.23.2.
       - name: Linux desktop
         run: |
           python3 -m testing.gate.run_platform --platform desktop --xvfb \
             --jar "${{ steps.art.outputs.jar }}" \
             --node-version "${{ needs.server.outputs.version }}" \
             --shots shots --report reports/linux.json --flows testing/flows ${{ inputs.candidate_version && format('--client-version {0}', inputs.candidate_version) || '' }} \
-            --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-linux"
+            --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-linux" \
+            --call-video --call-work "$RUNNER_TEMP/call-linux"
 
       # THE ANDROID LEG SHARES THIS NODE, AND THE FIXTURE CHANGED IT. A
       # `fixture: two_node` flow on the desktop leg leaves the node with a
@@ -435,7 +443,7 @@ jobs:
           #
           # after the emulator had booted and the whole leg had been paid for.
           # It reads worse on one line and it is the form that runs.
-          script: python3 -m testing.gate.run_platform --platform android --apk "${{ steps.art.outputs.apk }}" --node-version "${{ needs.server.outputs.version }}" --shots shots --report reports/android.json --flows testing/flows ${{ inputs.candidate_version && format('--client-version {0}', inputs.candidate_version) || '' }} --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-android"; rc=$?; adb logcat -d > logcat.txt 2>&1; exit $rc
+          script: python3 -m testing.gate.run_platform --platform android --apk "${{ steps.art.outputs.apk }}" --node-version "${{ needs.server.outputs.version }}" --shots shots --report reports/android.json --flows testing/flows ${{ inputs.candidate_version && format('--client-version {0}', inputs.candidate_version) || '' }} --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-android" --call-video --peer-client-jar "${{ steps.art.outputs.jar }}" --call-work "$RUNNER_TEMP/call-android"; rc=$?; adb logcat -d > logcat.txt 2>&1; exit $rc
 
       # THE PEER DIES WITH THE JOB, WHATEVER KILLED IT. The runner's `finally`
       # and its SIGTERM handler cover a failed flow and a cancelled step; this
@@ -520,7 +528,8 @@ jobs:
             --jar "$(python3 -m testing.gate.candidate_artifacts --kind desktop | tail -1)" \
             --node-version "${{ needs.server.outputs.version }}" \
             --shots shots --report reports/macos.json --flows testing/flows ${{ inputs.candidate_version && format('--client-version {0}', inputs.candidate_version) || '' }} \
-            --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-macos"
+            --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-macos" \
+            --call-video --call-work "$RUNNER_TEMP/call-macos"
 
       # THE iOS APP, BUILT THE ONE WAY (.github/actions/ios-sim-app): the
       # agent's substrate, the simulator natives, the XCFramework and the app,
@@ -553,7 +562,9 @@ jobs:
             --node-version "${{ needs.server.outputs.version }}" \
             --embedded-node-version "${{ steps.ios.outputs.embedded }}" \
             --shots shots --report reports/ios.json --flows testing/flows ${{ inputs.candidate_version && format('--client-version {0}', inputs.candidate_version) || '' }} \
-            --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-ios" || rc=$?
+            --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-ios" \
+            --call-video --peer-client-jar "$(python3 -m testing.gate.candidate_artifacts --kind desktop | tail -1)" \
+            --call-work "$RUNNER_TEMP/call-ios" || rc=$?
 
           # THE APP'S OWN ACCOUNT, EITHER WAY. Run 35359571538 got the iOS app
           # to a real screen — "Engine Failed to Start: server did not become
@@ -713,7 +724,8 @@ jobs:
             --jar "$(python3 -m testing.gate.candidate_artifacts --kind desktop | tail -1)" \
             --node-version "${{ needs.server.outputs.version }}" \
             --shots shots --report reports/windows.json --flows testing/flows ${{ inputs.candidate_version && format('--client-version {0}', inputs.candidate_version) || '' }} \
-            --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-windows"
+            --node-binary node/ciris-server --peer-work "$RUNNER_TEMP/two-node-windows" \
+            --call-video --call-work "$RUNNER_TEMP/call-windows"
 
       - name: Tear down the two-node peer
         if: always()
@@ -826,7 +838,8 @@ jobs:
             --with-ai --agent-version "${{ needs.server.outputs.agent_pypi }}" \
             --llm-provider "${{ inputs.llm_provider || 'anthropic' }}" --llm-model "${{ inputs.llm_model }}" --llm-key-env LLM_API_KEY \
             --node-version "v${{ needs.server.outputs.agent_server }}" \
-            --shots shots --report reports/linux-ai.json --flows testing/flows/agent ${{ inputs.candidate_version && format('--client-version {0}', inputs.candidate_version) || '' }}
+            --shots shots --report reports/linux-ai.json --flows testing/flows/agent ${{ inputs.candidate_version && format('--client-version {0}', inputs.candidate_version) || '' }} \
+            --call-video
 
       # BEFORE THE UPLOAD, EVERY TIME. Copies the agent's own logs (never its
       # .env) beside the leg's evidence, then scans all of it for the key.
@@ -897,7 +910,8 @@ jobs:
             --with-ai --agent-version "${{ needs.server.outputs.agent_pypi }}" \
             --llm-provider "${{ inputs.llm_provider || 'anthropic' }}" --llm-model "${{ inputs.llm_model }}" --llm-key-env LLM_API_KEY \
             --node-version "v${{ needs.server.outputs.agent_server }}" \
-            --shots shots --report reports/windows-ai.json --flows testing/flows/agent ${{ inputs.candidate_version && format('--client-version {0}', inputs.candidate_version) || '' }}
+            --shots shots --report reports/windows-ai.json --flows testing/flows/agent ${{ inputs.candidate_version && format('--client-version {0}', inputs.candidate_version) || '' }} \
+            --call-video
 
       - name: No artifact carries the provider key
         if: always()
@@ -972,7 +986,8 @@ jobs:
             --llm-provider "${{ inputs.llm_provider || 'anthropic' }}" --llm-model "${{ inputs.llm_model }}" --llm-key-env LLM_API_KEY \
             --node-version "v${{ needs.server.outputs.agent_server }}" \
             --embedded-node-version "${{ steps.ios.outputs.embedded }}" \
-            --shots shots --report reports/ios-ai.json --flows testing/flows/agent ${{ inputs.candidate_version && format('--client-version {0}', inputs.candidate_version) || '' }}
+            --shots shots --report reports/ios-ai.json --flows testing/flows/agent ${{ inputs.candidate_version && format('--client-version {0}', inputs.candidate_version) || '' }} \
+            --call-video
 
       # #50'S RECORD AND THE APP'S OWN ACCOUNT, WHATEVER HAPPENED ABOVE. Logs
       # only: `*.log*` and `*.txt` from Documents/ciris, never the container

@@ -304,6 +304,14 @@ def main() -> int:
     # the node the client uses answers from this host (testing/gate/two_node.py).
     from testing.gate.run_flows import add_fixture_args
     add_fixture_args(ap)
+    # The call check (testing/gate/call_video.py): two clients in one video
+    # call on a node leg; on a with-AI leg, the agent's WebSocket forwarding.
+    ap.add_argument("--call-video", action="store_true",
+                    help="after the flows, run the two-client call check (CSD-134)")
+    ap.add_argument("--peer-client-jar", type=Path,
+                    help="the desktop jar the call check's second client runs (default: --jar)")
+    ap.add_argument("--call-work", type=Path,
+                    help="where the call check's peer node and client keep their homes and logs")
     args = ap.parse_args()
 
     rep = Report(platform=args.platform, node_version=args.node_version,
@@ -349,6 +357,8 @@ def main() -> int:
         walk(drv, rep, args.shots, platform, args_timeout=args.timeout, with_ai=args.with_ai)
         if specs is not None:
             flows(drv, rep, specs, args, platform)
+        if args.call_video:
+            call_video(drv, rep, args)
         rep.ok = all(s.ok for s in rep.steps)
     except bringup.CannotRun as e:
         # LOUD. Not a skip: the caller decides what to exclude, and it does so
@@ -412,6 +422,18 @@ def flows(drv: TestAutomationServer, rep: Report, specs, args, platform) -> None
     from testing.gate import optional_skips
     ok, detail = optional_skips.verdict(leg, rep.flows)
     rep.add("optional-skips", ok, detail)
+
+
+def call_video(drv: TestAutomationServer, rep: Report, args) -> None:
+    """One board line per check: `call-video:<name>`. An expected failure
+    (xfail) and a refusal by floor are green and say so; anything else red."""
+    if not all(s.ok for s in rep.steps):
+        rep.add("call-video", False, "not run — a step above failed, so there is no app to call from")
+        return
+    from testing.gate import call_video as cv  # noqa: PLC0415
+    leg = args.report.stem if args.report else args.platform
+    for c in cv.run(drv, args, leg):
+        rep.add(f"call-video:{c.name}", c.ok, f"[{c.status.upper()}] {c.detail}")
 
 
 def _finish(args, rep: Report) -> int:
