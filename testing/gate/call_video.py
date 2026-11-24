@@ -387,16 +387,16 @@ def judge(side: str, seen: Seen, video_gated: bool, server: str) -> List[Check]:
 
 def grant_media(platform: str, *, package: str = "", bundle_id: str = "", serial: Optional[str] = None,
                 udid: str = "booted", log: Callable[[str], None] = print) -> List[str]:
-    """Grant the phone's microphone and camera before the call. Run 45325764721
+    """Grant an Android phone's microphone and camera before the call. Run 45325764721
     stopped both phones on `call_asking`: the system permission prompt, which no
     automation answers. The test-mode sources need no real device, but the
     screen asks first (CallScreen.kt, CallPermissionState.Asking)."""
     if platform == "android":
         adb = ["adb"] + (["-s", serial] if serial else [])
         cmds = [adb + ["shell", "pm", "grant", package, f"android.permission.{p}"] for p in ("RECORD_AUDIO", "CAMERA")]
-    elif platform == "ios":
-        cmds = [["xcrun", "simctl", "privacy", udid, "grant", svc, bundle_id] for svc in ("microphone", "camera")]
     else:
+        # iOS is granted at bring-up, before launch: `simctl privacy grant`
+        # terminates a running app (run 45341631367). Android's pm grant does not.
         return []
     said = []
     for c in cmds:
