@@ -215,8 +215,12 @@ class PeerClient:
         # Its own java.util.prefs root, so its stored session is not the leg
         # client's (honoured where prefs are files: Linux; elsewhere the two
         # clients read their sessions at start, the leg's long before this one).
+        # A BOUNDED HEAP. Uncapped, the JVM may take a quarter of the runner's
+        # RAM, and on the Android leg it shares the machine with the emulator and
+        # two nodes: run 45304697279 lost that runner ("lost communication with
+        # the server") during the Android step. A call client needs far less.
         env["JAVA_TOOL_OPTIONS"] = (env.get("JAVA_TOOL_OPTIONS", "") +
-                                    f" -Djava.util.prefs.userRoot={prefs}").strip()
+                                    f" -Xmx1g -Djava.util.prefs.userRoot={prefs}").strip()
         cmd = ["java", "-jar", str(self.jar)]
         if self.xvfb:
             cmd = ["xvfb-run", "-a"] + cmd
