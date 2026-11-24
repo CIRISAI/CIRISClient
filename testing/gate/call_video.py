@@ -385,9 +385,31 @@ def judge(side: str, seen: Seen, video_gated: bool, server: str) -> List[Check]:
     return out
 
 
+def grant_media(platform: str, *, package: str = "", bundle_id: str = "", serial: Optional[str] = None,
+                udid: str = "booted", log: Callable[[str], None] = print) -> List[str]:
+    """Grant the phone's microphone and camera before the call. Run 45325764721
+    stopped both phones on `call_asking`: the system permission prompt, which no
+    automation answers. The test-mode sources need no real device, but the
+    screen asks first (CallScreen.kt, CallPermissionState.Asking)."""
+    if platform == "android":
+        adb = ["adb"] + (["-s", serial] if serial else [])
+        cmds = [adb + ["shell", "pm", "grant", package, f"android.permission.{p}"] for p in ("RECORD_AUDIO", "CAMERA")]
+    elif platform == "ios":
+        cmds = [["xcrun", "simctl", "privacy", udid, "grant", svc, bundle_id] for svc in ("microphone", "camera")]
+    else:
+        return []
+    said = []
+    for c in cmds:
+        got = subprocess.run(c, capture_output=True, text=True, timeout=60)
+        said.append(f"{' '.join(c[-3:])}: {'ok' if got.returncode == 0 else (got.stderr.strip() or got.returncode)}")
+    log("  media permissions: " + "; ".join(said))
+    return said
+
+
 def run_node_call(drv: TestAutomationServer, *, binary: Path, jar: Path, node_url: str,
                   username: str, password: str, work: Path, server_version: str, xvfb: bool,
                   shots: Path, leg: str, measure_for: float = 90.0,
+                  grant: Callable[[], List[str]] = lambda: [],
                   log: Callable[[str], None] = print) -> List[Check]:
     video_gated = bool(at_least(server_version, VIDEO_SERVER_FLOOR))
     spec = PeerSpec(binary=two_node.resolve_binary(binary), home=work / "node",
@@ -413,6 +435,9 @@ def run_node_call(drv: TestAutomationServer, *, binary: Path, jar: Path, node_ur
                                         + "; ".join(v.notes or ["no room"]))]
         checks.append(Check("seed", PASS, f"room {v.room_id}; peer node {v.peer_node_key_id}"))
 
+        granted = grant()
+        if granted:
+            checks.append(Check("permissions", PASS, "; ".join(granted)))
         open_call(peer_drv, v.local_key_on_peer)
         open_call(drv, v.peer_key_id)
         deadline = time.monotonic() + 120
@@ -424,7 +449,8 @@ def run_node_call(drv: TestAutomationServer, *, binary: Path, jar: Path, node_ur
         if bad:
             def where(d: TestAutomationServer) -> str:
                 try:
-                    tags = sorted(t for t in d.tags() if "call" in t)
+                    els = [e for e in d.tree() if "call" in e.test_tag]
+                    tags = sorted(f"{e.test_tag}={e.text}" if e.text else e.test_tag for e in els)
                     return f"screen={d.screen()!r} call tags={tags[:20]}"
                 except DriverError as e:
                     return f"unreadable: {e}"
@@ -483,7 +509,11 @@ def run(drv: TestAutomationServer, args, leg: str) -> List[Check]:
     import tempfile  # noqa: PLC0415
     work = Path(getattr(args, "call_work", None) or tempfile.mkdtemp(prefix=f"ciris-call-{leg}-"))
     xvfb = os.name != "nt" and not os.environ.get("DISPLAY") and os.uname().sysname == "Linux"
+    platform = getattr(args, "platform", "desktop")
+    grant = lambda: grant_media(platform, package=getattr(args, "package", ""),  # noqa: E731
+                                bundle_id=getattr(args, "bundle_id", ""), serial=getattr(args, "serial", None),
+                                udid=getattr(args, "udid", "booted") or "booted")
     return run_node_call(drv, binary=Path(binary), jar=Path(jar), node_url=args.node_url,
                          username=args.username, password=args.password, work=work,
                          server_version=getattr(args, "node_version", ""), xvfb=xvfb,
-                         shots=args.shots, leg=leg)
+                         shots=args.shots, leg=leg, grant=grant)
