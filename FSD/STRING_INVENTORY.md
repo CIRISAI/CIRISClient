@@ -9,14 +9,14 @@ not a key to delete.
 
 Agent usage recorded at CIRISAgent `f0a079953`. CI carries it forward.
 
-**6069 keys in 29 languages.**
+**6126 keys in 29 languages.**
 
 | Owner | Keys |
 |---|---|
-| client | 4843 |
+| client | 4883 |
 | server | 599 |
 | agent | 216 |
-| unclaimed | 411 |
+| unclaimed | 428 |
 
 ## Held in the app
 
@@ -30,12 +30,12 @@ bound: the node serves that screen once it answers.
 
 ## Duplicates
 
-376 English strings sit under 1026 keys.
+378 English strings sit under 1033 keys.
 
 - **Same in every language:** 93 groups, 199 keys.
   Candidates to share a key, for a person to confirm.
-- **Short, and differ in at least one language:** 283 groups, 827 keys. Context can explain these: read before merging.
-- **Sentences that differ:** 0 groups, 0 keys.
+- **Short, and differ in at least one language:** 283 groups, 830 keys. Context can explain these: read before merging.
+- **Sentences that differ:** 2 groups, 4 keys.
   Identical English, translated differently: drift until read.
 - **Confirmation facts:** 131 keys, 44 of them duplicates.
   CC 4.5.13 derives these, so they go when their card flips.
@@ -44,6 +44,8 @@ Sentences that differ, most languages first:
 
 | English | Keys | Languages |
 |---|---|---|
+| You left the call. | 2 | 14 |
+| someone in this room | 2 | 11 |
 
 ## Dead root keys
 
@@ -63,6 +65,7 @@ back to them, so they are unreachable and still translated. Marked `dead_root`.
 | `commons_surface` | 22 |
 | `duty` | 21 |
 | `errors` | 20 |
+| `call` | 17 |
 | `agent` | 11 |
 | `conscience` | 7 |
 | `mesh` | 7 |

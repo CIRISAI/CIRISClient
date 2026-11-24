@@ -181,6 +181,7 @@ Decided for client 0.5.239 so these terms stop being left in English. "corpus" m
 | rubric review | 루브릭 검토 | rubeurik geomto | corpus: a review of an agent's behaviour against a scoring rubric |
 | delegation scope | 위임 범위 | wiim beomwi | corpus: the set of actions a delegate is allowed to perform |
 | canonical node | 캐노니컬 노드 | kaenonikeol nodeu | corpus: a node chosen as the reference copy a family's other nodes follow |
+| CIRIS public servers | CIRIS 공개 서버 | - | person-facing name for ciris-canonical and any canonical seat: the servers anyone can reach. Plural. Never a family's canonical node (row above). Taken from the reviewed mobile.call_relay_refused_by_policy, 2026-11-22 |
 | serve node | 서비스 노드 | seobiseu nodeu | corpus: a node that serves others on the mesh (always on, reachable) |
 | genesis seed | 제네시스 시드 | jenesiseu sideu | corpus: the starting material from which a family's first records are created |
 | circuit breaker | 회로 차단기 | hoero chadangi | corpus: a safeguard that stops a failing service from being called until it recovers |

@@ -293,6 +293,7 @@ Decided for client 0.5.239 so these terms stop being left in English. "corpus" m
 | rubric review | revisão de rubrica | - | corpus: a review of an agent's behaviour against a scoring rubric |
 | delegation scope | escopo de delegação | - | corpus: the set of actions a delegate is allowed to perform |
 | canonical node | nó canônico | - | corpus: a node chosen as the reference copy a family's other nodes follow |
+| CIRIS public servers | os servidores públicos do CIRIS | - | person-facing name for ciris-canonical and any canonical seat: the servers anyone can reach. Plural. Never a family's canonical node (row above). Taken from the reviewed mobile.call_relay_refused_by_policy, 2026-11-22 |
 | serve node | nó servidor | - | corpus: a node that serves others on the mesh (always on, reachable) |
 | genesis seed | semente de gênese | - | corpus: the starting material from which a family's first records are created |
 | attestation level | nível de atestação | - | corpus: how strongly a device has proven its identity and integrity (a numbered level) |

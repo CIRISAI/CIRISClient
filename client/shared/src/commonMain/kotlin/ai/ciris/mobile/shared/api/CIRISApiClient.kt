@@ -2159,15 +2159,21 @@ class CIRISApiClient internal constructor(
 
         private fun callPath(room: String) = "/v1/chat/${room.encodeURLPathPart()}/call"
 
-        override suspend fun join(room: String, video: Boolean): ai.ciris.mobile.shared.calls.CallJoinAnswer {
+        override suspend fun join(room: String, video: Boolean): ai.ciris.mobile.shared.calls.CallJoinAnswer =
+            join(room, video, null)
+
+        // `relay` is sent only when this device has a reason: the person chose, or the
+        // network is metered (false). Omitted, the node decides (CIRISServer 0.5.254:
+        // false on a CIRIS public server, the member default otherwise).
+        override suspend fun join(room: String, video: Boolean, relay: Boolean?): ai.ciris.mobile.shared.calls.CallJoinAnswer {
             val method = "joinCall"
-            logInfo(method, "POST $nodeUrl${callPath(room)} video=$video")
+            logInfo(method, "POST $nodeUrl${callPath(room)} video=$video relay=${relay ?: "-"}")
             val client = federationHttpClient()
             try {
                 val response = client.post("$nodeUrl${callPath(room)}") {
                     authHeader()?.let { header("Authorization", it) }
                     contentType(ContentType.Application.Json)
-                    setBody(buildJsonObject { put("video", video) }.toString())
+                    setBody(buildJsonObject { put("video", video); relay?.let { put("relay", it) } }.toString())
                 }
                 val raw = response.bodyAsText()
                 if (!response.status.isSuccess()) {
@@ -2187,6 +2193,37 @@ class CIRISApiClient internal constructor(
         }
 
         override suspend fun leave(room: String) = leave(room, ai.ciris.mobile.shared.calls.LeaveReason.LEFT)
+
+        override suspend fun setRelay(room: String, relay: Boolean): ai.ciris.mobile.shared.calls.RelayAnswer {
+            val method = "setCallRelay"
+            logInfo(method, "POST $nodeUrl${callPath(room)}/relay relay=$relay")
+            val client = federationHttpClient()
+            try {
+                val response = client.post("$nodeUrl${callPath(room)}/relay") {
+                    authHeader()?.let { header("Authorization", it) }
+                    contentType(ContentType.Application.Json)
+                    setBody(buildJsonObject { put("relay", relay) }.toString())
+                }
+                val raw = response.bodyAsText()
+                if (!response.status.isSuccess()) {
+                    // 409 call.not_joined; a node before 0.5.254 has no route (404/405).
+                    val r = NodeRefusal.fromBody(response.status.value, raw)
+                    logInfo(method, "refused ${response.status.value} reason_id=${r.reasonId}")
+                    throw ai.ciris.mobile.shared.calls.CallRefusal(
+                        r.reasonId ?: ai.ciris.mobile.shared.calls.CallTransport.RELAY_UNAVAILABLE, r.detail,
+                    )
+                }
+                val o = jsonConfig.parseToJsonElement(raw) as JsonObject
+                fun bool(k: String) = (o[k] as? kotlinx.serialization.json.JsonPrimitive)?.takeIf { !it.isString }?.contentOrNull?.toBooleanStrictOrNull()
+                return ai.ciris.mobile.shared.calls.RelayAnswer(
+                    relaying = bool("relaying") ?: false,
+                    relayingFor = (o["relaying_for"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull?.toIntOrNull() ?: 0,
+                    serveSeat = bool("serve_seat") ?: false,
+                )
+            } finally {
+                client.close()
+            }
+        }
 
         override suspend fun leave(room: String, reason: ai.ciris.mobile.shared.calls.LeaveReason) {
             val client = federationHttpClient()
