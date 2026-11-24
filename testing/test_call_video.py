@@ -79,6 +79,9 @@ class Judge(unittest.TestCase):
 
     def test_the_tone_wanders_but_noise_does_not_pass(self):
         self.assertEqual(cv.judge("leg", cv.Seen(frames=26, hz=475), False, "")[0].status, cv.PASS)
+        self.assertEqual(cv.judge("leg", cv.Seen(frames=86, hz=525), False, "")[0].status, cv.PASS)
+        self.assertEqual(cv.judge("leg", cv.Seen(frames=86, hz=880), False, "")[0].status, cv.FAIL)
+        self.assertEqual(cv.judge("leg", cv.Seen(frames=86, hz=220), False, "")[0].status, cv.FAIL)
         self.assertEqual(cv.judge("leg", cv.Seen(frames=26, hz=1800), False, "")[0].status, cv.FAIL)
 
 

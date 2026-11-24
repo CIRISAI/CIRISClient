@@ -75,10 +75,10 @@ PEER_CLIENT_PORT = 9092
 PEER_NODE_PORT = 5262
 
 #: Pitch the tone is judged at: TestModeDevices sends 440 Hz. The pitch is a
-#: zero-crossing count over decoded Opus frames, so it wanders: run 45304697279
-#: read 425-475 Hz from a clean tone. 60 Hz still tells the tone from silence,
-#: noise (thousands) and an octave slip (880).
-TONE_HZ, TONE_TOLERANCE = 440, 60
+#: zero-crossing count over ONE decoded Opus frame, so it wanders: runs
+#: 45304697279 and 45318196127 read 425-525 Hz from a clean tone. 100 Hz still
+#: tells the tone from silence, noise (thousands) and an octave slip (220, 880).
+TONE_HZ, TONE_TOLERANCE = 440, 100
 
 #: Where a desktop client lands once it can be driven (run_platform's walk).
 ENTRY_SCREENS = {"Login", "Setup", "Interact", "Contacts", "ManageNodes"}
@@ -318,7 +318,10 @@ def open_call(drv: TestAutomationServer, contact_key: str, timeout: float = 120.
         if row in drv.tags():
             break
         if "btn_contacts_refresh" in drv.tags():
-            drv.click("btn_contacts_refresh")
+            try:
+                drv.click("btn_contacts_refresh")
+            except DriverError:
+                pass  # disabled while the list loads (run 45318196127, Android): wait it out
         time.sleep(3.0)
     drv.click(drv.wait_for_element(row, timeout=10).test_tag)
     drv.click(drv.wait_for_element("btn_chat_call", timeout=60).test_tag)
@@ -419,7 +422,14 @@ def run_node_call(drv: TestAutomationServer, *, binary: Path, jar: Path, node_ur
             time.sleep(2.0)
         bad = {k: s for k, s in states.items() if s != "in_call"}
         if bad:
-            return checks + [Check("join", FAIL, f"not in the call: {bad}")]
+            def where(d: TestAutomationServer) -> str:
+                try:
+                    tags = sorted(t for t in d.tags() if "call" in t)
+                    return f"screen={d.screen()!r} call tags={tags[:20]}"
+                except DriverError as e:
+                    return f"unreadable: {e}"
+            seen_now = {k: where(drv if k == "leg" else peer_drv) for k in bad}
+            return checks + [Check("join", FAIL, f"not in the call: {bad}; {seen_now}")]
         deadline = time.monotonic() + 60
         while time.monotonic() < deadline and not (legs_joined(local, v.room_id) and legs_joined(remote, v.room_id)):
             time.sleep(2.0)
