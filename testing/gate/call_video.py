@@ -141,7 +141,11 @@ def ws_upgrade_status(base_url: str, path: str, timeout: float = 10.0) -> Tuple[
         return 0, f"{type(e).__name__}: {e}"
     line = head.split("\r\n", 1)[0]
     m = re.match(r"HTTP/1\.[01] (\d{3})", line)
-    return (int(m.group(1)) if m else 0), line
+    # The first line of the body says WHO refused: run 45312276429's macOS agent
+    # answered 400, not the 403 the agent session described.
+    rest = head.split("\r\n\r\n", 1)[1].strip() if "\r\n\r\n" in head else ""
+    body = rest.splitlines()[0][:160] if rest else ""
+    return (int(m.group(1)) if m else 0), (f"{line} — {body}" if body else line)
 
 
 def agent_verdict(agent_version: str, status: int, line: str) -> Check:
@@ -199,6 +203,12 @@ class PeerClient:
         self._fh = None
 
     def start(self) -> TestAutomationServer:
+        # NOTHING MAY ALREADY ANSWER ON OUR PORT. Run 45312276429: the Linux leg's
+        # second client outlived its `xvfb-run` wrapper, and the Android leg then
+        # drove THAT client (found on 'UserChat') instead of its own.
+        if ws_upgrade_status(f"http://127.0.0.1:{PEER_CLIENT_PORT}", "/health", timeout=2)[0]:
+            raise FixtureUnavailable(f"something already answers on 127.0.0.1:{PEER_CLIENT_PORT} — "
+                                     f"a client from an earlier leg is still running")
         self.work.mkdir(parents=True, exist_ok=True)
         home, prefs = self.work / "client-home", self.work / "client-prefs"
         home.mkdir(exist_ok=True)
@@ -248,7 +258,24 @@ class PeerClient:
 
     def stop(self) -> None:
         if self.proc is not None:
-            two_node._terminate(self.proc.pid, self.proc)
+            if os.name != "nt":
+                # The whole process GROUP: under xvfb-run the JVM is a grandchild,
+                # and TERM to the wrapper alone leaves it serving.
+                import signal  # noqa: PLC0415
+                for sig in (signal.SIGTERM, signal.SIGKILL):
+                    try:
+                        os.killpg(self.proc.pid, sig)
+                    except (ProcessLookupError, PermissionError):
+                        break
+                    try:
+                        self.proc.wait(timeout=10)
+                        if sig is signal.SIGTERM:
+                            # The wrapper is gone; give its children the same grace.
+                            time.sleep(2)
+                    except subprocess.TimeoutExpired:
+                        continue
+            else:
+                two_node._terminate(self.proc.pid, self.proc)  # taskkill /T: the whole tree
             self.proc = None
         if self._fh is not None:
             self._fh.close()
