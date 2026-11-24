@@ -58,6 +58,10 @@ class Judge(unittest.TestCase):
         got = cv.judge("leg", cv.Seen(frames=0, hz=0), True, "0.5.254")
         self.assertEqual(got[0].status, cv.FAIL)
 
+    def test_one_frame_is_an_arrival_not_a_call(self):
+        self.assertEqual(cv.judge("leg", cv.Seen(frames=1, hz=440), False, "")[0].status, cv.FAIL)
+        self.assertEqual(cv.judge("leg", cv.Seen(frames=cv.MIN_FRAMES, hz=440), False, "")[0].status, cv.PASS)
+
     def test_the_wrong_pitch_is_red(self):
         self.assertEqual(cv.judge("leg", cv.Seen(frames=40, hz=880), False, "")[0].status, cv.FAIL)
 

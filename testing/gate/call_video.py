@@ -79,6 +79,10 @@ PEER_NODE_PORT = 5262
 #: 45304697279 and 45318196127 read 425-525 Hz from a clean tone. 100 Hz still
 #: tells the tone from silence, noise (thousands) and an octave slip (220, 880).
 TONE_HZ, TONE_TOLERANCE = 440, 100
+#: Frames a side must have decoded for its tone to count, and how many the
+#: measurement waits for. The first cut stopped at the first frame, so run
+#: 45349626935 passed iOS on frames=1 — one frame is an arrival, not a call.
+MIN_FRAMES, WAIT_FRAMES = 10, 20
 
 #: Where a desktop client lands once it can be driven (run_platform's walk).
 ENTRY_SCREENS = {"Login", "Setup", "Interact", "Contacts", "ManageNodes"}
@@ -366,7 +370,7 @@ def judge(side: str, seen: Seen, video_gated: bool, server: str) -> List[Check]:
     # THE MEASUREMENT FIRST. MeasuringSink counts what was decoded BEFORE the
     # speaker, so a runner with no audio output still measures the tone (run
     # 45304697279, Windows: frames=82 hz=425 beside "no audio").
-    if seen.frames > 0 and abs(seen.hz - TONE_HZ) <= TONE_TOLERANCE:
+    if seen.frames >= MIN_FRAMES and abs(seen.hz - TONE_HZ) <= TONE_TOLERANCE:
         out.append(Check(f"{side}-audio", PASS, f"{side} heard the other side's tone: {seen.tile}"))
     elif seen.audio_unavailable and seen.frames == 0:
         out.append(Check(f"{side}-audio", REFUSED, f"{side}: this device reports no audio output and "
@@ -467,8 +471,8 @@ def run_node_call(drv: TestAutomationServer, *, binary: Path, jar: Path, node_ur
         while time.monotonic() < end:
             leg_seen = seen_of(drv, v.peer_node_key_id)
             peer_seen = seen_of(peer_drv, v.local_node_key_id)
-            done_a = leg_seen.frames > 0 and leg_seen.hz and (leg_seen.picture or not video_gated)
-            done_b = peer_seen.frames > 0 and peer_seen.hz and (peer_seen.picture or not video_gated)
+            done_a = leg_seen.frames >= WAIT_FRAMES and leg_seen.hz and (leg_seen.picture or not video_gated)
+            done_b = peer_seen.frames >= WAIT_FRAMES and peer_seen.hz and (peer_seen.picture or not video_gated)
             if done_a and done_b:
                 break
             time.sleep(3.0)
