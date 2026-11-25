@@ -458,6 +458,9 @@ class FixtureValues:
     message_text: str = ""
     message_attestation_id: str = ""
     message_arrived: bool = False
+    #: The key the PEER's node holds the leg's owner under (the reverse contact),
+    #: for a second client on the peer (testing/gate/call_video.py).
+    local_key_on_peer: str = ""
     notes: List[str] = field(default_factory=list)
 
     def as_vars(self) -> Dict[str, str]:
@@ -775,6 +778,8 @@ def seed(local: Party, remote: Party, *, message: str = DEFAULT_MESSAGE,
         announce(p, log)
         self_record(p)
     owner_of(local)
+    # A peer claimed by a CLIENT (call_video.py) has no console claim to say who owns it.
+    owner_of(remote)
     v.local_owner_key_id, v.local_node_key_id = local.owner_key_id, local.node_key_id
     v.peer_owner_key_id, v.peer_node_key_id = remote.owner_key_id, remote.node_key_id
     log(f"local node={local.node_key_id} owner={local.owner_key_id or '?'}; "
@@ -793,6 +798,7 @@ def seed(local: Party, remote: Party, *, message: str = DEFAULT_MESSAGE,
                                                reachable_wait=reachable_wait, land_wait=land_wait)
     back_key, back_via = add_contact(remote, local, owner_wait, v.notes, "", log,
                                      reachable_wait=reachable_wait, land_wait=land_wait)
+    v.local_key_on_peer = back_key
     if v.contact_via != "owner":
         v.notes.append(f"the peer's owner key never reached the leg's node within {owner_wait:.0f}s; "
                        f"the contact is held under the peer NODE ({v.peer_key_id})")

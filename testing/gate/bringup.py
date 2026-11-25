@@ -387,6 +387,12 @@ def ios_simulator_plan(app_bundle: Path, bundle_id: str, udid: str = "booted") -
             # 35353482427). Optional: on a fresh simulator there is nothing to
             # end.
             Step("terminate", ["xcrun", "simctl", "terminate", udid, bundle_id], optional=True),
+            # THE CALL'S PERMISSIONS, BEFORE LAUNCH. A call asks for the microphone
+            # and camera, and the system prompt is something no automation
+            # answers; granting them later with `simctl privacy` terminates the
+            # running app (run 45341631367: 9091 went dark right after the grant).
+            Step("grant-microphone", ["xcrun", "simctl", "privacy", udid, "grant", "microphone", bundle_id], optional=True),
+            Step("grant-camera", ["xcrun", "simctl", "privacy", udid, "grant", "camera", bundle_id], optional=True),
             # TEST MODE HAS TO BE SAID HERE. The app reads CIRIS_TEST_MODE with
             # getenv (TestAutomationServer.ios.kt) and starts its automation
             # server only when it is set; `simctl launch` hands the child only
