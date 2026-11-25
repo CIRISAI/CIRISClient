@@ -1168,6 +1168,8 @@
     "call_relay_switch": "በዚህ ጥሪ ውስጥ ያሉ ሌሎችን በዚህ መሣሪያ በኩል እንዲገናኙ እርዷቸው",
     "call_relay_metered_note": "እርስዎ እስካላበሩት ድረስ በሞባይል ዳታ ላይ ጠፍቷል፦ ጥሪዎችን ማስተላለፍ የእርስዎን ዳታ እና ባትሪ ይጠቀማል።",
     "call_relaying_for": "በዚህ መሣሪያ በኩል የተገናኙ ሰዎች፦ {count}",
+    "call_relay_switch_node": "በዚህ ጥሪ ውስጥ ያሉ ሌሎችን ጥሪውን በሚያስኬደው ኖድ በኩል እንዲገናኙ እርዷቸው",
+    "call_relaying_for_node": "ጥሪውን በሚያስኬደው ኖድ በኩል የተገናኙ ሰዎች፦ {count}",
     "call_someone": "በዚህ ክፍል ውስጥ ያለ ሰው",
     "call_tile_video": "ካሜራ በርቷል",
     "call_tile_audio": "በመናገር ላይ",

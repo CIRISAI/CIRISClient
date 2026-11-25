@@ -2826,6 +2826,8 @@
     "call_relay_switch": "Anderen im Anruf helfen, sich über dieses Gerät zu verbinden",
     "call_relay_metered_note": "Bei mobilen Daten standardmäßig deaktiviert, es sei denn, Sie schalten es ein: Das Weiterleiten von Anrufen verbraucht Ihre Daten und Akkuleistung.",
     "call_relaying_for": "Über dieses Gerät verbundene Personen: {count}",
+    "call_relay_switch_node": "Anderen im Anruf helfen, sich über den Knoten zu verbinden, der den Anruf betreibt",
+    "call_relaying_for_node": "Über den Knoten, der den Anruf betreibt, verbundene Personen: {count}",
     "call_h264_off": "H.264-Video ist auf diesem Computer ausgeschaltet, daher wird das Video mancher Personen hier nicht angezeigt. Das Einschalten lädt den H.264-Codec von Cisco herunter, unter 1 MB. Das Ausschalten löscht ihn.",
     "call_h264_turn_on": "H.264-Video einschalten",
     "call_h264_downloading": "H.264-Codec wird von Cisco heruntergeladen…",

@@ -1,5 +1,6 @@
 package ai.ciris.mobile.shared.calls
 
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.Flow
@@ -58,11 +59,19 @@ class CallSession(
      * relay switch): null leaves it to the node, which decides by what it is.
      */
     fun join(video: Boolean, relay: Boolean? = null) {
+        join(video, suspend { relay })
+    }
+
+    /** As above, where the answer has to be read first (the person's stored choice). */
+    fun join(video: Boolean, relay: suspend () -> Boolean?) {
         if (_state.value is CallState.Joining || _state.value is CallState.InCall) return
         _state.value = CallState.Joining
         scope.launch {
+            val say = relay()
+            // Left while it was read: nothing was asked of the node, and nothing is.
+            if (_state.value !is CallState.Joining) return@launch
             val answer = try {
-                transport.join(room, video, relay)
+                transport.join(room, video, say)
             } catch (e: CallRefusal) {
                 PlatformLogger.w(TAG, "[join] refused reason_id=${e.reasonId}")
                 _state.value = CallState.Refused(e.reasonId)
@@ -94,6 +103,9 @@ class CallSession(
                 attendees = answer.attendees.associateWith { Attendee(it) },
                 videoAllowed = answer.videoAllowed,
                 videoMaxPeople = answer.videoMaxPeople,
+                relaying = answer.relay?.relaying,
+                relayingFor = answer.relay?.relayingFor ?: 0,
+                relaySeat = answer.relay?.serveSeat ?: false,
             )
             reader = scope.launch { s.incoming.collect { onMessage(it) } }
         }
@@ -113,19 +125,23 @@ class CallSession(
      * Turn relaying for others on or off, live (POST …/call/relay; edge
      * `Call::set_relay`). The node's answer is the truth: on a CIRIS public
      * server it stays off and says `serve_seat`, and the switch goes away.
+     * A [RelayAsk.FAILED] one may be tried again; a [RelayAsk.REFUSED] one may not.
      */
-    fun setRelay(on: Boolean) {
-        if (_state.value !is CallState.InCall) return
-        scope.launch {
-            try {
-                val a = transport.setRelay(room, on)
-                PlatformLogger.i(TAG, "[relay] asked=$on relaying=${a.relaying} for=${a.relayingFor} serve_seat=${a.serveSeat}")
-                updateCall { it.copy(relaying = a.relaying, relayingFor = a.relayingFor, relaySeat = a.serveSeat) }
-            } catch (e: CallRefusal) {
-                PlatformLogger.w(TAG, "[relay] refused reason_id=${e.reasonId}")
-            } catch (e: Exception) {
-                PlatformLogger.w(TAG, "[relay] failed: ${e::class.simpleName}")
-            }
+    suspend fun setRelay(on: Boolean): RelayAsk {
+        if (_state.value !is CallState.InCall) return RelayAsk.REFUSED
+        return try {
+            val a = transport.setRelay(room, on)
+            PlatformLogger.i(TAG, "[relay] asked=$on relaying=${a.relaying} for=${a.relayingFor} serve_seat=${a.serveSeat}")
+            updateCall { it.copy(relaying = a.relaying, relayingFor = a.relayingFor, relaySeat = a.serveSeat) }
+            RelayAsk.ANSWERED
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: CallRefusal) {
+            PlatformLogger.w(TAG, "[relay] refused reason_id=${e.reasonId}")
+            RelayAsk.REFUSED
+        } catch (e: Exception) {
+            PlatformLogger.w(TAG, "[relay] failed: ${e::class.simpleName}")
+            RelayAsk.FAILED
         }
     }
 
@@ -465,7 +481,22 @@ data class PathRestored(
 }
 
 /** `POST …/call/relay` answer: what the node is doing now, not what was asked. */
-data class RelayAnswer(val relaying: Boolean, val relayingFor: Int, val serveSeat: Boolean)
+data class RelayAnswer(val relaying: Boolean, val relayingFor: Int, val serveSeat: Boolean) {
+    companion object {
+        /** The join answer's `relay` object (CIRISServer 0.5.254). Absent on an older node, or without a ruling: null. */
+        fun parse(o: JsonObject): RelayAnswer? {
+            fun bool(k: String) = (o[k] as? JsonPrimitive)?.takeIf { !it.isString }?.contentOrNull?.toBooleanStrictOrNull()
+            return RelayAnswer(
+                relaying = bool("relaying") ?: return null,
+                relayingFor = (o["relaying_for"] as? JsonPrimitive)?.contentOrNull?.toIntOrNull() ?: 0,
+                serveSeat = bool("serve_seat") ?: false,
+            )
+        }
+    }
+}
+
+/** How asking the node to relay, or to stop, ended. */
+enum class RelayAsk { ANSWERED, REFUSED, FAILED }
 
 /** The socket's text events (CSD-134 §3): one JSON object each, members as key ids only. */
 sealed interface CallEvent {
@@ -617,6 +648,8 @@ data class CallJoinAnswer(
     /** False when the call already has more people than the node carries video for. Absent from the node means no limit. */
     val videoAllowed: Boolean = true,
     val videoMaxPeople: Int? = null,
+    /** Whether the node is relaying others' media as of this join; null from a node before 0.5.254. */
+    val relay: RelayAnswer? = null,
 ) {
     companion object {
         /**
@@ -639,6 +672,7 @@ data class CallJoinAnswer(
                 attendees = attendees,
                 videoAllowed = (o["video_allowed"] as? JsonPrimitive)?.takeIf { !it.isString }?.contentOrNull?.toBooleanStrictOrNull() ?: true,
                 videoMaxPeople = str("video_max_people")?.toIntOrNull(),
+                relay = (o["relay"] as? JsonObject)?.let { RelayAnswer.parse(it) },
             )
         }
     }

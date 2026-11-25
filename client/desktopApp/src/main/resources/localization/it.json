@@ -4591,6 +4591,8 @@
     "call_relay_switch": "Aiuta gli altri in questa chiamata a connettersi tramite questo dispositivo",
     "call_relay_metered_note": "Disattivato sui dati mobili a meno che tu non lo attivi: trasmettere le chiamate consuma i tuoi dati e la batteria.",
     "call_relaying_for": "Persone connesse tramite questo dispositivo: {count}",
+    "call_relay_switch_node": "Aiuta gli altri in questa chiamata a connettersi tramite il nodo che gestisce la chiamata",
+    "call_relaying_for_node": "Persone connesse tramite il nodo che gestisce la chiamata: {count}",
     "call_h264_off": "Il video H.264 è disattivato su questo computer, quindi il video inviato da alcune persone non verrà mostrato qui. Attivandolo scaricherai il codec H.264 da Cisco, meno di 1 MB. Disattivandolo lo eliminerai.",
     "call_h264_turn_on": "Attiva il video H.264",
     "call_h264_downloading": "Download del codec H.264 da Cisco…",

@@ -4591,6 +4591,8 @@
     "call_relay_switch": "Bantu orang lain dalam panggilan ini terhubung melalui perangkat ini",
     "call_relay_metered_note": "Nonaktif pada data seluler kecuali Anda mengaktifkannya: meneruskan panggilan menggunakan data dan baterai Anda.",
     "call_relaying_for": "Orang yang terhubung melalui perangkat ini: {count}",
+    "call_relay_switch_node": "Bantu orang lain dalam panggilan ini terhubung melalui node yang menjalankan panggilan ini",
+    "call_relaying_for_node": "Orang yang terhubung melalui node yang menjalankan panggilan: {count}",
     "call_h264_off": "Video H.264 nonaktif di komputer ini, sehingga video yang dikirim oleh sebagian orang tidak akan ditampilkan di sini. Mengaktifkannya akan mengunduh codec H.264 dari Cisco, kurang dari 1 MB. Menonaktifkannya akan menghapusnya.",
     "call_h264_turn_on": "Aktifkan video H.264",
     "call_h264_downloading": "Mengunduh codec H.264 dari Cisco…",

@@ -2212,6 +2212,8 @@
     "call_relay_switch": "Taimaki wasu a cikin wannan kiran su haɗu ta wannan na'ura",
     "call_relay_metered_note": "A kashe take a kan bayanan waya sai dai idan kun kunna shi: wucewa da kiraye-kiraye yana amfani da bayananku da baturin ku.",
     "call_relaying_for": "Mutanen da suka haɗu ta wannan na'ura: {count}",
+    "call_relay_switch_node": "Taimaki wasu a cikin wannan kiran su haɗu ta kumburin da ke gudanar da kiran",
+    "call_relaying_for_node": "Mutanen da suka haɗu ta kumburin da ke gudanar da kiran: {count}",
     "call_h264_off": "Bidiyon H.264 a kashe yake a kan wannan kwamfuta, don haka bidiyon da wasu mutane suke aikawa ba zai nuna a nan ba. Kunna shi yana zazzage codec na H.264 daga Cisco, ƙasa da 1 MB. Kashe shi yana share shi.",
     "call_h264_turn_on": "Kunna bidiyon H.264",
     "call_h264_downloading": "Ana zazzage codec na H.264 daga Cisco…",

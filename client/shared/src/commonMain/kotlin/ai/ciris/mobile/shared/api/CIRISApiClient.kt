@@ -2162,9 +2162,8 @@ class CIRISApiClient internal constructor(
         override suspend fun join(room: String, video: Boolean): ai.ciris.mobile.shared.calls.CallJoinAnswer =
             join(room, video, null)
 
-        // `relay` is sent only when this device has a reason: the person chose, or the
-        // network is metered (false). Omitted, the node decides (CIRISServer 0.5.254:
-        // false on a CIRIS public server, the member default otherwise).
+        // `relay` is the person's choice for this node, or what a phone carrying its own
+        // call says about its network (calls/RelayChoice.kt). Omitted, the node decides.
         override suspend fun join(room: String, video: Boolean, relay: Boolean?): ai.ciris.mobile.shared.calls.CallJoinAnswer {
             val method = "joinCall"
             logInfo(method, "POST $nodeUrl${callPath(room)} video=$video relay=${relay ?: "-"}")
@@ -2206,6 +2205,8 @@ class CIRISApiClient internal constructor(
                 }
                 val raw = response.bodyAsText()
                 if (!response.status.isSuccess()) {
+                    // The node's own failure is not a refusal: it may be asked again.
+                    if (response.status.value >= 500) throw IllegalStateException("HTTP ${response.status.value}")
                     // 409 call.not_joined; a node before 0.5.254 has no route (404/405).
                     val r = NodeRefusal.fromBody(response.status.value, raw)
                     logInfo(method, "refused ${response.status.value} reason_id=${r.reasonId}")

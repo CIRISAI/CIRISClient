@@ -1752,7 +1752,9 @@ mobile.call_relay_metered_note	client	client	literal	-	-	-	-
 mobile.call_relay_none_available	client	client	literal	-	-	-	-
 mobile.call_relay_refused_by_policy	client	client	literal	-	-	-	-
 mobile.call_relay_switch	client	client	literal	-	-	-	-
+mobile.call_relay_switch_node	client	client	literal	-	-	-	-
 mobile.call_relaying_for	client	client	literal	-	-	-	-
+mobile.call_relaying_for_node	client	client	literal	-	-	-	-
 mobile.call_save	client	client	literal	-	-	-	-
 mobile.call_save_unavailable	client	client	literal	-	-	-	-
 mobile.call_share	client	client	literal	-	-	-	-

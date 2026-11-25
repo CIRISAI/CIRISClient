@@ -4616,6 +4616,7 @@ fun CIRISApp(
                             devices = if (ai.ciris.mobile.shared.platform.TestAutomation.isEnabled()) {
                                 ai.ciris.mobile.shared.calls.media.TestModeDevices(real, kotlinx.coroutines.GlobalScope)
                             } else real,
+                            relayNode = ai.ciris.mobile.shared.calls.RelayNode.of(effectiveNodeUrl),
                         )
                     }
                 } else null
