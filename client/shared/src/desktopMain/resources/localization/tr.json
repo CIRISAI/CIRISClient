@@ -4591,6 +4591,8 @@
     "call_relay_switch": "Bu aramadaki diğer kişilerin bu cihaz üzerinden bağlanmasına yardımcı olun",
     "call_relay_metered_note": "Mobil veride siz açmadığınız sürece kapalıdır: aramaları aktarmak verinizi ve pilinizi kullanır.",
     "call_relaying_for": "Bu cihaz üzerinden bağlanan kişiler: {count}",
+    "call_relay_switch_node": "Bu aramadaki diğer kişilerin aramayı yürüten düğüm üzerinden bağlanmasına yardımcı olun",
+    "call_relaying_for_node": "Aramayı yürüten düğüm üzerinden bağlanan kişiler: {count}",
     "call_h264_off": "Bu bilgisayarda H.264 görüntü kapalı, bu yüzden bazı kişilerin gönderdiği görüntü burada gösterilmeyecek. Bunu açmak, Cisco'dan 1 MB'tan küçük H.264 kodekini indirir. Kapatmak ise onu siler.",
     "call_h264_turn_on": "H.264 görüntüyü aç",
     "call_h264_downloading": "Cisco'dan H.264 kodeki indiriliyor…",

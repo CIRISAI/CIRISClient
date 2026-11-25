@@ -1245,6 +1245,8 @@
     "call_relay_switch": "Saidia wengine kwenye simu hii kuunganisha kupitia kifaa hiki",
     "call_relay_metered_note": "Imezimwa kwenye data ya simu isipokuwa ukiiwasha: kusambaza simu hutumia data na betri yako.",
     "call_relaying_for": "Watu waliounganishwa kupitia kifaa hiki: {count}",
+    "call_relay_switch_node": "Saidia wengine kwenye simu hii kuunganisha kupitia nodi inayoendesha simu hiyo",
+    "call_relaying_for_node": "Watu waliounganishwa kupitia nodi inayoendesha simu: {count}",
     "call_h264_off": "Video ya H.264 imezimwa kwenye kompyuta hii, hivyo video ambayo baadhi ya watu wanatuma haitaonekana hapa. Kuiwasha hupakua kodeki ya H.264 kutoka Cisco, chini ya MB 1. Kuizima huifuta.",
     "call_h264_turn_on": "Washa video ya H.264",
     "call_h264_downloading": "Inapakua kodeki ya H.264 kutoka Cisco…",

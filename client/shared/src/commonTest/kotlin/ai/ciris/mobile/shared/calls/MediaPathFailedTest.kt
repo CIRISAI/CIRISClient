@@ -211,13 +211,6 @@ class MediaPathFailedTest {
         assertEquals(LeaveReason.LOST, LeaveReason.of("something_newer"))
     }
 
-    @Test fun theJoinSaysRelayOnlyWithAReason() {
-        assertNull(RelayChoice.forJoin(choice = null, metered = false))
-        assertEquals(false, RelayChoice.forJoin(choice = null, metered = true))
-        assertEquals(true, RelayChoice.forJoin(choice = true, metered = true))
-        assertEquals(false, RelayChoice.forJoin(choice = false, metered = false))
-    }
-
     @Test fun theSwitchAsksTheNodeAndShowsItsAnswer() = runTest {
         var asked: Boolean? = null
         val t = object : CallTransport by FakeTransport() {
@@ -231,7 +224,7 @@ class MediaPathFailedTest {
         }
         val s = CallSession("r", t, backgroundScope)
         s.join(video = false, relay = null); runCurrent()
-        s.setRelay(true); runCurrent()
+        assertEquals(RelayAsk.ANSWERED, s.setRelay(true))
         assertEquals(true, asked)
         val call = assertIs<CallState.InCall>(s.state.value)
         // A CIRIS public server never relays: the answer, not the ask, is what shows.

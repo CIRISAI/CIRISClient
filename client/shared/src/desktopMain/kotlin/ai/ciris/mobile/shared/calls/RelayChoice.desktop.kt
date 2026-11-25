@@ -1,4 +1,7 @@
 package ai.ciris.mobile.shared.calls
 
-/** A desktop OS gives no portable "metered" signal; it is treated as unmetered. */
-actual fun networkIsMetered(): Boolean = false
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
+
+/** A desktop OS gives no portable "metered" signal. Never asked: only a phone carrying its own call asks. */
+actual fun networkMetered(): Flow<Boolean?> = flowOf(null)

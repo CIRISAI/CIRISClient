@@ -1,7 +1,7 @@
 package ai.ciris.mobile.shared.calls
 
-/** `navigator.connection` (Chromium-based browsers): cellular, or the person's data saver. Elsewhere unknown, so false. */
-private fun jsMetered(): Boolean =
-    js("(function(){var c=navigator.connection;return !!(c && (c.type==='cellular' || c.saveData===true));})()")
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
-actual fun networkIsMetered(): Boolean = runCatching { jsMetered() }.getOrDefault(false)
+/** A browser tab is not a node: the call runs on the node it talks to, whose network this is not. */
+actual fun networkMetered(): Flow<Boolean?> = flowOf(null)

@@ -4591,6 +4591,8 @@
     "call_relay_switch": "Giúp người khác trong cuộc gọi này kết nối qua thiết bị này",
     "call_relay_metered_note": "Tắt khi dùng dữ liệu di động trừ khi bạn bật lên: chuyển tiếp cuộc gọi sẽ tiêu tốn dữ liệu và pin của bạn.",
     "call_relaying_for": "Số người đang kết nối qua thiết bị này: {count}",
+    "call_relay_switch_node": "Giúp người khác trong cuộc gọi này kết nối qua nút đang điều hành cuộc gọi",
+    "call_relaying_for_node": "Số người đang kết nối qua nút đang điều hành cuộc gọi: {count}",
     "call_h264_off": "Video H.264 đang tắt trên máy tính này, nên video mà một số người gửi sẽ không hiển thị ở đây. Bật lên sẽ tải codec H.264 từ Cisco, dưới 1 MB. Tắt đi sẽ xóa codec đó.",
     "call_h264_turn_on": "Bật video H.264",
     "call_h264_downloading": "Đang tải codec H.264 từ Cisco…",

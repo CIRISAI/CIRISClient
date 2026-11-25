@@ -266,20 +266,32 @@ closes with the bare token, and the screen says what the join refusal says, with
 Rejoin. `ended: hung_up | revoked | expired` read as "you left", "you were removed" and
 `call.end.expired`. The close that follows never blurs a stated reason to "lost".
 
-**Relaying for others (Eric, 2026-11-22).** Relay is meant on by default on a desktop, a
-home node and a phone on Wi-Fi; a phone on metered or mobile data does not relay unless the
-person turns it on. **The node holds the default** (CIRISServer 0.5.254: always off on a
-CIRIS public server; off on a member node until edge's relay gate passes, then on, with no
-wire change), so the client sends `relay` on join only with a reason: the person's
-remembered choice, or `false` on a metered or mobile connection without an opt-in
-(`calls/RelayChoice.kt`). The switch "Help others in this call connect through this device"
-(`row_call_relay__act.self`) is remembered per device and applied live with
-`POST /v1/chat/{room}/call/relay {relay}`; the node's answer, not the ask, sets the
-switch, and a `serve_seat: true` answer removes it. While relaying for anyone,
-`relay_status.relaying_for` (people, mapped by the node; `relaying_for_nodes` is diag)
-shows as "People connected through this device: N" (`row_call_relay.self`). Metered is
-per platform: Android `isActiveNetworkMetered`, iOS `NWPathMonitor` `isExpensive` or
-`isConstrained`, web `navigator.connection` (cellular or data saver), desktop never.
+**Relaying for others (Eric, 2026-11-22; per node, 2026-11-25).** Relay is meant on by
+default on a desktop, a home node and a phone on Wi-Fi; a phone on metered or mobile data
+does not relay unless the person turns it on. A device is a node, so the choice belongs to
+**the node that carries the call** (`calls/RelayChoice.kt`, `RelayNode`): normally this
+device's own, and another where the person switched the app to a different node or uses a
+browser. Every loopback address is this device's one node; any other is kept by its address.
+
+| The call runs on | What the client says |
+|---|---|
+| a phone's own node | always `relay`: the person's choice, else `true` where the network is **known** not to be metered or mobile, else `false`. A network not known yet, a choice not read yet, and a choice that could not be read are all `false` |
+| any other node (a desktop's own, a home node, the node behind a browser) | `relay` only where the person chose for that node; else nothing, and the node decides (CIRISServer 0.5.254: never on a CIRIS public server; on elsewhere, except a phone's node). This device's network is not that node's and is not read |
+
+The join waits up to 3 s for the stored choice; one that comes later is sent then. A phone
+watches its network for the whole call, and a change is sent with
+`POST /v1/chat/{room}/call/relay {relay}`, one request at a time, newest first. A request
+that fails is repeated (2 s, doubling to 30 s) until the node answers, refuses, or the call
+ends: a lost "off" must not leave a phone relaying over mobile data. A refusal is not
+repeated. The switch (`row_call_relay__act.self`) reads "Help others in this call connect
+through this device", or "…through the node that runs the call" where that is another; the
+node's answer, not the ask, sets it, from the join answer's `relay` object on, and a
+`serve_seat: true` answer removes it. While relaying for anyone, `relay_status.relaying_for`
+(people, mapped by the node; `relaying_for_nodes` is diag) shows as "People connected
+through this device: N" (`row_call_relay.self`), or through the node that runs the call.
+Metered is per platform: Android's default network (cellular, or without
+`NET_CAPABILITY_NOT_METERED`), iOS `NWPathMonitor` (`isExpensive`, `isConstrained`, or over
+cellular); a desktop and a browser are never asked.
 
 **Built (client 0.5.243), not observed on a node:** CIRISServer 0.5.254 and edge 45.2.0
 are not released. The parser, the state and the sentence choice are read from the frozen
@@ -287,8 +299,9 @@ token set and the server's wire shapes (`MediaPathFailedTest`: 45.1.11's top-lev
 and 0.5.254's `diag` form, a sparse event, latest per member, restore direct and through a
 member, one sentence per cause, retry only where edge says, advice by side and none for
 anonymous mode, the peer's claim, relay standings, Details, `relay_status`, `call_ended`
-and the close after it, the end tokens, the join's `relay`, the switch's answer). The iOS
-metered watch is not compiled here (no Mac); the publish iOS leg is its first build. A
+and the close after it, the end tokens, the switch's answer; `RelayChoiceTest`: whose node,
+what is said to it, the mid-call network, the late, unread and tapped choice, the retry). The
+Android and iOS network watches are compiled in CI and not observed on a device. A
 node that never sends these events changes nothing: an unknown event type is skipped.
 
 **CSD/5:** this card is CSD/3. The panel's tags are already in CSD/5 form (`row_` is the
@@ -316,7 +329,7 @@ five-platform flows in CIRISAgent; converting them is its own change.
 | capture, encode, decode, render | platform code in the client (§2, Built) | CIRISClient | **built** on Android, iOS, desktop and web; no call between two real devices has been run |
 | video only for two people | `video_allowed`, `video_max_people` on the join answer and the `video_allowed` event; `publish_refused {reason: call.video_two_people_only}` | CIRISServer | **live** on release/0.5.246 (`fe0a93ec`); lifted at Edge 45.1 |
 | why a member can't be reached directly | frames socket text events: `media_path_failed {member, person, cause, reason_id: call.media_path_failed.<cause>, retryable, retry_after_s, relay, relay_reason_id: call.relay_standing.<relay>, diag: {detail, tried: [{kind, outcome, attempts, elapsed_ms, knocks_sent, sockets}], local_nat: NatReport, peer_nat: {report: NatReport, source: self_reported} \| null}}` (45.1.11's top-level diagnostics are still read); `media_path_restored {member, person, via: <path_kind>, direct, through: <node key id> \| null, through_person}`. `cause` ∈ both_nats_random, punch_no_answer, punch_one_way, nat_undetermined, no_facilitator, refused_by_peer_policy, peer_unsupported, budget_refused, not_trusted, no_member_could_relay, anonymous_no_direct, other. `relay` ∈ none_available, refused_by_policy, peer_relay_in_use (reserved). NatReport: RFC 4787 axes plus `legacy_class` ∈ open, full_cone, restricted, port_restricted, symmetric, unknown | CIRISEdge 45.2.0 · CIRISServer 0.5.254 | **frozen for 45.x by edge** (`docs/calls_relay_tokens.md`, release/45.2.0 @60218cf), **not released**; the wire shapes are the server session's (2026-11-23), its vectors in `tests/vectors/call_frames_v1.json` not yet landed |
-| relaying for others | `POST …/call {video?, relay?}` (omitted: the node decides); `POST /v1/chat/{room}/call/relay {relay}` → 200 `{room, relaying, relaying_for, relaying_for_nodes, serve_seat}`, 409 `call.not_joined`; event `relay_status {relaying, relaying_for, relaying_for_nodes}` on change, at most every ~250 ms | CIRISEdge 45.2.0 (`Call::set_relay`) · CIRISServer 0.5.254 | **not released**; built to the server's shapes (§2.1) |
+| relaying for others | `POST …/call {video?, relay?}` (omitted: the node decides) → the join answer's `relay {relaying, relaying_for, relaying_for_nodes, serve_seat}`; `POST /v1/chat/{room}/call/relay {relay}` → 200 `{room, relaying, relaying_for, relaying_for_nodes, serve_seat}`, 409 `call.not_joined`; event `relay_status {relaying, relaying_for, relaying_for_nodes}` on change, at most every ~250 ms | CIRISEdge 45.2.0 (`Call::set_relay`) · CIRISServer 0.5.254 | **not released**; built to the server's shapes (§2.1) |
 | why the call ended | event `call_ended {ended: hung_up \| revoked \| expired \| shaped_only_no_media \| onion_anonymous_no_media, reason_id: call.end.<token> \| call.shaped_only \| call.anonymous_mode}`, then the socket closes with the bare token; join refusal 403 `call.shaped_only` / `call.anonymous_mode` with edge's `token` | CIRISEdge 45.2.0 · CIRISServer 0.5.254 | **not released**; built to the server's shapes |
 
 **Where frames run (recommended).** Capture and encode in the client, then encoded frames

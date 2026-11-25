@@ -4686,6 +4686,8 @@
     "call_relay_switch": "Help others in this call connect through this device",
     "call_relay_metered_note": "Off on mobile data unless you turn it on: passing calls along uses your data and battery.",
     "call_relaying_for": "People connected through this device: {count}",
+    "call_relay_switch_node": "Help others in this call connect through the node that runs the call",
+    "call_relaying_for_node": "People connected through the node that runs the call: {count}",
     "call_h264_off": "H.264 video is off on this computer, so video that some people send won't show here. Turning it on downloads the H.264 codec from Cisco, under 1 MB. Turning it off deletes it.",
     "call_h264_turn_on": "Turn on H.264 video",
     "call_h264_downloading": "Downloading the H.264 codec from Cisco…",

@@ -1178,6 +1178,8 @@
     "call_relay_switch": "이 기기를 통해 통화 중인 다른 사람들의 연결을 돕기",
     "call_relay_metered_note": "모바일 데이터에서는 켜지 않는 한 꺼져 있습니다: 통화를 전달하면 데이터와 배터리가 소모됩니다.",
     "call_relaying_for": "이 기기를 통해 연결된 사람들: {count}",
+    "call_relay_switch_node": "통화를 진행하는 노드를 통해 통화 중인 다른 사람들의 연결을 돕기",
+    "call_relaying_for_node": "통화를 진행하는 노드를 통해 연결된 사람들: {count}",
     "call_save_unavailable": "통화 저장 기능은 아직 준비되지 않았습니다.",
     "trust_hosts_verified": "신뢰 루트 호스트 {checked}개 중 {verified}개 확인됨",
     "trust_hosts_unreachable": "신뢰 루트 호스트 {count}개에 도달할 수 없었습니다. 이는 실패가 아닙니다: 해당 호스트가 다운되었거나 이 네트워크에서 차단되었을 수 있습니다.",

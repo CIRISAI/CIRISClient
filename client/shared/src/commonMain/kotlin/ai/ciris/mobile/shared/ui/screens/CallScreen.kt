@@ -498,16 +498,18 @@ private fun memberLeftKey(r: ai.ciris.mobile.shared.calls.LeaveReason) = when (r
 }
 
 /**
- * The relay switch (CSD-134 §2.1): let others in the call connect through this
- * device. Remembered per device. On a metered or mobile connection it is off
- * unless the person turns it on, and says why. Not shown on a CIRIS public
- * server, which never relays calls.
+ * The relay switch (CSD-134 §2.1): let others in the call connect through the
+ * node that carries it, which is this device or, where the person switched node,
+ * another. Remembered for that node. A phone on a metered or mobile connection
+ * has it off unless the person turns it on, and says why. Not shown on a CIRIS
+ * public server, which never relays calls.
  */
 @Composable
 private fun RelayRow(call: ai.ciris.mobile.shared.viewmodels.CallViewModel, s: ai.ciris.mobile.shared.calls.CallState.InCall) {
     val choice by call.relayChoice.collectAsState()
     val metered by call.meteredNetwork.collectAsState()
-    val on = s.relaying ?: (choice == true)
+    val on = s.relaying ?: (choice.on == true)
+    val here = call.relayNode.onThisDevice
     Column(verticalArrangement = Arrangement.spacedBy(2.dp), modifier = Modifier.fillMaxWidth()) {
         Row(
             verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
@@ -515,7 +517,7 @@ private fun RelayRow(call: ai.ciris.mobile.shared.viewmodels.CallViewModel, s: a
             modifier = Modifier.fillMaxWidth(),
         ) {
             Text(
-                localizedString("mobile.call_relay_switch"),
+                localizedString(if (here) "mobile.call_relay_switch" else "mobile.call_relay_switch_node"),
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.weight(1f),
             )
@@ -525,7 +527,7 @@ private fun RelayRow(call: ai.ciris.mobile.shared.viewmodels.CallViewModel, s: a
                 modifier = Modifier.testableClickable("row_call_relay__act.self", if (on) "on" else "off") { call.setRelay(!on) },
             )
         }
-        if (metered && choice != true) {
+        if (metered == true && choice.on != true) {
             Text(
                 localizedString("mobile.call_relay_metered_note"),
                 style = MaterialTheme.typography.bodySmall,
@@ -534,7 +536,10 @@ private fun RelayRow(call: ai.ciris.mobile.shared.viewmodels.CallViewModel, s: a
         }
         if (on && s.relayingFor > 0) {
             Text(
-                localizedString("mobile.call_relaying_for", mapOf("count" to s.relayingFor.toString())),
+                localizedString(
+                    if (here) "mobile.call_relaying_for" else "mobile.call_relaying_for_node",
+                    mapOf("count" to s.relayingFor.toString()),
+                ),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.testable("row_call_relay.self", s.relayingFor.toString()),

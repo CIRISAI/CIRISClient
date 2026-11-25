@@ -4591,6 +4591,8 @@
     "call_relay_switch": "帮助此通话中的其他人通过此设备连接",
     "call_relay_metered_note": "在移动数据下默认关闭，除非您手动开启：为他人转接通话会消耗您的流量和电量。",
     "call_relaying_for": "通过此设备连接的人数：{count}",
+    "call_relay_switch_node": "帮助此通话中的其他人通过运行此通话的节点连接",
+    "call_relaying_for_node": "通过运行此通话的节点连接的人数：{count}",
     "call_h264_off": "此电脑上的 H.264 视频已关闭，因此部分人发送的视频将无法在此显示。开启后将从 Cisco 下载 H.264 编解码器，不到 1 MB。关闭后会将其删除。",
     "call_h264_turn_on": "开启 H.264 视频",
     "call_h264_downloading": "正在从 Cisco 下载 H.264 编解码器……",
