@@ -453,6 +453,31 @@ reached a third member (the contact grant did not carry those rows), and on
 `2ae2d8a8` an appeal against a superseded flag row was lost. Takedown is not in 0.5.246 (CIRISPersist#1260) and stays drawn
 unavailable.
 
+### 2.5 The members' lift (CC 4.5.13, v1.0-rc22) — not built
+
+A duty holder's single-signature act takes effect at once, and the room's members
+may lift it. Nothing here offers it yet: CC marks the claim staged
+(`CLM-members-lift-moderator-act`, CIRISServer#873), and no node serves it. It is a
+different act from *Rule: lift the flag…* (§2.4), which is the ruling on an appeal.
+
+The count is the policy row `moderation_overturn`: its fraction, base, floor and window
+are read from the node and never typed here. When a surface is built:
+
+- **Who counts:** the members seated at the head the act names, less the act's author,
+  each by their own signed `objection:raised` row naming the act. Nobody who joined
+  later counts.
+- **Where it can't happen, it is not offered.** The floor is two voices and the author is
+  not one, so where the author is one of two members no lift is possible. In a room of
+  two the control is absent, with no disabled stand-in.
+- **What it undoes:** a warning, a block for the room, a withhold, and a takedown still
+  inside its withhold window. A restored item returns behind the interstitial, never to
+  plain view.
+- **What it never reaches:** a removal on an immediate-removal basis, and a ruling on a
+  privately filed report. No objection names the report or its reporter. A removal from
+  the roster, except of an agent's key, is not a moderator's act and has its own door.
+- **Afterwards:** the same moderator may not take the same act on the same item again
+  without new facts stated in it. Another holder may.
+
 ## 3. Contracts (who)
 
 Verified against ciris-server 0.5.217, route literals in `src/`.

@@ -48,7 +48,9 @@ owner: CIRISClient
 > by ONE holder of the `takedown` duty over the target, conferred by the
 > content's subject or the community's authority set, with **no count** (CC
 > 3.4.7.3, `takedown_notice:{basis}`; refused `takedown_unauthorised`). The
-> community's members may lift it (CC 4.5.13). Holders acting for
+> community's members may lift it inside its withhold window, by the count and
+> the limits of CSD-065 §2.5; a removal on an immediate-removal basis is beyond
+> any lift (CC 4.5.13, v1.0-rc22). Holders acting for
 > `ciris-canonical` act as its founders, not with accord authority (CC 4.2.1, CC
 > 3.2). The descend quorum is CSD-065's (OPEN — CIRISServer). Read §1.1's
 > "parents" below as history.
