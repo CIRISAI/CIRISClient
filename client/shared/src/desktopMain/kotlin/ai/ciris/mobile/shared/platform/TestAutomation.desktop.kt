@@ -124,7 +124,9 @@ actual object TestAutomation {
     actual fun hasClickHandler(testTag: String): Boolean = clickHandlers.containsKey(testTag)
 
     actual fun requestTextInput(testTag: String, text: String, clearFirst: Boolean) {
-        _textInputRequests.value = TextInputRequest(testTag, text, clearFirst)
+        _textInputRequests.value = TextInputRequest(
+            testTag, text, clearFirst, ai.ciris.mobile.shared.testing.TestAutomationState.nextRequestSeq(),
+        )
     }
 
     actual fun clearTextInputRequest() {

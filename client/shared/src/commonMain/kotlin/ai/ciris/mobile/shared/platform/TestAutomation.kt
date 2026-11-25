@@ -22,7 +22,9 @@ import kotlinx.coroutines.flow.update
 data class TextInputRequest(
     val testTag: String,
     val text: String,
-    val clearFirst: Boolean = true
+    val clearFirst: Boolean = true,
+    /** Numbered as it is posted: the same text typed twice is two requests (see ScrollRequest.seq). */
+    val seq: Long = 0,
 )
 
 /**
