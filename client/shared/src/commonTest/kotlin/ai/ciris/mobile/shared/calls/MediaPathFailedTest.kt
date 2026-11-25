@@ -203,6 +203,34 @@ class MediaPathFailedTest {
         assertEquals(LeaveReason.SHAPED_ONLY, assertIs<CallState.Left>(s.state.value).reason)
     }
 
+    @Test fun aJoinThatMadeTheCallTooBigSaysSoAndTheCloseDoesNotBlurIt() = runTest {
+        val t = FakeTransport()
+        val s = CallSession("r", t, backgroundScope)
+        s.join(video = false); runCurrent()
+        t.socket.inbox.send(CallSocketMessage.Text(
+            """{"type":"call_ended","ended":"call_full","reason_id":"call.full","max_people":4,"people":5}""",
+        ))
+        runCurrent()
+        val left = assertIs<CallState.Left>(s.state.value)
+        assertEquals(LeaveReason.FULL, left.reason)
+        assertEquals(4, left.maxPeople)
+        s.onMessage(CallSocketMessage.Closed("call_full"))
+        assertEquals(LeaveReason.FULL, assertIs<CallState.Left>(s.state.value).reason)
+        // A close alone (no event) reads the same.
+        assertEquals(LeaveReason.FULL, LeaveReason.of("call_full"))
+    }
+
+    @Test fun aFullCallRefusesTheJoinWithItsCap() = runTest {
+        val t = object : CallTransport by FakeTransport() {
+            // The session joins through the three-argument form; a delegate's default would bypass this.
+            override suspend fun join(room: String, video: Boolean, relay: Boolean?): CallJoinAnswer =
+                throw CallRefusal(CallSession.CALL_FULL, "This call already has 4 people.", maxPeople = 4)
+        }
+        val s = CallSession("r", t, backgroundScope)
+        s.join(video = false); runCurrent()
+        assertEquals(CallState.Refused(CallSession.CALL_FULL, 4), s.state.value)
+    }
+
     @Test fun edgesEndTokensMapOntoTheLeaveReasons() {
         assertEquals(LeaveReason.LEFT, LeaveReason.of("ended:hung_up"))
         assertEquals(LeaveReason.REMOVED, LeaveReason.of("revoked"))

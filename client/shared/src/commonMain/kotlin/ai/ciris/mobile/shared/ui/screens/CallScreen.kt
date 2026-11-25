@@ -302,13 +302,13 @@ private fun LiveCall(
             modifier = Modifier.testable("state_call_connecting"),
         )
         is ai.ciris.mobile.shared.calls.CallState.Refused -> Text(
-            localizedString(s.reasonId),
+            if (s.reasonId == ai.ciris.mobile.shared.calls.CallSession.CALL_FULL) fullText(s.maxPeople) else localizedString(s.reasonId),
             color = MaterialTheme.colorScheme.error,
             modifier = Modifier.testable("state_call_refused", s.reasonId),
         )
         is ai.ciris.mobile.shared.calls.CallState.Left -> {
             Text(
-                localizedString(youLeftKey(s.reason)),
+                if (s.reason == ai.ciris.mobile.shared.calls.LeaveReason.FULL) fullText(s.maxPeople) else localizedString(youLeftKey(s.reason)),
                 modifier = Modifier.testable("state_call_left", s.reason.wire),
             )
             // Removed from the room, a setting that refuses calls, or an expired room: not
@@ -484,7 +484,14 @@ private fun youLeftKey(r: ai.ciris.mobile.shared.calls.LeaveReason) = when (r) {
     ai.ciris.mobile.shared.calls.LeaveReason.EXPIRED -> "call.end.expired"
     ai.ciris.mobile.shared.calls.LeaveReason.SHAPED_ONLY -> "call.shaped_only"
     ai.ciris.mobile.shared.calls.LeaveReason.ANONYMOUS -> "call.anonymous_mode"
+    ai.ciris.mobile.shared.calls.LeaveReason.FULL -> ai.ciris.mobile.shared.calls.CallSession.CALL_FULL
 }
+
+/** "This call already has 4 people…", with the node's number; without one, the sentence that needs none. */
+@Composable
+private fun fullText(maxPeople: Int?): String =
+    if (maxPeople != null) localizedString(ai.ciris.mobile.shared.calls.CallSession.CALL_FULL, mapOf("max_people" to maxPeople.toString()))
+    else localizedString("mobile.call_full_no_count")
 
 /** Why someone else left. The node sends only the first four about others; the rest read as "left". */
 private fun memberLeftKey(r: ai.ciris.mobile.shared.calls.LeaveReason) = when (r) {
@@ -494,7 +501,8 @@ private fun memberLeftKey(r: ai.ciris.mobile.shared.calls.LeaveReason) = when (r
     ai.ciris.mobile.shared.calls.LeaveReason.LOST -> "mobile.call_member_lost"
     ai.ciris.mobile.shared.calls.LeaveReason.EXPIRED,
     ai.ciris.mobile.shared.calls.LeaveReason.SHAPED_ONLY,
-    ai.ciris.mobile.shared.calls.LeaveReason.ANONYMOUS -> "mobile.call_member_left"
+    ai.ciris.mobile.shared.calls.LeaveReason.ANONYMOUS,
+    ai.ciris.mobile.shared.calls.LeaveReason.FULL -> "mobile.call_member_left"
 }
 
 /**

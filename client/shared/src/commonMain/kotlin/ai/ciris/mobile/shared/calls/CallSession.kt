@@ -74,7 +74,7 @@ class CallSession(
                 transport.join(room, video, say)
             } catch (e: CallRefusal) {
                 PlatformLogger.w(TAG, "[join] refused reason_id=${e.reasonId}")
-                _state.value = CallState.Refused(e.reasonId)
+                _state.value = CallState.Refused(e.reasonId, e.maxPeople)
                 return@launch
             }
             PlatformLogger.i(
@@ -200,7 +200,7 @@ class CallSession(
             reader?.cancel()
             socket?.close()
             socket = null
-            _state.value = CallState.Left(LeaveReason.of(event.ended))
+            _state.value = CallState.Left(LeaveReason.of(event.ended), event.maxPeople)
             return
         }
         updateCall { call ->
@@ -282,6 +282,8 @@ class CallSession(
 
         /** Why one member's video does not reach this device: the route to them carries audio only (CIRISServer 0.5.246). */
         const val RELAY_AUDIO_ONLY = "call.relay_canonical_audio_only"
+        /** The call has as many people as the node carries (CIRISServer 0.5.254); `max_people` rides with it. */
+        const val CALL_FULL = "call.full"
 
         /**
          * An event's `stream_id` as the frames' raw 32 bytes, when it is 64 hex
@@ -349,10 +351,11 @@ sealed interface CallState {
     ) : CallState
 
     /** The node said no, by id (`call.not_a_member`, `call.anonymous_mode`, …). */
-    data class Refused(val reasonId: String) : CallState
+    /** [maxPeople] is the node's cap, where the refusal is `call.full`. */
+    data class Refused(val reasonId: String, val maxPeople: Int? = null) : CallState
 
     /** This device is out of the call; [reason] tells "you were removed" from "you left". */
-    data class Left(val reason: LeaveReason) : CallState
+    data class Left(val reason: LeaveReason, val maxPeople: Int? = null) : CallState
 }
 
 /** A member's share: whose it is, so the tile reads "Ada's screen". */
@@ -450,7 +453,14 @@ enum class LeaveReason(val wire: String) {
      * Said with the same words as the join refusal, and not undone by a tap.
      */
     SHAPED_ONLY("shaped_only_no_media"),
-    ANONYMOUS("onion_anonymous_no_media");
+    ANONYMOUS("onion_anonymous_no_media"),
+
+    /**
+     * This join made the call more people than the node carries (CIRISServer
+     * 0.5.254: four). The people already there stay. Rejoining may work: two who
+     * joined in the same seconds can both be turned away.
+     */
+    FULL("call_full");
 
     companion object {
         /**
@@ -536,7 +546,8 @@ sealed interface CallEvent {
     /** Whether this device relays others' media, and for how many people. */
     data class RelayStatus(val relaying: Boolean, val relayingFor: Int) : CallEvent
     /** The call is over for this device ([ended] is edge's token); the socket closes next. */
-    data class CallEnded(val ended: String, val reasonId: String?) : CallEvent
+    /** [maxPeople] is the node's cap, sent with `call_full`. */
+    data class CallEnded(val ended: String, val reasonId: String?, val maxPeople: Int? = null) : CallEvent
 
     companion object {
         private val json = Json { ignoreUnknownKeys = true }
@@ -630,7 +641,7 @@ sealed interface CallEvent {
                 // `relaying_for` is PEOPLE (the server maps nodes to owners); `relaying_for_nodes` is diag.
                 "relay_status" -> (o["relaying"] as? JsonPrimitive)?.takeIf { !it.isString }?.contentOrNull?.toBooleanStrictOrNull()
                     ?.let { RelayStatus(it, int("relaying_for") ?: 0) }
-                "call_ended" -> str("ended")?.let { CallEnded(it, str("reason_id")) }
+                "call_ended" -> str("ended")?.let { CallEnded(it, str("reason_id"), int("max_people")) }
                 else -> null
             }
         }
@@ -679,7 +690,7 @@ data class CallJoinAnswer(
 }
 
 /** A refusal by id from the call routes. */
-class CallRefusal(val reasonId: String, detail: String? = null) : Exception(detail ?: reasonId)
+class CallRefusal(val reasonId: String, detail: String? = null, val maxPeople: Int? = null) : Exception(detail ?: reasonId)
 
 /** The node side, injected so the session is driven by a fake in tests. */
 interface CallTransport {
