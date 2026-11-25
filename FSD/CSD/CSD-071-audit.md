@@ -64,7 +64,7 @@ fields:
     example: "e3b0c44298fc1c149afb…"
     renders: "Hash Chain — e3b0c44298fc1c149afb… (the first 24 characters)"
     tag: "proposed:row_audit_hash_chain"
-  - ceg: transparency_log:inclusion
+  - ceg: x_private:audit_log_inclusion
     use: display-only
     type: bool
     example: true
@@ -92,8 +92,11 @@ claim the anti-Goodhart rules name: a signal that reads as assurance and carries
 none.
 
 The agent serves the answer (`POST /v1/audit/verify/{entry_id}`, §3) and the
-client never calls it, which is why `transparency_log:inclusion` above is bound
-to a `proposed:` tag on an element that does not exist.
+client never calls it, which is why the inclusion above is bound to a `proposed:`
+tag on an element that does not exist. The measured fact is the plain field
+`transparency_log.inclusion` on ciris-verify's attestation bundle, not a family:
+the `transparency_log:*` families are retired (CC 3.4.10, v1.0-rc22) and
+ciris-verify 23.6.0 and later emit none.
 
 ```yaml csd:states
 populated: {tag: "proposed:list_audit_entries", renders: "newest first, one card per entry, with the stats bar above"}

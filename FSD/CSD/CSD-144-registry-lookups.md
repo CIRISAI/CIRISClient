@@ -1,7 +1,7 @@
 # CSD-144 — Registry lookups (a build, a partner, a revocation, the transparency witnesses)
 
 **CSD**: CSD-144 · **Standard**: CSD/3 (`CSD.md`) · **Origin**: the owner's request (2026-11-10) to fill the card set with the NodeCore and Registry screens
-**Reads with**: CSD-087 (Verify an agent build: the build-by-hash lookup, which this card does not repeat), CSD-105 (Trust root: `/v1/trust-root/bundle`, live on CIRISServer), CSD-122 and CSD-123 (licences and partners, the write side), CSD-071 (Audit: `transparency_log:inclusion`)
+**Reads with**: CSD-087 (Verify an agent build: the build-by-hash lookup, which this card does not repeat), CSD-105 (Trust root: `/v1/trust-root/bundle`, live on CIRISServer), CSD-122 and CSD-123 (licences and partners, the write side), CSD-071 (Audit: whether an entry is in the log)
 **Sources read**: CIRISRegistry `origin/main` @ `f04b149` (`rust-registry/ciris-registry-core/src/api/http.rs`); CIRISServer `origin/main` @ `7af5d4eb` (2026-11-09)
 **Flow**: unwritten. The client cannot reach these routes, and no screen exists
 
@@ -104,11 +104,11 @@ fields:
     example: "revoked 2026-09-14 · 'key compromise reported by holder'"
     renders: "'Revoked on 14 Sep 2026' with the registry's reason text, or 'The registry reports no revocation (checked 09:12)'. The reason is free text (`reason_detail`), not the family's `{reason}` vocabulary, so it is shown as text and never mapped to a reason code"
     tag: "proposed:card_registry_lookup_revocation"
-  - ceg: "transparency_log:cosigned:{tree_size}"
+  - ceg: x_private:registry_lookup_witness
     use: display-only
     type: unconfirmed
     example: "witness-eu-1 · SHA256:9c1f… · YubiHSM · since 2026-06-01"
-    renders: "one row per witness from `/v1/transparency/witnesses`: key id, fingerprint, hardware class, trusted since (`WitnessEntry`, http.rs:575-582). The family is reserved to witness emitters; this card only displays"
+    renders: "one row per witness from `/v1/transparency/witnesses`: key id, fingerprint, hardware class, trusted since (`WitnessEntry`, http.rs:575-582). A plain answer, not a family: a Transparency Service signs a Receipt, which is not an attestation row"
     tag: "proposed:row_registry_lookup_witness.<witness_key_id>"
   - ceg: x_private:registry_lookup_query
     use: emit
@@ -119,9 +119,13 @@ fields:
 ```
 
 `build:registered:{target}`, `provenance:slsa:{level}`, `partner_role:{role}`,
-`licensure:{authority_id}`, `bond_posted:{currency}`,
-`revocation:{entity_type}:{reason}` and `transparency_log:cosigned:{tree_size}`
-are registered (rc6). Only the query field is `x_private:`.
+`licensure:{authority_id}`, `bond_posted:{currency}` and
+`revocation:{entity_type}:{reason}` are registered (rc6). The query field and the
+witness row are `x_private:`. The witness row was bound to
+`transparency_log:cosigned:{tree_size}`, which CC retired with the other
+`transparency_log:*` families (CC 3.4.10, v1.0-rc22) and did not replace: the
+proof is a Transparency Service's own Receipt (CC 2.6.1.11). Whether the registry
+keeps `/v1/transparency/witnesses` after that is **OPEN (CIRISRegistry)**.
 
 ```yaml csd:states
 populated: {tag: "proposed:state_registry_lookup_result", renders: "the answer card for the lookup asked"}
