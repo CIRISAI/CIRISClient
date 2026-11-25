@@ -2178,7 +2178,11 @@ class CIRISApiClient internal constructor(
                 if (!response.status.isSuccess()) {
                     val r = NodeRefusal.fromBody(response.status.value, raw)
                     logInfo(method, "refused ${response.status.value} reason_id=${r.reasonId}")
-                    throw ai.ciris.mobile.shared.calls.CallRefusal(r.reasonId ?: "call.plumbing", r.detail)
+                    // `call.full` names the node's cap, so the screen can say it (CIRISServer 0.5.254).
+                    val maxPeople = runCatching {
+                        ((jsonConfig.parseToJsonElement(raw) as JsonObject)["max_people"] as kotlinx.serialization.json.JsonPrimitive).contentOrNull?.toIntOrNull()
+                    }.getOrNull()
+                    throw ai.ciris.mobile.shared.calls.CallRefusal(r.reasonId ?: "call.plumbing", r.detail, maxPeople)
                 }
                 val o = jsonConfig.parseToJsonElement(raw) as JsonObject
                 framesPath = (o["frames_socket"] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull

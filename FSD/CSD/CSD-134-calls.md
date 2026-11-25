@@ -293,6 +293,16 @@ Metered is per platform: Android's default network (cellular, or without
 `NET_CAPABILITY_NOT_METERED`), iOS `NWPathMonitor` (`isExpensive`, `isConstrained`, or over
 cellular); a desktop and a browser are never asked.
 
+**A full call (CIRISServer 0.5.254).** A call carries at most `max_people` people
+(four at 0.5.254; a room still seats more), and the number is the node's, never this
+client's. A join into a full call is refused 409 `call.full` with `max_people` and
+`people`; a join that made the call too big, learned in its first seconds, ends with
+`call_ended {ended: call_full, reason_id: call.full, max_people, people}` and then a close
+`call_full`, and the people already there stay. Both read "This call already has
+{max_people} people, the most a call can have." (`state_call_refused` / `state_call_left`,
+value `call.full` / `call_full`). Rejoin stays offered after the second: two who joined in
+the same seconds can both be turned away. Not observed on a node; 0.5.254 is not tagged.
+
 **Built (client 0.5.243), not observed on a node:** CIRISServer 0.5.254 and edge 45.2.0
 are not released. The parser, the state and the sentence choice are read from the frozen
 token set and the server's wire shapes (`MediaPathFailedTest`: 45.1.11's top-level form
