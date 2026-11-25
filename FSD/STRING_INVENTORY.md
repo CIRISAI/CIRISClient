@@ -9,11 +9,11 @@ not a key to delete.
 
 Agent usage recorded at CIRISAgent `f0a079953`. CI carries it forward.
 
-**6126 keys in 29 languages.**
+**6128 keys in 29 languages.**
 
 | Owner | Keys |
 |---|---|
-| client | 4883 |
+| client | 4885 |
 | server | 599 |
 | agent | 216 |
 | unclaimed | 428 |
