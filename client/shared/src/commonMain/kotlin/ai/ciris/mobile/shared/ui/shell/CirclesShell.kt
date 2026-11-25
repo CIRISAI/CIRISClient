@@ -345,8 +345,10 @@ private fun CardHeader(title: String?, onBack: (() -> Unit)?, published: (@Compo
 private fun TabStrip(circle: CohortScope, tab: Tab?, hasAgent: Boolean, onTab: (Tab) -> Unit, fits: Boolean) {
     val t = CirisTheme.tokens
     val type = CirisTheme.type
-    val scroll = rememberTestableScrollState(name = CirclesNav.TABS_SCROLLABLE)
-    val rowModifier = if (fits) Modifier.fillMaxWidth() else Modifier.fillMaxWidth().horizontalScroll(scroll)
+    // Tabs that fit have nothing to scroll, so no scrollable is registered: one that is
+    // attached to nothing takes a /scroll, moves nothing and answers "moved".
+    val rowModifier = if (fits) Modifier.fillMaxWidth()
+    else Modifier.fillMaxWidth().horizontalScroll(rememberTestableScrollState(name = CirclesNav.TABS_SCROLLABLE))
     Column(modifier = Modifier.fillMaxWidth().background(t.ground)) {
         Row(
             modifier = rowModifier.padding(horizontal = 8.dp),

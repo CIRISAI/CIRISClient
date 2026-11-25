@@ -1,6 +1,7 @@
 package ai.ciris.mobile.shared.testing
 
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 
 /**
  * Shared data models for the test automation HTTP server.
@@ -145,6 +146,13 @@ data class ScrollRequest(
      * view, and the screens under it were unreachable. Null keeps the guess.
      */
     val container: String? = null,
+    /**
+     * Numbered by [TestAutomationState.requestScroll], never sent: two identical
+     * steps are two requests. A StateFlow drops a value EQUAL to the last one its
+     * collector saw, so a step posted before a busy UI thread had seen the `null`
+     * between them was never delivered, and nothing cleared it.
+     */
+    @Transient val seq: Long = 0,
 )
 
 /** Where the scrollable was, where it ended up, and how far it can go. */

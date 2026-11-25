@@ -88,6 +88,89 @@ class ScrollHonestyTest {
         }
     }
 
+    @Test
+    fun an_identical_step_is_a_second_request() = runTest {
+        // Five-platform iOS runs 44332013830, 44912860245 and 45657938378: the harness
+        // repeats ONE step until the element shows. Posted before the collector had seen
+        // the null between them, an equal value is dropped by the StateFlow, and it stayed
+        // there refusing every later /scroll.
+        val seen = mutableListOf<ScrollRequest>()
+        backgroundScope.launch {
+            TestAutomationState.scrollRequests.collect { request ->
+                if (request == null) return@collect
+                seen += request
+                TestAutomationState.clearScrollRequest(request)
+                if (seen.size < 3) TestAutomationState.requestScroll("qr_contact_code", "down", 300)
+            }
+        }
+        TestAutomationState.requestScroll("qr_contact_code", "down", 300)
+        runCurrent()
+        assertEquals(3, seen.size, "every step is delivered")
+        assertEquals(null, TestAutomationState.scrollRequests.value)
+    }
+
+    @Test
+    fun a_step_that_was_not_applied_is_taken_back() = runTest {
+        val token = TestAutomationState.registerScrollable()
+        try {
+            repeat(2) {
+                val r = handler.handleScroll(ScrollRequest("input_password", "down", 300))
+                assertTrue("did not apply" in (r.error ?: ""), "one lost step must not refuse the next: ${r.error}")
+            }
+            assertEquals(null, TestAutomationState.scrollRequests.value)
+        } finally {
+            TestAutomationState.unregisterScrollable(token)
+        }
+    }
+
+    @Test
+    fun a_late_consumer_does_not_clear_the_next_step() {
+        val first = TestAutomationState.requestScroll("a", "down", 300)
+        val second = TestAutomationState.requestScroll("a", "down", 300)
+        TestAutomationState.clearScrollRequest(first)
+        assertEquals(second, TestAutomationState.scrollRequests.value)
+    }
+
+    @Test
+    fun a_named_container_reaches_the_dispatch() = runTest {
+        val rail = TestAutomationState.registerScrollable("shell_rail")
+        val content = TestAutomationState.registerScrollable()
+        try {
+            TestAutomationState.setScrollableCapacity(rail, 500)
+            TestAutomationState.setScrollableCapacity(content, 900)
+            var asked: String? = null
+            backgroundScope.launch {
+                TestAutomationState.scrollRequests.collect { request ->
+                    if (request == null) return@collect
+                    asked = request.container
+                    TestAutomationState.recordScrollOutcome(0, 300, 500)
+                    TestAutomationState.clearScrollRequest(request)
+                }
+            }
+            runCurrent()
+            val r = handler.handleScroll(ScrollRequest("x", "down", 300, container = "shell_rail"))
+            assertTrue(r.success, r.error ?: "")
+            assertEquals("shell_rail", asked)
+        } finally {
+            TestAutomationState.unregisterScrollable(content)
+            TestAutomationState.unregisterScrollable(rail)
+        }
+    }
+
+    @Test
+    fun a_scrollable_attached_to_nothing_never_owns_the_dispatch() {
+        val content = TestAutomationState.registerScrollable()
+        val unattached = TestAutomationState.registerScrollable("shell_tabs")
+        try {
+            TestAutomationState.setScrollableCapacity(content, 900)
+            TestAutomationState.setScrollableCapacity(unattached, Int.MAX_VALUE) // a ScrollState never laid out
+            assertTrue(TestAutomationState.isActiveScrollable(content))
+        } finally {
+            TestAutomationState.unregisterScrollable(unattached)
+            TestAutomationState.unregisterScrollable(content)
+        }
+    }
+
     /** A consumer that moves by [moved] and reports [max] as its capacity. */
     private fun TestScope.consumer(token: Long, moved: Int, max: Int) {
         TestAutomationState.setScrollableCapacity(token, max)

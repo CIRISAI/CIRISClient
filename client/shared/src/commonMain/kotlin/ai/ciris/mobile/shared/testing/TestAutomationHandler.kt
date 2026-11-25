@@ -461,8 +461,12 @@ object TestAutomationHandler {
             )
         }
         TestAutomationState.takeScrollOutcome()
-        TestAutomationState.requestScroll(request.testTag, request.direction, request.amount)
+        val posted = TestAutomationState.requestScroll(
+            request.testTag, request.direction, request.amount, request.container,
+        )
         if (!awaitScrollIdle()) {
+            // Taken back: one step that was not applied must not refuse every later one.
+            TestAutomationState.clearScrollRequest(posted)
             return ActionResponse(
                 success = false, element = request.testTag, action = "scroll",
                 error = "the screen did not apply the scroll within ${APPLY_TIMEOUT_MS}ms",

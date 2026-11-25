@@ -3,6 +3,7 @@ package ai.ciris.mobile.shared.testing
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.updateAndGet
 
 /**
  * Cross-platform shared state for test automation.
@@ -132,12 +133,17 @@ object TestAutomationState {
      */
     fun hasClickHandler(testTag: String): Boolean = clickHandlers.value.containsKey(testTag)
 
+    private val requestSeq = MutableStateFlow(0L)
+
+    /** A number no earlier request carried, so no two requests are equal (see [ScrollRequest.seq]). */
+    internal fun nextRequestSeq(): Long = requestSeq.updateAndGet { it + 1 }
+
     // Text input
     private val _textInputRequests = MutableStateFlow<TextInputRequest?>(null)
     val textInputRequests: StateFlow<TextInputRequest?> = _textInputRequests
 
     fun requestTextInput(testTag: String, text: String, clearFirst: Boolean) {
-        _textInputRequests.value = TextInputRequest(testTag, text, clearFirst)
+        _textInputRequests.value = TextInputRequest(testTag, text, clearFirst, nextRequestSeq())
     }
 
     fun clearTextInputRequest() {
@@ -197,9 +203,13 @@ object TestAutomationState {
         scrollableNames.update { it - token }
     }
 
-    /** How far this scrollable can travel right now; 0 means no overflow. */
+    /**
+     * How far this scrollable can travel right now; 0 means no overflow. A
+     * ScrollState starts at Int.MAX_VALUE and keeps it until something is laid out
+     * with it: that is "not measured", never "can move".
+     */
     fun setScrollableCapacity(token: Long, maxValue: Int) {
-        scrollableCapacity.update { it + (token to maxValue) }
+        scrollableCapacity.update { it + (token to if (maxValue == Int.MAX_VALUE) 0 else maxValue) }
     }
 
     /**
@@ -237,12 +247,19 @@ object TestAutomationState {
     fun hasScrollable(): Boolean = scrollables.value.isNotEmpty()
 
     fun requestScroll(testTag: String, direction: String, amount: Int,
-                      container: String? = null) {
-        _scrollRequests.value = ScrollRequest(testTag, direction, amount, container)
+                      container: String? = null): ScrollRequest {
+        val request = ScrollRequest(testTag, direction, amount, container, nextRequestSeq())
+        _scrollRequests.value = request
+        return request
     }
 
     fun clearScrollRequest() {
         _scrollRequests.value = null
+    }
+
+    /** Take back [request] and nothing newer: a late consumer must not clear the next step. */
+    fun clearScrollRequest(request: ScrollRequest) {
+        _scrollRequests.compareAndSet(request, null)
     }
 
     /**

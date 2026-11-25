@@ -12,6 +12,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import ai.ciris.mobile.shared.testing.TestAutomationState
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -67,7 +68,14 @@ fun rememberTestableScrollState(initial: Int = 0, name: String? = null): ScrollS
                 else -> request.amount
             }
             val before = state.value
-            state.animateScrollBy(delta.toFloat())
+            try {
+                state.animateScrollBy(delta.toFloat())
+            } catch (e: CancellationException) {
+                // Another scroll took over, or the screen went away. Given up by name, or
+                // nothing would ever clear it: collectLatest swallows this.
+                TestAutomationState.clearScrollRequest(request)
+                throw e
+            }
             // REPORT THE MOVEMENT, NOT THE ATTEMPT. A scrollable with no
             // overflow, or one already at its end, consumes the request and
             // does not move; without these offsets `/scroll` answered 200 for
@@ -75,7 +83,7 @@ fun rememberTestableScrollState(initial: Int = 0, name: String? = null): ScrollS
             TestAutomationState.recordScrollOutcome(before, state.value, state.maxValue)
             // CLEARING IS THE ACKNOWLEDGEMENT. handleScroll waits for this, so
             // it must happen after the scroll has run, never before.
-            TestAutomationState.clearScrollRequest()
+            TestAutomationState.clearScrollRequest(request)
         }
     }
     return state
