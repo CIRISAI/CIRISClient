@@ -28,3 +28,6 @@ iosApp/Resources.zip
 *.mp4
 *.jar
 !gradle/wrapper/gradle-wrapper.jar
+
+# AGP externalNativeBuild scratch (libciris_aom, CSD-134)
+.cxx/

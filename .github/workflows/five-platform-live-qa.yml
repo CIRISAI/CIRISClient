@@ -233,7 +233,7 @@ jobs:
 
       - uses: ./.github/actions/apt
         with:
-          packages: xvfb xauth
+          packages: xvfb xauth nasm
 
       - uses: actions/setup-java@v4
         with:

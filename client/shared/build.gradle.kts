@@ -437,6 +437,33 @@ kotlin {
     }
 }
 
+// AV1 FOR CALLS ON ANDROID (CSD-134): libaom, built from the pinned, signed release
+// by packaging/aom/build_libaom.sh for each ABI the app ships, then linked into
+// libciris_aom.so by src/androidMain/cpp. Real-time and 8-bit only: about 2.5 MB
+// per ABI. A local run can name an already-fetched tarball in AOM_TARBALL.
+val aomAbis = listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+val aomRoot = layout.buildDirectory.dir("aom")
+val buildLibaom by tasks.registering {
+    description = "Builds libaom (packaging/aom/build_libaom.sh) for every Android ABI."
+    val script = rootProject.file("../packaging/aom/build_libaom.sh")
+    inputs.file(script)
+    outputs.dir(aomRoot)
+    doLast {
+        val ndk = android.ndkDirectory
+        aomAbis.forEach { abi ->
+            val out = aomRoot.get().dir(abi).asFile
+            if (out.resolve("lib/libaom.a").isFile) return@forEach
+            providers.exec {
+                commandLine(listOfNotNull("bash", script.absolutePath, "android-$abi", out.absolutePath, System.getenv("AOM_TARBALL")))
+                environment("ANDROID_NDK_HOME", ndk.absolutePath)
+            }.result.get().assertNormalExitValue()
+        }
+    }
+}
+tasks.matching { it.name.startsWith("configureCMake") || it.name.startsWith("buildCMake") }.configureEach {
+    dependsOn(buildLibaom)
+}
+
 android {
     namespace = "ai.ciris.mobile.shared"
     compileSdk = 36
@@ -444,6 +471,14 @@ android {
     defaultConfig {
         minSdk = 24
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        ndk { abiFilters += aomAbis }
+        externalNativeBuild {
+            cmake { arguments += "-DAOM_ROOT=${aomRoot.get().asFile.absolutePath}" }
+        }
+    }
+
+    externalNativeBuild {
+        cmake { path = file("src/androidMain/cpp/CMakeLists.txt") }
     }
 
     compileOptions {

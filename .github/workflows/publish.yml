@@ -576,6 +576,12 @@ jobs:
               -Pkotlin.native.jvmArgs=-Xmx8g
     steps:
       - uses: actions/checkout@v4
+      # libaom's x86_64 assembly (the emulator ABI) is built with nasm; without it
+      # packaging/aom/build_libaom.sh falls back to plain C.
+      - uses: ./.github/actions/apt
+        if: matrix.name == 'android-aar'
+        with:
+          packages: nasm
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
