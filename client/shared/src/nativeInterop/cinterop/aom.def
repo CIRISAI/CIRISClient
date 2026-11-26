@@ -1,0 +1,8 @@
+# libaom for iOS call video (CSD-134, AV1 both ways): only the few calls in
+# ciris_aom.h are bound; libaom itself (built by :shared:buildLibaomIos from the
+# pinned, signed release) is linked in statically.
+package = ai.ciris.mobile.shared.calls.media.aom
+headers = ciris_aom.h
+headerFilter = ciris_aom.h
+staticLibraries = libaom.a
+compilerOpts = -std=c99

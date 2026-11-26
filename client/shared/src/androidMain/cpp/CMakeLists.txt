@@ -10,7 +10,7 @@ endif()
 set(AOM_DIR "${AOM_ROOT}/${ANDROID_ABI}")
 
 add_library(ciris_aom SHARED ciris_aom_jni.c)
-target_include_directories(ciris_aom PRIVATE "${AOM_DIR}/include")
+target_include_directories(ciris_aom PRIVATE "${AOM_DIR}/include" "${CMAKE_CURRENT_LIST_DIR}/../../nativeInterop/aom")
 target_compile_options(ciris_aom PRIVATE -Os -ffunction-sections -fdata-sections)
 target_link_libraries(ciris_aom PRIVATE "${AOM_DIR}/lib/libaom.a" m log)
 # Only what the wrapper calls, libaom's symbols kept private, and 16 KB pages

@@ -57,6 +57,7 @@ TREES = (
     "client/shared/src/iosArm64Main",
     "client/shared/src/iosSimulatorArm64Main",
     "client/generated-api/src",
+    "client/shared/src/nativeInterop",
 )
 FILES = (
     "client/shared/build.gradle.kts",
@@ -64,6 +65,7 @@ FILES = (
     "client/build.gradle.kts",
     "client/gradle.properties",
     "VERSION",
+    "packaging/aom/build_libaom.sh",
 )
 
 KEY_CHARS = 16  # of a sha256; collision risk here is not the threat model

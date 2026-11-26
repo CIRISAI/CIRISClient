@@ -3,7 +3,7 @@
 #
 #     packaging/aom/build_libaom.sh <target> <out-dir> [src-tarball]
 #     target: android-arm64-v8a | android-armeabi-v7a | android-x86_64 |
-#             ios-arm64 | ios-sim-arm64 | ios-sim-x86_64
+#             ios-arm64 | ios-sim-arm64
 #
 # Builds static libaom from the PINNED release tarball below: the signature is
 # checked against AOMedia's release key, then the sha256. Real-time only and
@@ -52,9 +52,23 @@ case "$target" in
             else echo "no nasm: x86_64 builds without assembly (emulator only)" >&2; args+=(-DAOM_TARGET_CPU=generic); fi
         fi
         ;;
-    ios-arm64)      args=(-DCMAKE_TOOLCHAIN_FILE="$src/cmake/toolchains/arm64-ios.cmake") ;;
-    ios-sim-arm64)  args=(-DCMAKE_TOOLCHAIN_FILE="$src/cmake/toolchains/arm64-ios.cmake" -DCMAKE_OSX_SYSROOT=iphonesimulator) ;;
-    ios-sim-x86_64) args=(-DCMAKE_TOOLCHAIN_FILE="$src/cmake/toolchains/x86_64-ios-simulator.cmake" -DENABLE_NASM=ON) ;;
+    ios-arm64)
+        args=(-DCMAKE_TOOLCHAIN_FILE="$src/cmake/toolchains/arm64-ios.cmake" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0) ;;
+    ios-sim-arm64)
+        # libaom ships no arm64-simulator toolchain: its arm64-ios one, with the
+        # simulator SDK and an explicit simulator triple so the linker accepts it.
+        cat > "$work/sim.cmake" <<T
+set(CMAKE_SYSTEM_NAME "Darwin")
+set(CMAKE_SYSTEM_PROCESSOR "arm64")
+set(CMAKE_OSX_ARCHITECTURES "arm64")
+set(CMAKE_OSX_SYSROOT iphonesimulator)
+set(CMAKE_C_COMPILER clang)
+set(CMAKE_CXX_COMPILER clang++)
+set(CMAKE_C_FLAGS_INIT "-target arm64-apple-ios15.0-simulator")
+set(CMAKE_CXX_FLAGS_INIT "-target arm64-apple-ios15.0-simulator")
+set(CMAKE_ASM_FLAGS_INIT "-target arm64-apple-ios15.0-simulator")
+T
+        args=(-DCMAKE_TOOLCHAIN_FILE="$work/sim.cmake" -DAOM_TARGET_CPU=arm64) ;;
     *) echo "unknown target $target" >&2; exit 2 ;;
 esac
 cmake -S "$src" -B "$work/build" "${common[@]}" "${args[@]}" >/dev/null
