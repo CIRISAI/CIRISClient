@@ -6576,7 +6576,7 @@
     "keep_refused": "Il salvataggio delle chiamate non è ancora pronto, quindi questa chiamata non viene conservata.",
     "share_unavailable": "La condivisione dello schermo non è ancora disponibile su questo nodo.",
     "leave_reason_unknown": "Questo non è un motivo per lasciare la chiamata.",
-    "full": "Questa chiamata ha già {max_people} persone, il massimo che una chiamata può avere.",
+    "full": "Questa chiamata ha già 4 persone, il massimo che una chiamata può avere.",
     "video_two_people_only": "Per ora, video e condivisione dello schermo funzionano nelle chiamate tra due persone. Questa chiamata ne ha di più, quindi è solo vocale. Se la tua fotocamera è attiva, riprenderà a trasmettere quando la chiamata tornerà a due persone.",
     "relay_canonical_audio_only": "Il loro video non può raggiungerti in questo momento: il percorso tra voi trasporta solo l'audio. Puoi comunque sentirli.",
     "share_already_live": "Stai già condividendo lo schermo.",

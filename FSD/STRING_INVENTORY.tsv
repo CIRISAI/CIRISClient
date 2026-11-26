@@ -347,12 +347,12 @@ auth.session_expired	server	client,server	literal	-	-	-	-
 call.anonymous_mode	server	client,server	literal	-	-	-	-
 call.bad_layer_policy	server	server	-	-	-	-	-
 call.cross_origin	server	server	-	-	-	-	-
-call.end.expired	client	client	literal	-	-	-	-
-call.end.hung_up	unclaimed	-	-	-	28	differs:14	-
-call.end.revoked	unclaimed	-	-	-	-	-	-
+call.end.expired	server	client,server	literal	-	-	-	-
+call.end.hung_up	server	server	-	-	28	differs:14	-
+call.end.revoked	server	server	-	-	-	-	-
 call.ended	server	server	-	-	-	-	-
 call.frame_over_budget	server	server	-	-	-	-	-
-call.full	client	client	literal	-	-	-	-
+call.full	server	client,server	literal	-	-	-	-
 call.keep_refused	server	server	-	-	-	-	-
 call.leave_reason_unknown	server	server	-	-	-	-	-
 call.media_path_failed.anonymous_no_direct	unclaimed	-	-	-	-	-	-
@@ -380,7 +380,7 @@ call.relay_standing.refused_by_policy	unclaimed	-	-	-	-	-	-
 call.relay_unavailable	client	client	literal	-	-	-	-
 call.room_may_keep.not_yet	server	server	-	-	-	-	-
 call.session_absent	server	server	-	-	-	-	-
-call.shaped_only	client	client	literal	-	-	-	-
+call.shaped_only	server	client,server	literal	-	-	-	-
 call.share_already_live	server	server	-	-	-	-	-
 call.share_unavailable	server	client,server	literal	-	-	-	-
 call.socket_already_open	server	server	-	-	-	-	-
