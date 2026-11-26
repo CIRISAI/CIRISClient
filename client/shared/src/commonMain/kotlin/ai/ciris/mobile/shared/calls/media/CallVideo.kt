@@ -275,6 +275,10 @@ class CallVideo(
     private val publish: (OutgoingFrame) -> Boolean = session::publish,
     /** False for a share: it only sends; other members' video is the call's to render. */
     private val receive: Boolean = true,
+    /** Each captured frame, as this device's own picture: the person sees themselves. */
+    private val preview: ((VideoFrame) -> Unit)? = null,
+    /** Whether a frame may go out now; captured frames that may not are only previewed. */
+    private val canSend: () -> Boolean = { true },
 ) {
     private var listener: Job? = null
     private val streams = mutableMapOf<String, Inbound>()
@@ -307,6 +311,13 @@ class CallVideo(
         if (encoder != null && source != null) {
             source.start { frame ->
                 if (cameraOff) return@start
+                preview?.invoke(frame)
+                // Not sendable yet (the node has not said ready, or the call is over its size
+                // for video): nothing is encoded, and the first frame that is sent is a keyframe.
+                if (!canSend()) {
+                    keyframeDue = true
+                    return@start
+                }
                 // Edge has no keyframe request yet, so a late joiner waits for the next
                 // one: a keyframe at least every KEYFRAME_INTERVAL_US (CIRISEdge, 2026-11-10).
                 val force = keyframeDue || frame.timestampUs - lastKeyframeUs >= KEYFRAME_INTERVAL_US

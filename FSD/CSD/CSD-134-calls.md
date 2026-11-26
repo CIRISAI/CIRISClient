@@ -173,9 +173,16 @@ and linked into `libciris_aom.so` (Android: about 2.3 to 3.2 MB per ABI). Every 
 must decode AV1 (CC 5.3.3.2.1), and now every one does. H.264 is still decoded where a
 device can, for clients before 0.5.243.
 
-**The camera is open only while its picture is sent.** Camera off, a call over the video
-limit, no encoder, leaving, and closing the screen each release the device, so its light
-is on only when someone can see the picture. Turning the camera back on opens it again
+**The camera is open while the person has it on in a video call (Eric, 2026-11-26).** It
+opens at the join, and the person sees their own picture (`media_call_self`, "You") while
+the call connects; frames go out only once the node says `ready`, and the first one sent
+is a keyframe. Until `ready` the screen says it is connecting (`txt_call_connecting`); after 20 s with no `ready` and no `media_path_failed`, it says the call has reached no one and the other device may be offline (`txt_call_not_reached`), since a call that never connected must not look like one that did (Eric, 2026-11-26).
+Camera off, a call over the video limit, no encoder, leaving, and closing the screen each
+release the device, so its light is on only when someone, the person included, can see the
+picture. Found on Eric's first real call (2026-11-26): no route to the other node, so no
+`ready`, and a screen that read "Your microphone and camera are ready" over a call that
+sent nothing. Tiles are named from the join answer's `attendee_people` (each node's owner,
+through contacts), not "Someone". Turning the camera back on opens it again
 (a browser may ask again), and the first frame sent is a keyframe.
 
 **Video is for two people (Eric, 2026-11-10; CIRISServer `fe0a93ec`; lifted at Edge 45.1).**

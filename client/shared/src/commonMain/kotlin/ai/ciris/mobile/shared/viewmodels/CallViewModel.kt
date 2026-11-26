@@ -196,6 +196,10 @@ class CallViewModel(
     private val _shareState = MutableStateFlow<ai.ciris.mobile.shared.calls.CallShare.State>(ai.ciris.mobile.shared.calls.CallShare.State.Idle)
     val shareState: StateFlow<ai.ciris.mobile.shared.calls.CallShare.State> = _shareState.asStateFlow()
 
+    private val _selfPicture = MutableStateFlow<androidx.compose.ui.graphics.ImageBitmap?>(null)
+    /** This device's own camera, as the person sees themselves; null while it is not open. */
+    val selfPicture: StateFlow<androidx.compose.ui.graphics.ImageBitmap?> = _selfPicture.asStateFlow()
+
     private val _cameraOff = MutableStateFlow(false)
     val cameraOff: StateFlow<Boolean> = _cameraOff.asStateFlow()
 
@@ -336,19 +340,30 @@ class CallViewModel(
         camera = ai.ciris.mobile.shared.calls.media.CallVideo(
             session = session, source = source, encoder = encoder, scope = scope,
             render = { _, _, _ -> }, receive = false,
+            preview = { frame -> frame.toImageBitmapSafe()?.let { _selfPicture.value = it } },
+            canSend = ::canSendVideo,
         ).also { it.start() }
     }
 
+    /**
+     * The camera is held while the person has it on in a video call the node carries
+     * video for: from the moment the call is joined, so they see themselves while it
+     * connects (Eric, 2026-11-26: "I do not see my video preview"). Frames go out only
+     * once the node says ready ([canSendVideo]).
+     */
     private fun cameraWanted(): Boolean {
         val call = state.value as? CallState.InCall ?: return false
-        return video != null && call.ready && call.videoAllowed && wantsVideo && !_cameraOff.value
+        return call.videoAllowed && wantsVideo && !_cameraOff.value
     }
+
+    private fun canSendVideo(): Boolean = (state.value as? CallState.InCall)?.let { it.ready && it.videoAllowed } ?: false
 
     /** With [videoLock] held. */
     private fun stopCamera() {
         camera?.stop()
         camera = null
         videoCodec = null
+        _selfPicture.value = null
     }
 
     /**
