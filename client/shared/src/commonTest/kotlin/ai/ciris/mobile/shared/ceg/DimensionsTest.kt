@@ -73,10 +73,14 @@ class DimensionsTest {
         assertSame(Dim.capacityFactor, Dim.forWire("capacity:integrity:v1"))
         assertSame(Dim.accordLifecycleKind, Dim.forWire("accord:lifecycle:active:v1"))
         assertSame(Dim.detectionDetector, Dim.forWire("detection:temporal_drift"))
-        assertNull(Dim.forWire("capacity:cheerfulness"))
+        // A row it fits beats a row it is off the list of.
+        assertSame(Dim.accordLifecycle, Dim.forWire("accord:lifecycle:v1"))
         // A key segment has a pattern: an identity reference in its place is no key.
         assertNull(Dim.forWire("licensure:urn:ietf:params:oauth:ckt:sha-256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA:v1"))
-        assertSame(Dim.objectionState, Dim.forWire("objection:open"))
+        // rc22 closes objection:{state} to assent | raised.
+        assertSame(Dim.objectionState, Dim.forWire("objection:raised:v1"))
+        // Off the closed list still draws as the row: persist writes objection:upheld.
+        assertSame(Dim.objectionState, Dim.forWire("objection:upheld:v1"))
         assertSame(Dim.image, Dim.forWire("image:leaf:v1"), "image:* is registered")
         assertNull(Dim.forWire("zz_unminted:jpeg"), "not a registry family — cannot be rendered")
         assertSame(Dim.consentKind, Dim.byPrefix("consent:{kind}"))

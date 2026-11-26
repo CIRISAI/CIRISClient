@@ -1708,19 +1708,25 @@ object Dim {
 
     /**
      * The family a wire `dimension` string belongs to: the row whose segments
-     * match the wire's leading segments. A literal must be equal, a closed
-     * vocabulary must hold the value, and a patterned segment must match its
-     * pattern. The most segments matched by name wins, then the longer row.
+     * match the wire's leading segments. A literal must be equal and a
+     * patterned segment must match its pattern. A value on a closed list counts as
+     * matched by name; one off the list still resolves, ranked below a row it fits,
+     * because this draws what a node sent (persist still writes objection:upheld,
+     * which rc22 does not list) and refusing is the validator's job. The most
+     * segments matched by name wins, then the fewest values off a list, then the
+     * longer row.
      */
     fun forWire(dimension: String): Dimension? {
         val parts = dimension.split(':')
         var best: Dimension? = null
         var bestScore = -1
+        var bestOff = Int.MAX_VALUE
         var bestSize = -1
         for (d in all) {
             if (d.segments.size > parts.size) continue
             var ok = true
             var literals = 0
+            var off = 0
             for ((i, seg) in d.segments.withIndex()) {
                 when (seg.cls) {
                     SegmentClass.LITERAL -> if (seg.segment == parts[i]) literals++ else { ok = false; break }
@@ -1728,13 +1734,15 @@ object Dim {
                     else -> {
                         if (parts[i].isEmpty()) { ok = false; break }
                         val values = seg.values
-                        if (values != null) { if (parts[i] in values) literals++ else { ok = false; break } }
+                        if (values != null) { if (parts[i] in values) literals++ else off++ }
                         if (!seg.admits(parts[i])) { ok = false; break }
                     }
                 }
             }
-            if (ok && (literals > bestScore || (literals == bestScore && d.segments.size > bestSize))) {
-                best = d; bestScore = literals; bestSize = d.segments.size
+            val better = literals > bestScore ||
+                (literals == bestScore && (off < bestOff || (off == bestOff && d.segments.size > bestSize)))
+            if (ok && better) {
+                best = d; bestScore = literals; bestOff = off; bestSize = d.segments.size
             }
         }
         return best
