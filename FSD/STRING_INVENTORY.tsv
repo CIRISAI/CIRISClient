@@ -392,8 +392,10 @@ ceg.content_class_class.gloss	client	client	literal	-	-	-	-
 ceg.content_class_class.label	client	client	literal	-	-	-	-
 ceg.credits_domain_language_subject.gloss	client	client	literal	-	-	-	-
 ceg.credits_domain_language_subject.label	client	client	literal	-	-	-	-
-ceg.delivery_receipt_stream_id.gloss	client	client	literal	-	-	-	-
-ceg.delivery_receipt_stream_id.label	client	client	literal	-	30	differs:5	-
+ceg.custody_kind.gloss	client	client	literal	-	-	-	-
+ceg.custody_kind.label	client	client	literal	-	-	-	-
+ceg.delivery_ack_stream_id.gloss	client	client	literal	-	-	-	-
+ceg.delivery_ack_stream_id.label	client	client	literal	-	30	differs:5	-
 ceg.envelope.attesting_key_id.gloss	client	client	literal	-	-	-	-
 ceg.envelope.attesting_key_id.label	client	client	literal	-	-	-	-
 ceg.envelope.by_rule	client	client	literal	-	-	-	-
@@ -406,8 +408,8 @@ ceg.envelope.dimension.label	client	client	literal	-	-	-	-
 ceg.envelope.not_sent	client	client	literal	-	-	-	-
 ceg.envelope.subject_key_ids.gloss	client	client	literal	-	-	-	-
 ceg.envelope.subject_key_ids.label	client	client	literal	-	-	-	-
-ceg.holds_bytes_sha256_prefix.gloss	client	client	literal	-	-	-	-
-ceg.holds_bytes_sha256_prefix.label	client	client	literal	-	-	-	-
+ceg.file_version.gloss	client	client	literal	-	-	-	-
+ceg.file_version.label	client	client	literal	-	-	-	-
 ceg.objection_state.gloss	client	client	literal	-	-	-	-
 ceg.objection_state.label	client	client	literal	-	-	-	-
 ceg.prohibited_category.gloss	client	client	literal	-	-	-	-

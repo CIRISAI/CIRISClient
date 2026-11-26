@@ -6150,7 +6150,7 @@
       "label": "Kim kime kefil oluyor",
       "gloss": "Bir anahtarın, belirtilen bir görev için başka bir anahtarın arkasında durduğuna dair bir beyan."
     },
-    "holds_bytes_sha256_prefix": {
+    "custody_kind": {
       "label": "Bir kopya tutuyor",
       "gloss": "Bir düğümün, karmasıyla adlandırılan bir dosyanın baytlarını tuttuğunu bildirmesi."
     },
@@ -6170,7 +6170,7 @@
       "label": "İzin verilmiyor",
       "gloss": "Bir şeyin, anayasanın çizdiği sınırlardan birini aştığına dair bir işaret. Her zaman sadece bir eksidir."
     },
-    "delivery_receipt_stream_id": {
+    "delivery_ack_stream_id": {
       "label": "Makbuz",
       "gloss": "Bir şeyin teslim edildiğine dair bir kayıt. Makbuzu geri almak teslimatı geri almaz."
     },
@@ -6184,6 +6184,10 @@
       "granted": "Verildi",
       "revoked": "İptal edildi",
       "expired": "Süresi doldu"
+    },
+    "file_version": {
+      "label": "Dosya",
+      "gloss": "Bir grubun görebileceği bir yere yerleştirilen, baytları karmasıyla adlandırılan dosya."
     }
   },
   "drive": {

@@ -14,7 +14,7 @@ import kotlin.test.assertTrue
 /**
  * THE REFERENCE MATCHER'S VECTORS, REPLAYED AGAINST [Dim.forWire]
  * (CIRISClient#150; `client/ceg/namespace_match_vectors.json`, vendored from
- * CIRISConstitution v1.0-rc6 with the registry it was generated against).
+ * CIRISConstitution v1.0-rc22 with the registry it was generated against).
  *
  * What this covers: every vector the reference ADMITS (`refusal == null`)
  * resolves, through the client's renderer lookup, to exactly the family the

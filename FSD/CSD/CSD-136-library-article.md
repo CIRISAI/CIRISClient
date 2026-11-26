@@ -53,7 +53,7 @@ entry: "an article row in CSD-135's feeds, or a references / see_also link in an
 ```
 
 ```yaml csd:shows
-registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
+registry_sha256: 5f8ff71fd1415c88179b73a8b7d9a047613b22cb81f609909ca9ab9ccc2a8d69
 fields:
   - ceg: x_private:article_entity_key_id
     use: display-only

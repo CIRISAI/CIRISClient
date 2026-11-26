@@ -1,20 +1,20 @@
 # `client/ceg/` — the namespace is the design system
 
 `namespace_registry.json` and `namespace_match_vectors.json` are byte copies of
-`manifests/` in CIRISAI/CIRISConstitution at tag **`v1.0-rc6`**
-(commit `3c3e63fdef844f2f849e43081a8242e31cfaf30d`), re-vendored for
-CIRISClient#150. Vendored from the TAG, not a branch: `~/CIRISConstitution`
+`manifests/` in CIRISAI/CIRISConstitution at tag **`v1.0-rc22`**
+(commit `f4671933f2b22b33d2db868d4654036162104123`), re-vendored from rc6
+(`3c3e63f`, CIRISClient#150) on 2026-11-25. Vendored from the TAG, not a branch: `~/CIRISConstitution`
 `main` is already past it.
 
 | pin | value |
 |---|---|
-| repo / tag / commit | `CIRISAI/CIRISConstitution` / `v1.0-rc6` / `3c3e63fdef844f2f849e43081a8242e31cfaf30d` |
-| `cc_version` | `1.0-rc6` |
-| families | 158 (rc5 had 116) |
-| `_meta.registry_sha256` — **what every CSD `registry_sha256:` pins** (CIRISConstitution#112: sha256 of the grammar, i.e. canonical JSON of `families` + `_meta` minus the two hashes and `cc_version`; a Part 3 wording edit does not move it) | `f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37` |
-| `_meta.source_sha256` (hash of `constitution/part_3_the_namespace.md`; the CSD pin until rc5, now informational) | `459d3ef52bc6d021d8bed58af908f75c11fdaf83b5cb841e100040fbe6437ea9` |
-| sha256 of `namespace_registry.json` | `5f53f9776604713cb84468811983e67804b9771d61882a6723be61000897056d` |
-| sha256 of `namespace_match_vectors.json` (1040 dimension vectors + 39 `row_type_vectors`, `_meta.registry_sha256` = the above) | `c4226dfb769c8939b608398e9b6b4364dde62b8ac40b2cd25363af9bb4622810` |
+| repo / tag / commit | `CIRISAI/CIRISConstitution` / `v1.0-rc22` / `f4671933f2b22b33d2db868d4654036162104123` |
+| `cc_version` | `1.0-rc22` |
+| families | 187 (rc6 had 158; rc22 retires 16 and folds 11 of them into rows with a closed final segment) |
+| `_meta.registry_sha256` — **what every CSD `registry_sha256:` pins** (CIRISConstitution#112: sha256 of the grammar, i.e. canonical JSON of `families` + `_meta` minus the two hashes and `cc_version`; a Part 3 wording edit does not move it) | `5f8ff71fd1415c88179b73a8b7d9a047613b22cb81f609909ca9ab9ccc2a8d69` |
+| `_meta.source_sha256` (hash of `constitution/part_3_the_namespace.md`; the CSD pin until rc5, now informational) | `b7d87df89be792d6dce014aa22c64b724cafb9657a0eb6b07683782988cc67d7` |
+| sha256 of `namespace_registry.json` | `1886df7fb71d91bc00b8faea6ae453b21bc189cf404467bd5e63aa57c01e556a` |
+| sha256 of `namespace_match_vectors.json` (1334 dimension vectors, 296 admitted; `_meta.registry_sha256` = the above) | `74b1cef61ddea817febd583ef9492c1b0b66f922853287cedbd82c2abdadd7ee` |
 
 `gen_dimension_table.py` and `packaging/check_csd_v3.py` both RECOMPUTE
 `registry_sha256` from the file and refuse a registry that misstates it.
@@ -38,6 +38,19 @@ requires the same family. The refusal vectors are not replayed: `forWire`
 resolves for rendering and is deliberately lenient; refusing malformed forms
 needs the reference matcher ported into `check_csd_v3`, which is
 CIRISClient#114.
+
+**rc22, what moved for the client.** `holds_bytes:sha256:{prefix}` is retired: a
+file's receipt names `file:{version}` and a holding claim is `custody:{kind}`
+(`custody:ack:v1`). `delivery_receipt:{stream_id}` is now `delivery_ack:{stream_id}`.
+Rows that differed only in their last segment (`capacity:*`, `detection:*`,
+`accord:lifecycle:*`, the credits subject) are one row each with a closed list, so
+their old wire strings still resolve, to the folded row. `forWire` now checks a closed
+list's values and a segment's pattern, which is how it agrees with every admitted
+vector. A value off a closed list is no row: CIRISConstitution ruled (2026-11-26)
+that persist v61's `objection:upheld|dismissed|overruled` are unregistered and are
+shown as rows the registry does not admit, never as objections; an act's outcome is
+read from the count and a `window:{state}` landing. The three `transparency_log:*` families and `lineage_witness:{stage}` are gone
+with no replacement row.
 
 ## What is generated from it
 
