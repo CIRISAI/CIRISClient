@@ -26,9 +26,11 @@ if [ -z "$tarball" ]; then
     curl -sfSL -o "$tarball.asc" "$URL.asc"
 fi
 echo "$SHA256  $tarball" | sha256sum -c - >/dev/null || { echo "libaom tarball sha256 mismatch" >&2; exit 1; }
+# The signing key is committed beside this script (exported from the keyserver,
+# fingerprint checked), so a build never depends on a keyserver answering.
 if [ -f "$tarball.asc" ] && command -v gpg >/dev/null; then
     export GNUPGHOME="$work/gnupg"; mkdir -m 700 "$GNUPGHOME"
-    gpg -q --keyserver hkps://keyserver.ubuntu.com --recv-keys "$KEY_FPR" 2>/dev/null || true
+    gpg -q --import "$(dirname "$0")/aomedia-release-key.asc" 2>/dev/null
     gpg --verify --status-fd 1 "$tarball.asc" "$tarball" 2>/dev/null | grep -q "VALIDSIG $KEY_FPR" \
         || { echo "libaom signature does not verify against $KEY_FPR" >&2; exit 1; }
 fi
