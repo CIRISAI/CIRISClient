@@ -62,7 +62,19 @@ enum class Renderer {
 enum class SegmentClass { LITERAL, VOCAB, VALUE, WILDCARD, EXTERNAL, HEX }
 
 @Immutable
-data class Segment(val segment: String, val cls: SegmentClass)
+data class Segment(
+    val segment: String,
+    val cls: SegmentClass,
+    /** A CLOSED vocabulary's values (rc22): the wire value must be one of them. Null where open. */
+    val values: List<String>? = null,
+    /** The registry's full-match pattern for this segment, where it gives one. */
+    val pattern: String? = null,
+) {
+    private val regex: Regex? by lazy { pattern?.let { Regex(it) } }
+
+    /** Whether [value] meets this segment's pattern. A segment without one admits anything. */
+    fun admits(value: String): Boolean = regex?.matches(value) ?: true
+}
 
 @Immutable
 data class Dimension(

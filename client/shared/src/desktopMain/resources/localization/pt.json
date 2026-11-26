@@ -6150,7 +6150,7 @@
       "gloss": "Uma declaração de que uma chave garante outra para uma função declarada.",
       "label": "Quem garante por quem"
     },
-    "holds_bytes_sha256_prefix": {
+    "custody_kind": {
       "label": "Possui uma cópia",
       "gloss": "Um nó declarando que possui os bytes de um arquivo, identificado pelo seu hash."
     },
@@ -6170,7 +6170,7 @@
       "label": "Não permitido",
       "gloss": "Uma marca de que algo cruzou uma das linhas que a constituição traça. É sempre apenas um ponto negativo."
     },
-    "delivery_receipt_stream_id": {
+    "delivery_ack_stream_id": {
       "label": "Recibo",
       "gloss": "Um registro de que algo foi entregue. Desfazer o recibo não desfaz a entrega."
     },
@@ -6184,6 +6184,10 @@
       "granted": "Concedido",
       "revoked": "Revogado",
       "expired": "Expirado"
+    },
+    "file_version": {
+      "label": "Arquivo",
+      "gloss": "Um arquivo colocado onde um grupo pode vê-lo, com seus bytes identificados pelo seu hash."
     }
   },
   "drive": {

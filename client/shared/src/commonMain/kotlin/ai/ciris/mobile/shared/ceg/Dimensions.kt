@@ -3,14 +3,14 @@
 // Re-run `python3 client/tools/gen_dimension_table.py --write` after changing any of them.
 package ai.ciris.mobile.shared.ceg
 
-const val REGISTRY_CC_VERSION = "1.0-rc6"
-const val REGISTRY_FAMILY_COUNT = 158
+const val REGISTRY_CC_VERSION = "1.0-rc22"
+const val REGISTRY_FAMILY_COUNT = 187
 /** `_meta.registry_sha256` — the grammar hash (CIRISConstitution#112); what every CSD `registry_sha256:` pins. */
-const val REGISTRY_SHA256 = "f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37"
+const val REGISTRY_SHA256 = "5f8ff71fd1415c88179b73a8b7d9a047613b22cb81f609909ca9ab9ccc2a8d69"
 /** `_meta.source_sha256` — hash of the CC Part 3 prose; moves on a wording edit, so nothing pins it. */
-const val REGISTRY_SOURCE_SHA256 = "459d3ef52bc6d021d8bed58af908f75c11fdaf83b5cb841e100040fbe6437ea9"
+const val REGISTRY_SOURCE_SHA256 = "b7d87df89be792d6dce014aa22c64b724cafb9657a0eb6b07683782988cc67d7"
 /** sha256 of client/ceg/namespace_registry.json itself; the currency gate compares this. */
-const val REGISTRY_FILE_SHA256 = "5f53f9776604713cb84468811983e67804b9771d61882a6723be61000897056d"
+const val REGISTRY_FILE_SHA256 = "1886df7fb71d91bc00b8faea6ae453b21bc189cf404467bd5e63aa57c01e556a"
 
 /** Every CEG family in the pinned registry, one `val` each. A screen names these; it never builds a Dimension. */
 object Dim {
@@ -28,7 +28,7 @@ object Dim {
         renderer = Renderer.SIGNED_SCORE, owningComponent = "registry", reserved = true, reservedRule = "accord_holder-only",
         segments = listOf(Segment("accord", SegmentClass.LITERAL), Segment("human_dignity", SegmentClass.LITERAL)),
         labelKey = null, glossKey = null,
-        description = "Catalogue row (CC 3.1.7 R1); provisional accord-holder verdict on an agent's human-dignity conduct, CC 3.4.1 (CIRISConstitution#112).",
+        description = "Catalogue row (CC 3.1.7 R1); a leaf no accord holder signs, since accord authority gives no verdict on an agent's conduct, CC 3.4.1.",
     )
     val accordInvokeConstitutionalHaltId: Dimension = Dimension(
         prefix = "accord:invoke:constitutional:{halt_id}", slug = "accord_invoke_constitutional_halt_id", ccSection = "3.1.1",
@@ -62,13 +62,21 @@ object Dim {
         labelKey = null, glossKey = null,
         description = "Catalogue row (CC 3.1.7 R1); the accord heartbeat, wire accord:lifecycle:v1, CC 3.4.1.",
     )
-    val accordLifecycleActive: Dimension = Dimension(
-        prefix = "accord:lifecycle:active", slug = "accord_lifecycle_active", ccSection = "3.1.1",
+    val accordLifecycleKind: Dimension = Dimension(
+        prefix = "accord:lifecycle:{kind}", slug = "accord_lifecycle_kind", ccSection = "3.1.1",
         polarity = Polarity.PLUS_ONE_ONLY, polarityRaw = "+1.0 only", indeterminateAllowed = false,
         renderer = Renderer.STATE_PILL, owningComponent = "registry", reserved = true, reservedRule = "accord_holder-only",
-        segments = listOf(Segment("accord", SegmentClass.LITERAL), Segment("lifecycle", SegmentClass.LITERAL), Segment("active", SegmentClass.LITERAL)),
+        segments = listOf(Segment("accord", SegmentClass.LITERAL), Segment("lifecycle", SegmentClass.LITERAL), Segment("{kind}", SegmentClass.VOCAB, values = listOf("active", "confirmed"))),
         labelKey = null, glossKey = null,
-        description = "Catalogue row (CC 3.1.7 R1); resumption from a constitutional halt, CC 4.2.1.3.",
+        description = "Catalogue row (CC 3.1.7 R1); the two lifecycle rows that answer a constitutional halt: {kind} ∈ active | confirmed — closed.",
+    )
+    val actAck: Dimension = Dimension(
+        prefix = "act:ack", slug = "act_ack", ccSection = "3.1.3",
+        polarity = Polarity.POSITIVE_ONLY, polarityRaw = "positive-only", indeterminateAllowed = false,
+        renderer = Renderer.POSITIVE_ONLY_ACCRUAL, owningComponent = "persist", reserved = true, reservedRule = "a voice at the head the acts name: the conferrer, another holder of the body the acts were done for, or a receipter an offer names; never the signer of an act it names, and never a node; one voice or the body's count",
+        segments = listOf(Segment("act", SegmentClass.LITERAL), Segment("ack", SegmentClass.LITERAL)),
+        labelKey = null, glossKey = null,
+        description = "A receipt of one or more acts (registered under CC 3.1.7 R2(a); CC 2.7.5, CC 2.4.1.1): the signer acknowledges the acts it names under refs.also ack, at most 256 of them, and names no head.",
     )
     val activityTierPeriod: Dimension = Dimension(
         prefix = "activity_tier:{period}", slug = "activity_tier_period", ccSection = "3.1.9.6",
@@ -76,13 +84,21 @@ object Dim {
         renderer = Renderer.BOOLEAN_VIA_SCORE, owningComponent = "node", reserved = false, reservedRule = null,
         segments = listOf(Segment("activity_tier", SegmentClass.LITERAL), Segment("{period}", SegmentClass.VOCAB)),
         labelKey = null, glossKey = null,
-        description = "Active vs Below-Active per 30-day window (F-AV-DORMANT).",
+        description = "Active vs Below-Active per 30-day window.",
+    )
+    val admissionUnit: Dimension = Dimension(
+        prefix = "admission:unit", slug = "admission_unit", ccSection = "3.1.3",
+        polarity = Polarity.POSITIVE_ONLY, polarityRaw = "positive-only", indeterminateAllowed = false,
+        renderer = Renderer.POSITIVE_ONLY_ACCRUAL, owningComponent = "persist", reserved = true, reservedRule = "a person's key, alone or as a voice of the group whose head the row names; never a substrate self-report",
+        segments = listOf(Segment("admission", SegmentClass.LITERAL), Segment("unit", SegmentClass.LITERAL)),
+        labelKey = null, glossKey = null,
+        description = "That a unit may execute, with named capabilities, until an instant (CC 2.7.11).",
     )
     val ageAssuranceLevelBandVersion: Dimension = Dimension(
         prefix = "age_assurance:{level}:{band}:{version}", slug = "age_assurance_level_band_version", ccSection = "3.1.2",
         polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
         renderer = Renderer.SIGNED_SCORE, owningComponent = "attestation", reserved = true, reservedRule = "witness-reserved, subject-not-self",
-        segments = listOf(Segment("age_assurance", SegmentClass.LITERAL), Segment("{level}", SegmentClass.VOCAB), Segment("{band}", SegmentClass.VOCAB), Segment("{version}", SegmentClass.VOCAB)),
+        segments = listOf(Segment("age_assurance", SegmentClass.LITERAL), Segment("{level}", SegmentClass.VOCAB, values = listOf("provider", "government")), Segment("{band}", SegmentClass.VOCAB, values = listOf("minor", "adult", "under_13", "13_15", "16_17")), Segment("{version}", SegmentClass.VOCAB)),
         labelKey = null, glossKey = null,
         description = "Witness rung of the age ladder — {level} ∈ provider | government (closed; self is refused here), {band} ∈ minor | adult | under_13 | 13_15 | 16_17 (closed — the CC 3.4.13 Q1 finer bands spelled as the substrate's AgeBandFine; unknown is a c",
     )
@@ -90,7 +106,7 @@ object Dim {
         prefix = "age_self_declared:band:{band}:{version}", slug = "age_self_declared_band_band_version", ccSection = "3.1.2",
         polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
         renderer = Renderer.SIGNED_SCORE, owningComponent = "attestation", reserved = false, reservedRule = null,
-        segments = listOf(Segment("age_self_declared", SegmentClass.LITERAL), Segment("band", SegmentClass.LITERAL), Segment("{band}", SegmentClass.VOCAB), Segment("{version}", SegmentClass.VOCAB)),
+        segments = listOf(Segment("age_self_declared", SegmentClass.LITERAL), Segment("band", SegmentClass.LITERAL), Segment("{band}", SegmentClass.VOCAB, values = listOf("minor", "adult", "under_13", "13_15", "16_17")), Segment("{version}", SegmentClass.VOCAB)),
         labelKey = null, glossKey = null,
         description = "Subject's own age-band declaration — {band} ∈ minor | adult | under_13 | 13_15 | 16_17 (closed — the CC 3.4.13 Q1 finer bands spelled as the substrate's AgeBandFine; unknown is a consumer's fail-secure *resolution*, never a wire token), can",
     )
@@ -108,7 +124,15 @@ object Dim {
         renderer = Renderer.SIGNED_SCORE, owningComponent = "node", reserved = false, reservedRule = null,
         segments = listOf(Segment("approach", SegmentClass.LITERAL), Segment("{goal_id}", SegmentClass.VALUE)),
         labelKey = null, glossKey = null,
-        description = "Strategic pathway from current state toward Goals (Piece 10 karma — the per-agent forward post-selection structure; the universal-grace half of Piece 10 is upstream-retracted, F-11).",
+        description = "Strategic pathway from current state toward Goals (the per-agent forward post-selection structure).",
+    )
+    val archiveReleaseBasis: Dimension = Dimension(
+        prefix = "archive_release:{basis}", slug = "archive_release_basis", ccSection = "3.1.5",
+        polarity = Polarity.PLUS_ONE_ONLY, polarityRaw = "+1.0 only", indeterminateAllowed = false,
+        renderer = Renderer.STATE_PILL, owningComponent = "accord-agent", reserved = true, reservedRule = "reserved (see table)",
+        segments = listOf(Segment("archive_release", SegmentClass.LITERAL), Segment("{basis}", SegmentClass.VOCAB, values = listOf("wa_approval", "lawful_order"))),
+        labelKey = null, glossKey = null,
+        description = "The one row that opens a seal (CC 7.5.5): {basis} ∈ wa_approval | lawful_order — closed.",
     )
     val attestationAgentIntegrity: Dimension = Dimension(
         prefix = "attestation:agent_integrity", slug = "attestation_agent_integrity", ccSection = "3.1.2",
@@ -136,7 +160,7 @@ object Dim {
     )
     val attestationRegistryConsensus: Dimension = Dimension(
         prefix = "attestation:registry_consensus", slug = "attestation_registry_consensus", ccSection = "3.1.2",
-        polarity = Polarity.BOOLEAN_VIA_SCORE, polarityRaw = "boolean-via-score; Indeterminate allowed → RESTRICTED", indeterminateAllowed = true,
+        polarity = Polarity.BOOLEAN_VIA_SCORE, polarityRaw = "boolean-via-score", indeterminateAllowed = false,
         renderer = Renderer.BOOLEAN_VIA_SCORE, owningComponent = "attestation", reserved = false, reservedRule = null,
         segments = listOf(Segment("attestation", SegmentClass.LITERAL), Segment("registry_consensus", SegmentClass.LITERAL)),
         labelKey = null, glossKey = null,
@@ -174,13 +198,37 @@ object Dim {
         labelKey = null, glossKey = null,
         description = "\"Uphold the informed agency and dignity of sentient beings.\"",
     )
+    val ballotModerator: Dimension = Dimension(
+        prefix = "ballot:moderator", slug = "ballot_moderator", ccSection = "3.1.3",
+        polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
+        renderer = Renderer.SIGNED_SCORE, owningComponent = "persist", reserved = true, reservedRule = "a member of the roster the election names, one ballot a person; never a substrate self-report",
+        segments = listOf(Segment("ballot", SegmentClass.LITERAL), Segment("moderator", SegmentClass.LITERAL)),
+        labelKey = null, glossKey = null,
+        description = "A member's ballot in a moderator election (CC 4.5.13): community_id, the election id (digest of the community id and the last seating row, or of the roster's genesis for an unseated room), ranks (up to three member keys in order).",
+    )
+    val ballotModeratorAcceptance: Dimension = Dimension(
+        prefix = "ballot:moderator_acceptance", slug = "ballot_moderator_acceptance", ccSection = "3.1.3",
+        polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
+        renderer = Renderer.SIGNED_SCORE, owningComponent = "persist", reserved = true, reservedRule = "the count's winner over the bound ballot set; never a substrate self-report",
+        segments = listOf(Segment("ballot", SegmentClass.LITERAL), Segment("moderator_acceptance", SegmentClass.LITERAL)),
+        labelKey = null, glossKey = null,
+        description = "The winner's acceptance, binding the ballot set it was seated on: community_id, the election id, the digest of the ballot and withdrawal rows counted and the signer's own key.",
+    )
+    val ballotTallyPollId: Dimension = Dimension(
+        prefix = "ballot:tally:{poll_id}", slug = "ballot_tally_poll_id", ccSection = "3.1.3",
+        polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
+        renderer = Renderer.SIGNED_SCORE, owningComponent = "persist", reserved = true, reservedRule = "a tally member of the room for the period (the share-index-0 member for expected_active and the tally); recomputed by every member; community scope",
+        segments = listOf(Segment("ballot", SegmentClass.LITERAL), Segment("tally", SegmentClass.LITERAL), Segment("{poll_id}", SegmentClass.VALUE)),
+        labelKey = null, glossKey = null,
+        description = "A community's secret poll result: the composite of the members' poll cells for a period, with the members of census:composite, named by the poll it closes; refusals ballot_tally_mass_total_mismatch and aggregation_meta_dominated; it conclud",
+    )
     val benchmarkHe300CategoryVersion: Dimension = Dimension(
         prefix = "benchmark:he300:{category}:{version}", slug = "benchmark_he300_category_version", ccSection = "3.1.10",
         polarity = Polarity.POSITIVE_ONLY, polarityRaw = "positive-only", indeterminateAllowed = false,
         renderer = Renderer.POSITIVE_ONLY_ACCRUAL, owningComponent = "cirisbench", reserved = false, reservedRule = null,
         segments = listOf(Segment("benchmark", SegmentClass.LITERAL), Segment("he300", SegmentClass.LITERAL), Segment("{category}", SegmentClass.VOCAB), Segment("{version}", SegmentClass.VOCAB)),
         labelKey = null, glossKey = null,
-        description = "HE-300 score on category (commonsense, commonsense_hard, deontology, justice, virtue) at version — {version} ∈ v1.0 | v1.1 | v1.2, the HE-300 suite version (a dotted rule version is admitted by CC 3.1.7 R3).",
+        description = "HE-300 benchmark score on category (commonsense, commonsense_hard, deontology, justice, virtue) at version — {version} ∈ v1.0 | v1.1 | v1.2, the HE-300 suite version (a dotted rule version is admitted by CC 3.1.7 R3).",
     )
     val beneficenceAspect: Dimension = Dimension(
         prefix = "beneficence:{aspect}", slug = "beneficence_aspect", ccSection = "3.1.5.2",
@@ -202,9 +250,9 @@ object Dim {
         prefix = "bond_posted:{currency}", slug = "bond_posted_currency", ccSection = "3.1.1",
         polarity = Polarity.POSITIVE_ONLY, polarityRaw = "positive-only", indeterminateAllowed = false,
         renderer = Renderer.POSITIVE_ONLY_ACCRUAL, owningComponent = "registry", reserved = false, reservedRule = null,
-        segments = listOf(Segment("bond_posted", SegmentClass.LITERAL), Segment("{currency}", SegmentClass.EXTERNAL)),
+        segments = listOf(Segment("bond_posted", SegmentClass.LITERAL), Segment("{currency}", SegmentClass.EXTERNAL, pattern = "^[A-Z]{3}\$")),
         labelKey = null, glossKey = null,
-        description = "Bond posted per \$1-Sybil-resistance per PoB; forfeited on revocation.",
+        description = "A bond posted for Sybil resistance (proof of bond); forfeited on revocation.",
     )
     val buildRegisteredTarget: Dimension = Dimension(
         prefix = "build:registered:{target}", slug = "build_registered_target", ccSection = "3.1.1",
@@ -222,30 +270,6 @@ object Dim {
         labelKey = null, glossKey = null,
         description = "𝒞_CIRIS — the minimum over the five factors; anti-Goodhart unity-of-virtues",
     )
-    val capacityCoreIdentity: Dimension = Dimension(
-        prefix = "capacity:core_identity", slug = "capacity_core_identity", ccSection = "3.1.8.1",
-        polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
-        renderer = Renderer.SIGNED_SCORE, owningComponent = "lens", reserved = true, reservedRule = "no-self-emit (attesting_key_id != attested_key_id)",
-        segments = listOf(Segment("capacity", SegmentClass.LITERAL), Segment("core_identity", SegmentClass.LITERAL)),
-        labelKey = null, glossKey = null,
-        description = "C",
-    )
-    val capacityIncompletenessAwareness: Dimension = Dimension(
-        prefix = "capacity:incompleteness_awareness", slug = "capacity_incompleteness_awareness", ccSection = "3.1.8.1",
-        polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
-        renderer = Renderer.SIGNED_SCORE, owningComponent = "lens", reserved = true, reservedRule = "no-self-emit (attesting_key_id != attested_key_id)",
-        segments = listOf(Segment("capacity", SegmentClass.LITERAL), Segment("incompleteness_awareness", SegmentClass.LITERAL)),
-        labelKey = null, glossKey = null,
-        description = "I_inc",
-    )
-    val capacityIntegrity: Dimension = Dimension(
-        prefix = "capacity:integrity", slug = "capacity_integrity", ccSection = "3.1.8.1",
-        polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
-        renderer = Renderer.SIGNED_SCORE, owningComponent = "lens", reserved = true, reservedRule = "no-self-emit (attesting_key_id != attested_key_id)",
-        segments = listOf(Segment("capacity", SegmentClass.LITERAL), Segment("integrity", SegmentClass.LITERAL)),
-        labelKey = null, glossKey = null,
-        description = "I_int",
-    )
     val capacityRelayDelivery: Dimension = Dimension(
         prefix = "capacity:relay_delivery", slug = "capacity_relay_delivery", ccSection = "3.1.4",
         polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
@@ -254,21 +278,13 @@ object Dim {
         labelKey = null, glossKey = null,
         description = "A consuming node's measurement of a relay's delivered-versus-claimed A/V throughput over a window, keyed to the relay's own SignedRelayCapacity claim (advertiser_key_id, stream_id, epoch): the envelope score is the fulfilment ratio, never a",
     )
-    val capacityResilience: Dimension = Dimension(
-        prefix = "capacity:resilience", slug = "capacity_resilience", ccSection = "3.1.8.1",
+    val capacityFactor: Dimension = Dimension(
+        prefix = "capacity:{factor}", slug = "capacity_factor", ccSection = "3.1.8.1",
         polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
         renderer = Renderer.SIGNED_SCORE, owningComponent = "lens", reserved = true, reservedRule = "no-self-emit (attesting_key_id != attested_key_id)",
-        segments = listOf(Segment("capacity", SegmentClass.LITERAL), Segment("resilience", SegmentClass.LITERAL)),
+        segments = listOf(Segment("capacity", SegmentClass.LITERAL), Segment("{factor}", SegmentClass.VOCAB, values = listOf("core_identity", "integrity", "resilience", "incompleteness_awareness", "sustained_coherence"))),
         labelKey = null, glossKey = null,
-        description = "R",
-    )
-    val capacitySustainedCoherence: Dimension = Dimension(
-        prefix = "capacity:sustained_coherence", slug = "capacity_sustained_coherence", ccSection = "3.1.8.1",
-        polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
-        renderer = Renderer.SIGNED_SCORE, owningComponent = "lens", reserved = true, reservedRule = "no-self-emit (attesting_key_id != attested_key_id)",
-        segments = listOf(Segment("capacity", SegmentClass.LITERAL), Segment("sustained_coherence", SegmentClass.LITERAL)),
-        labelKey = null, glossKey = null,
-        description = "S",
+        description = "The five factors, one wire prefix each: {factor} ∈ core_identity | integrity | resilience | incompleteness_awareness | sustained_coherence — closed.",
     )
     val capacityAssuranceReversibleExcludedDomainVersion: Dimension = Dimension(
         prefix = "capacity_assurance:reversible_excluded:{domain}:{version}", slug = "capacity_assurance_reversible_excluded_domain_version", ccSection = "3.1.2",
@@ -284,15 +300,63 @@ object Dim {
         renderer = Renderer.SIGNED_SCORE, owningComponent = "attestation", reserved = true, reservedRule = "witness-reserved, subject-not-self, attester != steward",
         segments = listOf(Segment("capacity_assurance", SegmentClass.LITERAL), Segment("reversible_pending", SegmentClass.LITERAL), Segment("{domain}", SegmentClass.VOCAB), Segment("{version}", SegmentClass.VOCAB)),
         labelKey = null, glossKey = null,
-        description = "Acute-window companion (CC 3.4.12): exclusion in progress, not skipped; admissible for the T1 emergency-necessity tier only, and the binding MUST lapse unless it resolves to reversible_excluded within its valid_until.",
+        description = "Acute-window companion (CC 3.4.12): exclusion in progress, not skipped; admissible for the T1 provisional tier only, and the binding MUST lapse unless it resolves to reversible_excluded within its valid_until.",
     )
     val capacityAssuranceLevelDomainBandVersion: Dimension = Dimension(
         prefix = "capacity_assurance:{level}:{domain}:{band}:{version}", slug = "capacity_assurance_level_domain_band_version", ccSection = "3.1.2",
         polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
         renderer = Renderer.SIGNED_SCORE, owningComponent = "attestation", reserved = true, reservedRule = "witness-reserved, subject-not-self, attester != steward",
-        segments = listOf(Segment("capacity_assurance", SegmentClass.LITERAL), Segment("{level}", SegmentClass.VOCAB), Segment("{domain}", SegmentClass.VOCAB), Segment("{band}", SegmentClass.VOCAB), Segment("{version}", SegmentClass.VOCAB)),
+        segments = listOf(Segment("capacity_assurance", SegmentClass.LITERAL), Segment("{level}", SegmentClass.VOCAB, values = listOf("provider", "panel", "government")), Segment("{domain}", SegmentClass.VOCAB), Segment("{band}", SegmentClass.VOCAB, values = listOf("capacitated", "incapacitated")), Segment("{version}", SegmentClass.VOCAB)),
         labelKey = null, glossKey = null,
         description = "Witness rung of the adult decision-capacity ladder (CC 3.4.12): a registered qualified assessor attests a per-domain band; the subject cannot self-emit it and the proposed steward cannot be the attester.",
+    )
+    val censusCompositeClass: Dimension = Dimension(
+        prefix = "census:composite:{class}", slug = "census_composite_class", ccSection = "3.1.3",
+        polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
+        renderer = Renderer.SIGNED_SCORE, owningComponent = "persist", reserved = true, reservedRule = "a serve seat acting as one of the period's two aggregators (census_partial_signer_not_seat / census_composite_signer_not_seat); federation scope",
+        segments = listOf(Segment("census", SegmentClass.LITERAL), Segment("composite", SegmentClass.LITERAL), Segment("{class}", SegmentClass.VOCAB)),
+        labelKey = null, glossKey = null,
+        description = "The mesh census for a class and period: a scores row naming both partials (partial_a, partial_b) and carrying the CC 6.1.2.1 inputs — version = 3, source_count, n_eff, max_source_multiplicity, mass_commitment_hex, member_commitment_hex, agg",
+    )
+    val censusExpectedActive: Dimension = Dimension(
+        prefix = "census:expected_active", slug = "census_expected_active", ccSection = "3.1.3",
+        polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
+        renderer = Renderer.SIGNED_SCORE, owningComponent = "persist", reserved = true, reservedRule = "a tally member of the room for the period (the share-index-0 member for expected_active and the tally); recomputed by every member; community scope",
+        segments = listOf(Segment("census", SegmentClass.LITERAL), Segment("expected_active", SegmentClass.LITERAL)),
+        labelKey = null, glossKey = null,
+        description = "The community's expected-active count, the base of CC 4.5.13: period, window_periods = 4, active_count (owners active in at least one of the last four periods), floor_applied, member_commitment_hex.",
+    )
+    val censusMemberPartial: Dimension = Dimension(
+        prefix = "census:member:partial", slug = "census_member_partial", ccSection = "3.1.3",
+        polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
+        renderer = Renderer.SIGNED_SCORE, owningComponent = "persist", reserved = true, reservedRule = "a tally member of the room for the period (the share-index-0 member for expected_active and the tally); recomputed by every member; community scope",
+        segments = listOf(Segment("census", SegmentClass.LITERAL), Segment("member", SegmentClass.LITERAL), Segment("partial", SegmentClass.LITERAL)),
+        labelKey = null, glossKey = null,
+        description = "A tally member's sum over the community cells it accepted, published into the room with the members of census:partial; ballot_partial_period_closed after the period's tally.",
+    )
+    val censusMemberShare: Dimension = Dimension(
+        prefix = "census:member:share", slug = "census_member_share", ccSection = "3.1.3",
+        polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
+        renderer = Renderer.SIGNED_SCORE, owningComponent = "persist", reserved = true, reservedRule = "a member of the room; addressed: for_key_id = one of the period's two tally members drawn from the roster; reach is that member only",
+        segments = listOf(Segment("census", SegmentClass.LITERAL), Segment("member", SegmentClass.LITERAL), Segment("share", SegmentClass.LITERAL)),
+        labelKey = null, glossKey = null,
+        description = "A member's community cell, one share of two: addressed to one of the period's two tally members of the room (ballot_share_recipient_not_tally_member), emitted every period at a fixed size whether or not a poll is open; the body is sealed un",
+    )
+    val censusPartialClass: Dimension = Dimension(
+        prefix = "census:partial:{class}", slug = "census_partial_class", ccSection = "3.1.3",
+        polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
+        renderer = Renderer.SIGNED_SCORE, owningComponent = "persist", reserved = true, reservedRule = "a serve seat acting as one of the period's two aggregators (census_partial_signer_not_seat / census_composite_signer_not_seat); federation scope",
+        segments = listOf(Segment("census", SegmentClass.LITERAL), Segment("partial", SegmentClass.LITERAL), Segment("{class}", SegmentClass.VOCAB)),
+        labelKey = null, glossKey = null,
+        description = "One aggregator's field-wise sum of the shares it accepted for a period: period, share_index, share_count, member_commitment_hex over the accepted tokens, mass_total, aggregation_algorithm_id, and a body of field elements.",
+    )
+    val censusShareClass: Dimension = Dimension(
+        prefix = "census:share:{class}", slug = "census_share_class", ccSection = "3.1.3",
+        polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
+        renderer = Renderer.SIGNED_SCORE, owningComponent = "persist", reserved = true, reservedRule = "the returning node's key (rooted owner binding); addressed: for_key_id = one of the period's two serve seats; reach is that seat only",
+        segments = listOf(Segment("census", SegmentClass.LITERAL), Segment("share", SegmentClass.LITERAL), Segment("{class}", SegmentClass.VOCAB)),
+        labelKey = null, glossKey = null,
+        description = "A node's census return, one share of two (CC 6.1.9): an addressed row whose signed for_key_id is one of the period's two serve seats, carrying period, return_token, share_index ∈ {0, 1}, expires_at = the period's end, and an opaque body (th",
     )
     val certValidityAuthority: Dimension = Dimension(
         prefix = "cert_validity:{authority}", slug = "cert_validity_authority", ccSection = "3.1.2",
@@ -333,6 +397,14 @@ object Dim {
         segments = listOf(Segment("commitment_fulfillment", SegmentClass.LITERAL), Segment("{prior_contribution_id}", SegmentClass.VALUE)),
         labelKey = null, glossKey = null,
         description = "Track-record of follow-through.",
+    )
+    val communityListing: Dimension = Dimension(
+        prefix = "community:listing", slug = "community_listing", ccSection = "3.1.1",
+        polarity = Polarity.POSITIVE_ONLY, polarityRaw = "positive-only", indeterminateAllowed = false,
+        renderer = Renderer.POSITIVE_ONLY_ACCRUAL, owningComponent = "registry", reserved = true, reservedRule = "moderate-holder-signed for the community it names; one live row per community; federation scope",
+        segments = listOf(Segment("community", SegmentClass.LITERAL), Segment("listing", SegmentClass.LITERAL)),
+        labelKey = null, glossKey = null,
+        description = "A public community's own discovery row (CC 3.2 public): a federation-scoped scores row by a moderate-holder of the room, carrying the room's name, description, cohort_subkind, admission policy, named moderator and community_key_id, ranked b",
     )
     val configScope: Dimension = Dimension(
         prefix = "config:{scope}", slug = "config_scope", ccSection = "3.1.9",
@@ -402,7 +474,7 @@ object Dim {
         prefix = "consent:deletion_sla:{days}", slug = "consent_deletion_sla_days", ccSection = "3.1.5",
         polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
         renderer = Renderer.SIGNED_SCORE, owningComponent = "accord-agent", reserved = true, reservedRule = "reserved (see table)",
-        segments = listOf(Segment("consent", SegmentClass.LITERAL), Segment("deletion_sla", SegmentClass.LITERAL), Segment("{days}", SegmentClass.VALUE)),
+        segments = listOf(Segment("consent", SegmentClass.LITERAL), Segment("deletion_sla", SegmentClass.LITERAL), Segment("{days}", SegmentClass.VALUE, pattern = "^[0-9]+\$")),
         labelKey = null, glossKey = null,
         description = "Catalogue row (CC 3.1.7 R1); the producer's time-to-delete-after-revoke commitment, CC 3.3.1.",
     )
@@ -420,7 +492,7 @@ object Dim {
         renderer = Renderer.POSITIVE_ONLY_ACCRUAL, owningComponent = "accord-agent", reserved = true, reservedRule = "reserved (see table)",
         segments = listOf(Segment("consent", SegmentClass.LITERAL), Segment("partnership_grant", SegmentClass.LITERAL)),
         labelKey = null, glossKey = null,
-        description = "Catalogue row (CC 3.1.7 R1); subject side of a bilateral grant, CC 3.3.1 / CC 4.4.3.5.3.",
+        description = "Catalogue row (CC 3.1.7 R1); subject side of a bilateral grant, CC 3.3.1 / CC 4.4.3.28.",
     )
     val consentReplicationVersion: Dimension = Dimension(
         prefix = "consent:replication:{version}", slug = "consent_replication_version", ccSection = "3.1.5",
@@ -436,13 +508,13 @@ object Dim {
         renderer = Renderer.ENUMERATED_CHIP, owningComponent = "accord-agent", reserved = true, reservedRule = "reserved (see table)",
         segments = listOf(Segment("consent", SegmentClass.LITERAL), Segment("scope", SegmentClass.LITERAL), Segment("{kind}", SegmentClass.VOCAB)),
         labelKey = null, glossKey = null,
-        description = "Catalogue row (CC 3.1.7 R1); a descriptive scope row — the scope of a grant is the scope envelope member of consent:state:granted (CC 3.3.1, #103).",
+        description = "Catalogue row (CC 3.1.7 R1); a descriptive scope row — the scope of a grant is the scope envelope member of consent:state:granted (CC 3.3.1).",
     )
     val consentStateStance: Dimension = Dimension(
         prefix = "consent:state:{stance}", slug = "consent_state_stance", ccSection = "3.1.5",
         polarity = Polarity.ENUMERATED, polarityRaw = "enumerated", indeterminateAllowed = false,
         renderer = Renderer.ENUMERATED_CHIP, owningComponent = "accord-agent", reserved = true, reservedRule = "reserved (see table)",
-        segments = listOf(Segment("consent", SegmentClass.LITERAL), Segment("state", SegmentClass.LITERAL), Segment("{stance}", SegmentClass.VOCAB)),
+        segments = listOf(Segment("consent", SegmentClass.LITERAL), Segment("state", SegmentClass.LITERAL), Segment("{stance}", SegmentClass.VOCAB, values = listOf("granted", "revoked", "expired"))),
         labelKey = null, glossKey = null,
         description = "Catalogue row (CC 3.1.7 R1); the subject's stance on a Contribution, semantics at CC 3.3.1.",
     )
@@ -476,7 +548,15 @@ object Dim {
         renderer = Renderer.ENUMERATED_CHIP, owningComponent = "node", reserved = false, reservedRule = null,
         segments = listOf(Segment("content_rating", SegmentClass.LITERAL), Segment("{scheme}", SegmentClass.VOCAB), Segment("{rating}", SegmentClass.EXTERNAL)),
         labelKey = null, glossKey = null,
-        description = "Catalogue row (CC 3.1.7 R1); semantics, schemes and the trusted-publisher emitter rule at CC 3.3.12.",
+        description = "Catalogue row (CC 3.1.7 R1); semantics and schemes at CC 3.3.12.",
+    )
+    val contributionSubjectKind: Dimension = Dimension(
+        prefix = "contribution:{subject_kind}", slug = "contribution_subject_kind", ccSection = "3.1.9.3",
+        polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
+        renderer = Renderer.SIGNED_SCORE, owningComponent = "node", reserved = false, reservedRule = null,
+        segments = listOf(Segment("contribution", SegmentClass.LITERAL), Segment("{subject_kind}", SegmentClass.VOCAB)),
+        labelKey = null, glossKey = null,
+        description = "A node's Contribution on a subject kind: the row a vote, a tally and a diversity check name by its row id.",
     )
     val corpusHealthNEffMeasurable: Dimension = Dimension(
         prefix = "corpus_health:n_eff_measurable", slug = "corpus_health_n_eff_measurable", ccSection = "3.1.3",
@@ -485,14 +565,6 @@ object Dim {
         segments = listOf(Segment("corpus_health", SegmentClass.LITERAL), Segment("n_eff_measurable", SegmentClass.LITERAL)),
         labelKey = null, glossKey = null,
         description = "",
-    )
-    val creditsDomainLanguageSubstrateBuilding: Dimension = Dimension(
-        prefix = "credits:{domain}:{language}:substrate_building", slug = "credits_domain_language_substrate_building", ccSection = "3.1.9.6",
-        polarity = Polarity.POSITIVE_ONLY, polarityRaw = "positive-only", indeterminateAllowed = false,
-        renderer = Renderer.POSITIVE_ONLY_ACCRUAL, owningComponent = "node", reserved = false, reservedRule = null,
-        segments = listOf(Segment("credits", SegmentClass.LITERAL), Segment("{domain}", SegmentClass.VOCAB), Segment("{language}", SegmentClass.VOCAB), Segment("substrate_building", SegmentClass.LITERAL)),
-        labelKey = null, glossKey = null,
-        description = "Sub-leaf for substrate-building labor (infrastructure maintenance, dependency contribution, documentation) not visible to the per-grounded-vote accrual loop.",
     )
     val creditsDomainLanguageSubject: Dimension = Dimension(
         prefix = "credits:{domain}:{language}:{subject}", slug = "credits_domain_language_subject", ccSection = "3.1.9.6",
@@ -505,9 +577,9 @@ object Dim {
     val custodyKind: Dimension = Dimension(
         prefix = "custody:{kind}", slug = "custody_kind", ccSection = "3.1.3.3",
         polarity = Polarity.POSITIVE_ONLY, polarityRaw = "positive-only", indeterminateAllowed = false,
-        renderer = Renderer.POSITIVE_ONLY_ACCRUAL, owningComponent = "persist", reserved = true, reservedRule = "holder self-report (attesting_key_id is the device the receipt is about); within-cohort only",
-        segments = listOf(Segment("custody", SegmentClass.LITERAL), Segment("{kind}", SegmentClass.VOCAB)),
-        labelKey = null, glossKey = null,
+        renderer = Renderer.CONTENT_REFERENCE, owningComponent = "persist", reserved = true, reservedRule = "holder self-report (attesting_key_id is the device the receipt is about); within-cohort only",
+        segments = listOf(Segment("custody", SegmentClass.LITERAL), Segment("{kind}", SegmentClass.VOCAB, values = listOf("ack"))),
+        labelKey = "ceg.custody_kind.label", glossKey = "ceg.custody_kind.gloss",
         description = "Within-cohort custody reports.",
     )
     val cwClassClass: Dimension = Dimension(
@@ -518,6 +590,22 @@ object Dim {
         labelKey = null, glossKey = null,
         description = "Catalogue row (CC 3.1.7 R1); community content-warning semantics at CC 3.3.12.",
     )
+    val deferralRequest: Dimension = Dimension(
+        prefix = "deferral:request", slug = "deferral_request", ccSection = "3.1.9.3",
+        polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
+        renderer = Renderer.SIGNED_SCORE, owningComponent = "node", reserved = true, reservedRule = "the deferring party's own key (an agent's occurrence key, or a person's key); audience = the party's cell",
+        segments = listOf(Segment("deferral", SegmentClass.LITERAL), Segment("request", SegmentClass.LITERAL)),
+        labelKey = null, glossKey = null,
+        description = "A deferral: one ask routed to a Wise Authority within the deferring party's cell (CC 1.9, CC 4.3).",
+    )
+    val deferralResponseOutcome: Dimension = Dimension(
+        prefix = "deferral:response:{outcome}", slug = "deferral_response_outcome", ccSection = "3.1.9.3",
+        polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
+        renderer = Renderer.SIGNED_SCORE, owningComponent = "node", reserved = true, reservedRule = "a key seated over the deferring party's deferrals in the live set at asserted_at (CC 4.3): the conferrer, the person seated, or an agent handed the answering; subject = the deferring party; references the deferral:request",
+        segments = listOf(Segment("deferral", SegmentClass.LITERAL), Segment("response", SegmentClass.LITERAL), Segment("{outcome}", SegmentClass.VOCAB)),
+        labelKey = null, glossKey = null,
+        description = "A Wise Authority's answer to one deferral, {outcome} ∈ approved | rejected.",
+    )
     val deliveryClass: Dimension = Dimension(
         prefix = "delivery:{class}", slug = "delivery_class", ccSection = "3.1.4",
         polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
@@ -526,42 +614,26 @@ object Dim {
         labelKey = null, glossKey = null,
         description = "",
     )
-    val deliveryReceiptStreamId: Dimension = Dimension(
-        prefix = "delivery_receipt:{stream_id}", slug = "delivery_receipt_stream_id", ccSection = "3.1.4",
+    val deliveryAckStreamId: Dimension = Dimension(
+        prefix = "delivery_ack:{stream_id}", slug = "delivery_ack_stream_id", ccSection = "3.1.4",
         polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
         renderer = Renderer.SETTLEMENT_RECEIPT, owningComponent = "transport-delivery", reserved = true, reservedRule = "subscriber-only (attesting_key_id is a current subscriber/member of the named stream; not a substrate self-report)",
-        segments = listOf(Segment("delivery_receipt", SegmentClass.LITERAL), Segment("{stream_id}", SegmentClass.VALUE)),
-        labelKey = "ceg.delivery_receipt_stream_id.label", glossKey = "ceg.delivery_receipt_stream_id.gloss",
+        segments = listOf(Segment("delivery_ack", SegmentClass.LITERAL), Segment("{stream_id}", SegmentClass.VALUE)),
+        labelKey = "ceg.delivery_ack_stream_id.label", glossKey = "ceg.delivery_ack_stream_id.gloss",
         description = "is Edge's too, and is registered here rather than left to CC 3.4.6 prose: subscriber-emitted, membership-gated, not a substrate-self-report.",
-    )
-    val detectionConscienceOverrideRate: Dimension = Dimension(
-        prefix = "detection:conscience_override_rate", slug = "detection_conscience_override_rate", ccSection = "3.1.8.2",
-        polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
-        renderer = Renderer.SIGNED_SCORE, owningComponent = "lens", reserved = true, reservedRule = "detector-only (identity_type contains lenscore_detector)",
-        segments = listOf(Segment("detection", SegmentClass.LITERAL), Segment("conscience_override_rate", SegmentClass.LITERAL)),
-        labelKey = null, glossKey = null,
-        description = "",
     )
     val detectionCorrelatedActionAxis: Dimension = Dimension(
         prefix = "detection:correlated_action:{axis}", slug = "detection_correlated_action_axis", ccSection = "3.1.8.4",
         polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
-        renderer = Renderer.SIGNED_SCORE, owningComponent = "lens", reserved = true, reservedRule = "detector-only (identity_type contains lenscore_detector)",
+        renderer = Renderer.SIGNED_SCORE, owningComponent = "lens", reserved = true, reservedRule = "detector-only (the signer holds infra:detect)",
         segments = listOf(Segment("detection", SegmentClass.LITERAL), Segment("correlated_action", SegmentClass.LITERAL), Segment("{axis}", SegmentClass.VOCAB)),
         labelKey = null, glossKey = null,
         description = "Population-scale correlated-action detector.",
     )
-    val detectionCrossAgentDivergence: Dimension = Dimension(
-        prefix = "detection:cross_agent_divergence", slug = "detection_cross_agent_divergence", ccSection = "3.1.8.2",
-        polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
-        renderer = Renderer.SIGNED_SCORE, owningComponent = "lens", reserved = true, reservedRule = "detector-only (identity_type contains lenscore_detector)",
-        segments = listOf(Segment("detection", SegmentClass.LITERAL), Segment("cross_agent_divergence", SegmentClass.LITERAL)),
-        labelKey = null, glossKey = null,
-        description = "",
-    )
     val detectionDistributiveAccessResourceType: Dimension = Dimension(
         prefix = "detection:distributive:access:{resource_type}", slug = "detection_distributive_access_resource_type", ccSection = "3.1.8.5",
         polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
-        renderer = Renderer.SIGNED_SCORE, owningComponent = "lens", reserved = true, reservedRule = "detector-only (identity_type contains lenscore_detector)",
+        renderer = Renderer.SIGNED_SCORE, owningComponent = "lens", reserved = true, reservedRule = "detector-only (the signer holds infra:detect)",
         segments = listOf(Segment("detection", SegmentClass.LITERAL), Segment("distributive", SegmentClass.LITERAL), Segment("access", SegmentClass.LITERAL), Segment("{resource_type}", SegmentClass.VOCAB)),
         labelKey = null, glossKey = null,
         description = "Population-scale resource-concentration detector.",
@@ -569,7 +641,7 @@ object Dim {
     val detectionHashChainIntegrity: Dimension = Dimension(
         prefix = "detection:hash_chain_integrity", slug = "detection_hash_chain_integrity", ccSection = "3.1.8.2",
         polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
-        renderer = Renderer.SIGNED_SCORE, owningComponent = "lens", reserved = true, reservedRule = "detector-only (identity_type contains lenscore_detector)",
+        renderer = Renderer.SIGNED_SCORE, owningComponent = "lens", reserved = true, reservedRule = "detector-only (the signer holds infra:detect)",
         segments = listOf(Segment("detection", SegmentClass.LITERAL), Segment("hash_chain_integrity", SegmentClass.LITERAL)),
         labelKey = null, glossKey = null,
         description = "",
@@ -577,18 +649,18 @@ object Dim {
     val detectionIntraAgentConsistency: Dimension = Dimension(
         prefix = "detection:intra_agent_consistency", slug = "detection_intra_agent_consistency", ccSection = "3.1.8.2",
         polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
-        renderer = Renderer.SIGNED_SCORE, owningComponent = "lens", reserved = true, reservedRule = "detector-only (identity_type contains lenscore_detector)",
+        renderer = Renderer.SIGNED_SCORE, owningComponent = "lens", reserved = true, reservedRule = "detector-only (the signer holds infra:detect)",
         segments = listOf(Segment("detection", SegmentClass.LITERAL), Segment("intra_agent_consistency", SegmentClass.LITERAL)),
         labelKey = null, glossKey = null,
         description = "",
     )
-    val detectionTemporalDrift: Dimension = Dimension(
-        prefix = "detection:temporal_drift", slug = "detection_temporal_drift", ccSection = "3.1.8.2",
+    val detectionDetector: Dimension = Dimension(
+        prefix = "detection:{detector}", slug = "detection_detector", ccSection = "3.1.8.2",
         polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
-        renderer = Renderer.SIGNED_SCORE, owningComponent = "lens", reserved = true, reservedRule = "detector-only (identity_type contains lenscore_detector)",
-        segments = listOf(Segment("detection", SegmentClass.LITERAL), Segment("temporal_drift", SegmentClass.LITERAL)),
+        renderer = Renderer.SIGNED_SCORE, owningComponent = "lens", reserved = true, reservedRule = "detector-only (the signer holds infra:detect)",
+        segments = listOf(Segment("detection", SegmentClass.LITERAL), Segment("{detector}", SegmentClass.VOCAB, values = listOf("cross_agent_divergence", "temporal_drift", "conscience_override_rate"))),
         labelKey = null, glossKey = null,
-        description = "",
+        description = "Three of the five detectors on one row: {detector} ∈ cross_agent_divergence | temporal_drift | conscience_override_rate — closed.",
     )
     val deviceLabel: Dimension = Dimension(
         prefix = "device:label", slug = "device_label", ccSection = "3.1.1",
@@ -596,7 +668,7 @@ object Dim {
         renderer = Renderer.POSITIVE_ONLY_ACCRUAL, owningComponent = "registry", reserved = true, reservedRule = "owner-signed, about an identity occurrence the signer owns; cohort_scope self only; confers nothing",
         segments = listOf(Segment("device", SegmentClass.LITERAL), Segment("label", SegmentClass.LITERAL)),
         labelKey = null, glossKey = null,
-        description = "The name a person gives one of their own devices (steward ruling 2026-10-01, CIRISConstitution#137; the server's shipped self:device_label, renamed — self is a cohort scope and names no family).",
+        description = "The name a person gives one of their own devices (not self:device_label: self is a cohort scope and names no family).",
     )
     val dmaCsdma: Dimension = Dimension(
         prefix = "dma:csdma:*", slug = "dma_csdma_any", ccSection = "3.1.5.1",
@@ -670,6 +742,14 @@ object Dim {
         labelKey = null, glossKey = null,
         description = "Catalogue row (CC 3.1.7 R1); publisher-asserted RSVP tally, semantics at CC 3.3.8.",
     )
+    val evidenceSuiteKindCellPrefix: Dimension = Dimension(
+        prefix = "evidence:{suite}:{kind}:{cell}:{prefix}", slug = "evidence_suite_kind_cell_prefix", ccSection = "3.1.5.5",
+        polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
+        renderer = Renderer.SIGNED_SCORE, owningComponent = "accord-agent", reserved = false, reservedRule = null,
+        segments = listOf(Segment("evidence", SegmentClass.LITERAL), Segment("{suite}", SegmentClass.VOCAB, values = listOf("safety_battery")), Segment("{kind}", SegmentClass.VOCAB, values = listOf("capture", "interpret")), Segment("{cell}", SegmentClass.VALUE), Segment("{prefix}", SegmentClass.HEX)),
+        labelKey = null, glossKey = null,
+        description = "One row per evidence blob of a registered suite; the blob is a Commons blob named in evidence_refs by its SHA-256, and {prefix} is that digest's first 16 lowercase hex characters.",
+    )
     val expertiseDomainLanguage: Dimension = Dimension(
         prefix = "expertise:{domain}:{language}", slug = "expertise_domain_language", ccSection = "3.1.9.6",
         polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
@@ -705,9 +785,9 @@ object Dim {
     val fileVersion: Dimension = Dimension(
         prefix = "file:{version}", slug = "file_version", ccSection = "3.1.3.4",
         polarity = Polarity.POSITIVE_ONLY, polarityRaw = "positive-only", indeterminateAllowed = false,
-        renderer = Renderer.POSITIVE_ONLY_ACCRUAL, owningComponent = "persist", reserved = true, reservedRule = "author-emitted (the file's author, or a device it acts through)",
+        renderer = Renderer.CONTENT_REFERENCE, owningComponent = "persist", reserved = true, reservedRule = "author-emitted (the file's author, or a device it acts through)",
         segments = listOf(Segment("file", SegmentClass.LITERAL), Segment("{version}", SegmentClass.VOCAB)),
-        labelKey = null, glossKey = null,
+        labelKey = "ceg.file_version.label", glossKey = "ceg.file_version.gloss",
         description = "A file: one row per file, placed at a cohort_scope, its bytes addressed by digest and described by the CC 3.3.13 Source struct, name and format inside the sealed descriptor.",
     )
     val film: Dimension = Dimension(
@@ -726,21 +806,29 @@ object Dim {
         labelKey = null, glossKey = null,
         description = "Multi-scale belonging-projector composite.",
     )
+    val groupRoster: Dimension = Dimension(
+        prefix = "group:roster", slug = "group_roster", ccSection = "3.1.3",
+        polarity = Polarity.POSITIVE_ONLY, polarityRaw = "positive-only", indeterminateAllowed = false,
+        renderer = Renderer.POSITIVE_ONLY_ACCRUAL, owningComponent = "persist", reserved = true, reservedRule = "cosigned under the group's consensus_protocol; withdrawn only by a cosigned withdraws",
+        segments = listOf(Segment("group", SegmentClass.LITERAL), Segment("roster", SegmentClass.LITERAL)),
+        labelKey = null, glossKey = null,
+        description = "A family's or community's roster version: the signed roster record at a version, as a cosigned scores row.",
+    )
     val hardCaseKind: Dimension = Dimension(
         prefix = "hard_case:{kind}", slug = "hard_case_kind", ccSection = "3.1.9.4",
         polarity = Polarity.POSITIVE_ONLY, polarityRaw = "positive-only", indeterminateAllowed = false,
-        renderer = Renderer.POSITIVE_ONLY_ACCRUAL, owningComponent = "node", reserved = false, reservedRule = null,
+        renderer = Renderer.POSITIVE_ONLY_ACCRUAL, owningComponent = "node", reserved = true, reservedRule = "substrate-emitted (the node that admitted or refused the row, under infra:attest); the kinds are open, the emitter is reserved; a non-substrate emission is a category error",
         segments = listOf(Segment("hard_case", SegmentClass.LITERAL), Segment("{kind}", SegmentClass.VOCAB)),
         labelKey = null, glossKey = null,
-        description = "Open vocabulary.",
+        description = "Open vocabulary of kinds; the emitter is reserved (CC 3.4.2, CC 3.4.4).",
     )
     val hardwareCustodyPlatform: Dimension = Dimension(
         prefix = "hardware_custody:{platform}", slug = "hardware_custody_platform", ccSection = "3.1.2",
         polarity = Polarity.BOOLEAN_VIA_SCORE, polarityRaw = "boolean-via-score", indeterminateAllowed = false,
         renderer = Renderer.BOOLEAN_VIA_SCORE, owningComponent = "attestation", reserved = false, reservedRule = null,
-        segments = listOf(Segment("hardware_custody", SegmentClass.LITERAL), Segment("{platform}", SegmentClass.VOCAB)),
+        segments = listOf(Segment("hardware_custody", SegmentClass.LITERAL), Segment("{platform}", SegmentClass.VOCAB, values = listOf("android_keystore", "android_strongbox", "ios_secure_enclave", "mac_os_secure_enclave", "tpm_discrete", "tpm_firmware", "intel_sgx", "software_only", "aws_cloud_hsm", "azure_hsm", "gcp_cloud_hsm", "yubi_hsm", "external_secure_element"))),
         labelKey = null, glossKey = null,
-        description = "Where the key's seed lives — the custody mechanism, not the certified class (CC 4.2.2 hardware_class answers that, and is a JSON property, never a value of {platform}).",
+        description = "Where the key's seed lives — the custody mechanism, not the certified class (CC 4.2.2 hardware_class answers that, and is a member of a key record's attestation_evidence, never a value of {platform}).",
     )
     val healthLivenessVersion: Dimension = Dimension(
         prefix = "health:liveness:{version}", slug = "health_liveness_version", ccSection = "3.1.9.4",
@@ -750,21 +838,45 @@ object Dim {
         labelKey = null, glossKey = null,
         description = "External service-health verdict — a third-person claim about a keyed service.",
     )
-    val holdsBytesSha256Prefix: Dimension = Dimension(
-        prefix = "holds_bytes:sha256:{prefix}", slug = "holds_bytes_sha256_prefix", ccSection = "3.1.9.1",
+    val holonClaim: Dimension = Dimension(
+        prefix = "holon:claim", slug = "holon_claim", ccSection = "3.1.11",
         polarity = Polarity.BOOLEAN_VIA_SCORE, polarityRaw = "boolean-via-score", indeterminateAllowed = false,
-        renderer = Renderer.CONTENT_REFERENCE, owningComponent = "node", reserved = false, reservedRule = null,
-        segments = listOf(Segment("holds_bytes", SegmentClass.LITERAL), Segment("sha256", SegmentClass.LITERAL), Segment("{prefix}", SegmentClass.HEX)),
-        labelKey = "ceg.holds_bytes_sha256_prefix.label", glossKey = "ceg.holds_bytes_sha256_prefix.gloss",
-        description = "A carrier row type, not a scores dimension (CC 2.4): the token is the row's type, the row carries no score, and it never appears as a dimension.",
+        renderer = Renderer.BOOLEAN_VIA_SCORE, owningComponent = "holon", reserved = false, reservedRule = null,
+        segments = listOf(Segment("holon", SegmentClass.LITERAL), Segment("claim", SegmentClass.LITERAL)),
+        labelKey = null, glossKey = null,
+        description = "A signer's statement that the checks of a holon declaration's spec held for one claim over the digests the row cites.",
     )
     val identityCanonicalBindingCanonicalHash: Dimension = Dimension(
         prefix = "identity:canonical_binding:{canonical_hash}", slug = "identity_canonical_binding_canonical_hash", ccSection = "3.1.2",
         polarity = Polarity.POSITIVE_ONLY, polarityRaw = "positive-only", indeterminateAllowed = false,
         renderer = Renderer.POSITIVE_ONLY_ACCRUAL, owningComponent = "attestation", reserved = false, reservedRule = null,
-        segments = listOf(Segment("identity", SegmentClass.LITERAL), Segment("canonical_binding", SegmentClass.LITERAL), Segment("{canonical_hash}", SegmentClass.HEX)),
+        segments = listOf(Segment("identity", SegmentClass.LITERAL), Segment("canonical_binding", SegmentClass.LITERAL), Segment("{canonical_hash}", SegmentClass.HEX, pattern = "^[0-9a-f]{64}\$")),
         labelKey = null, glossKey = null,
         description = "Catalogue row (CC 3.1.7 R1); the claim that federation key K is the identity behind canonical hash H, semantics and admission consequence at CC 3.3.14.",
+    )
+    val identityOccurrence: Dimension = Dimension(
+        prefix = "identity:occurrence", slug = "identity_occurrence", ccSection = "3.1.3",
+        polarity = Polarity.POSITIVE_ONLY, polarityRaw = "positive-only", indeterminateAllowed = false,
+        renderer = Renderer.POSITIVE_ONLY_ACCRUAL, owningComponent = "persist", reserved = true, reservedRule = "signed by the identity or a live occurrence of it (signer_acts_for)",
+        segments = listOf(Segment("identity", SegmentClass.LITERAL), Segment("occurrence", SegmentClass.LITERAL)),
+        labelKey = null, glossKey = null,
+        description = "An identity's occurrence record (CC 3.3.6): device class, encryption pubkeys, transport binding.",
+    )
+    val identityOccurrenceRevocation: Dimension = Dimension(
+        prefix = "identity:occurrence_revocation", slug = "identity_occurrence_revocation", ccSection = "3.1.3",
+        polarity = Polarity.MINUS_ONE_ONLY, polarityRaw = "-1 only", indeterminateAllowed = false,
+        renderer = Renderer.VIOLATION_MARKER, owningComponent = "persist", reserved = true, reservedRule = "signed by the identity or a live occurrence of it (signer_acts_for)",
+        segments = listOf(Segment("identity", SegmentClass.LITERAL), Segment("occurrence_revocation", SegmentClass.LITERAL)),
+        labelKey = null, glossKey = null,
+        description = "The carrier of a framed occurrence revocation (registered under CC 3.1.7 R2(a), on the planes-as-rows pattern of key:record / key:revocation): a framed SignedIdentityOccurrenceRevocation signed outside the two-path roster door (CC 3.3.6.4)",
+    )
+    val identityAmendment: Dimension = Dimension(
+        prefix = "identity_amendment", slug = "identity_amendment", ccSection = "3.1.5",
+        polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
+        renderer = Renderer.SIGNED_SCORE, owningComponent = "accord-agent", reserved = true, reservedRule = "the agent's occurrence key about its identity key; admitted only citing an admitted deferral:response:approved by the conferrer of the agent's seat or the person holding its unscoped seat (identity_amendment_unauthorized otherwise)",
+        segments = listOf(Segment("identity_amendment", SegmentClass.LITERAL)),
+        labelKey = null, glossKey = null,
+        description = "The identity change a Wise Authority authorised, as applied (promise 5: nobody edits an agent's identity record without a Wise Authority; CC 4.3).",
     )
     val identityContinuityRelationalAnchor: Dimension = Dimension(
         prefix = "identity_continuity:relational_anchor", slug = "identity_continuity_relational_anchor", ccSection = "3.1.3",
@@ -796,7 +908,7 @@ object Dim {
         renderer = Renderer.BOOLEAN_VIA_SCORE, owningComponent = "node", reserved = false, reservedRule = null,
         segments = listOf(Segment("judge_model", SegmentClass.LITERAL), Segment("verdict", SegmentClass.LITERAL), Segment("{model_id}", SegmentClass.VALUE)),
         labelKey = null, glossKey = null,
-        description = "Independent foundation-model judge verdict (PASS/FAIL/UNDETERMINED).",
+        description = "Independent foundation-model judge verdict: PASS is +1, FAIL is −1; UNDETERMINED is no row, never a third point.",
     )
     val justiceAspect: Dimension = Dimension(
         prefix = "justice:{aspect}", slug = "justice_aspect", ccSection = "3.1.5.2",
@@ -806,6 +918,22 @@ object Dim {
         labelKey = null, glossKey = null,
         description = "\"Distribute benefits and burdens equitably.\"",
     )
+    val keyRecord: Dimension = Dimension(
+        prefix = "key:record", slug = "key_record", ccSection = "3.1.3",
+        polarity = Polarity.POSITIVE_ONLY, polarityRaw = "positive-only", indeterminateAllowed = false,
+        renderer = Renderer.POSITIVE_ONLY_ACCRUAL, owningComponent = "persist", reserved = true, reservedRule = "self only (attesting_key_id == attested_key_id == the key), admitted by proof of possession",
+        segments = listOf(Segment("key", SegmentClass.LITERAL), Segment("record", SegmentClass.LITERAL)),
+        labelKey = null, glossKey = null,
+        description = "A key's claim of itself: attesting_key_id = attested_key_id = the key, envelope carrying pubkey_ed25519_base64, pubkey_ml_dsa_65_base64, identity_type and roles.",
+    )
+    val keyRevocation: Dimension = Dimension(
+        prefix = "key:revocation", slug = "key_revocation", ccSection = "3.1.3",
+        polarity = Polarity.MINUS_ONE_ONLY, polarityRaw = "-1 only", indeterminateAllowed = false,
+        renderer = Renderer.VIOLATION_MARKER, owningComponent = "persist", reserved = true, reservedRule = "revoker-signed, judged without the subject's record; never withdrawn",
+        segments = listOf(Segment("key", SegmentClass.LITERAL), Segment("revocation", SegmentClass.LITERAL)),
+        labelKey = null, glossKey = null,
+        description = "A key-plane revocation (CC 2.4.1.1): subject revoked_key_sha256_ed25519_raw, revoked_after only ever lowering across versions.",
+    )
     val keyBoundaryScope: Dimension = Dimension(
         prefix = "key_boundary:{scope}", slug = "key_boundary_scope", ccSection = "3.1.4",
         polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
@@ -814,21 +942,53 @@ object Dim {
         labelKey = null, glossKey = null,
         description = "",
     )
+    val keyGrantAxis: Dimension = Dimension(
+        prefix = "key_grant:{axis}", slug = "key_grant_axis", ccSection = "3.1.3",
+        polarity = Polarity.POSITIVE_ONLY, polarityRaw = "positive-only", indeterminateAllowed = false,
+        renderer = Renderer.POSITIVE_ONLY_ACCRUAL, owningComponent = "persist", reserved = true, reservedRule = "sealer-only: attesting_key_id speaks for the content/stream owner (content, stream) or is the epoch's minter (epoch); attested_key_id = the recipient occurrence; never withdrawn",
+        segments = listOf(Segment("key_grant", SegmentClass.LITERAL), Segment("{axis}", SegmentClass.VOCAB, values = listOf("content", "epoch", "stream"))),
+        labelKey = null, glossKey = null,
+        description = "One wrap of one data-encryption key to one recipient (CC 3.3.2): {axis} ∈ content | epoch | stream — closed; wire key_grant:{axis}:v1.",
+    )
+    val lawfulOrderRelease: Dimension = Dimension(
+        prefix = "lawful_order:release", slug = "lawful_order_release", ccSection = "3.1.5",
+        polarity = Polarity.PLUS_ONE_ONLY, polarityRaw = "+1.0 only", indeterminateAllowed = false,
+        renderer = Renderer.STATE_PILL, owningComponent = "accord-agent", reserved = true, reservedRule = "reserved (see table)",
+        segments = listOf(Segment("lawful_order", SegmentClass.LITERAL), Segment("release", SegmentClass.LITERAL)),
+        labelKey = null, glossKey = null,
+        description = "The steward's record, under their own name, of a lawful order to release sealed material: issuing authority, reference, scope, order digest.",
+    )
+    val ledgerCheckpointUnitVersion: Dimension = Dimension(
+        prefix = "ledger:checkpoint:{unit}:{version}", slug = "ledger_checkpoint_unit_version", ccSection = "3.1.3",
+        polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
+        renderer = Renderer.SIGNED_SCORE, owningComponent = "persist", reserved = true, reservedRule = "the ledger's single owner (the steward-bound identity of its ledger_id triple); a delegation confers no write on a ledger",
+        segments = listOf(Segment("ledger", SegmentClass.LITERAL), Segment("checkpoint", SegmentClass.LITERAL), Segment("{unit}", SegmentClass.EXTERNAL), Segment("{version}", SegmentClass.VOCAB)),
+        labelKey = null, glossKey = null,
+        description = "Catalogue row (CC 3.1.7 R1); a co-witnessed balance snapshot at a sequence number, superseding the detail below it (CC 3.3.10.1 clause 5); the conservation fold is provable from the latest checkpoint forward.",
+    )
+    val ledgerHeadUnitVersion: Dimension = Dimension(
+        prefix = "ledger:head:{unit}:{version}", slug = "ledger_head_unit_version", ccSection = "3.1.3",
+        polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
+        renderer = Renderer.SIGNED_SCORE, owningComponent = "persist", reserved = true, reservedRule = "the ledger's single owner (the steward-bound identity of its ledger_id triple); a delegation confers no write on a ledger",
+        segments = listOf(Segment("ledger", SegmentClass.LITERAL), Segment("head", SegmentClass.LITERAL), Segment("{unit}", SegmentClass.EXTERNAL), Segment("{version}", SegmentClass.VOCAB)),
+        labelKey = null, glossKey = null,
+        description = "Catalogue row (CC 3.1.7 R1); an in-grammar ledger's head — sequence, unit and the declared anchoring cadence (CC 3.3.10.1 clauses 1–4).",
+    )
+    val ledgerPromotionVersion: Dimension = Dimension(
+        prefix = "ledger:promotion:{version}", slug = "ledger_promotion_version", ccSection = "3.1.3",
+        polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
+        renderer = Renderer.SIGNED_SCORE, owningComponent = "persist", reserved = true, reservedRule = "the ledger's single owner (the steward-bound identity of its ledger_id triple); a delegation confers no write on a ledger",
+        segments = listOf(Segment("ledger", SegmentClass.LITERAL), Segment("promotion", SegmentClass.LITERAL), Segment("{version}", SegmentClass.VOCAB)),
+        labelKey = null, glossKey = null,
+        description = "Catalogue row (CC 3.1.7 R1); promotion of a ledger to cohort visibility, carrying the compliance proof — chain validity from the latest witnessed checkpoint to the promoted head (CC 3.3.10.1 clause 6).",
+    )
     val licensureAuthorityId: Dimension = Dimension(
         prefix = "licensure:{authority_id}", slug = "licensure_authority_id", ccSection = "3.1.1",
         polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
         renderer = Renderer.SIGNED_SCORE, owningComponent = "registry", reserved = false, reservedRule = null,
-        segments = listOf(Segment("licensure", SegmentClass.LITERAL), Segment("{authority_id}", SegmentClass.VALUE)),
+        segments = listOf(Segment("licensure", SegmentClass.LITERAL), Segment("{authority_id}", SegmentClass.VALUE, pattern = "^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]\$")),
         labelKey = null, glossKey = null,
-        description = "License status for a key under a named authority (authority_id is the licence's provenance — CC 2.4.1.2.1; authority is conferred by quorum, never by delegates_to).",
-    )
-    val lineageWitnessStage: Dimension = Dimension(
-        prefix = "lineage_witness:{stage}", slug = "lineage_witness_stage", ccSection = "3.1.3",
-        polarity = Polarity.POSITIVE_ONLY, polarityRaw = "positive-only", indeterminateAllowed = false,
-        renderer = Renderer.POSITIVE_ONLY_ACCRUAL, owningComponent = "persist", reserved = true, reservedRule = "per-leaf: proposal = an active founder of the lineage named; acceptance/decline = the owner of the node named in subject_key_ids[0] (or a key acting for the owner)",
-        segments = listOf(Segment("lineage_witness", SegmentClass.LITERAL), Segment("{stage}", SegmentClass.VOCAB)),
-        labelKey = null, glossKey = null,
-        description = "The ceremony by which a node becomes a witness of a trust-root lineage (CC 3.2 T6), one attestation-plane row per step: {stage} ∈ proposal | acceptance | decline — closed.",
+        description = "License status for a key under a named authority (authority_id is the licence's provenance — CC 2.4.1.3).",
     )
     val localityDecisionScale: Dimension = Dimension(
         prefix = "locality:decision:{scale}", slug = "locality_decision_scale", ccSection = "3.1.9.5",
@@ -837,6 +997,14 @@ object Dim {
         segments = listOf(Segment("locality", SegmentClass.LITERAL), Segment("decision", SegmentClass.LITERAL), Segment("{scale}", SegmentClass.VOCAB)),
         labelKey = null, glossKey = null,
         description = "Names the scale at which a decision is being made.",
+    )
+    val locationProofVersion: Dimension = Dimension(
+        prefix = "location_proof:{version}", slug = "location_proof_version", ccSection = "3.1.3",
+        polarity = Polarity.POSITIVE_ONLY, polarityRaw = "positive-only", indeterminateAllowed = false,
+        renderer = Renderer.POSITIVE_ONLY_ACCRUAL, owningComponent = "persist", reserved = true, reservedRule = "subject-only (attesting_key_id is the subject; no delegation mints one)",
+        segments = listOf(Segment("location_proof", SegmentClass.LITERAL), Segment("{version}", SegmentClass.VOCAB)),
+        labelKey = null, glossKey = null,
+        description = "A subject's rough-location declaration (CC 3.3.3): the scores row whose envelope is the location_proof payload, its cell at resolution 7 or coarser (CC 2.6.6.1).",
     )
     val manifoldConformityCohort: Dimension = Dimension(
         prefix = "manifold_conformity:{cohort}", slug = "manifold_conformity_cohort", ccSection = "3.1.8.3",
@@ -849,10 +1017,10 @@ object Dim {
     val membershipStage: Dimension = Dimension(
         prefix = "membership:{stage}", slug = "membership_stage", ccSection = "3.1.3.2",
         polarity = Polarity.POSITIVE_ONLY, polarityRaw = "positive-only", indeterminateAllowed = false,
-        renderer = Renderer.POSITIVE_ONLY_ACCRUAL, owningComponent = "persist", reserved = true, reservedRule = "per-leaf: proposal = an inviter (founder_only: an active founder; else any active member); acceptance/decline = the invitee only (signer_acts_for to subject_key_ids[0])",
-        segments = listOf(Segment("membership", SegmentClass.LITERAL), Segment("{stage}", SegmentClass.VOCAB)),
+        renderer = Renderer.POSITIVE_ONLY_ACCRUAL, owningComponent = "persist", reserved = true, reservedRule = "per-leaf: proposal = an inviter (founder_only: an active founder; else any active member); acceptance/decline = the invitee only (signer_acts_for to subject_key_ids[0]); widening/removal = cosigned under the group's consensus_protocol; resignation = the leaving member; keeps = counted under the group's consensus_protocol",
+        segments = listOf(Segment("membership", SegmentClass.LITERAL), Segment("{stage}", SegmentClass.VOCAB, values = listOf("proposal", "acceptance", "decline", "widening", "removal", "resignation", "keeps"))),
         labelKey = null, glossKey = null,
-        description = "The membership ceremony, one attestation-plane row per step: {stage} ∈ proposal | acceptance | decline — closed.",
+        description = "The membership ceremony, one attestation-plane row per step: {stage} ∈ proposal | acceptance | decline | widening | removal | resignation | keeps — closed.",
     )
     val meshConfigKey: Dimension = Dimension(
         prefix = "mesh_config:{key}", slug = "mesh_config_key", ccSection = "3.1.9.2",
@@ -860,7 +1028,7 @@ object Dim {
         renderer = Renderer.CONFIG_RECORD, owningComponent = "node", reserved = false, reservedRule = null,
         segments = listOf(Segment("mesh_config", SegmentClass.LITERAL), Segment("{key}", SegmentClass.VOCAB)),
         labelKey = null, glossKey = null,
-        description = "Mesh-configuration row (CC 4.2.1, #57 ratified): trust-root-emitted on the delegation plane; relieve-never-expand; most-restrictive-across-roots; a key naming no consumer processor is refused at admission; emergency form TTL ≤ 72 h.",
+        description = "Mesh-configuration row (CC 4.2.1): trust-root-emitted, a scores row authored under a grant counted over the holders of the bundle in force (a delegates_to needs a delegate; a configuration names none); relieve-never-expand; most-restrictive",
     )
     val methodApproachIdSubstrateRung: Dimension = Dimension(
         prefix = "method:{approach_id}:{substrate_rung}", slug = "method_approach_id_substrate_rung", ccSection = "3.1.9.7",
@@ -869,6 +1037,14 @@ object Dim {
         segments = listOf(Segment("method", SegmentClass.LITERAL), Segment("{approach_id}", SegmentClass.VALUE), Segment("{substrate_rung}", SegmentClass.VOCAB)),
         labelKey = null, glossKey = null,
         description = "Concrete operational practice.",
+    )
+    val mlsLeafVouch: Dimension = Dimension(
+        prefix = "mls:leaf_vouch", slug = "mls_leaf_vouch", ccSection = "3.1.4",
+        polarity = Polarity.POSITIVE_ONLY, polarityRaw = "positive-only", indeterminateAllowed = false,
+        renderer = Renderer.CONFIG_RECORD, owningComponent = "transport-delivery", reserved = true, reservedRule = "substrate-self-report",
+        segments = listOf(Segment("mls", SegmentClass.LITERAL), Segment("leaf_vouch", SegmentClass.LITERAL)),
+        labelKey = null, glossKey = null,
+        description = "A member's vouch for the MLS leaf key of one of its devices (CC 5.1).",
     )
     val model3d: Dimension = Dimension(
         prefix = "model_3d:*", slug = "model_3d_any", ccSection = "3.1.9",
@@ -890,7 +1066,7 @@ object Dim {
         prefix = "moderation_track_record:{community_key_id}", slug = "moderation_track_record_community_key_id", ccSection = "3.1.9.2",
         polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
         renderer = Renderer.SIGNED_SCORE, owningComponent = "node", reserved = false, reservedRule = null,
-        segments = listOf(Segment("moderation_track_record", SegmentClass.LITERAL), Segment("{community_key_id}", SegmentClass.VALUE)),
+        segments = listOf(Segment("moderation_track_record", SegmentClass.LITERAL), Segment("{community_key_id}", SegmentClass.VALUE, pattern = "^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]\$")),
         labelKey = null, glossKey = null,
         description = "Moderation merit.",
     )
@@ -930,9 +1106,17 @@ object Dim {
         prefix = "objection:{state}", slug = "objection_state", ccSection = "3.1.9.2",
         polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
         renderer = Renderer.STATE_PILL, owningComponent = "node", reserved = false, reservedRule = null,
-        segments = listOf(Segment("objection", SegmentClass.LITERAL), Segment("{state}", SegmentClass.VOCAB)),
+        segments = listOf(Segment("objection", SegmentClass.LITERAL), Segment("{state}", SegmentClass.VOCAB, values = listOf("assent", "raised"))),
         labelKey = "ceg.objection_state.label", glossKey = "ceg.objection_state.gloss",
-        description = "Reverse-quorum objection marker (CIRISConstitution#67): a signed, roster-pinned objection to a pending commons act; state lifecycle per the minting cut.",
+        description = "Reverse-quorum objection marker: a signed, roster-pinned vote on a pending act (CC 2.7.5).",
+    )
+    val observationAccessAssumption: Dimension = Dimension(
+        prefix = "observation:access_assumption", slug = "observation_access_assumption", ccSection = "3.1.9.4",
+        polarity = Polarity.PLUS_ONE_ONLY, polarityRaw = "+1.0 only", indeterminateAllowed = false,
+        renderer = Renderer.STATE_PILL, owningComponent = "node", reserved = true, reservedRule = "first-person observation (attesting_key_id == attested_key_id; witness_relation self; subject_key_ids non-empty, the observed agent; never the subject itself)",
+        segments = listOf(Segment("observation", SegmentClass.LITERAL), Segment("access_assumption", SegmentClass.LITERAL)),
+        labelKey = null, glossKey = null,
+        description = "What one witness assumed about its view of a subject when it made a claim about that subject: which consent grants were in force, at what trace level, over which occurrences, over which window, through which channel classes.",
     )
     val observationReachability: Dimension = Dimension(
         prefix = "observation:reachability", slug = "observation_reachability", ccSection = "3.1.9.4",
@@ -966,6 +1150,22 @@ object Dim {
         labelKey = null, glossKey = null,
         description = "",
     )
+    val preserveRequest: Dimension = Dimension(
+        prefix = "preserve_request", slug = "preserve_request", ccSection = "3.1.5",
+        polarity = Polarity.PLUS_ONE_ONLY, polarityRaw = "+1.0 only", indeterminateAllowed = false,
+        renderer = Renderer.STATE_PILL, owningComponent = "accord-agent", reserved = true, reservedRule = "reserved (see table)",
+        segments = listOf(Segment("preserve_request", SegmentClass.LITERAL)),
+        labelKey = null, glossKey = null,
+        description = "The signed request handed to the operator with the retirement record (CC 7.5.5): retirement_id, manifest digest, preserve_until and its inputs (shutdown + 5 y as the default; a law or contract period with its citation; active legal_hold ids",
+    )
+    val preserveResponse: Dimension = Dimension(
+        prefix = "preserve_response", slug = "preserve_response", ccSection = "3.1.5",
+        polarity = Polarity.BOOLEAN_VIA_SCORE, polarityRaw = "boolean-via-score", indeterminateAllowed = false,
+        renderer = Renderer.BOOLEAN_VIA_SCORE, owningComponent = "accord-agent", reserved = true, reservedRule = "reserved (see table)",
+        segments = listOf(Segment("preserve_response", SegmentClass.LITERAL)),
+        labelKey = null, glossKey = null,
+        description = "The operator's answer to a preserve_request:v1: accepted (+1.0) | declined (−1.0), an optional statement, and the request's id.",
+    )
     val progressMeasureMethodId: Dimension = Dimension(
         prefix = "progress_measure:{method_id}", slug = "progress_measure_method_id", ccSection = "3.1.9.7",
         polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
@@ -978,9 +1178,9 @@ object Dim {
         prefix = "prohibited:{category}", slug = "prohibited_category", ccSection = "3.1.5.4",
         polarity = Polarity.MINUS_ONE_OR_HALF, polarityRaw = "-1 / -0.5 only", indeterminateAllowed = false,
         renderer = Renderer.VIOLATION_MARKER, owningComponent = "accord-agent", reserved = false, reservedRule = null,
-        segments = listOf(Segment("prohibited", SegmentClass.LITERAL), Segment("{category}", SegmentClass.VOCAB)),
+        segments = listOf(Segment("prohibited", SegmentClass.LITERAL), Segment("{category}", SegmentClass.VOCAB, values = listOf("medical", "financial", "legal", "spiritual_direction", "home_security", "identity_verification", "content_moderation", "research", "infrastructure_control", "weapons_harmful", "manipulation_coercion", "surveillance_mass", "deception_fraud", "cyber_offensive", "election_interference", "biometric_inference", "autonomous_deception", "hazardous_materials", "discrimination", "crisis_escalation", "pattern_detection", "protective_routing"))),
         labelKey = "ceg.prohibited_category.label", glossKey = "ceg.prohibited_category.gloss",
-        description = "22 NEVER_ALLOWED categories from prohibitions.py.",
+        description = "The 22 prohibited-capability categories; {category} ∈ medical | financial | legal | spiritual_direction | home_security | identity_verification | content_moderation | research | infrastructure_control | weapons_harmful | manipulation_coerci",
     )
     val provenanceBuildManifestTarget: Dimension = Dimension(
         prefix = "provenance:build_manifest:{target}", slug = "provenance_build_manifest_target", ccSection = "3.1.2",
@@ -994,7 +1194,7 @@ object Dim {
         prefix = "provenance:build_manifest:{target}:locale:{lang_code}", slug = "provenance_build_manifest_target_locale_lang_code", ccSection = "3.1.2",
         polarity = Polarity.BOOLEAN_VIA_SCORE, polarityRaw = "boolean-via-score", indeterminateAllowed = false,
         renderer = Renderer.BOOLEAN_VIA_SCORE, owningComponent = "attestation", reserved = false, reservedRule = null,
-        segments = listOf(Segment("provenance", SegmentClass.LITERAL), Segment("build_manifest", SegmentClass.LITERAL), Segment("{target}", SegmentClass.VALUE), Segment("locale", SegmentClass.LITERAL), Segment("{lang_code}", SegmentClass.EXTERNAL)),
+        segments = listOf(Segment("provenance", SegmentClass.LITERAL), Segment("build_manifest", SegmentClass.LITERAL), Segment("{target}", SegmentClass.VALUE), Segment("locale", SegmentClass.LITERAL), Segment("{lang_code}", SegmentClass.EXTERNAL, pattern = "^(?:[a-z]{2,3}(-[A-Z][a-z]{3})?(-(?:[A-Z]{2}|[0-9]{3}))?(-(?:[a-z0-9]{5,8}|[0-9][a-z0-9]{3}))*(-[a-wy-z0-9](-[a-z0-9]{2,8})+)*(-x(-[a-z0-9]{1,8})+)?|x(-[a-z0-9]{1,8})+|i-default|i-enochian|i-mingo|cel-gaulish|zh-min)\$")),
         labelKey = null, glossKey = null,
         description = "Per-locale signed sub-manifest within a target's manifest tree.",
     )
@@ -1020,7 +1220,7 @@ object Dim {
         renderer = Renderer.STATE_PILL, owningComponent = "node", reserved = false, reservedRule = null,
         segments = listOf(Segment("quarantine", SegmentClass.LITERAL), Segment("{state}", SegmentClass.VOCAB)),
         labelKey = null, glossKey = null,
-        description = "Subject-scoped quarantine marker (CIRISConstitution#76): slash-duty-holder-only emitter.",
+        description = "Subject-scoped quarantine marker: slash-duty-holder-only emitter.",
     )
     val ratchetFlagCoordinatedVotingCluster: Dimension = Dimension(
         prefix = "ratchet:flag:coordinated_voting_cluster", slug = "ratchet_flag_coordinated_voting_cluster", ccSection = "3.1.6",
@@ -1084,7 +1284,23 @@ object Dim {
         renderer = Renderer.SIGNED_SCORE, owningComponent = "node", reserved = false, reservedRule = null,
         segments = listOf(Segment("regime", SegmentClass.LITERAL), Segment("{artifact}", SegmentClass.VOCAB), Segment("{version}", SegmentClass.VOCAB)),
         labelKey = null, glossKey = null,
-        description = "Regime declaration for {artifact} ∈ manifest/composition/gate/onwire (CIRISConstitution#81 / CIRISPersist#571): reserved — substrate-steward-emitted, the emitter rule pinned at mint per R2(a); registered to end the ProducerSteward default.",
+        description = "Regime declaration for {artifact} ∈ manifest/composition/gate/onwire: reserved — substrate-steward-emitted, the emitter rule pinned at mint per R2(a), so the ProducerSteward default never applies.",
+    )
+    val rendezvousRoute: Dimension = Dimension(
+        prefix = "rendezvous:route", slug = "rendezvous_route", ccSection = "3.1.4",
+        polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
+        renderer = Renderer.SIGNED_SCORE, owningComponent = "transport-delivery", reserved = true, reservedRule = "self: attester == subject == the period's fresh rendezvous key (identity_type rendezvous; key record inline); federation-wide reach",
+        segments = listOf(Segment("rendezvous", SegmentClass.LITERAL), Segment("route", SegmentClass.LITERAL)),
+        labelKey = null, glossKey = null,
+        description = "A receiver's published route for targeted delivery through the Anonymous Tier (CC 5.4.6).",
+    )
+    val retirementState: Dimension = Dimension(
+        prefix = "retirement:{state}", slug = "retirement_state", ccSection = "3.1.5",
+        polarity = Polarity.ENUMERATED, polarityRaw = "enumerated", indeterminateAllowed = false,
+        renderer = Renderer.ENUMERATED_CHIP, owningComponent = "accord-agent", reserved = true, reservedRule = "reserved (see table)",
+        segments = listOf(Segment("retirement", SegmentClass.LITERAL), Segment("{state}", SegmentClass.VOCAB)),
+        labelKey = null, glossKey = null,
+        description = "The agent's own retirement row (CC 7.5.5, the Retirement Standard).",
     )
     val revocationEntityTypeReason: Dimension = Dimension(
         prefix = "revocation:{entity_type}:{reason}", slug = "revocation_entity_type_reason", ccSection = "3.1.1",
@@ -1116,7 +1332,7 @@ object Dim {
         renderer = Renderer.POSITIVE_ONLY_ACCRUAL, owningComponent = "persist", reserved = true, reservedRule = "legacy label on an owner's own delegates_to row; claims no job, confers nothing; closed",
         segments = listOf(Segment("self", SegmentClass.LITERAL), Segment("delegates_to", SegmentClass.LITERAL)),
         labelKey = null, glossKey = null,
-        description = "Legacy label, closed.",
+        description = "Closed label, no job.",
     )
     val selfDelegatesToAgentOccurrence: Dimension = Dimension(
         prefix = "self:delegates_to:agent_occurrence", slug = "self_delegates_to_agent_occurrence", ccSection = "3.1.3",
@@ -1124,7 +1340,7 @@ object Dim {
         renderer = Renderer.POSITIVE_ONLY_ACCRUAL, owningComponent = "persist", reserved = true, reservedRule = "legacy label on an owner's own delegates_to row; claims no job, confers nothing; closed",
         segments = listOf(Segment("self", SegmentClass.LITERAL), Segment("delegates_to", SegmentClass.LITERAL), Segment("agent_occurrence", SegmentClass.LITERAL)),
         labelKey = null, glossKey = null,
-        description = "Legacy label, closed.",
+        description = "Closed label, no job.",
     )
     val sessionKind: Dimension = Dimension(
         prefix = "session:{kind}", slug = "session_kind", ccSection = "3.1.3.1",
@@ -1134,13 +1350,29 @@ object Dim {
         labelKey = null, glossKey = null,
         description = "Which occurrence of a self is handling an addressed, stateful exchange.",
     )
+    val settlement: Dimension = Dimension(
+        prefix = "settlement:*", slug = "settlement_any", ccSection = "3.1.3",
+        polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
+        renderer = Renderer.SIGNED_SCORE, owningComponent = "persist", reserved = false, reservedRule = null,
+        segments = listOf(Segment("settlement", SegmentClass.LITERAL), Segment("*", SegmentClass.WILDCARD)),
+        labelKey = null, glossKey = null,
+        description = "Catalogue row (CC 3.1.7 R1); the optional, privacy-scoped linkage of a federation action to its off-stack settlement — a bare scores against the paid Contribution, or the settlement subject_kind ceremony when an explicit receipt is wanted (",
+    )
     val slashingOutcome: Dimension = Dimension(
         prefix = "slashing:{outcome}", slug = "slashing_outcome", ccSection = "3.1.9.2",
         polarity = Polarity.BOOLEAN_VIA_SCORE, polarityRaw = "boolean-via-score", indeterminateAllowed = false,
         renderer = Renderer.BOOLEAN_VIA_SCORE, owningComponent = "node", reserved = false, reservedRule = null,
         segments = listOf(Segment("slashing", SegmentClass.LITERAL), Segment("{outcome}", SegmentClass.VOCAB)),
         labelKey = null, glossKey = null,
-        description = "proven_rogue / not_proven (lowercase per CC 3.1.7 R3; the substrate's coined upheld / suspension / expertise_fraud admit as open vocab under CC 4.5.1.1).",
+        description = "proven_rogue / not_proven (lowercase per CC 3.1.7 R3; the values upheld / suspension / expertise_fraud a substrate emits admit as open vocab under CC 4.5.1.1).",
+    )
+    val streamHead: Dimension = Dimension(
+        prefix = "stream:head", slug = "stream_head", ccSection = "3.1.3",
+        polarity = Polarity.POSITIVE_ONLY, polarityRaw = "positive-only", indeterminateAllowed = false,
+        renderer = Renderer.POSITIVE_ONLY_ACCRUAL, owningComponent = "persist", reserved = true, reservedRule = "self: the signer is the row's author and the stream's producer, a member's key and never a node's; sub is stream: and the stream's id; no second signer",
+        segments = listOf(Segment("stream", SegmentClass.LITERAL), Segment("head", SegmentClass.LITERAL)),
+        labelKey = null, glossKey = null,
+        description = "A stream's signed head (registered under CC 3.1.7 R2(a); CC 5.3.3.5, CC 5.3.3.8): the stream's epoch, its tree size and its root at one instant, with the room where the stream is accountable.",
     )
     val system: Dimension = Dimension(
         prefix = "system:*", slug = "system_any", ccSection = "3.1.3",
@@ -1149,6 +1381,14 @@ object Dim {
         segments = listOf(Segment("system", SegmentClass.LITERAL), Segment("*", SegmentClass.WILDCARD)),
         labelKey = null, glossKey = null,
         description = "",
+    )
+    val takedownNoticeBasis: Dimension = Dimension(
+        prefix = "takedown_notice:{basis}", slug = "takedown_notice_basis", ccSection = "3.1.1",
+        polarity = Polarity.MINUS_ONE_ONLY, polarityRaw = "-1 only", indeterminateAllowed = false,
+        renderer = Renderer.VIOLATION_MARKER, owningComponent = "registry", reserved = true, reservedRule = "duty-holder-signed under CC 4.5.5 for the legal bases; cosigned under the trust root's consensus_protocol for steward_purge, attester any seat, family derived from the verified signers",
+        segments = listOf(Segment("takedown_notice", SegmentClass.LITERAL), Segment("{basis}", SegmentClass.VOCAB, values = listOf("dmca512", "dsa_article16", "tvec_terrorist", "ncmec_csam", "gifct_cip", "community_standards", "perceptual_hash_csam", "osa_illegal_content", "avmsd_age_inappropriate", "court_order", "steward_purge"))),
+        labelKey = null, glossKey = null,
+        description = "A takedown notice as a row (shape and bases at CC 3.3.2): the scores row whose envelope is the takedown_notice payload, subject_kind: takedown_notice, so that every notice has an attestation_id a tombstone cites and a reconsideration:{groun",
     )
     val testimonialWitnessKind: Dimension = Dimension(
         prefix = "testimonial_witness:{kind}", slug = "testimonial_witness_kind", ccSection = "3.1.9.3",
@@ -1182,29 +1422,13 @@ object Dim {
         labelKey = null, glossKey = null,
         description = "Post-scrub digest of a trace for cross-node consumption when the trace itself is out of scope or over cap.",
     )
-    val transparencyLogConsistency: Dimension = Dimension(
-        prefix = "transparency_log:consistency", slug = "transparency_log_consistency", ccSection = "3.1.2",
-        polarity = Polarity.BOOLEAN_VIA_SCORE, polarityRaw = "boolean-via-score", indeterminateAllowed = false,
-        renderer = Renderer.BOOLEAN_VIA_SCORE, owningComponent = "attestation", reserved = false, reservedRule = null,
-        segments = listOf(Segment("transparency_log", SegmentClass.LITERAL), Segment("consistency", SegmentClass.LITERAL)),
+    val transportCanonicalRebind: Dimension = Dimension(
+        prefix = "transport:canonical_rebind", slug = "transport_canonical_rebind", ccSection = "3.1.3",
+        polarity = Polarity.POSITIVE_ONLY, polarityRaw = "positive-only", indeterminateAllowed = false,
+        renderer = Renderer.POSITIVE_ONLY_ACCRUAL, owningComponent = "persist", reserved = true, reservedRule = "the accord's holders, counted at a strict majority of the holders of the bundle in force; never a substrate self-report",
+        segments = listOf(Segment("transport", SegmentClass.LITERAL), Segment("canonical_rebind", SegmentClass.LITERAL)),
         labelKey = null, glossKey = null,
-        description = "RFC 6962 consistency proof between two STHs.",
-    )
-    val transparencyLogCosignedTreeSize: Dimension = Dimension(
-        prefix = "transparency_log:cosigned:{tree_size}", slug = "transparency_log_cosigned_tree_size", ccSection = "3.1.2",
-        polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
-        renderer = Renderer.SIGNED_SCORE, owningComponent = "attestation", reserved = true, reservedRule = "witness-emitter (identity_type contains witness)",
-        segments = listOf(Segment("transparency_log", SegmentClass.LITERAL), Segment("cosigned", SegmentClass.LITERAL), Segment("{tree_size}", SegmentClass.VALUE)),
-        labelKey = null, glossKey = null,
-        description = "Witness cosignature on an STH (substrate-conformance path; the interim uses a per-region registry_sth_cosignatures table; see CC 5.3.1 endpoints).",
-    )
-    val transparencyLogInclusion: Dimension = Dimension(
-        prefix = "transparency_log:inclusion", slug = "transparency_log_inclusion", ccSection = "3.1.2",
-        polarity = Polarity.BOOLEAN_VIA_SCORE, polarityRaw = "boolean-via-score", indeterminateAllowed = false,
-        renderer = Renderer.BOOLEAN_VIA_SCORE, owningComponent = "attestation", reserved = false, reservedRule = null,
-        segments = listOf(Segment("transparency_log", SegmentClass.LITERAL), Segment("inclusion", SegmentClass.LITERAL)),
-        labelKey = null, glossKey = null,
-        description = "RFC 6962 inclusion proof for an audit leaf.",
+        description = "The holders' re-bind of a seated serve node's transport destination and transit pair (registered under CC 3.1.7 R2(a); the quorum act of CC 3.3.6.2 and CC 5.3.4): an attestation row about a seated serve node, a counted row the accord's hold",
     )
     val transportKind: Dimension = Dimension(
         prefix = "transport:{kind}", slug = "transport_kind", ccSection = "3.1.4",
@@ -1220,7 +1444,7 @@ object Dim {
         renderer = Renderer.RELATION_EDGE, owningComponent = "registry", reserved = true, reservedRule = "reserved (see table)",
         segments = listOf(Segment("trust", SegmentClass.LITERAL), Segment("{job}", SegmentClass.VOCAB), Segment("{version}", SegmentClass.VOCAB)),
         labelKey = "ceg.trust_job_version.label", glossKey = "ceg.trust_job_version.gloss",
-        description = "The trust-root conferral and acceptance edges, carried as dimension values on delegates_to rows — the wire type is unchanged, so 1+4 is untouched.",
+        description = "The trust-root grant and acceptance edges, carried as dimension values on delegates_to rows — the wire type is unchanged, so 1+4 is untouched.",
     )
     val truthGroundingSubject: Dimension = Dimension(
         prefix = "truth_grounding:{subject}", slug = "truth_grounding_subject", ccSection = "3.1.9.3",
@@ -1250,9 +1474,9 @@ object Dim {
         prefix = "wa_adjudication:{state}", slug = "wa_adjudication_state", ccSection = "3.1.9.4",
         polarity = Polarity.SIGNED, polarityRaw = "signed", indeterminateAllowed = false,
         renderer = Renderer.STATE_PILL, owningComponent = "node", reserved = false, reservedRule = null,
-        segments = listOf(Segment("wa_adjudication", SegmentClass.LITERAL), Segment("{state}", SegmentClass.VOCAB)),
+        segments = listOf(Segment("wa_adjudication", SegmentClass.LITERAL), Segment("{state}", SegmentClass.VOCAB, values = listOf("abandonment", "seizure", "successor", "petition"))),
         labelKey = null, glossKey = null,
-        description = "CC 4.3 Wise-Authority quorum adjudication finding (CIRISConstitution#73) — the attestation a wa_adjudication_ref resolves to (abandonment/seizure and successor findings).",
+        description = "CC 4.3 Wise-Authority quorum adjudication finding — the attestation a wa_adjudication_ref resolves to.",
     )
     val watchlistId: Dimension = Dimension(
         prefix = "watchlist:{id}", slug = "watchlist_id", ccSection = "3.1.9.4",
@@ -1270,6 +1494,14 @@ object Dim {
         labelKey = null, glossKey = null,
         description = "Rolling tally per Contribution (P7).",
     )
+    val windowState: Dimension = Dimension(
+        prefix = "window:{state}", slug = "window_state", ccSection = "3.1.3",
+        polarity = Polarity.POSITIVE_ONLY, polarityRaw = "positive-only", indeterminateAllowed = false,
+        renderer = Renderer.POSITIVE_ONLY_ACCRUAL, owningComponent = "persist", reserved = true, reservedRule = "a key seated in the counted set at the head the opener names; for the self roster, a key of the roster; a landing by any other key concludes nothing",
+        segments = listOf(Segment("window", SegmentClass.LITERAL), Segment("{state}", SegmentClass.VOCAB, values = listOf("held", "landed", "refused"))),
+        labelKey = null, glossKey = null,
+        description = "The two rows by which a window that binds others is closed (registered under CC 3.1.7 R2(a); CC 2.7, the window).",
+    )
     val witnessDiversityContributionId: Dimension = Dimension(
         prefix = "witness_diversity:{contribution_id}", slug = "witness_diversity_contribution_id", ccSection = "3.1.9.3",
         polarity = Polarity.BOOLEAN_VIA_SCORE, polarityRaw = "boolean-via-score", indeterminateAllowed = false,
@@ -1286,12 +1518,15 @@ object Dim {
         accordInvokeDrillDrillId,
         accordInvokeNotifyNotifyId,
         accordLifecycle,
-        accordLifecycleActive,
+        accordLifecycleKind,
+        actAck,
         activityTierPeriod,
+        admissionUnit,
         ageAssuranceLevelBandVersion,
         ageSelfDeclaredBandBandVersion,
         agentFilesKindPlatformOrTarget,
         approachGoalId,
+        archiveReleaseBasis,
         attestationAgentIntegrity,
         attestationHardwareRooted,
         attestationLicenseValidity,
@@ -1300,26 +1535,32 @@ object Dim {
         audio,
         auditChainHashContinuity,
         autonomyAspect,
+        ballotModerator,
+        ballotModeratorAcceptance,
+        ballotTallyPollId,
         benchmarkHe300CategoryVersion,
         beneficenceAspect,
         blog,
         bondPostedCurrency,
         buildRegisteredTarget,
         capacityComposite,
-        capacityCoreIdentity,
-        capacityIncompletenessAwareness,
-        capacityIntegrity,
         capacityRelayDelivery,
-        capacityResilience,
-        capacitySustainedCoherence,
+        capacityFactor,
         capacityAssuranceReversibleExcludedDomainVersion,
         capacityAssuranceReversiblePendingDomainVersion,
         capacityAssuranceLevelDomainBandVersion,
+        censusCompositeClass,
+        censusExpectedActive,
+        censusMemberPartial,
+        censusMemberShare,
+        censusPartialClass,
+        censusShareClass,
         certValidityAuthority,
         chat,
         coherenceStandingCohort,
         collectionKind,
         commitmentFulfillmentPriorContributionId,
+        communityListing,
         configScope,
         conscienceCoherence,
         conscienceEntropy,
@@ -1338,20 +1579,20 @@ object Dim {
         consentKind,
         contentClassClass,
         contentRatingSchemeRating,
+        contributionSubjectKind,
         corpusHealthNEffMeasurable,
-        creditsDomainLanguageSubstrateBuilding,
         creditsDomainLanguageSubject,
         custodyKind,
         cwClassClass,
+        deferralRequest,
+        deferralResponseOutcome,
         deliveryClass,
-        deliveryReceiptStreamId,
-        detectionConscienceOverrideRate,
+        deliveryAckStreamId,
         detectionCorrelatedActionAxis,
-        detectionCrossAgentDivergence,
         detectionDistributiveAccessResourceType,
         detectionHashChainIntegrity,
         detectionIntraAgentConsistency,
-        detectionTemporalDrift,
+        detectionDetector,
         deviceLabel,
         dmaCsdma,
         dmaDsdmaDomain,
@@ -1362,6 +1603,7 @@ object Dim {
         eventAttendance,
         eventLifecycleState,
         eventRsvpCount,
+        evidenceSuiteKindCellPrefix,
         expertiseDomainLanguage,
         federationDirectoryReplicationLag,
         fidelityExplainabilitySlaTier,
@@ -1369,24 +1611,36 @@ object Dim {
         fileVersion,
         film,
         goalScale,
+        groupRoster,
         hardCaseKind,
         hardwareCustodyPlatform,
         healthLivenessVersion,
-        holdsBytesSha256Prefix,
+        holonClaim,
         identityCanonicalBindingCanonicalHash,
+        identityOccurrence,
+        identityOccurrenceRevocation,
+        identityAmendment,
         identityContinuityRelationalAnchor,
         image,
         integrityAspect,
         judgeModelVerdictModelId,
         justiceAspect,
+        keyRecord,
+        keyRevocation,
         keyBoundaryScope,
+        keyGrantAxis,
+        lawfulOrderRelease,
+        ledgerCheckpointUnitVersion,
+        ledgerHeadUnitVersion,
+        ledgerPromotionVersion,
         licensureAuthorityId,
-        lineageWitnessStage,
         localityDecisionScale,
+        locationProofVersion,
         manifoldConformityCohort,
         membershipStage,
         meshConfigKey,
         methodApproachIdSubstrateRung,
+        mlsLeafVouch,
         model3d,
         moderationAllegationType,
         moderationTrackRecordCommunityKeyId,
@@ -1395,10 +1649,13 @@ object Dim {
         news,
         nonMaleficenceAspect,
         objectionState,
+        observationAccessAssumption,
         observationReachability,
         ownershipRelationTargetKindVersion,
         partnerRoleRole,
         peerReachabilityNetwork,
+        preserveRequest,
+        preserveResponse,
         progressMeasureMethodId,
         prohibitedCategory,
         provenanceBuildManifestTarget,
@@ -1414,21 +1671,24 @@ object Dim {
         ratchetFlagOutOfDistributionVoting,
         reconsiderationGrounds,
         regimeArtifactVersion,
+        rendezvousRoute,
+        retirementState,
         revocationEntityTypeReason,
         rollbackDetectedRevisionField,
         seedHolderVotingAlignmentCell,
         selfDelegatesTo,
         selfDelegatesToAgentOccurrence,
         sessionKind,
+        settlement,
         slashingOutcome,
+        streamHead,
         system,
+        takedownNoticeBasis,
         testimonialWitnessKind,
         topicalRelationKind,
         traceFormVersion,
         traceSummaryKind,
-        transparencyLogConsistency,
-        transparencyLogCosignedTreeSize,
-        transparencyLogInclusion,
+        transportCanonicalRebind,
         transportKind,
         trustJobVersion,
         truthGroundingSubject,
@@ -1437,6 +1697,7 @@ object Dim {
         waAdjudicationState,
         watchlistId,
         weightedAggregateContributionId,
+        windowState,
         witnessDiversityContributionId,
     )
 
@@ -1446,25 +1707,43 @@ object Dim {
     fun byPrefix(prefix: String): Dimension? = byPrefixIndex[prefix]
 
     /**
-     * The family a wire `dimension` string belongs to: the row whose literal
-     * segments match the wire's leading segments, longest match wins.
+     * The family a wire `dimension` string belongs to: the row whose segments
+     * match the wire's leading segments. A literal must be equal and a
+     * patterned segment must match its pattern. A value on a closed list counts as
+     * matched by name; one off the list still resolves, ranked below a row it fits,
+     * because this draws what a node sent (persist still writes objection:upheld,
+     * which rc22 does not list) and refusing is the validator's job. The most
+     * segments matched by name wins, then the fewest values off a list, then the
+     * longer row.
      */
     fun forWire(dimension: String): Dimension? {
         val parts = dimension.split(':')
         var best: Dimension? = null
-        var bestLen = -1
+        var bestScore = -1
+        var bestOff = Int.MAX_VALUE
+        var bestSize = -1
         for (d in all) {
             if (d.segments.size > parts.size) continue
             var ok = true
             var literals = 0
+            var off = 0
             for ((i, seg) in d.segments.withIndex()) {
                 when (seg.cls) {
                     SegmentClass.LITERAL -> if (seg.segment == parts[i]) literals++ else { ok = false; break }
                     SegmentClass.WILDCARD -> {}
-                    else -> if (parts[i].isEmpty()) { ok = false; break }
+                    else -> {
+                        if (parts[i].isEmpty()) { ok = false; break }
+                        val values = seg.values
+                        if (values != null) { if (parts[i] in values) literals++ else off++ }
+                        if (!seg.admits(parts[i])) { ok = false; break }
+                    }
                 }
             }
-            if (ok && literals > bestLen) { best = d; bestLen = literals }
+            val better = literals > bestScore ||
+                (literals == bestScore && (off < bestOff || (off == bestOff && d.segments.size > bestSize)))
+            if (ok && better) {
+                best = d; bestScore = literals; bestOff = off; bestSize = d.segments.size
+            }
         }
         return best
     }

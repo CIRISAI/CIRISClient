@@ -6150,7 +6150,7 @@
       "label": "Nani anamdhamini nani",
       "gloss": "Dai kwamba ufunguo mmoja unamsimamia mwingine kwa kazi iliyotajwa."
     },
-    "holds_bytes_sha256_prefix": {
+    "custody_kind": {
       "label": "Inashikilia nakala",
       "gloss": "Nodi ikisema inashikilia baiti za faili, zinazotambuliwa kwa hashi yao."
     },
@@ -6170,7 +6170,7 @@
       "label": "Hairuhusiwi",
       "gloss": "Alama kwamba kitu kimevuka mojawapo ya mistari inayowekwa na katiba. Huwa ni alama hasi pekee."
     },
-    "delivery_receipt_stream_id": {
+    "delivery_ack_stream_id": {
       "label": "Risiti",
       "gloss": "Rekodi kwamba kitu kimewasilishwa. Kubatilisha risiti hakubatilishi uwasilishaji."
     },
@@ -6184,6 +6184,10 @@
       "granted": "Imetolewa",
       "revoked": "Imebatilishwa",
       "expired": "Muda umeisha"
+    },
+    "file_version": {
+      "label": "Faili",
+      "gloss": "Faili iliyowekwa mahali ambapo kundi linaweza kuiona, baiti zake zikitambuliwa kwa hashi yao."
     }
   },
   "drive": {

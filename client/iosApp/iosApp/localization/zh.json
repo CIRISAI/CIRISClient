@@ -6150,7 +6150,7 @@
       "label": "谁为谁作担保",
       "gloss": "声明某一密钥在指定任务上为另一密钥作背书。"
     },
-    "holds_bytes_sha256_prefix": {
+    "custody_kind": {
       "label": "持有副本",
       "gloss": "某节点声明自己持有某文件的字节内容，以其哈希值命名。"
     },
@@ -6170,7 +6170,7 @@
       "label": "不允许",
       "gloss": "表明某事越过了宪章所划定的某条界线的标记。它始终只会是扣分项。"
     },
-    "delivery_receipt_stream_id": {
+    "delivery_ack_stream_id": {
       "label": "收据",
       "gloss": "记录某物已被投递的凭证。撤销此凭证并不会撤销投递本身。"
     },
@@ -6184,6 +6184,10 @@
       "granted": "已授予",
       "revoked": "已撤销",
       "expired": "已过期"
+    },
+    "file_version": {
+      "label": "文件",
+      "gloss": "放置在某群组可见位置的文件，其字节内容以哈希值命名。"
     }
   },
   "drive": {

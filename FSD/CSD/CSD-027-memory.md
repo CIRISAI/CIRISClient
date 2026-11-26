@@ -32,7 +32,7 @@ nav_epistemic_memory`. Listed as `agentOnly` (`CirclesNav.kt:154`) — **and
 that is wrong**: every route this screen calls is served by the node. See §6.
 
 ```yaml csd:shows
-registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
+registry_sha256: 5f8ff71fd1415c88179b73a8b7d9a047613b22cb81f609909ca9ab9ccc2a8d69
 fields:
   - ceg: x_private:memory_node_id
     use: display-only
@@ -59,12 +59,12 @@ fields:
     renders: "Who can see this — the CC 2.1 envelope's `cohort_scope`, plus `community_id` / `family_id` where set. NOT SENT: `/v1/memory/query` returns the graph node, not the envelope the bytes were filed under, so this screen cannot tell a self-scoped memory from a federated one. CC 2.3.3 makes these different axes and the screen has only the graph one."
     tag: "proposed:memory_receipt_scope"
     blocked_by: CIRISServer#661
-  - ceg: "holds_bytes:sha256:{prefix}"
-    bind: {prefix: 4a19c2ef}
+  - ceg: "custody:{kind}"
+    bind: {kind: ack}
     use: display-only
     type: float
     example: 1.0
-    renders: "This node holds the bytes — the CC 3.1.9.1 directory row. Load-bearing by its ABSENCE: CC 5.2 forbids emitting this for `cohort_scope: self | family` unconditionally, so a memory with no holds_bytes row is not missing, it is invisible on purpose."
+    renders: "This node holds the bytes — the holding claim custody:ack:v1 at the content's scope (CC 3.1.3.3; rc22 retired holds_bytes:sha256:{prefix}, the old CC 3.1.9.1 directory row). Load-bearing by its ABSENCE: CC 5.2 forbids emitting this for `cohort_scope: self | family` unconditionally, so a memory with no holds_bytes row is not missing, it is invisible on purpose."
     tag: "proposed:memory_holds_bytes"
   - ceg: x_private:memory_created_at
     use: display-only
@@ -106,7 +106,7 @@ it. A person whose node refused the read is told their memory is empty.
 | totals | `GET /v1/memory/stats` | **both** | live |
 | one memory | `GET /v1/memory/{node_id}` | **both** | live |
 | its envelope (`cohort_scope`) | — **unconfirmed** | CIRISServer | blocks `building` for `memory_receipt_scope` |
-| its `holds_bytes` row | — **unconfirmed** | CIRISServer | blocks `building` for `memory_holds_bytes` |
+| its holding claim (`custody:ack:v1`) | — **unconfirmed** | CIRISServer | blocks `building` for `memory_holds_bytes` |
 
 **All four live routes are served by the node.**
 
@@ -159,7 +159,7 @@ The last block fails today.
 structurally invisible outside the cohort, so the gate would have to stand up a
 second member to see one — worth doing when `memory_receipt_scope` is served,
 because the assertion that matters is that a family memory shows NO
-`holds_bytes` row and the screen does not read that as a defect.
+holding claim (`custody:ack:v1`) and the screen does not read that as a defect.
 
 ## 6. Card vs API vs CC — the delta
 

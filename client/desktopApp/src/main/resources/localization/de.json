@@ -6150,7 +6150,7 @@
       "label": "Wer für wen bürgt",
       "gloss": "Die Aussage, dass ein Schlüssel bei einer angegebenen Aufgabe für einen anderen Schlüssel einsteht."
     },
-    "holds_bytes_sha256_prefix": {
+    "custody_kind": {
       "label": "Hält eine Kopie",
       "gloss": "Eine Aussage eines Knotens, dass er die Bytes einer Datei hält, benannt durch ihren Hash."
     },
@@ -6170,7 +6170,7 @@
       "label": "Nicht erlaubt",
       "gloss": "Eine Markierung, dass etwas eine der Grenzen überschritten hat, die die Verfassung zieht. Es ist immer nur ein Minus."
     },
-    "delivery_receipt_stream_id": {
+    "delivery_ack_stream_id": {
       "label": "Quittung",
       "gloss": "Ein Datensatz, der bestätigt, dass etwas zugestellt wurde. Das Rückgängigmachen der Quittung macht die Zustellung nicht ungeschehen."
     },
@@ -6184,6 +6184,10 @@
       "granted": "Gewährt",
       "revoked": "Widerrufen",
       "expired": "Abgelaufen"
+    },
+    "file_version": {
+      "label": "Datei",
+      "gloss": "Eine Datei, die dort abgelegt wird, wo eine Gruppe sie sehen kann; ihre Bytes werden durch ihren Hash benannt."
     }
   },
   "drive": {
