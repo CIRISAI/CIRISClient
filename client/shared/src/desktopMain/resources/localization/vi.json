@@ -6150,7 +6150,7 @@
       "label": "Ai bảo đảm cho ai",
       "gloss": "Một tuyên bố rằng một khóa đứng sau bảo đảm cho khóa khác đối với một nhiệm vụ đã nêu."
     },
-    "holds_bytes_sha256_prefix": {
+    "custody_kind": {
       "label": "Giữ một bản sao",
       "gloss": "Một nút cho biết rằng nó đang giữ các byte của một tệp, được xác định bằng mã băm của chúng."
     },
@@ -6170,7 +6170,7 @@
       "label": "Không được phép",
       "gloss": "Một dấu hiệu cho thấy điều gì đó đã vượt qua một trong những giới hạn mà hiến pháp đặt ra. Đây luôn chỉ là một điểm trừ."
     },
-    "delivery_receipt_stream_id": {
+    "delivery_ack_stream_id": {
       "label": "Biên nhận",
       "gloss": "Một bản ghi cho biết điều gì đó đã được giao. Hủy biên nhận không hủy việc giao hàng."
     },
@@ -6184,6 +6184,10 @@
       "granted": "Đã cấp",
       "revoked": "Đã thu hồi",
       "expired": "Đã hết hạn"
+    },
+    "file_version": {
+      "label": "Tệp",
+      "gloss": "Một tệp được đặt ở nơi một nhóm có thể xem nó, các byte của nó được xác định bằng mã băm của chúng."
     }
   },
   "drive": {

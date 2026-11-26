@@ -1,0 +1,3 @@
+/home/emoore/CIRISClient/client/shared/.cxx/Debug/43r7223x/armeabi-v7a/CMakeFiles/ciris_aom.dir
+/home/emoore/CIRISClient/client/shared/.cxx/Debug/43r7223x/armeabi-v7a/CMakeFiles/edit_cache.dir
+/home/emoore/CIRISClient/client/shared/.cxx/Debug/43r7223x/armeabi-v7a/CMakeFiles/rebuild_cache.dir

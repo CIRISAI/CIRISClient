@@ -68,13 +68,13 @@ With no room nothing is asked of the node (`FilesViewModel.refresh(null)`);
 "no files" is only ever said about a room that was read.
 
 ```yaml csd:shows
-registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
+registry_sha256: 5f8ff71fd1415c88179b73a8b7d9a047613b22cb81f609909ca9ab9ccc2a8d69
 fields:
-  - ceg: "holds_bytes:sha256:{prefix}"
+  - ceg: "file:{version}"
     use: display-only
     type: unconfirmed
     example: "unconfirmed"
-    renders: "What it is — This node did not send this (the LISTING carries no content hash; the opened file's digest is checked on the sheet, not here)"
+    renders: "What it is: a file (rc22 retired holds_bytes:sha256:{prefix}; the row is file:{version}, CC 3.1.3.4) — This node did not send this (the LISTING carries no content hash; the opened file's digest is checked on the sheet, not here)"
     tag: receipt_dimension
     blocked_by: CIRISEdge#638
   - ceg: x_private:attesting_key_id

@@ -1,0 +1,19 @@
+                        -H/home/emoore/CIRISClient/client/shared/src/androidMain/cpp
+-DCMAKE_SYSTEM_NAME=Android
+-DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+-DCMAKE_SYSTEM_VERSION=24
+-DANDROID_PLATFORM=android-24
+-DANDROID_ABI=arm64-v8a
+-DCMAKE_ANDROID_ARCH_ABI=arm64-v8a
+-DANDROID_NDK=/home/emoore/Android/Sdk/ndk/26.1.10909125
+-DCMAKE_ANDROID_NDK=/home/emoore/Android/Sdk/ndk/26.1.10909125
+-DCMAKE_TOOLCHAIN_FILE=/home/emoore/Android/Sdk/ndk/26.1.10909125/build/cmake/android.toolchain.cmake
+-DCMAKE_MAKE_PROGRAM=/home/emoore/Android/Sdk/cmake/3.22.1/bin/ninja
+-DCMAKE_LIBRARY_OUTPUT_DIRECTORY=/home/emoore/CIRISClient/client/shared/build/intermediates/cxx/Debug/43r7223x/obj/arm64-v8a
+-DCMAKE_RUNTIME_OUTPUT_DIRECTORY=/home/emoore/CIRISClient/client/shared/build/intermediates/cxx/Debug/43r7223x/obj/arm64-v8a
+-DCMAKE_BUILD_TYPE=Debug
+-B/home/emoore/CIRISClient/client/shared/.cxx/Debug/43r7223x/arm64-v8a
+-GNinja
+-DAOM_ROOT=/home/emoore/CIRISClient/client/shared/build/aom
+                        Build command args: []
+                        Version: 2

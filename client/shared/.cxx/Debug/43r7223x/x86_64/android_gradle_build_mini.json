@@ -1,0 +1,27 @@
+{
+  "buildFiles": [
+    "/home/emoore/CIRISClient/client/shared/src/androidMain/cpp/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/home/emoore/Android/Sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/home/emoore/CIRISClient/client/shared/.cxx/Debug/43r7223x/x86_64",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/home/emoore/Android/Sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/home/emoore/CIRISClient/client/shared/.cxx/Debug/43r7223x/x86_64",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "ciris_aom::@6890427a1f51a3e7e1df": {
+      "artifactName": "ciris_aom",
+      "abi": "x86_64",
+      "output": "/home/emoore/CIRISClient/client/shared/build/intermediates/cxx/Debug/43r7223x/obj/x86_64/libciris_aom.so",
+      "runtimeFiles": []
+    }
+  }
+}

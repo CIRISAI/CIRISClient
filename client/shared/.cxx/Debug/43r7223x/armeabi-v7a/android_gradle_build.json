@@ -1,0 +1,38 @@
+{
+  "buildFiles": [
+    "/home/emoore/CIRISClient/client/shared/src/androidMain/cpp/CMakeLists.txt"
+  ],
+  "cleanCommandsComponents": [
+    [
+      "/home/emoore/Android/Sdk/cmake/3.22.1/bin/ninja",
+      "-C",
+      "/home/emoore/CIRISClient/client/shared/.cxx/Debug/43r7223x/armeabi-v7a",
+      "clean"
+    ]
+  ],
+  "buildTargetsCommandComponents": [
+    "/home/emoore/Android/Sdk/cmake/3.22.1/bin/ninja",
+    "-C",
+    "/home/emoore/CIRISClient/client/shared/.cxx/Debug/43r7223x/armeabi-v7a",
+    "{LIST_OF_TARGETS_TO_BUILD}"
+  ],
+  "libraries": {
+    "ciris_aom::@6890427a1f51a3e7e1df": {
+      "toolchain": "toolchain",
+      "abi": "armeabi-v7a",
+      "artifactName": "ciris_aom",
+      "output": "/home/emoore/CIRISClient/client/shared/build/intermediates/cxx/Debug/43r7223x/obj/armeabi-v7a/libciris_aom.so",
+      "runtimeFiles": []
+    }
+  },
+  "toolchains": {
+    "toolchain": {
+      "cCompilerExecutable": "/home/emoore/Android/Sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/linux-x86_64/bin/clang.lld",
+      "cppCompilerExecutable": "/home/emoore/Android/Sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++.lld"
+    }
+  },
+  "cFileExtensions": [
+    "c"
+  ],
+  "cppFileExtensions": []
+}

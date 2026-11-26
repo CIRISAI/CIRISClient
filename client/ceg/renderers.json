@@ -26,7 +26,8 @@
   "config:{scope}": "CONFIG_RECORD",
   "mesh_config:{key}": "CONFIG_RECORD",
   "watchlist:{id}": "CONFIG_RECORD",
-  "holds_bytes:sha256:{prefix}": "CONTENT_REFERENCE",
-  "delivery_receipt:{stream_id}": "SETTLEMENT_RECEIPT",
+  "file:{version}": "CONTENT_REFERENCE",
+  "custody:{kind}": "CONTENT_REFERENCE",
+  "delivery_ack:{stream_id}": "SETTLEMENT_RECEIPT",
   "trust:{job}:{version}": "RELATION_EDGE"
 }

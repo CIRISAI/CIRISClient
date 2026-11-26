@@ -33,7 +33,7 @@ Two steps: pick a peer (a searchable list of this node's peers), then a digest
 and a timeout.
 
 ```yaml csd:shows
-registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
+registry_sha256: 5f8ff71fd1415c88179b73a8b7d9a047613b22cb81f609909ca9ab9ccc2a8d69
 fields:
   - ceg: x_private:peer_key_id
     use: emit
@@ -41,8 +41,7 @@ fields:
     example: "ciris-node-9f21ab"
     renders: "one pick row per peer, filtered by input_peer_search (drivable)"
     tag: "peer_pick_row_{keyId}"
-  - ceg: "holds_bytes:sha256:{prefix}"
-    bind: {prefix: "0f1e2d3c4b5a69788796a5b4c3d2e1f00f1e2d3c4b5a69788796a5b4c3d2e1f0"}
+  - ceg: x_private:content_digest
     use: read
     type: string
     example: "0f1e2d3c…"
@@ -56,9 +55,12 @@ fields:
     tag: card_content_result
 ```
 
-`holds_bytes:sha256:*` is bound as `read` because the fetch is a read of a peer's
-holding by digest; CC 5.2 suppresses that family from the holder directory, which
-is why there is no "browse" step: the person must already know the digest.
+The digest is bound as `read` because the fetch is a read of a peer's holding by
+digest. It was bound to `holds_bytes:sha256:*`, which CC v1.0-rc22 retired: the
+holder directory is now the `custody:ack:v1` claim at the content's scope (CC
+3.1.3.3), and a consumer still verifies the full SHA of what it receives (CC
+5.3.2.11). The digest itself is no family, so it is `x_private:`. There is no
+"browse" step: the person must already know the digest.
 
 ```yaml csd:states
 populated: {tag: card_content_result}

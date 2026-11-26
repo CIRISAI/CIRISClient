@@ -6150,7 +6150,7 @@
       "label": "Wanene ke ba da tabbaci ga wa",
       "gloss": "Da'awar cewa maɓalli ɗaya yana goyon bayan wani don wani aiki da aka ambata."
     },
-    "holds_bytes_sha256_prefix": {
+    "custody_kind": {
       "label": "Yana riƙe da kwafi",
       "gloss": "Kumburin da ke cewa yana riƙe da bytes na fayil, wanda hash ɗinsu ya ambace shi."
     },
@@ -6170,7 +6170,7 @@
       "label": "Ba a yarda ba",
       "gloss": "Alama cewa wani abu ya ƙetare wani layi daga cikin layukan da kundin tsarin mulki ya zana. Koyaushe alamar ragi ce kawai."
     },
-    "delivery_receipt_stream_id": {
+    "delivery_ack_stream_id": {
       "label": "Rasit",
       "gloss": "Rikodin da ke nuna cewa an isar da wani abu. Sokewar rasit ba ya soke isar da shi ba."
     },
@@ -6184,6 +6184,10 @@
       "granted": "An ba da izini",
       "revoked": "An soke",
       "expired": "Ya ƙare"
+    },
+    "file_version": {
+      "label": "Fayil",
+      "gloss": "Fayil da aka sanya a inda ƙungiya za ta iya ganinsa, bytes ɗinsa kuwa hash ɗinsu ya ambace su."
     }
   },
   "drive": {

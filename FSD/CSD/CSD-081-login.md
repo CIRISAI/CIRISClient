@@ -39,7 +39,7 @@ sidebar is suppressed while it is showing (`CIRISApp.kt:1789-1792`). CSD-080 §2
 records why `flow_only:` is a checked key rather than a spelling convention.
 
 ```yaml csd:shows
-registry_sha256: f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37
+registry_sha256: 5f8ff71fd1415c88179b73a8b7d9a047613b22cb81f609909ca9ab9ccc2a8d69
 fields:
   - ceg: "ownership:{relation}:{target_kind}:{version}"
     bind: {relation: responsible_party, target_kind: node, version: v1}

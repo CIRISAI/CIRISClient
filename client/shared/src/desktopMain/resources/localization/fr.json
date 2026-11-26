@@ -6150,7 +6150,7 @@
       "label": "Qui se porte garant pour qui",
       "gloss": "Une déclaration selon laquelle une clé se porte garante d'une autre pour une tâche précisée."
     },
-    "holds_bytes_sha256_prefix": {
+    "custody_kind": {
       "label": "Détient une copie",
       "gloss": "Un nœud déclarant détenir les octets d'un fichier, désignés par leur empreinte (hash)."
     },
@@ -6170,7 +6170,7 @@
       "label": "Interdit",
       "gloss": "Une marque indiquant qu'une chose a franchi une des limites tracées par la constitution. Ce n'est jamais qu'un point négatif."
     },
-    "delivery_receipt_stream_id": {
+    "delivery_ack_stream_id": {
       "label": "Reçu",
       "gloss": "Un enregistrement attestant qu'une chose a été livrée. Annuler le reçu n'annule pas la livraison."
     },
@@ -6184,6 +6184,10 @@
       "granted": "Accordé",
       "revoked": "Révoqué",
       "expired": "Expiré"
+    },
+    "file_version": {
+      "label": "Fichier",
+      "gloss": "Un fichier placé là où un groupe peut le voir, ses octets désignés par leur empreinte (hash)."
     }
   },
   "drive": {
