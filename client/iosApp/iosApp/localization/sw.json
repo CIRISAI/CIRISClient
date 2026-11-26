@@ -6579,7 +6579,7 @@
     "keep_refused": "Kuhifadhi simu bado hakujakamilika, hivyo simu hii haihifadhiwi.",
     "share_unavailable": "Kushiriki skrini yako hakupatikani bado kwenye nodi hii.",
     "leave_reason_unknown": "Hiyo si sababu ya kuondoka kwenye simu.",
-    "full": "Simu hii tayari ina watu {max_people}, idadi ya juu zaidi ambayo simu inaweza kuwa nayo.",
+    "full": "Simu hii tayari ina watu 4, idadi ya juu zaidi ambayo simu inaweza kuwa nayo.",
     "video_two_people_only": "Video na kushiriki skrini hufanya kazi kwenye simu kati ya watu wawili kwa sasa. Simu hii ina watu zaidi, hivyo ni ya sauti pekee. Ikiwa kamera yako imewashwa, itaanza kutuma tena wakati simu itakaporudi kuwa ya watu wawili.",
     "relay_canonical_audio_only": "Video yao haiwezi kukufikia kwa sasa: njia iliyo baina yenu inabeba sauti pekee. Bado unaweza kuwasikia.",
     "share_already_live": "Tayari unashiriki skrini yako.",

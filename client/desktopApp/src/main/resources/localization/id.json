@@ -6579,7 +6579,7 @@
     "keep_refused": "Penyimpanan panggilan belum siap, sehingga panggilan ini tidak disimpan.",
     "share_unavailable": "Berbagi layar belum tersedia di node ini.",
     "leave_reason_unknown": "Itu bukan alasan untuk meninggalkan panggilan.",
-    "full": "Panggilan ini sudah memiliki {max_people} orang, jumlah maksimal yang dapat dimiliki sebuah panggilan.",
+    "full": "Panggilan ini sudah memiliki 4 orang, jumlah maksimal yang dapat dimiliki sebuah panggilan.",
     "video_two_people_only": "Video dan berbagi layar untuk saat ini hanya berfungsi dalam panggilan antara dua orang. Panggilan ini memiliki lebih dari itu, sehingga hanya suara. Jika kamera Anda aktif, pengiriman video akan dimulai lagi saat panggilan kembali menjadi dua orang.",
     "relay_canonical_audio_only": "Video mereka tidak dapat menjangkau Anda saat ini: jalur antara Anda dan mereka hanya membawa suara. Anda tetap dapat mendengar mereka.",
     "share_already_live": "Anda sudah membagikan layar Anda.",

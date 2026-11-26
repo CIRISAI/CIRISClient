@@ -6579,7 +6579,7 @@
     "keep_refused": "Tính năng lưu cuộc gọi chưa sẵn sàng, nên cuộc gọi này sẽ không được lưu lại.",
     "share_unavailable": "Chia sẻ màn hình chưa khả dụng trên nút này.",
     "leave_reason_unknown": "Đó không phải là lý do để rời khỏi cuộc gọi.",
-    "full": "Cuộc gọi này đã có {max_people} người, số người tối đa mà một cuộc gọi có thể có.",
+    "full": "Cuộc gọi này đã có 4 người, số người tối đa mà một cuộc gọi có thể có.",
     "video_two_people_only": "Video và chia sẻ màn hình hiện chỉ hoạt động trong cuộc gọi giữa hai người. Cuộc gọi này có nhiều người hơn, nên đây là cuộc gọi chỉ có thoại. Nếu camera của bạn đang bật, nó sẽ bắt đầu gửi lại khi cuộc gọi trở về còn hai người.",
     "relay_canonical_audio_only": "Video của họ hiện không thể đến được với bạn: tuyến đường giữa hai bên chỉ mang âm thanh. Bạn vẫn có thể nghe thấy họ.",
     "share_already_live": "Bạn đang chia sẻ màn hình của mình rồi.",

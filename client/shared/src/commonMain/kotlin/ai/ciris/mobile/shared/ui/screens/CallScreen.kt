@@ -519,7 +519,12 @@ private fun youLeftKey(r: ai.ciris.mobile.shared.calls.LeaveReason) = when (r) {
     ai.ciris.mobile.shared.calls.LeaveReason.FULL -> ai.ciris.mobile.shared.calls.CallSession.CALL_FULL
 }
 
-/** "This call already has 4 people…", with the node's number; without one, the sentence that needs none. */
+/**
+ * `call.full` is the server's own sentence, number included ("This call already has 4
+ * people…"): a server id's English must equal what the server sends, so the cap is in
+ * the text, and a new cap is a new sentence from the server. `max_people` is passed in
+ * case a later text carries the placeholder. Without the number, the sentence that needs none.
+ */
 @Composable
 private fun fullText(maxPeople: Int?): String =
     if (maxPeople != null) localizedString(ai.ciris.mobile.shared.calls.CallSession.CALL_FULL, mapOf("max_people" to maxPeople.toString()))

@@ -21,7 +21,7 @@ upstream's last merged state** — the branch point the next pull starts from:
 
 | Upstream | Last merged state | Input commit | Pulled |
 |---|---|---|---|
-| `CIRISAI/CIRISServer` | `v0.5.253` (`e85b029700f82fa784c51734c35bf6014555cf9f`) | `release/0.5.242` (the release tag, the LTS: 0.5.253 (#887) adopts edge v45.1.9, persist v61.4.3 and verify v22.2.0, with no PyO3, migration or client-floor change, and a harness node's identity end no longer lands on a whole second, which verify formats without milliseconds and persist then refuses at self-registration (it failed this client's iOS leg once, run 44867953009). Before it, five server releases: 0.5.248 (CIRISServer#878) adopts edge v45.1.3 and persist v61.4.1, so the responder no longer wedges, and a home that adds AI keeps its node key instead of minting a new ML-DSA seed that peers refused as `pubkey_swap`; 0.5.249 (#879, #882) upgrades from 0.5.225, the oldest release on PyPI, and a partial reset starts a new node; 0.5.250 (#884, edge 45.1.7, persist 61.4.2) carries video calls on an agent install and `POST /v1/system/local-shutdown`, which this client's Reset (#316) calls to stop an attached backend; 0.5.251 (#885): an identity amendment names the link it follows (`refs.prev`); 0.5.252 (#886): a shipped template is pre-approved, so an agent on one reads anchored from first boot, and an amendment may name its derived base. Six ids 0.5.252 emits had no entry here (`call.no_share`, `call.share_already_live`, `drive.image_too_large` and three more); they are in the bundle now; 0.5.253 emits no id without one. Previous: `v0.5.252` `906ed2c70f226d96f1b0686c978f4c80b7193ac5`, `release/0.5.242`; `v0.5.247` `baf41f14de21ec943fc6d93cc890adf4fcf2fd6c`, `chore/pin-server-v0.5.247`; `v0.5.246` `9fe076b0a3b6acd03f56bd4350664d64be73c2a2`, `chore/pin-server-v0.5.246`; `release/0.5.246` `b19f32acd424ee0818134927720cf22e101cff79`, `chore/pin-server-0.5.246`) | 2026-11-21 |
+| `CIRISAI/CIRISServer` | `v0.5.254` (`8233dc26c70c0717dbaab36423f7792126987a1a`) | `release/0.5.243` (the release tag: 0.5.254 (#890) is the LTS calls cut on edge 45.2.1, persist v61.4.4 and verify v22.2.4. A call says why its media path failed and through whom it was restored; member nodes relay calls by default, a phone only when its client says so, with a live relay switch (`POST /v1/chat/{room}/call/relay`); a mid-call switch to "Always hide when I talk" or anonymous ends the call in words (`call_ended`), and a shaped-only device is refused (`call.shaped_only`); video joins carry a codec map, so a video frame larger than one link packet arrives whole; a room seats six and a call four (`call.full`). Its client floor is `ciris-client>=0.5.242,<0.6`. Before it, 0.5.253 (#887): edge v45.1.9, persist v61.4.3 and verify v22.2.0) | 2026-11-26 |
 | `CIRISAI/CIRISAgent` | `v2.9.36-stable` (`c211a9ff330ab5821002a159c13741cdd74609bb`) | `merge/agent-v2.9.36` | 2026-08-24 |
 
 The §2 exclusion set (extended: `.ciris_keys/`, `__pycache__/`, `*.pyc`,
@@ -40,7 +40,7 @@ source is the pair a bisect wants:
 The tree's current recorded state — sha256-of-sha256s over every git-tracked
 file under `client/` except this one:
 
-**state digest:** `5657ffb23099ccc158fd853cb81dcfdba3f61e0663044d59e1fb3e94efb5a87e`
+**state digest:** `9ce139c9082dc57af335cc723698e43d43949cde4da7fc062516de71b6422620`
 
 `packaging/check_vendoring.py` asserts it on every push, and refuses any
 tracked file matching a §2 never-vendor class. **Any commit that touches
