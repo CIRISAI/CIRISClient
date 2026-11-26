@@ -46,7 +46,10 @@ Rows that differed only in their last segment (`capacity:*`, `detection:*`,
 `accord:lifecycle:*`, the credits subject) are one row each with a closed list, so
 their old wire strings still resolve, to the folded row. `forWire` now checks a closed
 list's values and a segment's pattern, which is how it agrees with every admitted
-vector. The three `transparency_log:*` families and `lineage_witness:{stage}` are gone
+vector. A value off a closed list is no row: CIRISConstitution ruled (2026-11-26)
+that persist v61's `objection:upheld|dismissed|overruled` are unregistered and are
+shown as rows the registry does not admit, never as objections; an act's outcome is
+read from the count and a `window:{state}` landing. The three `transparency_log:*` families and `lineage_witness:{stage}` are gone
 with no replacement row.
 
 ## What is generated from it

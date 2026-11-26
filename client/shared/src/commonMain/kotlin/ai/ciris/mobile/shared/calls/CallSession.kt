@@ -100,7 +100,7 @@ class CallSession(
                 epoch = answer.epoch,
                 frameBudgetBytes = answer.frameBudgetBytes,
                 serviceTier = answer.serviceTier,
-                attendees = answer.attendees.associateWith { Attendee(it) },
+                attendees = answer.attendees.associateWith { Attendee(it, person = answer.attendeePeople[it]) },
                 videoAllowed = answer.videoAllowed,
                 videoMaxPeople = answer.videoMaxPeople,
                 relaying = answer.relay?.relaying,
@@ -661,6 +661,8 @@ data class CallJoinAnswer(
     val videoMaxPeople: Int? = null,
     /** Whether the node is relaying others' media as of this join; null from a node before 0.5.254. */
     val relay: RelayAnswer? = null,
+    /** Each attendee node's owner (`attendee_people`), so a tile can name the person. */
+    val attendeePeople: Map<String, String> = emptyMap(),
 ) {
     companion object {
         /**
@@ -684,6 +686,13 @@ data class CallJoinAnswer(
                 videoAllowed = (o["video_allowed"] as? JsonPrimitive)?.takeIf { !it.isString }?.contentOrNull?.toBooleanStrictOrNull() ?: true,
                 videoMaxPeople = str("video_max_people")?.toIntOrNull(),
                 relay = (o["relay"] as? JsonObject)?.let { RelayAnswer.parse(it) },
+                attendeePeople = (o["attendee_people"]?.let { runCatching { it.jsonArray }.getOrNull() } ?: emptyList<JsonElement>())
+                    .mapNotNull { e ->
+                        val p = runCatching { e.jsonObject }.getOrNull() ?: return@mapNotNull null
+                        val m = (p["member"] as? JsonPrimitive)?.contentOrNull ?: return@mapNotNull null
+                        val who = (p["person"] as? JsonPrimitive)?.contentOrNull ?: return@mapNotNull null
+                        m to who
+                    }.toMap(),
             )
         }
     }

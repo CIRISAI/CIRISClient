@@ -1695,6 +1695,7 @@ mobile.call_audio_unavailable_here	client	client	literal	-	-	-	-
 mobile.call_camera_off	client	client	literal	-	-	-	-
 mobile.call_camera_on	client	client	literal	-	151	differs:7	-
 mobile.call_choose	client	client	literal	-	-	-	-
+mobile.call_connecting	client	client	literal	-	-	-	-
 mobile.call_full_no_count	client	client	literal	-	-	-	-
 mobile.call_h264_downloading	client	client	literal	-	-	-	-
 mobile.call_h264_failed_check	client	client	literal	-	-	-	-
@@ -1722,6 +1723,7 @@ mobile.call_nat_restricted	client	client	literal	-	-	-	-
 mobile.call_nat_symmetric	client	client	literal	-	-	-	-
 mobile.call_nat_unknown	client	client	literal	-	14	differs:18	-
 mobile.call_not_connecting	client	client	literal	-	-	-	-
+mobile.call_not_reached	client	client	literal	-	-	-	-
 mobile.call_not_saved	client	client	literal	-	-	-	-
 mobile.call_path_action_local	client	client	literal	-	-	-	-
 mobile.call_path_action_peer	client	client	literal	-	-	-	-
@@ -1783,6 +1785,7 @@ mobile.call_unmute	client	client	literal	-	-	-	-
 mobile.call_video	client	client	literal	-	-	-	-
 mobile.call_video_unavailable_here	client	client	literal	-	-	-	-
 mobile.call_voice	client	client	literal	-	-	-	-
+mobile.call_you	client	client	literal	-	-	-	-
 mobile.call_you_backgrounded	client	client	literal	-	-	-	-
 mobile.call_you_left	client	client	literal	-	28	differs:14	-
 mobile.call_you_lost	client	client	literal	-	-	-	-

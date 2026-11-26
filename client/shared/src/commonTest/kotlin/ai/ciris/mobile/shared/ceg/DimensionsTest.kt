@@ -79,8 +79,10 @@ class DimensionsTest {
         assertNull(Dim.forWire("licensure:urn:ietf:params:oauth:ckt:sha-256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA:v1"))
         // rc22 closes objection:{state} to assent | raised.
         assertSame(Dim.objectionState, Dim.forWire("objection:raised:v1"))
-        // Off the closed list still draws as the row: persist writes objection:upheld.
-        assertSame(Dim.objectionState, Dim.forWire("objection:upheld:v1"))
+        // Off the closed list is no row. Persist v61 writes objection:upheld, dismissed and
+        // overruled: CC rules them unregistered, drawn as rows the registry does not admit.
+        for (v in listOf("upheld", "dismissed", "overruled")) assertNull(Dim.forWire("objection:$v:v1"), v)
+        assertNull(Dim.forWire("capacity:cheerfulness"))
         assertSame(Dim.image, Dim.forWire("image:leaf:v1"), "image:* is registered")
         assertNull(Dim.forWire("zz_unminted:jpeg"), "not a registry family — cannot be rendered")
         assertSame(Dim.consentKind, Dim.byPrefix("consent:{kind}"))

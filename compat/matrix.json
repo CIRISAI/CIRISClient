@@ -2666,9 +2666,11 @@
         "calls.media_path_failed",
         "calls.relay",
         "calls.full",
-        "ceg.registry_rc22"
+        "ceg.registry_rc22",
+        "calls.av1_both_ways",
+        "calls.self_view"
       ],
-      "capabilities_note": "added over 0.5.242: a call that can't connect says why, for each member, with the node's cause and what the person can do (calls.media_path_failed, #323); help others connect through this device, a switch whose choice is kept per node, with a phone saying on only on a known unmetered network and following its network mid-call (calls.relay, #323, #326); a full call says so with the node's cap (calls.full, #328); the camera's and a share's encoder follow the size the source really sends (#330); the CEG namespace registry and the formal model pinned at CC v1.0-rc22 (ceg.registry_rc22, #325, #329, #331); desktop FFmpeg natives come from the ciris-holon wheel (#322); the five-platform run checks a two-client call on every leg (#324) and no longer loses a repeated scroll step (#327).",
+      "capabilities_note": "added over 0.5.242: a call that can't connect says why, for each member, with the node's cause and what the person can do (calls.media_path_failed, #323); help others connect through this device, a switch whose choice is kept per node, with a phone saying on only on a known unmetered network and following its network mid-call (calls.relay, #323, #326); a full call says so with the node's cap (calls.full, #328); the camera's and a share's encoder follow the size the source really sends (#330); phones send and show AV1 whatever their hardware, by libaom 3.15.3, so a phone and a desktop see each other (calls.av1_both_ways, #333); the person sees their own camera from the join, the screen says it is connecting until the node is ready and says when the call has reached no one, and tiles name people (calls.self_view, #334); the CEG namespace registry and the formal model pinned at CC v1.0-rc22 (ceg.registry_rc22, #325, #329, #331); desktop FFmpeg natives come from the ciris-holon wheel (#322); the five-platform run checks a two-client call on every leg (#324) and no longer loses a repeated scroll step (#327).",
       "spec_source": {
         "repo": "CIRISAI/CIRISServer",
         "release": null,
@@ -2677,9 +2679,9 @@
       },
       "locale_bundle": {
         "languages": 29,
-        "keys": 6135
+        "keys": 6138
       },
-      "notes": "For CIRISServer 0.5.254 (the LTS calls cut) and CIRISAgent 2.23.1. Tested: TODO(five-platform run with AI on the release commit: run id, legs, results). Calls through an agent need ciris-agent 2.23.2 (CIRISAgent#1373); on 2.23.1 the agent refuses the frames socket (403) and the call check records it as expected. The v62 paths (edition 2) are covered by unit tests only. New strings are machine-translated and reviewed by a judge of a different model family: draft / machine_reviewed, with no native-fluency review.",
+      "notes": "For CIRISServer 0.5.254 (the LTS calls cut) and CIRISAgent 2.23.2. Tested before the tag, not on the release commit: five-platform run 45832940789 (#330's branch, server v0.5.254): Linux, Windows and macOS desktops pass the two-client call with picture and tone both ways; Android failed video for want of a shared codec, fixed by #333 and passed in run 45848618862 (Android emulator and Linux desktop, picture and tone both ways); the iOS libaom path built and passed AomIosTest in CI (run 45849665718) but has not run a call; the iOS node-only leg failed setup on its 0.5.254 node in 45832940789 (not investigated). With-AI legs ran agent 2.23.1, where calls through the agent are an expected failure; 2.23.2 forwards them and has not been run in the matrix. The v62 paths (edition 2) are covered by unit tests only. New strings are machine-translated and reviewed by a judge of a different model family: draft / machine_reviewed, with no native-fluency review.",
       "published": null
     }
   ]

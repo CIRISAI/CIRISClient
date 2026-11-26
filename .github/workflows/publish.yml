@@ -576,6 +576,12 @@ jobs:
               -Pkotlin.native.jvmArgs=-Xmx8g
     steps:
       - uses: actions/checkout@v4
+      # libaom's x86_64 assembly (the emulator ABI) is built with nasm; without it
+      # packaging/aom/build_libaom.sh falls back to plain C.
+      - uses: ./.github/actions/apt
+        if: matrix.name == 'android-aar'
+        with:
+          packages: nasm
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -643,7 +649,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: client/shared/build/XCFrameworks/release
-          key: xcf-${{ runner.os }}-${{ hashFiles('client/shared/src/commonMain/**', 'client/shared/src/iosMain/**', 'client/shared/src/iosArm64Main/**', 'client/shared/src/iosSimulatorArm64Main/**', 'client/generated-api/src/**', 'client/shared/build.gradle.kts', 'client/generated-api/build.gradle.kts', 'client/build.gradle.kts', 'client/gradle.properties', 'VERSION') }}
+          key: xcf-${{ runner.os }}-${{ hashFiles('client/shared/src/commonMain/**', 'client/shared/src/iosMain/**', 'client/shared/src/iosArm64Main/**', 'client/shared/src/iosSimulatorArm64Main/**', 'client/generated-api/src/**', 'client/shared/src/nativeInterop/**', 'client/shared/build.gradle.kts', 'client/generated-api/build.gradle.kts', 'client/build.gradle.kts', 'client/gradle.properties', 'VERSION', 'packaging/aom/build_libaom.sh') }}
 
       - name: Prebuilt XCFramework
         # THE STEP ABOVE CANNOT BE PRIMED FROM OUTSIDE A RUNNER, AND VERSION IS

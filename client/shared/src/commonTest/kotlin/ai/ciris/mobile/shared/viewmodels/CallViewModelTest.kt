@@ -68,7 +68,8 @@ class CallViewModelTest {
         val lit get() = stops == 0
         override fun start(onFrame: (VideoFrame) -> Unit) { this.onFrame = onFrame; everStarted = true }
         override fun stop() { onFrame = null; stops++ }
-        fun deliver() = onFrame!!(VideoFrame(2, 2, ByteArray(4), ByteArray(1), ByteArray(1), 0))
+        /** At the size the call opens the encoder at, so the encoder is not reopened. */
+        fun deliver() = onFrame!!(VideoFrame(640, 480, ByteArray(640 * 480), ByteArray(640 * 480 / 4), ByteArray(640 * 480 / 4), 0))
     }
 
     private class FakeDevices : CallMediaDevices {
@@ -131,14 +132,19 @@ class CallViewModelTest {
         const val TWO_AGAIN = """{"type":"video_allowed","allowed":true,"people":2,"max_people":2,"reason_id":"call.video_two_people_only"}"""
     }
 
-    @Test fun theCameraIsHeldOnlyWhileItsPictureIsSent() = runTest {
+    @Test fun theCameraIsHeldOnlyWhileThePersonHasItOnInAVideoCall() = runTest {
         val r = Rig(this)
         r.vm.join(video = true); runCurrent()
-        assertEquals(0, r.devices.asked, "not before the node is ready for frames")
+        // Open from the join, so the person sees themselves while the call connects
+        // (Eric, 2026-11-26), and nothing sent until the node is ready for frames.
+        assertEquals(1, r.devices.lit, "the camera opens at the join, for the person's own picture")
+        r.devices.opened[0].deliver()
+        assertTrue(r.encoded.isEmpty(), "nothing is encoded before the node is ready")
+        assertTrue(r.sentCodecs.isEmpty())
         r.say(READY); runCurrent()
-        assertEquals(1, r.devices.lit)
+        assertEquals(1, r.devices.opened.size, "the same opening, not a second one")
         r.devices.opened[0].deliver(); r.devices.opened[0].deliver()
-        assertEquals(listOf("key", "inter"), r.encoded)
+        assertEquals(listOf("key", "inter"), r.encoded, "the first frame sent is a keyframe")
         assertEquals(listOf(CallVideoCodec.AV1_SVC, CallVideoCodec.AV1_SVC), r.sentCodecs)
 
         // The person turns the camera off: the device's camera is let go, not just unsent.

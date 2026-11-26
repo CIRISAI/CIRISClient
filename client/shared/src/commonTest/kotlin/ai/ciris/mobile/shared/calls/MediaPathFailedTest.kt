@@ -220,6 +220,14 @@ class MediaPathFailedTest {
         assertEquals(LeaveReason.FULL, LeaveReason.of("call_full"))
     }
 
+    @Test fun tilesAreNamedFromTheJoinAnswersPeople() {
+        val a = CallJoinAnswer.parse(kotlinx.serialization.json.Json.parseToJsonElement(
+            """{"call_id":"c","stream_id":"s","epoch":1,"frame_budget_bytes":0,"attendees":["node-a","node-b"],
+               "attendee_people":[{"member":"node-a","person":"francesco"},{"member":"node-b","person":null}]}""",
+        ) as kotlinx.serialization.json.JsonObject)
+        assertEquals(mapOf("node-a" to "francesco"), a.attendeePeople)
+    }
+
     @Test fun aFullCallRefusesTheJoinWithItsCap() = runTest {
         val t = object : CallTransport by FakeTransport() {
             // The session joins through the three-argument form; a delegate's default would bypass this.
