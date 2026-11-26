@@ -66,6 +66,7 @@ FILES = (
     "client/gradle.properties",
     "VERSION",
     "packaging/aom/build_libaom.sh",
+    "packaging/aom/aomedia-release-key.asc",
 )
 
 KEY_CHARS = 16  # of a sha256; collision risk here is not the threat model

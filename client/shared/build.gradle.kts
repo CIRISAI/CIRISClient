@@ -142,6 +142,19 @@ extra["bytedecoHostClassifier"] = bytedecoHostClassifier
 extra["bytedecoJavacppVersion"] = bytedecoJavacppVersion
 extra["bytedecoFfmpegVersion"] = bytedecoFfmpegVersion
 
+/** Runs build_libaom.sh, and on failure shows what it said: Gradle would otherwise say only "exit value 1". */
+fun runLibaomBuild(cmd: List<String>, env: Map<String, String>) {
+    val run = providers.exec {
+        commandLine(cmd)
+        env.forEach { (k, v) -> environment(k, v) }
+        isIgnoreExitValue = true
+    }
+    val code = run.result.get().exitValue
+    if (code != 0) {
+        throw GradleException("${cmd.drop(2).joinToString(" ")} failed ($code):\n" + run.standardError.asText.get() + run.standardOutput.asText.get())
+    }
+}
+
 // The iOS targets that link libaom, and the build_libaom.sh target each one takes.
 val aomIosTargets = mapOf("iosArm64" to "ios-arm64", "iosSimulatorArm64" to "ios-sim-arm64")
 
@@ -455,14 +468,13 @@ val buildLibaomIos by tasks.registering {
     val script = rootProject.file("../packaging/aom/build_libaom.sh")
     onlyIf { org.jetbrains.kotlin.konan.target.HostManager.hostIsMac }
     inputs.file(script)
+    inputs.file(rootProject.file("../packaging/aom/aomedia-release-key.asc"))
     outputs.dirs(aomIosTargets.values.map { layout.buildDirectory.dir("aom/$it") })
     doLast {
         aomIosTargets.values.forEach { target ->
             val out = layout.buildDirectory.dir("aom/$target").get().asFile
             if (out.resolve("lib/libaom.a").isFile) return@forEach
-            providers.exec {
-                commandLine(listOfNotNull("bash", script.absolutePath, target, out.absolutePath, System.getenv("AOM_TARBALL")))
-            }.result.get().assertNormalExitValue()
+            runLibaomBuild(listOfNotNull("bash", script.absolutePath, target, out.absolutePath, System.getenv("AOM_TARBALL")), emptyMap())
         }
     }
 }
@@ -478,16 +490,15 @@ val buildLibaom by tasks.registering {
     description = "Builds libaom (packaging/aom/build_libaom.sh) for every Android ABI."
     val script = rootProject.file("../packaging/aom/build_libaom.sh")
     inputs.file(script)
+    inputs.file(rootProject.file("../packaging/aom/aomedia-release-key.asc"))
     outputs.dir(aomRoot)
     doLast {
         val ndk = android.ndkDirectory
         aomAbis.forEach { abi ->
             val out = aomRoot.get().dir(abi).asFile
             if (out.resolve("lib/libaom.a").isFile) return@forEach
-            providers.exec {
-                commandLine(listOfNotNull("bash", script.absolutePath, "android-$abi", out.absolutePath, System.getenv("AOM_TARBALL")))
-                environment("ANDROID_NDK_HOME", ndk.absolutePath)
-            }.result.get().assertNormalExitValue()
+            runLibaomBuild(listOfNotNull("bash", script.absolutePath, "android-$abi", out.absolutePath, System.getenv("AOM_TARBALL")),
+                mapOf("ANDROID_NDK_HOME" to ndk.absolutePath))
         }
     }
 }
