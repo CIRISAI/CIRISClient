@@ -6150,7 +6150,7 @@
       "label": "Ta ló dúró fún ta?",
       "gloss": "Ìtẹnumọ́ pé kọ́kọ́rọ́ kan dúró tì òmíràn fún iṣẹ́ kan pàtó."
     },
-    "holds_bytes_sha256_prefix": {
+    "custody_kind": {
       "label": "Ní ẹ̀dà kan",
       "gloss": "Nóòdù kan tí ń sọ pé òun ní àwọn byte fún fáìlì kan, tí a sọ lórúkọ nípasẹ̀ hash wọn."
     },
@@ -6170,7 +6170,7 @@
       "label": "A kò gbà á láàyè",
       "gloss": "Àmì pé nǹkan kan ré ọ̀kan lára àwọn ààlà tí ìlànà-ìgbékalẹ̀ fà kọjá. Ó jẹ́ àbùkù lásán."
     },
-    "delivery_receipt_stream_id": {
+    "delivery_ack_stream_id": {
       "label": "Ìwé-ẹ̀rí",
       "gloss": "Àkọsílẹ̀ pé a ti fi nǹkan jíṣẹ́. Píparẹ́ ìwé-ẹ̀rí kò ní pa ìfijíṣẹ́ náà rẹ́."
     },
@@ -6184,6 +6184,10 @@
       "granted": "Ti yọ̀nda",
       "revoked": "Ti fagilé",
       "expired": "Ti parí"
+    },
+    "file_version": {
+      "label": "Fáìlì",
+      "gloss": "Fáìlì kan tí a gbé sí ibi tí àwùjọ kan lè rí i, tí a sọ orúkọ àwọn byte rẹ̀ nípasẹ̀ hash wọn."
     }
   },
   "drive": {

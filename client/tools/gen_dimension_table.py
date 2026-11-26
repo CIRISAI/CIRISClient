@@ -205,7 +205,13 @@ def build(registry_path: pathlib.Path, glosses_path: pathlib.Path, renderers_pat
                     raise Refusal(f"{prefix}: localization key {k} does not resolve in en.json")
         else:
             missing_gloss.append(prefix)
-        segs = [(s["segment"], SEG_CLASS[s["class"]]) for s in f.get("segments", [])]
+        # A closed vocabulary's values and a segment's pattern decide which row a wire
+        # string is (rc22 folds families that differ only in their last segment into one
+        # row with a closed list, and gives key and digest segments a pattern).
+        segs = [(s["segment"], SEG_CLASS[s["class"]],
+                 s.get("values") if s.get("class") == "vocab" and s.get("open") is False else None,
+                 s.get("pattern"))
+                for s in f.get("segments", [])]
         if not segs:
             raise Refusal(f"{prefix}: no segments — registry predates rc5?")
         rows.append(dict(
@@ -247,7 +253,14 @@ def build(registry_path: pathlib.Path, glosses_path: pathlib.Path, renderers_pat
     out.append("/** Every CEG family in the pinned registry, one `val` each. A screen names these; it never builds a Dimension. */\n")
     out.append("object Dim {\n")
     for r in rows:
-        segs = ", ".join(f"Segment({kstr(s)}, SegmentClass.{c})" for s, c in r["segs"])
+        def seg(s, c, values, pattern):
+            extra = ""
+            if values:
+                extra += ", values = listOf(" + ", ".join(kstr(v) for v in values) + ")"
+            if pattern:
+                extra += f", pattern = {kstr(pattern)}"
+            return f"Segment({kstr(s)}, SegmentClass.{c}{extra})"
+        segs = ", ".join(seg(*x) for x in r["segs"])
         out.append(
             f"    val {r['name']}: Dimension = Dimension(\n"
             f"        prefix = {kstr(r['prefix'])}, slug = {kstr(r['slug'])}, ccSection = {kstr(r['cc'])},\n"
@@ -268,12 +281,15 @@ def build(registry_path: pathlib.Path, glosses_path: pathlib.Path, renderers_pat
     out.append("    private val byPrefixIndex: Map<String, Dimension> by lazy { all.associateBy { it.prefix } }\n\n")
     out.append("    /** The family whose registry prefix is exactly [prefix]. */\n")
     out.append("    fun byPrefix(prefix: String): Dimension? = byPrefixIndex[prefix]\n\n")
-    out.append("    /**\n     * The family a wire `dimension` string belongs to: the row whose literal\n"
-               "     * segments match the wire's leading segments, longest match wins.\n     */\n")
+    out.append("    /**\n     * The family a wire `dimension` string belongs to: the row whose segments\n"
+               "     * match the wire's leading segments. A literal must be equal, a closed\n"
+               "     * vocabulary must hold the value, and a patterned segment must match its\n"
+               "     * pattern. The most segments matched by name wins, then the longer row.\n     */\n")
     out.append("    fun forWire(dimension: String): Dimension? {\n"
                "        val parts = dimension.split(':')\n"
                "        var best: Dimension? = null\n"
-               "        var bestLen = -1\n"
+               "        var bestScore = -1\n"
+               "        var bestSize = -1\n"
                "        for (d in all) {\n"
                "            if (d.segments.size > parts.size) continue\n"
                "            var ok = true\n"
@@ -282,10 +298,17 @@ def build(registry_path: pathlib.Path, glosses_path: pathlib.Path, renderers_pat
                "                when (seg.cls) {\n"
                "                    SegmentClass.LITERAL -> if (seg.segment == parts[i]) literals++ else { ok = false; break }\n"
                "                    SegmentClass.WILDCARD -> {}\n"
-               "                    else -> if (parts[i].isEmpty()) { ok = false; break }\n"
+               "                    else -> {\n"
+               "                        if (parts[i].isEmpty()) { ok = false; break }\n"
+               "                        val values = seg.values\n"
+               "                        if (values != null) { if (parts[i] in values) literals++ else { ok = false; break } }\n"
+               "                        if (!seg.admits(parts[i])) { ok = false; break }\n"
+               "                    }\n"
                "                }\n"
                "            }\n"
-               "            if (ok && literals > bestLen) { best = d; bestLen = literals }\n"
+               "            if (ok && (literals > bestScore || (literals == bestScore && d.segments.size > bestSize))) {\n"
+               "                best = d; bestScore = literals; bestSize = d.segments.size\n"
+               "            }\n"
                "        }\n"
                "        return best\n"
                "    }\n"

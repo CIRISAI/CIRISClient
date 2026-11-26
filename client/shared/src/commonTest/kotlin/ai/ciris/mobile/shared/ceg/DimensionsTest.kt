@@ -16,12 +16,12 @@ class DimensionsTest {
     @Test
     fun oneRowPerFamilyAndNoDuplicates() {
         assertEquals(REGISTRY_FAMILY_COUNT, Dim.all.size)
-        assertEquals(158, Dim.all.size, "rc6 @3c3e63f has 158 families")
+        assertEquals(187, Dim.all.size, "rc22 @f4671933 has 187 families")
         assertEquals(Dim.all.size, Dim.all.map { it.prefix }.toSet().size)
         assertEquals(Dim.all.size, Dim.all.map { it.slug }.toSet().size)
-        assertEquals("f666f334db6b5e82dd7f75e6cbe82c926d27dcd9bd81d208784527cbce651c37", REGISTRY_SHA256,
-            "the rc6 grammar hash every CSD pins (CIRISConstitution#112)")
-        assertEquals("1.0-rc6", REGISTRY_CC_VERSION)
+        assertEquals("5f8ff71fd1415c88179b73a8b7d9a047613b22cb81f609909ca9ab9ccc2a8d69", REGISTRY_SHA256,
+            "the rc22 grammar hash every CSD pins (CIRISConstitution#112)")
+        assertEquals("1.0-rc22", REGISTRY_CC_VERSION)
     }
 
     @Test
@@ -34,18 +34,19 @@ class DimensionsTest {
                 assertTrue(d.renderer != Renderer.SIGNED_SCORE && d.renderer != Renderer.POSITIVE_ONLY_ACCRUAL, d.prefix)
             }
         }
-        assertEquals(Polarity.PLUS_ONE_ONLY, Dim.accordLifecycleActive.polarity)
+        assertEquals(Polarity.PLUS_ONE_ONLY, Dim.accordLifecycleKind.polarity)
         assertEquals(Renderer.VIOLATION_MARKER, Dim.prohibitedCategory.renderer)
         assertEquals(Renderer.POSITIVE_ONLY_ACCRUAL, Dim.creditsDomainLanguageSubject.renderer)
         assertEquals(Renderer.STATE_PILL, Dim.objectionState.renderer)
         assertEquals(Renderer.CONSENT_LEAF, Dim.consentKind.renderer)
-        assertEquals(Renderer.CONTENT_REFERENCE, Dim.holdsBytesSha256Prefix.renderer)
+        assertEquals(Renderer.CONTENT_REFERENCE, Dim.fileVersion.renderer)
+        assertEquals(Renderer.CONTENT_REFERENCE, Dim.custodyKind.renderer)
     }
 
     @Test
     fun theFamiliesTheUiTouchesAreGlossed() {
-        for (d in listOf(Dim.consentKind, Dim.trustJobVersion, Dim.holdsBytesSha256Prefix, Dim.objectionState,
-                         Dim.contentClassClass, Dim.prohibitedCategory, Dim.deliveryReceiptStreamId)) {
+        for (d in listOf(Dim.consentKind, Dim.trustJobVersion, Dim.custodyKind, Dim.fileVersion, Dim.objectionState,
+                         Dim.contentClassClass, Dim.prohibitedCategory, Dim.deliveryAckStreamId)) {
             assertNotNull(d.labelKey, d.prefix); assertNotNull(d.glossKey, d.prefix)
             assertTrue(d.labelKey!!.startsWith("ceg.${d.slug}."), d.prefix)
         }
@@ -64,9 +65,19 @@ class DimensionsTest {
         // CIRISServer#717: the device-name row. The old name resolves to nothing.
         assertSame(Dim.deviceLabel, Dim.forWire("device:label:v1"))
         assertNull(Dim.forWire("self:device_label:v1"), "self is a cohort scope and names no family (rc6)")
-        assertSame(Dim.holdsBytesSha256Prefix, Dim.forWire("holds_bytes:sha256:ab12"))
+        // rc22 retires holds_bytes:sha256:{prefix}; the holding claim is custody:ack.
+        assertNull(Dim.forWire("holds_bytes:sha256:ab12"))
+        assertSame(Dim.custodyKind, Dim.forWire("custody:ack:v1"))
+        // rc22 folds rows that differ only in their last segment into one row with a closed
+        // list: the old wire still resolves, to the folded row, and a value off the list does not.
+        assertSame(Dim.capacityFactor, Dim.forWire("capacity:integrity:v1"))
+        assertSame(Dim.accordLifecycleKind, Dim.forWire("accord:lifecycle:active:v1"))
+        assertSame(Dim.detectionDetector, Dim.forWire("detection:temporal_drift"))
+        assertNull(Dim.forWire("capacity:cheerfulness"))
+        // A key segment has a pattern: an identity reference in its place is no key.
+        assertNull(Dim.forWire("licensure:urn:ietf:params:oauth:ckt:sha-256:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA:v1"))
         assertSame(Dim.objectionState, Dim.forWire("objection:open"))
-        assertSame(Dim.image, Dim.forWire("image:leaf:v1"), "rc6 registers image:*")
+        assertSame(Dim.image, Dim.forWire("image:leaf:v1"), "image:* is registered")
         assertNull(Dim.forWire("zz_unminted:jpeg"), "not a registry family — cannot be rendered")
         assertSame(Dim.consentKind, Dim.byPrefix("consent:{kind}"))
     }
@@ -74,7 +85,7 @@ class DimensionsTest {
     @Test
     fun bindFillsPlaceholders() {
         assertEquals("consent:replication", Dim.consentKind.bind(mapOf("kind" to "replication")))
-        assertEquals("holds_bytes:sha256:ab", Dim.holdsBytesSha256Prefix.bind(mapOf("prefix" to "ab")))
+        assertEquals("custody:ack", Dim.custodyKind.bind(mapOf("kind" to "ack")))
     }
 
     @Test

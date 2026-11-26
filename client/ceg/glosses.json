@@ -31,7 +31,7 @@
     "label": "Who vouches for whom",
     "gloss": "A claim that one key stands behind another for a stated job."
   },
-  "holds_bytes:sha256:{prefix}": {
+  "custody:{kind}": {
     "label": "Holds a copy",
     "gloss": "A node saying it holds the bytes for a file, named by their hash."
   },
@@ -51,8 +51,12 @@
     "label": "Not allowed",
     "gloss": "A mark that something crossed one of the lines the constitution draws. It is only ever a minus."
   },
-  "delivery_receipt:{stream_id}": {
+  "delivery_ack:{stream_id}": {
     "label": "Receipt",
     "gloss": "A record that something was delivered. Undoing the receipt does not undo the delivery."
+  },
+  "file:{version}": {
+    "label": "File",
+    "gloss": "A file placed where a group can see it, its bytes named by their hash."
   }
 }

@@ -6150,7 +6150,7 @@
       "label": "Chi garantisce per chi",
       "gloss": "Un'attestazione secondo cui una chiave garantisce per un'altra per un compito dichiarato."
     },
-    "holds_bytes_sha256_prefix": {
+    "custody_kind": {
       "label": "Detiene una copia",
       "gloss": "Un nodo che dichiara di detenere i byte di un file, identificato dal loro hash."
     },
@@ -6170,7 +6170,7 @@
       "label": "Non consentito",
       "gloss": "Un segno che indica che qualcosa ha attraversato uno dei limiti tracciati dalla costituzione. È sempre e solo un demerito."
     },
-    "delivery_receipt_stream_id": {
+    "delivery_ack_stream_id": {
       "label": "Ricevuta",
       "gloss": "Un record che attesta che qualcosa è stato consegnato. Annullare la ricevuta non annulla la consegna."
     },
@@ -6184,6 +6184,10 @@
       "granted": "Concesso",
       "revoked": "Revocato",
       "expired": "Scaduto"
+    },
+    "file_version": {
+      "label": "File",
+      "gloss": "Un file collocato dove un gruppo può vederlo, i cui byte sono identificati dal loro hash."
     }
   },
   "drive": {

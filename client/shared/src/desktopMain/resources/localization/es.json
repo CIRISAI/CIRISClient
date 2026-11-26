@@ -6150,7 +6150,7 @@
       "label": "Quién avala a quién",
       "gloss": "Una declaración de que una clave respalda a otra para una función especificada."
     },
-    "holds_bytes_sha256_prefix": {
+    "custody_kind": {
       "label": "Tiene una copia",
       "gloss": "Un nodo que declara que posee los bytes de un archivo, identificados por su hash."
     },
@@ -6170,7 +6170,7 @@
       "label": "No permitido",
       "gloss": "Una marca de que algo cruzó una de las líneas que traza la constitución. Siempre es un punto en contra."
     },
-    "delivery_receipt_stream_id": {
+    "delivery_ack_stream_id": {
       "label": "Recibo",
       "gloss": "Un registro de que algo fue entregado. Deshacer el recibo no deshace la entrega."
     },
@@ -6184,6 +6184,10 @@
       "granted": "Concedido",
       "revoked": "Revocado",
       "expired": "Vencido"
+    },
+    "file_version": {
+      "label": "Archivo",
+      "gloss": "Un archivo colocado donde un grupo puede verlo, cuyos bytes están identificados por su hash."
     }
   },
   "drive": {

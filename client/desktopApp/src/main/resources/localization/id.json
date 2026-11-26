@@ -6150,7 +6150,7 @@
       "label": "Siapa menjamin siapa",
       "gloss": "Klaim bahwa satu kunci menjamin kunci lain untuk tugas tertentu."
     },
-    "holds_bytes_sha256_prefix": {
+    "custody_kind": {
       "label": "Memegang salinan",
       "gloss": "Sebuah node yang menyatakan memegang byte untuk suatu berkas, yang dikenali melalui hash-nya."
     },
@@ -6170,7 +6170,7 @@
       "label": "Tidak diizinkan",
       "gloss": "Tanda bahwa sesuatu telah melewati salah satu batas yang digariskan konstitusi. Tanda ini selalu bernilai minus."
     },
-    "delivery_receipt_stream_id": {
+    "delivery_ack_stream_id": {
       "label": "Tanda terima",
       "gloss": "Catatan bahwa sesuatu telah dikirimkan. Membatalkan tanda terima tidak membatalkan pengiriman itu."
     },
@@ -6184,6 +6184,10 @@
       "granted": "Diberikan",
       "revoked": "Dicabut",
       "expired": "Kedaluwarsa"
+    },
+    "file_version": {
+      "label": "Berkas",
+      "gloss": "Sebuah berkas yang ditempatkan di tempat yang dapat dilihat oleh suatu grup, byte-nya dikenali melalui hash-nya."
     }
   },
   "drive": {
