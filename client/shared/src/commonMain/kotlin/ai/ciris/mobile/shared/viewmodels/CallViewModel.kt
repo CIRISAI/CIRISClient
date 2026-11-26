@@ -317,7 +317,12 @@ class CallViewModel(
             source?.stop()
             return
         }
-        val encoder = source?.let { newEncoder(640, 480, 15, 400_000) }
+        // Opened at the size asked for, and reopened at the size the camera really sends.
+        val encoder = source?.let {
+            newEncoder(640, 480, 15, 400_000)?.let { first ->
+                ai.ciris.mobile.shared.calls.media.ResizingVideoEncoder(640, 480, first) { w, h -> newEncoder(w, h, 15, 400_000) }
+            }
+        }
         if (source == null || encoder == null) {
             PlatformLogger.w(CALL_LOG_TAG, "[camera] unavailable: camera=${source != null} encoder=${encoder != null}")
             // Getting the source may already have opened the camera (desktop, the browser): let it go.
@@ -358,7 +363,12 @@ class CallViewModel(
         sh.state.onEach { st ->
             _shareState.value = st
             if (st is ai.ciris.mobile.shared.calls.CallShare.State.Sharing && shareVideo == null) {
-                val enc = ai.ciris.mobile.shared.calls.media.createVideoEncoder(width, height, 5, 800_000)
+                val enc = ai.ciris.mobile.shared.calls.media.createVideoEncoder(width, height, 5, 800_000)?.let { first ->
+                    // A window's size is its own, and changes when it is resized.
+                    ai.ciris.mobile.shared.calls.media.ResizingVideoEncoder(width, height, first) { w, h ->
+                        ai.ciris.mobile.shared.calls.media.createVideoEncoder(w, h, 5, 800_000)
+                    }
+                }
                 if (enc == null) { sh.stop(); return@onEach }
                 shareCodec = enc.codecId
                 shareVideo = ai.ciris.mobile.shared.calls.media.CallVideo(

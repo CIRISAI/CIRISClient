@@ -274,4 +274,35 @@ class CallVideoTest {
         override suspend fun leave(room: String) = Unit
         override suspend fun openFrames(room: String) = error("not used")
     }
+
+    /** An encoder that, like desktop's, refuses a frame of another size than its own. */
+    private class StrictEncoder(val w: Int, val h: Int, val log: MutableList<String>) : VideoEncoder {
+        override val codecId = CallVideoCodec.AV1_SVC
+        override val codecName = "av1"
+        override fun encode(frame: VideoFrame, forceKeyframe: Boolean, onChunk: (EncodedChunk) -> Unit) {
+            require(frame.width == w && frame.height == h) { "encoder is ${w}x$h, frame ${frame.width}x${frame.height}" }
+            log += "${w}x$h ${if (forceKeyframe) "key" else "inter"}"
+        }
+        override fun close() { log += "close ${w}x$h" }
+    }
+
+    private fun frame(w: Int, h: Int) = VideoFrame(w, h, ByteArray(w * h), ByteArray(w * h / 4), ByteArray(w * h / 4), 0)
+
+    @Test fun anEncoderFollowsTheSizeTheSourceReallySends() {
+        // Run 45810495792: asked for 640x480, the test pattern sent 320x180, every frame refused.
+        val log = mutableListOf<String>()
+        val e = ResizingVideoEncoder(640, 480, StrictEncoder(640, 480, log)) { w, h -> StrictEncoder(w, h, log) }
+        e.encode(frame(320, 180), false) {}
+        e.encode(frame(320, 180), false) {}
+        e.encode(frame(640, 480), false) {}
+        assertEquals(listOf("close 640x480", "320x180 key", "320x180 inter", "close 320x180", "640x480 key"), log)
+    }
+
+    @Test fun aSizeWithNoEncoderSendsNothingAndTheNextSizeTriesAgain() {
+        val log = mutableListOf<String>()
+        val e = ResizingVideoEncoder(640, 480, StrictEncoder(640, 480, log)) { w, h -> if (w == 4) null else StrictEncoder(w, h, log) }
+        e.encode(frame(4, 4), false) {}
+        e.encode(frame(320, 180), false) {}
+        assertEquals(listOf("close 640x480", "320x180 key"), log)
+    }
 }

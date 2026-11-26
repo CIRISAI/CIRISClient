@@ -293,6 +293,14 @@ Metered is per platform: Android's default network (cellular, or without
 `NET_CAPABILITY_NOT_METERED`), iOS `NWPathMonitor` (`isExpensive`, `isConstrained`, or over
 cellular); a desktop and a browser are never asked.
 
+**The sent picture follows the source's size.** The camera's encoder opens at
+640x480 and the share's at the size asked for; a frame of another size closes it and
+opens one at that size, and that frame is a keyframe (`ResizingVideoEncoder`). A frame
+that still will not encode is dropped, logged once, and never ends the stream. Found by
+the call check's first run against 0.5.254 (run 45810495792): the runner's 320x180 test
+pattern was refused by an encoder opened at 640x480, the exception ended the sending
+loop, and no picture crossed on any desktop leg.
+
 **A full call (CIRISServer 0.5.254).** A call carries at most `max_people` people
 (four at 0.5.254; a room still seats more), and the number is the node's, never this
 client's. A join into a full call is refused 409 `call.full` with `max_people` and

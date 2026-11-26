@@ -154,6 +154,49 @@ interface VideoDecoder {
 }
 
 /**
+ * An encoder that follows the frames it is given. A source says its size only by
+ * its frames: a camera may deliver another size than the one asked for, and the
+ * runner's test pattern is 320x180. An encoder opened at one size refuses or
+ * corrupts frames of another (desktop refused every frame, and the whole stream
+ * stopped: five-platform run 45810495792, every desktop leg). So on a frame of a
+ * new size this closes the encoder, opens one at that size through [open], and
+ * makes that frame a keyframe, which the receivers need to start again.
+ */
+class ResizingVideoEncoder(
+    width: Int,
+    height: Int,
+    first: VideoEncoder,
+    private val open: (width: Int, height: Int) -> VideoEncoder?,
+) : VideoEncoder {
+    private var inner: VideoEncoder? = first
+    private var w = width
+    private var h = height
+
+    override val codecId: Int get() = inner?.codecId ?: lastCodec
+    override val codecName: String get() = inner?.codecName ?: lastName
+    private var lastCodec = first.codecId
+    private var lastName = first.codecName
+
+    override fun encode(frame: VideoFrame, forceKeyframe: Boolean, onChunk: (EncodedChunk) -> Unit) {
+        var force = forceKeyframe
+        if (frame.width != w || frame.height != h) {
+            inner?.close()
+            inner = open(frame.width, frame.height)?.also { lastCodec = it.codecId; lastName = it.codecName }
+            w = frame.width
+            h = frame.height
+            force = true
+        }
+        // No encoder at this size: the frame is not sent, and the next size change tries again.
+        inner?.encode(frame, force, onChunk)
+    }
+
+    override fun close() {
+        inner?.close()
+        inner = null
+    }
+}
+
+/**
  * The platform's video codecs. [createVideoEncoder] returns AV1 where the device
  * encodes it in real time, else H.264; null where neither is built yet.
  * [createVideoDecoder] returns null for a codec this platform cannot decode.
@@ -246,6 +289,8 @@ class CallVideo(
         val broken = mutableSetOf<Layer>()
     }
     private var keyframeDue = true
+    /** Said once in the log, not once a frame. */
+    private var encodeFailed = false
     private var lastKeyframeUs = Long.MIN_VALUE
 
     /**
@@ -267,8 +312,20 @@ class CallVideo(
                 val force = keyframeDue || frame.timestampUs - lastKeyframeUs >= KEYFRAME_INTERVAL_US
                 keyframeDue = false
                 if (force) lastKeyframeUs = frame.timestampUs
-                encoder.encode(frame, force) { chunk ->
-                    publish(OutgoingFrame(encoder.codecId, chunk.layer, chunk.bytes))
+                // One frame that will not encode costs that frame, never the stream: thrown
+                // here it ended the source's loop, so no frame was sent again.
+                try {
+                    encoder.encode(frame, force) { chunk ->
+                        publish(OutgoingFrame(encoder.codecId, chunk.layer, chunk.bytes))
+                    }
+                } catch (e: kotlinx.coroutines.CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    keyframeDue = true
+                    if (!encodeFailed) {
+                        encodeFailed = true
+                        ai.ciris.mobile.shared.platform.PlatformLogger.w("CallVideo", "[video] a frame did not encode: ${e::class.simpleName}: ${e.message}")
+                    }
                 }
             }
         }

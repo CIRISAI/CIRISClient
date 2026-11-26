@@ -68,7 +68,8 @@ class CallViewModelTest {
         val lit get() = stops == 0
         override fun start(onFrame: (VideoFrame) -> Unit) { this.onFrame = onFrame; everStarted = true }
         override fun stop() { onFrame = null; stops++ }
-        fun deliver() = onFrame!!(VideoFrame(2, 2, ByteArray(4), ByteArray(1), ByteArray(1), 0))
+        /** At the size the call opens the encoder at, so the encoder is not reopened. */
+        fun deliver() = onFrame!!(VideoFrame(640, 480, ByteArray(640 * 480), ByteArray(640 * 480 / 4), ByteArray(640 * 480 / 4), 0))
     }
 
     private class FakeDevices : CallMediaDevices {
