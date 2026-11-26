@@ -16,19 +16,19 @@ import platform.VideoToolbox.*
 /**
  * iOS video through VideoToolbox.
  *
- * Encode: H.264 only (`0x04`, "h264"). No iPhone or iPad encodes AV1 in hardware,
- * so [createVideoEncoder] never returns AV1 here.
+ * Encode (CSD-134, AV1 both ways): AV1 (`0x01`) by libaom (AomVideoCodec.ios.kt),
+ * since no iPhone or iPad encodes AV1 in hardware; H.264 (`0x04`, VideoToolbox)
+ * only where libaom will not open.
  *
- * Decode: H.264 always; AV1 (`0x01`) only where VideoToolbox reports a hardware
- * AV1 decoder (A17 Pro / M3 and later), else null and the tile says so. There is
- * no software AV1 decoder on iOS (dav1d is not bundled).
+ * Decode: AV1 by VideoToolbox where it reports a hardware AV1 decoder (A17 Pro /
+ * M3 and later), else by libaom; H.264 by VideoToolbox, for clients before 0.5.243.
  */
 actual fun createVideoEncoder(width: Int, height: Int, fps: Int, bitrate: Int): VideoEncoder? =
-    VtH264Encoder.open(width, height, fps, bitrate)
+    AomVideoEncoder.open(width, height, fps, bitrate) ?: VtH264Encoder.open(width, height, fps, bitrate)
 
 actual fun createVideoDecoder(codecId: Int): VideoDecoder? = when (codecId) {
     CallVideoCodec.TEMPORAL_LAYERED -> VtH264Decoder()
-    CallVideoCodec.AV1_SVC -> if (av1HardwareDecode) VtAv1Decoder() else null
+    CallVideoCodec.AV1_SVC -> if (av1HardwareDecode) VtAv1Decoder() else AomVideoDecoder.open()
     else -> null
 }
 

@@ -332,6 +332,11 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
+      # libaom's x86_64 assembly (the emulator ABI) is built with nasm; without it
+      # packaging/aom/build_libaom.sh falls back to plain C.
+      - uses: ./.github/actions/apt
+        with:
+          packages: nasm
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"

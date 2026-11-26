@@ -354,6 +354,35 @@ private fun LiveCall(
                     modifier = Modifier.testable("txt_call_video_unavailable"),
                 )
             }
+            // Until the node says ready nothing goes out: say so, rather than look like a
+            // call that is up and silent (CSD-134; Eric's call of 2026-11-26).
+            // Not ready after a while, and the node has said nothing about why: the call has
+            // failed so far, and the person is told, not left looking at a call that seems up.
+            var slow by remember(s.callId) { mutableStateOf(false) }
+            androidx.compose.runtime.LaunchedEffect(s.callId, s.ready) {
+                slow = false
+                if (!s.ready) { kotlinx.coroutines.delay(CONNECT_PATIENCE_MS); slow = true }
+            }
+            if (!s.ready) {
+                val notReached = slow && s.pathFailures.isEmpty()
+                Text(
+                    localizedString(if (notReached) "mobile.call_not_reached" else "mobile.call_connecting"),
+                    color = if (notReached) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testable(if (notReached) "txt_call_not_reached" else "txt_call_connecting"),
+                )
+            }
+            // The person's own camera, from the moment it opens: they see what the others will.
+            val self by call.selfPicture.collectAsState()
+            self?.let { picture ->
+                Column(modifier = Modifier.testable("media_call_self")) {
+                    androidx.compose.foundation.Image(
+                        bitmap = picture,
+                        contentDescription = localizedString("mobile.call_you"),
+                        modifier = Modifier.fillMaxWidth(0.35f).aspectRatio(picture.width.toFloat() / picture.height),
+                    )
+                    Text(localizedString("mobile.call_you"), style = MaterialTheme.typography.bodySmall)
+                }
+            }
             // One picture per stream: a member's camera and their screen are two tiles.
             val pictures by call.pictures.collectAsState()
             pictures.forEach { (stream, picture) ->
@@ -464,6 +493,9 @@ private fun LiveCall(
         }
     }
 }
+
+/** How long "Connecting…" may last before the screen says the call has reached no one. */
+private const val CONNECT_PATIENCE_MS = 20_000L
 
 private val NO_REJOIN = setOf(
     ai.ciris.mobile.shared.calls.LeaveReason.REMOVED,

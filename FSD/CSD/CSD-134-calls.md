@@ -158,14 +158,31 @@ leaves the call.
 
 | Platform | Capture | Sends | Decodes |
 |---|---|---|---|
-| Android | Camera2, MediaProjection for the screen | AV1 where the device has a hardware encoder that runs this size and rate, otherwise H.264 (MediaCodec) | H.264; AV1 where the device has a hardware decoder |
-| iOS | AVFoundation; ReplayKit for the screen, this app only | H.264 (VideoToolbox) | H.264; AV1 where the device has a hardware decoder |
+| Android | Camera2, MediaProjection for the screen | AV1: a hardware encoder that runs this size and rate, else libaom in software. H.264 (MediaCodec) only where libaom does not load | AV1: hardware, else libaom, else the platform's software decoder (Android 10+); H.264 |
+| iOS | AVFoundation; ReplayKit for the screen, this app only | H.264 (VideoToolbox). **Being built:** AV1 by libaom, as on Android | H.264; AV1 where the device has a hardware decoder. **Being built:** AV1 by libaom |
 | Desktop | The bundled FFmpeg: camera, a screen or one window. No screen share on Wayland | AV1 (SVT-AV1); H.264 only with Cisco's library, below | AV1; H.264 only with Cisco's library |
 | Web | `getUserMedia`, `getDisplayMedia` | AV1 where WebCodecs encodes it here, otherwise H.264 | Both, where WebCodecs has them |
 
-**The camera is open only while its picture is sent.** Camera off, a call over the video
-limit, no encoder, leaving, and closing the screen each release the device, so its light
-is on only when someone can see the picture. Turning the camera back on opens it again
+**AV1 both ways (Eric, 2026-11-26).** A desktop sends AV1 and shows H.264 only with
+Cisco's opt-in library, so a phone that sent H.264 was shown as no picture on a desktop,
+and a phone without hardware AV1 showed no picture from one (the call check against
+0.5.254, run 45832940789: Android and the Linux desktop, frames both ways, no picture
+either way). Phones therefore send and show AV1 whatever their hardware: libaom 3.15.3,
+real-time and 8-bit only, built from the signed release by `packaging/aom/build_libaom.sh`
+and linked into `libciris_aom.so` (Android: about 2.3 to 3.2 MB per ABI). Every client
+must decode AV1 (CC 5.3.3.2.1), and now every one does. H.264 is still decoded where a
+device can, for clients before 0.5.243.
+
+**The camera is open while the person has it on in a video call (Eric, 2026-11-26).** It
+opens at the join, and the person sees their own picture (`media_call_self`, "You") while
+the call connects; frames go out only once the node says `ready`, and the first one sent
+is a keyframe. Until `ready` the screen says it is connecting (`txt_call_connecting`); after 20 s with no `ready` and no `media_path_failed`, it says the call has reached no one and the other device may be offline (`txt_call_not_reached`), since a call that never connected must not look like one that did (Eric, 2026-11-26).
+Camera off, a call over the video limit, no encoder, leaving, and closing the screen each
+release the device, so its light is on only when someone, the person included, can see the
+picture. Found on Eric's first real call (2026-11-26): no route to the other node, so no
+`ready`, and a screen that read "Your microphone and camera are ready" over a call that
+sent nothing. Tiles are named from the join answer's `attendee_people` (each node's owner,
+through contacts), not "Someone". Turning the camera back on opens it again
 (a browser may ask again), and the first frame sent is a keyframe.
 
 **Video is for two people (Eric, 2026-11-10; CIRISServer `fe0a93ec`; lifted at Edge 45.1).**
@@ -292,6 +309,14 @@ through this device: N" (`row_call_relay.self`), or through the node that runs t
 Metered is per platform: Android's default network (cellular, or without
 `NET_CAPABILITY_NOT_METERED`), iOS `NWPathMonitor` (`isExpensive`, `isConstrained`, or over
 cellular); a desktop and a browser are never asked.
+
+**The sent picture follows the source's size.** The camera's encoder opens at
+640x480 and the share's at the size asked for; a frame of another size closes it and
+opens one at that size, and that frame is a keyframe (`ResizingVideoEncoder`). A frame
+that still will not encode is dropped, logged once, and never ends the stream. Found by
+the call check's first run against 0.5.254 (run 45810495792): the runner's 320x180 test
+pattern was refused by an encoder opened at 640x480, the exception ended the sending
+loop, and no picture crossed on any desktop leg.
 
 **A full call (CIRISServer 0.5.254).** A call carries at most `max_people` people
 (four at 0.5.254; a room still seats more), and the number is the node's, never this

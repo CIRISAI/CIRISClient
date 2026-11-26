@@ -18,9 +18,9 @@ import android.util.Log
  *
  * Encoder choice, per the codec rule: AV1 (`0x01`) only where a HARDWARE AV1
  * encoder says it runs this size at this rate; otherwise H.264 (`0x04`),
- * constrained baseline. Decoding: H.264 always; AV1 only on a hardware decoder.
- * There is no software AV1 decoder in this build (dav1d is not bundled), so a
- * device without one shows an AV1 publisher's tile as audio only.
+ * constrained baseline. Decoding: H.264 always; AV1 on a hardware decoder, else
+ * the platform's software one (Android 10+, c2.android.av1.decoder). Before
+ * Android 10 an AV1 publisher's tile shows audio only.
  *
  * Both are asynchronous (MediaCodec.Callback on their own HandlerThread) and
  * deliver in codec output order, which is submission order for these streams
@@ -413,7 +413,8 @@ internal class AndroidVideoDecoder(private val info: MediaCodecInfo, private val
     }
 
     companion object {
-        fun create(codecId: Int): AndroidVideoDecoder? {
+        /** [hardwareOnly]: a hardware decoder or none, so a better software one can be tried first. */
+        fun create(codecId: Int, hardwareOnly: Boolean = false): AndroidVideoDecoder? {
             val mime = when (codecId) {
                 CallVideoCodec.TEMPORAL_LAYERED -> MIME_AVC
                 CallVideoCodec.AV1_SVC -> MIME_AV1
@@ -423,15 +424,17 @@ internal class AndroidVideoDecoder(private val info: MediaCodecInfo, private val
                 runCatching { info.getCapabilitiesForType(mime).colorFormats.contains(MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Flexible) }
                     .getOrDefault(false)
             }
-            // AV1: hardware only (no dav1d here). H.264: hardware first, the platform's software decoder otherwise.
-            val chosen = if (mime == MIME_AV1) candidates.firstOrNull { isHardware(it) }
-            else candidates.firstOrNull { isHardware(it) } ?: candidates.firstOrNull()
-            chosen ?: return null
+            // Hardware first, the platform's software decoder otherwise. Every client must decode
+            // AV1 (CC 5.3.3.2.1): Android 10 and later ship one (c2.android.av1.decoder), which is
+            // what a desktop's picture arrives in. Before Android 10 there is none here.
+            val chosen = candidates.firstOrNull { isHardware(it) } ?: candidates.firstOrNull().takeUnless { hardwareOnly }
+            chosen ?: return null.also { if (!hardwareOnly) Log.w(TAG, "no $mime decoder on this device") }
             return runCatching { AndroidVideoDecoder(chosen, mime) }.getOrElse {
                 Log.e(TAG, "decoder ${chosen.name} could not start", it)
-                // A hardware decoder that refuses is not the end for H.264: the software one stays.
-                if (mime == MIME_AVC) candidates.firstOrNull { it !== chosen && !isHardware(it) }
-                    ?.let { sw -> runCatching { AndroidVideoDecoder(sw, mime) }.getOrNull() } else null
+                // A hardware decoder that refuses is not the end: the software one stays.
+                if (hardwareOnly) return null
+                candidates.firstOrNull { it !== chosen && !isHardware(it) }
+                    ?.let { sw -> runCatching { AndroidVideoDecoder(sw, mime) }.getOrNull() }
             }
         }
     }

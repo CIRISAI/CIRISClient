@@ -142,6 +142,22 @@ extra["bytedecoHostClassifier"] = bytedecoHostClassifier
 extra["bytedecoJavacppVersion"] = bytedecoJavacppVersion
 extra["bytedecoFfmpegVersion"] = bytedecoFfmpegVersion
 
+/** Runs build_libaom.sh, and on failure shows what it said: Gradle would otherwise say only "exit value 1". */
+fun runLibaomBuild(cmd: List<String>, env: Map<String, String>) {
+    val run = providers.exec {
+        commandLine(cmd)
+        env.forEach { (k, v) -> environment(k, v) }
+        isIgnoreExitValue = true
+    }
+    val code = run.result.get().exitValue
+    if (code != 0) {
+        throw GradleException("${cmd.drop(2).joinToString(" ")} failed ($code):\n" + run.standardError.asText.get() + run.standardOutput.asText.get())
+    }
+}
+
+// The iOS targets that link libaom, and the build_libaom.sh target each one takes.
+val aomIosTargets = mapOf("iosArm64" to "ios-arm64", "iosSimulatorArm64" to "ios-sim-arm64")
+
 kotlin {
     // Suppress expect/actual beta warnings - feature is stable enough for production use
     targets.all {
@@ -198,6 +214,14 @@ kotlin {
             baseName = "shared"
             isStatic = true
             xcf.add(this)
+        }
+        // AV1 both ways on iOS (CSD-134): the calls in src/nativeInterop/aom/ciris_aom.h,
+        // with libaom linked in statically. :shared:buildLibaomIos builds it on a Mac.
+        val aomDir = layout.buildDirectory.dir("aom/${aomIosTargets.getValue(iosTarget.name)}")
+        iosTarget.compilations.getByName("main").cinterops.create("aom") {
+            defFile(project.file("src/nativeInterop/cinterop/aom.def"))
+            includeDirs(project.file("src/nativeInterop/aom"), aomDir.map { it.dir("include") })
+            extraOpts("-libraryPath", aomDir.get().dir("lib").asFile.absolutePath)
         }
     }
 
@@ -437,6 +461,51 @@ kotlin {
     }
 }
 
+// AV1 FOR CALLS ON iOS (CSD-134): the same libaom, built on a Mac (Xcode) for the
+// device and the Apple Silicon simulator, then linked through the `aom` cinterop.
+val buildLibaomIos by tasks.registering {
+    description = "Builds libaom (packaging/aom/build_libaom.sh) for the iOS device and simulator."
+    val script = rootProject.file("../packaging/aom/build_libaom.sh")
+    onlyIf { org.jetbrains.kotlin.konan.target.HostManager.hostIsMac }
+    inputs.file(script)
+    inputs.file(rootProject.file("../packaging/aom/aomedia-release-key.asc"))
+    outputs.dirs(aomIosTargets.values.map { layout.buildDirectory.dir("aom/$it") })
+    doLast {
+        aomIosTargets.values.forEach { target ->
+            val out = layout.buildDirectory.dir("aom/$target").get().asFile
+            if (out.resolve("lib/libaom.a").isFile) return@forEach
+            runLibaomBuild(listOfNotNull("bash", script.absolutePath, target, out.absolutePath, System.getenv("AOM_TARBALL")), emptyMap())
+        }
+    }
+}
+tasks.matching { it.name.startsWith("cinteropAom") }.configureEach { dependsOn(buildLibaomIos) }
+
+// AV1 FOR CALLS ON ANDROID (CSD-134): libaom, built from the pinned, signed release
+// by packaging/aom/build_libaom.sh for each ABI the app ships, then linked into
+// libciris_aom.so by src/androidMain/cpp. Real-time and 8-bit only: about 2.5 MB
+// per ABI. A local run can name an already-fetched tarball in AOM_TARBALL.
+val aomAbis = listOf("arm64-v8a", "armeabi-v7a", "x86_64")
+val aomRoot = layout.buildDirectory.dir("aom")
+val buildLibaom by tasks.registering {
+    description = "Builds libaom (packaging/aom/build_libaom.sh) for every Android ABI."
+    val script = rootProject.file("../packaging/aom/build_libaom.sh")
+    inputs.file(script)
+    inputs.file(rootProject.file("../packaging/aom/aomedia-release-key.asc"))
+    outputs.dir(aomRoot)
+    doLast {
+        val ndk = android.ndkDirectory
+        aomAbis.forEach { abi ->
+            val out = aomRoot.get().dir(abi).asFile
+            if (out.resolve("lib/libaom.a").isFile) return@forEach
+            runLibaomBuild(listOfNotNull("bash", script.absolutePath, "android-$abi", out.absolutePath, System.getenv("AOM_TARBALL")),
+                mapOf("ANDROID_NDK_HOME" to ndk.absolutePath))
+        }
+    }
+}
+tasks.matching { it.name.startsWith("configureCMake") || it.name.startsWith("buildCMake") }.configureEach {
+    dependsOn(buildLibaom)
+}
+
 android {
     namespace = "ai.ciris.mobile.shared"
     compileSdk = 36
@@ -444,6 +513,14 @@ android {
     defaultConfig {
         minSdk = 24
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        ndk { abiFilters += aomAbis }
+        externalNativeBuild {
+            cmake { arguments += "-DAOM_ROOT=${aomRoot.get().asFile.absolutePath}" }
+        }
+    }
+
+    externalNativeBuild {
+        cmake { path = file("src/androidMain/cpp/CMakeLists.txt") }
     }
 
     compileOptions {
