@@ -1,5 +1,0 @@
-# ninja log v5
-42	74	1795706431811996703	/home/emoore/CIRISClient/client/shared/build/intermediates/cxx/Debug/43r7223x/obj/x86_64/libciris_aom.so	1d815c07dc05e373
-0	42	1795706431779995976	CMakeFiles/ciris_aom.dir/ciris_aom_jni.c.o	5ad05e38308e1504
-0	55	1795706892626405621	CMakeFiles/ciris_aom.dir/ciris_aom_jni.c.o	e1ca8360c6144b31
-55	89	1795706892660406375	/home/emoore/CIRISClient/client/shared/build/intermediates/cxx/Debug/43r7223x/obj/x86_64/libciris_aom.so	1d815c07dc05e373

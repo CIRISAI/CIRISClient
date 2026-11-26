@@ -1,7 +1,0 @@
-[
-{
-  "directory": "/home/emoore/CIRISClient/client/shared/.cxx/Debug/43r7223x/x86_64",
-  "command": "/home/emoore/Android/Sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/linux-x86_64/bin/clang --target=x86_64-none-linux-android24 --sysroot=/home/emoore/Android/Sdk/ndk/26.1.10909125/toolchains/llvm/prebuilt/linux-x86_64/sysroot -Dciris_aom_EXPORTS -I/home/emoore/CIRISClient/client/shared/build/aom/x86_64/include -I/home/emoore/CIRISClient/client/shared/src/androidMain/cpp/../../nativeInterop/aom -g -DANDROID -fdata-sections -ffunction-sections -funwind-tables -fstack-protector-strong -no-canonical-prefixes -D_FORTIFY_SOURCE=2 -Wformat -Werror=format-security  -fno-limit-debug-info  -fPIC -Os -ffunction-sections -fdata-sections -o CMakeFiles/ciris_aom.dir/ciris_aom_jni.c.o -c /home/emoore/CIRISClient/client/shared/src/androidMain/cpp/ciris_aom_jni.c",
-  "file": "/home/emoore/CIRISClient/client/shared/src/androidMain/cpp/ciris_aom_jni.c"
-}
-]
