@@ -1367,6 +1367,18 @@
     "wa_identity_profile_contested": "या एजंटची ओळख वादग्रस्त आहे. ते निकाली निघेपर्यंत कोणताही ओळख बदल लागू होणार नाही.",
     "wa_identity_profile_unknown": "या एजंटने अशी ओळख स्थिती कळवली जी हे अॅप ओळखत नाही.",
     "wa_identity_open_base_link": "बेस-लिंक विनंती उघडा",
+    "call_incoming_voice": "{who} कॉल करत आहे",
+    "call_incoming_video": "{who} व्हिडिओसह कॉल करत आहे",
+    "call_incoming_leaves_current": "उत्तर दिल्याने तुम्ही सध्या ज्या कॉलमध्ये आहात तो कॉल सुटेल.",
+    "call_answer": "उत्तर द्या",
+    "call_decline": "नाकारा",
+    "call_rung_ringing": "{who} ला रिंग करत आहे…",
+    "call_rung_busy": "{who} दुसऱ्या कॉलमध्ये आहे.",
+    "call_rung_declined": "{who} ने नाकारले.",
+    "call_rung_unreachable": "{who} पर्यंत आत्ता पोहोचता येत नाही.",
+    "call_rung_refused": "{who} च्या डिव्हाइसला हा कॉल घेता आला नाही. त्याच्याकडे अजून ही रूम नसेल.",
+    "call_no_answer_declined": "कोणीही कॉल घेऊ शकले नाही.",
+    "call_no_answer_timeout": "कोणीही उत्तर दिले नाही.",
     "trust_hosts_verified": "{checked} पैकी {verified} ट्रस्ट-रूट होस्ट पडताळले गेले",
     "trust_hosts_unreachable": "{count} ट्रस्ट-रूट होस्टपर्यंत पोहोचता आले नाही. हे अपयश नाही: ते बंद असू शकतात किंवा या नेटवर्कवरून ब्लॉक केलेले असू शकतात.",
     "contact_requests_heading": "जोडू इच्छित आहे",
@@ -6609,7 +6621,8 @@
       "peer_relay_in_use": "कॉलमधील दुसरी व्यक्ती ते रिले करत आहे.",
       "none_available": "कॉलमधील कोणीही ते रिले करण्याची ऑफर दिली नाही.",
       "refused_by_policy": "फक्त CIRIS सार्वजनिक सर्व्हरच ते रिले करू शकला असता, आणि CIRIS सार्वजनिक सर्व्हर्स कधीही कॉल्स रिले करत नाहीत."
-    }
+    },
+    "decline_reason_unknown": "ते कॉल नाकारण्याचे कारण नाही."
   },
   "decisions": {
     "not_found": "तो निर्णय आता तुमच्यासाठी खुला नाही.",

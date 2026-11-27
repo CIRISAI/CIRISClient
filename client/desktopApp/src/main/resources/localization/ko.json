@@ -1303,6 +1303,18 @@
     "wa_identity_profile_contested": "이 에이전트의 신원에 이의가 제기되어 있습니다. 이 문제가 해결되기 전까지는 어떠한 신원 변경도 적용되지 않습니다.",
     "wa_identity_profile_unknown": "이 에이전트가 이 앱이 알지 못하는 신원 상태를 보고했습니다.",
     "wa_identity_open_base_link": "기본 연결 요청 열기",
+    "call_incoming_voice": "{who}님이 전화를 걸고 있습니다",
+    "call_incoming_video": "{who}님이 영상 통화를 걸고 있습니다",
+    "call_incoming_leaves_current": "응답하면 현재 참여 중인 통화에서 나가게 됩니다.",
+    "call_answer": "받기",
+    "call_decline": "거절",
+    "call_rung_ringing": "{who}님에게 전화를 거는 중…",
+    "call_rung_busy": "{who}님은 다른 통화 중입니다.",
+    "call_rung_declined": "{who}님이 거절했습니다.",
+    "call_rung_unreachable": "{who}님에게 지금은 연결할 수 없습니다.",
+    "call_rung_refused": "{who}님의 기기가 이 통화를 받을 수 없었습니다. 아직 이 룸을 가지고 있지 않을 수 있습니다.",
+    "call_no_answer_declined": "아무도 통화를 받을 수 없었습니다.",
+    "call_no_answer_timeout": "아무도 응답하지 않았습니다.",
     "claim_node_cohort_biosphere": "모든 생명체 (생물권)",
     "claim_node_cohort_federation": "전체 페더레이션 (페더레이션)",
     "claim_node_cohort_more": "옵션 더 보기",
@@ -6609,7 +6621,8 @@
       "peer_relay_in_use": "통화 중인 다른 사람이 중계하고 있습니다.",
       "none_available": "통화 중인 누구도 중계를 제안하지 않았습니다.",
       "refused_by_policy": "CIRIS 공개 서버만이 이를 중계할 수 있었지만, CIRIS 공개 서버는 통화를 절대 중계하지 않습니다."
-    }
+    },
+    "decline_reason_unknown": "그것은 통화를 거절하는 사유가 아닙니다."
   },
   "decisions": {
     "not_found": "그 결정은 더 이상 사용자에게 열려 있지 않습니다.",

@@ -2684,6 +2684,18 @@
     "wa_identity_profile_contested": "هویت این عامل مورد مناقشه است. تا زمانی که این موضوع حل نشود، هیچ تغییر هویتی اعمال نمی‌شود.",
     "wa_identity_profile_unknown": "این عامل وضعیت هویتی را گزارش داد که این برنامه نمی‌شناسد.",
     "wa_identity_open_base_link": "درخواست پیوند پایه را باز کنید",
+    "call_incoming_voice": "{who} تماس می‌گیرد",
+    "call_incoming_video": "{who} با ویدیو تماس می‌گیرد",
+    "call_incoming_leaves_current": "با پاسخ دادن، تماسی را که در آن هستید ترک می‌کنید.",
+    "call_answer": "پاسخ",
+    "call_decline": "رد",
+    "call_rung_ringing": "در حال زنگ زدن به {who}…",
+    "call_rung_busy": "{who} در تماسی دیگر است.",
+    "call_rung_declined": "{who} رد کرد.",
+    "call_rung_unreachable": "در حال حاضر دسترسی به {who} ممکن نیست.",
+    "call_rung_refused": "دستگاه {who} نتوانست این تماس را پاسخ دهد. ممکن است هنوز این اتاق را نداشته باشد.",
+    "call_no_answer_declined": "هیچ‌کس نتوانست تماس را پاسخ دهد.",
+    "call_no_answer_timeout": "هیچ‌کس پاسخ نداد.",
     "yubikey_probe_failed": "وضعیت YubiKey خوانده نشد",
     "yubikey_probe_not_on_this_node": "این گره وضعیت YubiKey را گزارش نمی‌دهد",
     "yubikey_probe_reason": "دلیل: {detail}",
@@ -6615,7 +6627,8 @@
       "peer_relay_in_use": "فرد دیگری در تماس در حال انتقال آن است.",
       "none_available": "هیچ‌کس در تماس پیشنهاد نداد که آن را منتقل کند.",
       "refused_by_policy": "فقط یک سرور عمومی CIRIS می‌توانست آن را منتقل کند، و سرورهای عمومی CIRIS هرگز تماس‌ها را منتقل نمی‌کنند."
-    }
+    },
+    "decline_reason_unknown": "این دلیلی برای رد تماس نیست."
   },
   "decisions": {
     "not_found": "آن تصمیم دیگر برای شما باز نیست.",

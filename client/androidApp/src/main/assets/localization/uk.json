@@ -1167,6 +1167,18 @@
     "wa_identity_profile_contested": "Ідентичність цього агента оскаржена. Жодна зміна ідентичності не набуде чинності, доки це не буде вирішено.",
     "wa_identity_profile_unknown": "Цей агент повідомив статус ідентичності, який цей застосунок не розпізнає.",
     "wa_identity_open_base_link": "Відкрити запит на базове прив'язування",
+    "call_incoming_voice": "{who} телефонує",
+    "call_incoming_video": "{who} телефонує з відео",
+    "call_incoming_leaves_current": "Якщо ви відповісте, ви залишите дзвінок, у якому зараз перебуваєте.",
+    "call_answer": "Відповісти",
+    "call_decline": "Відхилити",
+    "call_rung_ringing": "Дзвонимо {who}…",
+    "call_rung_busy": "{who} наразі на іншому дзвінку.",
+    "call_rung_declined": "{who} відхилив дзвінок.",
+    "call_rung_unreachable": "Зараз неможливо зв'язатися з {who}.",
+    "call_rung_refused": "Пристрій {who} не зміг прийняти цей дзвінок. Можливо, у нього ще немає цієї кімнати.",
+    "call_no_answer_declined": "Ніхто не зміг прийняти дзвінок.",
+    "call_no_answer_timeout": "Ніхто не відповів.",
     "wa_identity_template_name": "Шаблон",
     "wa_identity_template_version": "Версія",
     "wa_identity_manifest_digest": "Дайджест маніфесту",
@@ -6609,7 +6621,8 @@
       "peer_relay_in_use": "Ще одна людина в дзвінку передає його.",
       "none_available": "Ніхто в дзвінку не запропонував передати його.",
       "refused_by_policy": "Передати його міг би лише публічний сервер CIRIS, а публічні сервери CIRIS ніколи не ретранслюють дзвінки."
-    }
+    },
+    "decline_reason_unknown": "Це не причина для відхилення дзвінка."
   },
   "decisions": {
     "not_found": "Це рішення більше не відкрите для вас.",

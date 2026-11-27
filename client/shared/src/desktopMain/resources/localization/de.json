@@ -1189,6 +1189,18 @@
     "wa_identity_profile_contested": "Die Identität dieses Agenten ist umstritten. Keine Identitätsänderung wird wirksam, bis dies geklärt ist.",
     "wa_identity_profile_unknown": "Dieser Agent hat einen Identitätsstatus gemeldet, den diese App nicht kennt.",
     "wa_identity_open_base_link": "Basisverknüpfungs-Anfrage öffnen",
+    "call_incoming_voice": "{who} ruft an",
+    "call_incoming_video": "{who} ruft mit Video an",
+    "call_incoming_leaves_current": "Wenn Sie annehmen, verlassen Sie den Anruf, an dem Sie gerade teilnehmen.",
+    "call_answer": "Annehmen",
+    "call_decline": "Ablehnen",
+    "call_rung_ringing": "{who} wird angerufen…",
+    "call_rung_busy": "{who} führt gerade einen anderen Anruf.",
+    "call_rung_declined": "{who} hat abgelehnt.",
+    "call_rung_unreachable": "{who} ist gerade nicht erreichbar.",
+    "call_rung_refused": "Das Gerät von {who} konnte diesen Anruf nicht annehmen. Es hat diesen Raum möglicherweise noch nicht.",
+    "call_no_answer_declined": "Niemand konnte den Anruf entgegennehmen.",
+    "call_no_answer_timeout": "Niemand hat abgenommen.",
     "contact_requests_accepted": "Sie sind jetzt Kontakte.",
     "contact_requests_accept_pending": "Angenommen, aber dieser Knoten wartet noch auf den Schlüssel dieser Person. Sie erscheint als Kontakt, sobald er eintrifft.",
     "contact_requests_ignored_notice": "Ignoriert. Diese Person wird nicht informiert.",
@@ -6609,7 +6621,8 @@
       "peer_relay_in_use": "Eine andere Person im Anruf leitet ihn weiter.",
       "none_available": "Niemand im Anruf hat angeboten, ihn weiterzuleiten.",
       "refused_by_policy": "Nur die öffentlichen CIRIS-Server könnten ihn weiterleiten, und die öffentlichen CIRIS-Server leiten Anrufe nie weiter."
-    }
+    },
+    "decline_reason_unknown": "Das ist kein Grund, einen Anruf abzulehnen."
   },
   "decisions": {
     "not_found": "Diese Entscheidung steht für Sie nicht mehr offen.",

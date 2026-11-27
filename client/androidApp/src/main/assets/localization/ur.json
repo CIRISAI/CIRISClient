@@ -4640,7 +4640,19 @@
     "wa_identity_profile_mismatch": "اس ایجنٹ کی شناخت اس کے منظور شدہ ٹیمپلیٹ سے مماثل نہیں۔ جب تک یہ طے نہیں ہوتا، شناخت میں کوئی تبدیلی نافذ نہیں ہوگی۔",
     "wa_identity_profile_contested": "اس ایجنٹ کی شناخت متنازع ہے۔ جب تک یہ طے نہیں ہوتا، شناخت میں کوئی تبدیلی نافذ نہیں ہوگی۔",
     "wa_identity_profile_unknown": "اس ایجنٹ نے شناخت کی ایسی حالت رپورٹ کی جسے یہ ایپ نہیں جانتی۔",
-    "wa_identity_open_base_link": "بیس لنک درخواست کھولیں"
+    "wa_identity_open_base_link": "بیس لنک درخواست کھولیں",
+    "call_incoming_voice": "{who} کال کر رہے ہیں",
+    "call_incoming_video": "{who} ویڈیو کے ساتھ کال کر رہے ہیں",
+    "call_incoming_leaves_current": "جواب دینے سے آپ جس کال میں ہیں وہ چھوٹ جائے گی۔",
+    "call_answer": "جواب دیں",
+    "call_decline": "مسترد کریں",
+    "call_rung_ringing": "{who} کو گھنٹی بجائی جا رہی ہے…",
+    "call_rung_busy": "{who} کسی اور کال میں ہیں۔",
+    "call_rung_declined": "{who} نے مسترد کر دیا۔",
+    "call_rung_unreachable": "{who} تک ابھی رسائی نہیں ہو سکتی۔",
+    "call_rung_refused": "{who} کے آلے نے یہ کال نہیں لی۔ ہو سکتا ہے اس کے پاس ابھی یہ روم نہ ہو۔",
+    "call_no_answer_declined": "کوئی بھی کال نہیں لے سکا۔",
+    "call_no_answer_timeout": "کسی نے جواب نہیں دیا۔"
   },
   "moderation": {
     "ladder": {
@@ -6609,7 +6621,8 @@
       "peer_relay_in_use": "کال میں موجود کوئی دوسرا شخص اسے ریلے کر رہا ہے۔",
       "none_available": "کال میں کسی نے بھی اسے ریلے کرنے کی پیشکش نہیں کی۔",
       "refused_by_policy": "صرف CIRIS کا کوئی عوامی سرور ہی اسے ریلے کر سکتا تھا، اور CIRIS کے عوامی سرورز کبھی کالز ریلے نہیں کرتے۔"
-    }
+    },
+    "decline_reason_unknown": "یہ کال مسترد کرنے کی کوئی وجہ نہیں ہے۔"
   },
   "decisions": {
     "not_found": "وہ فیصلہ اب آپ کے لیے کھلا نہیں ہے۔",

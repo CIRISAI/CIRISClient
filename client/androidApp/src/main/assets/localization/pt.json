@@ -4619,6 +4619,18 @@
     "wa_identity_profile_contested": "A identidade deste agente está contestada. Nenhuma alteração de identidade será aplicada até que isso seja resolvido.",
     "wa_identity_profile_unknown": "Este agente relatou um status de identidade que este aplicativo não reconhece.",
     "wa_identity_open_base_link": "Abrir a solicitação de vínculo-base",
+    "call_incoming_voice": "{who} está chamando",
+    "call_incoming_video": "{who} está chamando com vídeo",
+    "call_incoming_leaves_current": "Atender sairá da chamada em que você está.",
+    "call_answer": "Atender",
+    "call_decline": "Recusar",
+    "call_rung_ringing": "Chamando {who}…",
+    "call_rung_busy": "{who} está em outra chamada.",
+    "call_rung_declined": "{who} recusou.",
+    "call_rung_unreachable": "{who} não pode ser alcançado no momento.",
+    "call_rung_refused": "O dispositivo de {who} não conseguiu atender a esta chamada. Ele pode ainda não ter esta sala.",
+    "call_no_answer_declined": "Ninguém pôde atender a chamada.",
+    "call_no_answer_timeout": "Ninguém atendeu.",
     "data_erase_self_label": "Apagar você",
     "data_erase_self_blocked": "Ainda não é possível a partir deste aplicativo. O nó só apaga uma pessoa mediante uma solicitação que essa pessoa assina, e este aplicativo não assina (CIRISServer#677). Apagar traços não apaga você.",
     "data_erase_agent_id_label": "ID do agente",
@@ -6609,7 +6621,8 @@
       "peer_relay_in_use": "Outra pessoa na chamada está retransmitindo-a.",
       "none_available": "Ninguém na chamada se ofereceu para retransmiti-la.",
       "refused_by_policy": "Somente um servidor público do CIRIS poderia retransmiti-la, e os servidores públicos do CIRIS nunca retransmitem chamadas."
-    }
+    },
+    "decline_reason_unknown": "Isso não é um motivo para recusar uma chamada."
   },
   "decisions": {
     "not_found": "Essa decisão não está mais aberta para você.",

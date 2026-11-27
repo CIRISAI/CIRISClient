@@ -2108,6 +2108,19 @@ fun CIRISApp(
             val capacityForCard by interactViewModel.cellVizState.collectAsState()
             val uriHandler = androidx.compose.ui.platform.LocalUriHandler.current
 
+            // Ringing (CSD-134; CIRISServer 0.5.255): while signed in to a node that serves
+            // calls, this device hears when someone in a room starts one. It rings only
+            // while the app runs; waking a backgrounded phone is CIRISServer#24.
+            val callsServed = nodeCapabilities.hasFeature(ai.ciris.mobile.shared.models.capability.Capability.CHAT_CALL)
+            val ringScope = rememberCoroutineScope()
+            val ringWatcher = remember(effectiveNodeUrl) {
+                ai.ciris.mobile.shared.calls.RingWatcher(apiClient.ringTransport(effectiveNodeUrl), ringScope)
+            }
+            DisposableEffect(ringWatcher, callsServed, showSidebar) {
+                if (callsServed && showSidebar) ringWatcher.start()
+                onDispose { ringWatcher.stop() }
+            }
+
 
             val mainScreenContent: @Composable (androidx.compose.ui.Modifier) -> Unit = { contentModifier ->
                 androidx.compose.foundation.layout.Box(modifier = contentModifier) {
@@ -4624,6 +4637,7 @@ fun CIRISApp(
                 DisposableEffect(callVm) { onDispose { callVm?.close() } }
                 val contacts by contactsViewModel.contacts.collectAsState()
                 CallScreen(
+                    answer = call.answer,
                     roomLabel = call.room.contactLabel,
                     onBack = { currentScreen = call.room },
                     call = callVm,
@@ -5526,6 +5540,31 @@ fun CIRISApp(
                 onOpenHousehold = { currentScreen = Screen.LayerFamily },
             )
         }
+            // Over every screen, never a dialog: a ring must not stack a modal on a modal (plan 2.1).
+            run {
+                val ringContacts by contactsViewModel.contacts.collectAsState()
+                ai.ciris.mobile.shared.ui.screens.IncomingCallBanner(
+                    watcher = ringWatcher,
+                    inCallRoom = (currentScreen as? Screen.Call)?.room?.communityId,
+                    nameOf = { person -> ringContacts.firstOrNull { it.keyId == person }?.aliasOverride },
+                    onAnswer = { ring ->
+                        val pair = ringContacts.firstOrNull { it.chatCommunityId == ring.room }
+                        val label = pair?.aliasOverride
+                            ?: ring.byPerson?.let { p -> ringContacts.firstOrNull { it.keyId == p }?.aliasOverride }
+                            ?: ""
+                        currentScreen = Screen.Call(
+                            room = Screen.UserChat(
+                                contactKeyId = pair?.keyId,
+                                communityId = ring.room,
+                                contactLabel = label,
+                            ),
+                            answer = if (ring.video) ai.ciris.mobile.shared.platform.CallKind.VIDEO
+                            else ai.ciris.mobile.shared.platform.CallKind.VOICE,
+                        )
+                    },
+                    modifier = Modifier.align(androidx.compose.ui.Alignment.TopCenter),
+                )
+            }
                 } // close Box(modifier = contentModifier)
             } // close mainScreenContent lambda
 
@@ -6567,6 +6606,8 @@ internal sealed class Screen {
     /** A call in one room (CSD-134). Back returns to that room. */
     data class Call(
         val room: UserChat,
+        /** Opened by answering a ring: join at once, as voice or video as the caller asked. */
+        val answer: ai.ciris.mobile.shared.platform.CallKind? = null,
     ) : Screen()
     // Delegations (device-auth grants — authorize an agent to act on-behalf).
     object Delegations : Screen()

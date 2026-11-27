@@ -4640,7 +4640,19 @@
     "wa_identity_profile_mismatch": "Danh tính của tác nhân này không khớp với mẫu đã được chấp thuận. Không có thay đổi danh tính nào có hiệu lực cho đến khi việc đó được giải quyết.",
     "wa_identity_profile_contested": "Danh tính của tác nhân này đang bị tranh chấp. Không có thay đổi danh tính nào có hiệu lực cho đến khi việc đó được giải quyết.",
     "wa_identity_profile_unknown": "Tác nhân này đã báo cáo một trạng thái danh tính mà ứng dụng này không biết.",
-    "wa_identity_open_base_link": "Mở yêu cầu liên kết cơ sở"
+    "wa_identity_open_base_link": "Mở yêu cầu liên kết cơ sở",
+    "call_incoming_voice": "{who} đang gọi",
+    "call_incoming_video": "{who} đang gọi video",
+    "call_incoming_leaves_current": "Trả lời sẽ khiến bạn rời khỏi cuộc gọi hiện tại.",
+    "call_answer": "Trả lời",
+    "call_decline": "Từ chối",
+    "call_rung_ringing": "Đang đổ chuông cho {who}…",
+    "call_rung_busy": "{who} đang trong một cuộc gọi khác.",
+    "call_rung_declined": "{who} đã từ chối.",
+    "call_rung_unreachable": "Hiện không thể liên lạc với {who}.",
+    "call_rung_refused": "Thiết bị của {who} không thể nhận cuộc gọi này. Có thể thiết bị đó chưa có phòng này.",
+    "call_no_answer_declined": "Không ai có thể nhận cuộc gọi.",
+    "call_no_answer_timeout": "Không ai trả lời."
   },
   "moderation": {
     "ladder": {
@@ -6609,7 +6621,8 @@
       "peer_relay_in_use": "Một người khác trong cuộc gọi đang chuyển tiếp nó.",
       "none_available": "Không ai trong cuộc gọi đề nghị chuyển tiếp nó.",
       "refused_by_policy": "Chỉ một máy chủ công khai của CIRIS mới có thể chuyển tiếp nó, nhưng các máy chủ công khai của CIRIS không bao giờ chuyển tiếp cuộc gọi."
-    }
+    },
+    "decline_reason_unknown": "Đó không phải là lý do để từ chối một cuộc gọi."
   },
   "decisions": {
     "not_found": "Quyết định đó không còn mở cho bạn nữa.",

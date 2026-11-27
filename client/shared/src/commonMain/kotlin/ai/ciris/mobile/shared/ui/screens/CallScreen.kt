@@ -54,6 +54,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun CallScreen(
     roomLabel: String,
+    /** Set when the person answered a ring: the screen joins at once, as voice or video. */
+    answer: CallKind? = null,
     onBack: () -> Unit,
     /** The call itself. Null on a node without the call routes: the screen then says it cannot connect. */
     call: ai.ciris.mobile.shared.viewmodels.CallViewModel? = null,
@@ -75,6 +77,11 @@ fun CallScreen(
         if (next is CallPermissionState.Asking) {
             media.requestAccess(next.source) { advance(kind, asked + next.source) }
         }
+    }
+
+    // Answering is the choice already made: go straight to asking for the devices.
+    androidx.compose.runtime.LaunchedEffect(answer) {
+        if (answer != null && state == null) advance(answer, emptySet())
     }
 
     Scaffold(
@@ -307,6 +314,7 @@ private fun LiveCall(
             modifier = Modifier.testable("state_call_refused", s.reasonId),
         )
         is ai.ciris.mobile.shared.calls.CallState.Left -> {
+            s.noAnswer?.let { NoAnswerLine(it) }
             Text(
                 if (s.reason == ai.ciris.mobile.shared.calls.LeaveReason.FULL) fullText(s.maxPeople) else localizedString(youLeftKey(s.reason)),
                 modifier = Modifier.testable("state_call_left", s.reason.wire),
@@ -363,7 +371,9 @@ private fun LiveCall(
                 slow = false
                 if (!s.ready) { kotlinx.coroutines.delay(CONNECT_PATIENCE_MS); slow = true }
             }
-            if (!s.ready) {
+            // A call still ringing someone has not failed to reach them: the ring says where it is.
+            val ringing = s.rung.values.any { it == ai.ciris.mobile.shared.calls.RungState.RINGING } && s.noAnswer == null
+            if (!s.ready && !(ringing && s.attendees.isEmpty())) {
                 val notReached = slow && s.pathFailures.isEmpty()
                 Text(
                     localizedString(if (notReached) "mobile.call_not_reached" else "mobile.call_connecting"),
@@ -403,6 +413,7 @@ private fun LiveCall(
             if (s.attendees.isEmpty()) {
                 Text(localizedString("mobile.call_alone"), modifier = Modifier.testable("state_call_alone"))
             }
+            RungLines(s, nameOf)
             // Re-read the measurements twice a second, so the tiles (and the runner) see sound arrive.
             var tick by remember { mutableStateOf(0) }
             androidx.compose.runtime.LaunchedEffect(Unit) {
@@ -709,4 +720,43 @@ private fun MediaPathPanel(
             }
         }
     }
+}
+
+/**
+ * How the ring went for each person this call rang (CIRISServer 0.5.255), until they
+ * join: their tile then speaks for them. Nothing is shown for someone already in the call.
+ */
+@Composable
+private fun RungLines(s: ai.ciris.mobile.shared.calls.CallState.InCall, nameOf: (String) -> String?) {
+    val joined = s.attendees.values.mapNotNull { it.person }.toSet() + s.attendees.keys
+    s.rung.filterKeys { it !in joined }.toList().sortedBy { it.first }.forEach { (person, state) ->
+        val key = when (state) {
+            ai.ciris.mobile.shared.calls.RungState.RINGING -> "mobile.call_rung_ringing"
+            ai.ciris.mobile.shared.calls.RungState.BUSY -> "mobile.call_rung_busy"
+            ai.ciris.mobile.shared.calls.RungState.DECLINED -> "mobile.call_rung_declined"
+            ai.ciris.mobile.shared.calls.RungState.UNREACHABLE -> "mobile.call_rung_unreachable"
+            ai.ciris.mobile.shared.calls.RungState.REFUSED -> "mobile.call_rung_refused"
+            ai.ciris.mobile.shared.calls.RungState.IN_CALL,
+            ai.ciris.mobile.shared.calls.RungState.OTHER -> null
+        } ?: return@forEach
+        val who = nameOf(person) ?: localizedString("mobile.call_someone")
+        Text(
+            localizedString(key, "who", who),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testable("row_call_rung_$person", state.wire ?: "other"),
+        )
+    }
+    s.noAnswer?.let { NoAnswerLine(it) }
+}
+
+@Composable
+private fun NoAnswerLine(why: ai.ciris.mobile.shared.calls.NoAnswer) {
+    Text(
+        localizedString(
+            if (why == ai.ciris.mobile.shared.calls.NoAnswer.TIMEOUT) "mobile.call_no_answer_timeout"
+            else "mobile.call_no_answer_declined"
+        ),
+        color = MaterialTheme.colorScheme.error,
+        modifier = Modifier.testable("txt_call_no_answer", why.name.lowercase()),
+    )
 }

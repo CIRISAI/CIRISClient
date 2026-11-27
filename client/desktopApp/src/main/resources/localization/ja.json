@@ -4640,7 +4640,19 @@
     "wa_identity_profile_mismatch": "このエージェントのアイデンティティは承認済みのテンプレートと一致していません。それが解決するまで、アイデンティティの変更は適用されません。",
     "wa_identity_profile_contested": "このエージェントのアイデンティティは争われています。それが解決するまで、アイデンティティの変更は適用されません。",
     "wa_identity_profile_unknown": "このエージェントは、このアプリが認識していないアイデンティティの状態を報告しました。",
-    "wa_identity_open_base_link": "ベースリンクリクエストを開く"
+    "wa_identity_open_base_link": "ベースリンクリクエストを開く",
+    "call_incoming_voice": "{who}から着信があります",
+    "call_incoming_video": "{who}からビデオ通話の着信です",
+    "call_incoming_leaves_current": "応答すると、現在の通話から退出します。",
+    "call_answer": "応答",
+    "call_decline": "拒否",
+    "call_rung_ringing": "{who}を呼び出しています…",
+    "call_rung_busy": "{who}は別の通話中です。",
+    "call_rung_declined": "{who}が拒否しました。",
+    "call_rung_unreachable": "{who}には現在接続できません。",
+    "call_rung_refused": "{who}のデバイスはこの通話に応答できませんでした。このルームをまだ持っていない可能性があります。",
+    "call_no_answer_declined": "誰も通話に応答できませんでした。",
+    "call_no_answer_timeout": "誰も応答しませんでした。"
   },
   "moderation": {
     "ladder": {
@@ -6609,7 +6621,8 @@
       "peer_relay_in_use": "通話中の他の人がそれを中継しています。",
       "none_available": "通話中の誰も中継を申し出ませんでした。",
       "refused_by_policy": "それを中継できるのはCIRISパブリックサーバーだけですが、CIRISパブリックサーバーは通話を中継しません。"
-    }
+    },
+    "decline_reason_unknown": "それは通話を拒否する理由ではありません。"
   },
   "decisions": {
     "not_found": "その決定は、もうあなたに対して開かれていません。",

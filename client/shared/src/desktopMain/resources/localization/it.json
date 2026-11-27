@@ -4640,7 +4640,19 @@
     "wa_identity_profile_mismatch": "L'identità di questo agente non corrisponde al proprio modello approvato. Nessuna modifica all'identità verrà applicata finché la questione non sarà risolta.",
     "wa_identity_profile_contested": "L'identità di questo agente è contestata. Nessuna modifica all'identità verrà applicata finché la questione non sarà risolta.",
     "wa_identity_profile_unknown": "Questo agente ha segnalato uno stato dell'identità che questa app non riconosce.",
-    "wa_identity_open_base_link": "Apri la richiesta di collegamento di base"
+    "wa_identity_open_base_link": "Apri la richiesta di collegamento di base",
+    "call_incoming_voice": "{who} ti sta chiamando",
+    "call_incoming_video": "{who} ti sta chiamando con il video",
+    "call_incoming_leaves_current": "Rispondendo, uscirai dalla chiamata in corso.",
+    "call_answer": "Rispondi",
+    "call_decline": "Rifiuta",
+    "call_rung_ringing": "Chiamata a {who} in corso…",
+    "call_rung_busy": "{who} è in un'altra chiamata.",
+    "call_rung_declined": "{who} ha rifiutato.",
+    "call_rung_unreachable": "Al momento non è possibile raggiungere {who}.",
+    "call_rung_refused": "Il dispositivo di {who} non è riuscito a prendere questa chiamata. Potrebbe non avere ancora questa stanza.",
+    "call_no_answer_declined": "Nessuno ha potuto rispondere alla chiamata.",
+    "call_no_answer_timeout": "Nessuno ha risposto."
   },
   "moderation": {
     "ladder": {
@@ -6609,7 +6621,8 @@
       "peer_relay_in_use": "Un'altra persona nella chiamata la sta trasmettendo.",
       "none_available": "Nessuno nella chiamata si è offerto di trasmetterla.",
       "refused_by_policy": "Solo un server pubblico CIRIS avrebbe potuto trasmetterla, e i server pubblici CIRIS non inoltrano mai le chiamate."
-    }
+    },
+    "decline_reason_unknown": "Questo non è un motivo per rifiutare una chiamata."
   },
   "decisions": {
     "not_found": "Questa decisione non è più aperta per te.",

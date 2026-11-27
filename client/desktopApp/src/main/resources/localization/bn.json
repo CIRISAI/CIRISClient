@@ -4450,6 +4450,18 @@
     "wa_identity_profile_contested": "এই এজেন্টের পরিচয় বিতর্কিত। তা মীমাংসা না হওয়া পর্যন্ত কোনো পরিচয় পরিবর্তন কার্যকর হবে না।",
     "wa_identity_profile_unknown": "এই এজেন্ট এমন একটি পরিচয় স্থিতি জানিয়েছে যা এই অ্যাপ জানে না।",
     "wa_identity_open_base_link": "বেস-লিংক অনুরোধ খুলুন",
+    "call_incoming_voice": "{who} কল করছেন",
+    "call_incoming_video": "{who} ভিডিওসহ কল করছেন",
+    "call_incoming_leaves_current": "উত্তর দিলে আপনি যে কলে আছেন তা থেকে বেরিয়ে যাবেন।",
+    "call_answer": "উত্তর দিন",
+    "call_decline": "প্রত্যাখ্যান করুন",
+    "call_rung_ringing": "{who}-কে রিং করা হচ্ছে…",
+    "call_rung_busy": "{who} অন্য একটি কলে আছেন।",
+    "call_rung_declined": "{who} প্রত্যাখ্যান করেছেন।",
+    "call_rung_unreachable": "{who}-এর সাথে এখন যোগাযোগ করা যাচ্ছে না।",
+    "call_rung_refused": "{who}-এর ডিভাইস এই কলটি নিতে পারেনি। এতে এখনও এই রুম না-ও থাকতে পারে।",
+    "call_no_answer_declined": "কেউ কলটি ধরতে পারেননি।",
+    "call_no_answer_timeout": "কেউ উত্তর দেননি।",
     "accord_ceremony_phase_intro": "শুরু করার আগে",
     "accord_ceremony_phase_provision": "ছয়টি কী প্রস্তুত করা হচ্ছে",
     "accord_ceremony_phase_cosign": "পরিবারের এনভেলাপ সহ-স্বাক্ষর করা হচ্ছে",
@@ -6610,7 +6622,8 @@
       "peer_relay_in_use": "কলে থাকা অন্য একজন এটি রিলে করছেন।",
       "none_available": "কলে থাকা কেউ এটি রিলে করার প্রস্তাব দেননি।",
       "refused_by_policy": "শুধুমাত্র একটি CIRIS পাবলিক সার্ভারই এটি রিলে করতে পারত, এবং CIRIS পাবলিক সার্ভারগুলো কখনও কল রিলে করে না।"
-    }
+    },
+    "decline_reason_unknown": "এটি কল প্রত্যাখ্যান করার কোনো কারণ নয়।"
   },
   "decisions": {
     "not_found": "ওই সিদ্ধান্তটি আর আপনার জন্য খোলা নেই।",

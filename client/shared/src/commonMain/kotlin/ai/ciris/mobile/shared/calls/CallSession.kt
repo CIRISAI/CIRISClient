@@ -200,7 +200,10 @@ class CallSession(
             reader?.cancel()
             socket?.close()
             socket = null
-            _state.value = CallState.Left(LeaveReason.of(event.ended), event.maxPeople)
+            // A ring nobody answered ends the call from the node's side: keep why, so the
+            // screen says "nobody answered" rather than only "the call ended".
+            val noAnswer = (_state.value as? CallState.InCall)?.noAnswer
+            _state.value = CallState.Left(LeaveReason.of(event.ended), event.maxPeople, noAnswer)
             return
         }
         updateCall { call ->
@@ -261,6 +264,19 @@ class CallSession(
                 }
                 // Handled before this: the call is over, so the state is not InCall.
                 is CallEvent.CallEnded -> call
+                is CallEvent.Rung -> {
+                    PlatformLogger.i(TAG, "[ring] rung " + event.members.joinToString(",") { "${it.person ?: it.member}:${it.state.wire ?: "other"}" })
+                    call.copy(rung = call.rung + event.members.associate { (it.person ?: it.member) to it.state })
+                }
+                is CallEvent.Declined -> {
+                    PlatformLogger.i(TAG, "[ring] declined by ${event.person ?: event.member} reason=${event.reason}")
+                    val st = if (event.reason == "busy") RungState.BUSY else RungState.DECLINED
+                    call.copy(rung = call.rung + ((event.person ?: event.member) to st))
+                }
+                is CallEvent.NoAnswerEvent -> {
+                    PlatformLogger.i(TAG, "[ring] no answer why=${event.why}")
+                    call.copy(noAnswer = event.why)
+                }
                 is CallEvent.StreamReplaced -> {
                     val prior = call.attendees[event.member] ?: Attendee(event.member)
                     call.copy(attendees = call.attendees + (event.member to prior.copy(streamId = streamIdBytes(event.newStreamId))))
@@ -348,6 +364,14 @@ sealed interface CallState {
         val relayingFor: Int = 0,
         /** This node is a CIRIS public server: it never relays calls, so there is no switch. */
         val relaySeat: Boolean = false,
+        /**
+         * What happened when this call rang the room's other people (CIRISServer 0.5.255),
+         * by person key: ringing, busy, declined, unreachable, refused or in_call. Empty
+         * until the node says; a call joined into one already going never rings.
+         */
+        val rung: Map<String, RungState> = emptyMap(),
+        /** Nobody answered: everyone rung declined or was busy, or 45 s passed with nobody joining. */
+        val noAnswer: NoAnswer? = null,
     ) : CallState
 
     /** The node said no, by id (`call.not_a_member`, `call.anonymous_mode`, …). */
@@ -355,7 +379,7 @@ sealed interface CallState {
     data class Refused(val reasonId: String, val maxPeople: Int? = null) : CallState
 
     /** This device is out of the call; [reason] tells "you were removed" from "you left". */
-    data class Left(val reason: LeaveReason, val maxPeople: Int? = null) : CallState
+    data class Left(val reason: LeaveReason, val maxPeople: Int? = null, val noAnswer: NoAnswer? = null) : CallState
 }
 
 /** A member's share: whose it is, so the tile reads "Ada's screen". */
@@ -548,6 +572,10 @@ sealed interface CallEvent {
     /** The call is over for this device ([ended] is edge's token); the socket closes next. */
     /** [maxPeople] is the node's cap, sent with `call_full`. */
     data class CallEnded(val ended: String, val reasonId: String?, val maxPeople: Int? = null) : CallEvent
+    /** How each person rung answered the ring, once every node has answered or failed to. */
+    data class Rung(val members: List<RungMember>) : CallEvent
+    data class Declined(val member: String, val person: String?, val reason: String) : CallEvent
+    data class NoAnswerEvent(val why: NoAnswer) : CallEvent
 
     companion object {
         private val json = Json { ignoreUnknownKeys = true }
@@ -642,6 +670,16 @@ sealed interface CallEvent {
                 "relay_status" -> (o["relaying"] as? JsonPrimitive)?.takeIf { !it.isString }?.contentOrNull?.toBooleanStrictOrNull()
                     ?.let { RelayStatus(it, int("relaying_for") ?: 0) }
                 "call_ended" -> str("ended")?.let { CallEnded(it, str("reason_id"), int("max_people")) }
+                "ringing" -> Rung(
+                    (o["members"] as? kotlinx.serialization.json.JsonArray).orEmpty().mapNotNull { e ->
+                        val m = e as? JsonObject ?: return@mapNotNull null
+                        fun s(k: String) = (m[k] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
+                        val member = s("member") ?: return@mapNotNull null
+                        RungMember(member, s("person"), RungState.of(s("state")))
+                    },
+                )
+                "declined" -> str("member")?.let { Declined(it, str("person"), str("reason") ?: "declined") }
+                "no_answer" -> NoAnswerEvent(if (str("why") == "timeout") NoAnswer.TIMEOUT else NoAnswer.DECLINED)
                 else -> null
             }
         }
@@ -820,3 +858,26 @@ class CallShare(
  */
 internal fun redactTicket(message: String?): String? =
     message?.replace(Regex("(ticket=)[^&\\s\"')]+"), "$1<redacted>")
+
+/** One person rung, as the node reports it on the caller's socket. */
+data class RungMember(val member: String, val person: String?, val state: RungState)
+
+/** How a ring went for one person (CIRISServer 0.5.255 `member_states`). An unknown word is [OTHER]. */
+enum class RungState(val wire: String?) {
+    RINGING("ringing"),
+    IN_CALL("in_call"),
+    BUSY("busy"),
+    DECLINED("declined"),
+    /** No path to them now, or no answer within 8 s. */
+    UNREACHABLE("unreachable"),
+    /** Their node refused the ring, e.g. it does not hold this room yet. */
+    REFUSED("refused"),
+    OTHER(null);
+
+    companion object {
+        fun of(s: String?): RungState = entries.firstOrNull { it.wire != null && it.wire == s } ?: OTHER
+    }
+}
+
+/** Why nobody answered: everyone rung declined or was busy, or the 45 s ran out. */
+enum class NoAnswer { DECLINED, TIMEOUT }
