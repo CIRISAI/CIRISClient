@@ -222,6 +222,18 @@ fun main() {
         var accessToken by remember { mutableStateOf("") }
 
         // Track window position for test automation (screen-absolute coordinates)
+        // The window's heartbeat for the agent's launcher (docs/PLAN-0.5.244.md 2.7). This
+        // effect resumes on the UI thread, so a beat proves that thread is turning; the
+        // write itself is off it.
+        LaunchedEffect(Unit) {
+            while (true) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    ai.ciris.mobile.shared.platform.UiHeartbeat.beat()
+                }
+                kotlinx.coroutines.delay(ai.ciris.mobile.shared.platform.UiHeartbeat.INTERVAL_MS)
+            }
+        }
+
         LaunchedEffect(Unit) {
             testServer?.let { server ->
                 // Get initial position and set AWT window ref for screenshots

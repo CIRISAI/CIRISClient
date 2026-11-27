@@ -342,7 +342,8 @@ jobs:
           # them through the hardened path is the point, not the package list.
           # pulseaudio + pulseaudio-utils + alsa plugins: the call tests' virtual
           # microphone (packaging/virtual_audio.sh). The runner has no sound hardware.
-          packages: zip unzip pulseaudio pulseaudio-utils libasound2-plugins
+          # xvfb + xauth: the real-window UI check (xvfb-run).
+          packages: zip unzip pulseaudio pulseaudio-utils libasound2-plugins xvfb xauth
 
       - uses: actions/setup-java@v4
         with:
@@ -401,6 +402,24 @@ jobs:
       - name: Test :shared (desktop target)
         working-directory: client
         run: ./gradlew --no-daemon :shared:desktopTest
+
+      - name: Clicks reach a sheet opened from a panel, in a real window
+        # 2026-11-27: Eric's desktop window froze with a sheet open inside a sheet. The
+        # headless scene of :shared:desktopTest took every click even then, so this runs
+        # a REAL window under xvfb, clicked by java.awt.Robot. The test skips without
+        # CIRIS_REAL_WINDOW_TEST=1, so this step is where it actually runs.
+        working-directory: client
+        run: |
+          CIRIS_REAL_WINDOW_TEST=1 xvfb-run -a -s "-screen 0 1280x1024x24" \
+            ./gradlew --no-daemon :shared:desktopTest --rerun --tests '*RealWindowNestedSheetTest*'
+          python3 - <<'PY'
+          import glob, re, sys
+          s = open(glob.glob('shared/build/test-results/desktopTest/TEST-*RealWindowNestedSheetTest.xml')[0]).read()
+          m = re.search(r'tests="(\d+)" skipped="(\d+)" failures="(\d+)"', s)
+          print(m.group(0))
+          for line in re.findall(r'real window, nested ModalBottomSheet[^<\n]*', s): print(line)
+          sys.exit(0 if m and m.group(3) == '0' else 1)
+          PY
 
       - name: Call audio through a virtual microphone
         # CSD-134: a 440 Hz tone through Opus, out the speaker, back in through a
