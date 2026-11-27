@@ -54,6 +54,15 @@ person is told, and what the matrix proves.
    (epoch ms and pid) from the UI thread every 5 s. CIRISAgent's `desktop_launcher.py` logs "client
    window unresponsive" past 30 s and offers a restart. Note that this would NOT have caught today's
    freeze: the UI thread was idle and healthy, and only input was lost. Item 2 catches that.
+8. **Ringing (Eric: yes, 2026-11-27; server 0.5.255).** Someone not on the call screen is told a
+   call started. The node sends `call_ringing` and `call_ring_ended {why: answered|declined|
+   cancelled|timeout|answered_elsewhere}` on its event stream; `POST /v1/chat/{room}/call/decline
+   {reason: declined|busy}`; the caller's socket gets `declined` or `no_answer` (server timeout 45 s).
+   Never stored, room members only, rate-limited. The client: an incoming-call banner and sound,
+   Answer and Decline, busy while already in a call, and "Ringing …", declined and no answer for the
+   caller. The call check gains a ring-answer and a ring-decline step. **Limit:** it rings only while
+   the app is running. Waking a backgrounded phone is CIRISServer#24 (after 2.24; the wake carries
+   only "wake", and the device fetches over the mesh).
 
 
 ## 2a. Harden: the server (CIRISServer's proposals, 2026-11-27; for its next cut, with Eric)
@@ -105,8 +114,8 @@ configured in `client/desktopApp/build.gradle.kts` and has never been built in C
 
 | Platform | Package | Built by | Notes |
 |---|---|---|---|
-| macOS (arm64, x86_64) | `.dmg` | Compose `packageDmg` on the macOS runners | Developer ID signing and notarization: **OPEN, who holds the identity** |
-| Windows x86_64 | `.msi` | `packageMsi` on windows | **`upgradeUuid` is a placeholder (`a1b2c3d4-…`). Replace it with a real one before the first MSI ships, and never change it after**, or upgrades install side by side. Authenticode signing: **OPEN** |
+| macOS (arm64, x86_64) | `.dmg` | Compose `packageDmg` on the macOS runners | Unsigned for 0.5.244 (tester build); Developer ID and notarization later |
+| Windows x86_64 | `.msi` | `packageMsi` on windows | **`upgradeUuid` is a placeholder (`a1b2c3d4-…`). Replace it with a real one before the first MSI ships, and never change it after**, or upgrades install side by side. Unsigned for 0.5.244; Authenticode later |
 | Linux x86_64 | `.deb` and `.AppImage` | `packageDeb`; AppImage from the distributable | One for Debian and Ubuntu, one for everyone else |
 
 Each installer carries its own runtime (jpackage), so no system Java. FFmpeg comes from the
@@ -144,12 +153,15 @@ launcher makes must keep the holon jars at that relative place (item 4b).
 next cut. The agent supplies one relocatable Python with the agent, server and client inside;
 CIRISServer owns the Windows, macOS and Debian installer shells.
 
-**OPEN, Eric's call:**
-- **Signing identities.** Does CIRIS hold an Apple Developer ID (for notarization) and a Windows
-  code-signing certificate?
-- **What the client contributes,** under that plan: the desktop jar and its `ciris-holon` jars, or a
-  jpackage'd app image the installer drops in. The `upgradeUuid` fix applies either way, if an MSI is
-  built from Compose at all.
+**Decided (Eric, 2026-11-27):**
+- **This release ships UNSIGNED, for testing.** There is no Apple Developer ID or Windows
+  code-signing certificate yet. Every installer leaves a marked, skipped signing step, and its
+  release notes say plainly that Gatekeeper and SmartScreen will warn, and how to open it anyway.
+  Signing is the gate between a tester build and a public one.
+- **What the client contributes:** the desktop jar and its `ciris-holon` jars at the relative
+  place, as answered to CIRISServer above. No jpackage'd app image of our own; CIRISServer's shells
+  carry the runtime. The `upgradeUuid` placeholder is still replaced now, so that if a Compose MSI
+  is ever built it upgrades in place.
 
 ## 5. Order
 
@@ -157,5 +169,5 @@ CIRISServer owns the Windows, macOS and Debian installer shells.
 2. Section 2's client items, each with its test. 2.1 and 2.3 first.
 3. Section 3.1, the tag check, before any other 0.5.244 work merges, so the release is held to it.
 4. Section 3.2 and 3.3, the iOS legs.
-5. Section 4, once Eric answers its OPEN lines. The UUID fix goes in now, whatever is decided.
+5. Section 4, unsigned. The UUID fix goes in now.
    Client 2.6 waits on CIRISAgent#1385 merging, and 2.3 reads the server's `reach` once it ships.
