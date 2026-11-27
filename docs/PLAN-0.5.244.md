@@ -16,6 +16,7 @@ release. [ROADMAP.md](ROADMAP.md) points here.
 | 3 | Two tiles reading "Someone in this room" | The join answer's `attendee_people` was not read | 0.5.243 (#334) |
 | 4 | The desktop window froze: no click did anything | A room's "Files in this room" panel was a `ModalBottomSheet`, and the file view inside it opened a second one. Compose Desktop then routed every click to an invisible top layer. The JVM was healthy (no blocked thread) | branch `fix/room-files-nested-sheet`: the panel is no longer a sheet |
 | 4a | Calls with Francesco could not work even when his machine was on | Two Pythons on his machine: `pip install -U` upgraded 3.15's copy while his shortcut ran 3.14's, with agent 2.23.1 and server 0.5.250 (CIRISAgent, 2026-11-27) | CIRISAgent#1385 (2.23.4, not merged) reports the install; client item 2.6 |
+| 4b | (Found 2026-11-27, not yet seen by a person) A desktop launched by the agent or server has no FFmpeg, so a call there has no video either way | The jar finds FFmpeg through its manifest Class-Path `../../ciris_holon/media/jars/`, relative to its own folder. `ciris_server.upgrade.private_jar` and the agent's fallback run a copy from `$CIRIS_HOME/runtime/desktop/`, where that path leads nowhere, and the JVM ignores it silently. Checked on Eric's install: present in place, both jars missing from the copy | Reported to CIRISServer and CIRISAgent: copy `ciris_holon/media/jars` beside the jar, or launch with an explicit `-cp`. Client item 3.6 |
 | 5 | Video crossed nowhere on the first call check against 0.5.254 | The encoder was opened at 640x480 and the test camera sent 320x180. Then phones and desktops shared no codec | 0.5.243 (#330, #333: AV1 both ways by libaom) |
 
 **The pattern:** each failure left the person with a screen that looked fine while nothing
@@ -87,6 +88,10 @@ person is told, and what the matrix proves.
 5. **Publish survives a cancelled leg.** Twice now GitHub cancelled a macOS job (no runner, or
    stopped under its limit). The rerun path (`gh run rerun --failed`) worked; the workflow should
    retry the leg itself, once.
+6. **The matrix launches the jar the way people get it.** A desktop leg starts the client through the
+   agent's `desktop_launcher.py` (the private copy under `$CIRIS_HOME/runtime/desktop/`), and
+   `packaging/check_holon_classpath.py` runs against that copy. 0.5.243's CI ran the jar only where
+   it was built, which is how item 4b shipped.
 
 ## 4. Installers
 
@@ -129,9 +134,17 @@ agent's).** A node-only installer would reuse the Windows one per OS, and is on 
 - **Signing:** unsigned means SmartScreen and Gatekeeper warnings most people stop at. Unsigned
   works as a tester build only.
 
+**The client's part of the payload (answered to CIRISServer, 2026-11-27):** the client jar (from the
+`ciris_client` wheel), the `ciris-holon` jars for that OS at `../../ciris_holon/media/jars/`
+relative to wherever the jar runs from, and a Java 17+ runtime. Nothing else: no entry point
+outside the wheels, no other assets. It writes only under `$CIRIS_HOME`. Any copy the installer or
+launcher makes must keep the holon jars at that relative place (item 4b).
+
+**Decided (Eric to CIRISServer, 2026-11-27, relayed):** CIRISServer's §2a items are approved for its
+next cut. The agent supplies one relocatable Python with the agent, server and client inside;
+CIRISServer owns the Windows, macOS and Debian installer shells.
+
 **OPEN, Eric's call:**
-- **Who owns the installer build.** CIRISAgent proposes CIRISServer, extending its Windows installer
-  to the full stack, with the agent's Python payload. CIRISServer said it is Eric's call.
 - **Signing identities.** Does CIRIS hold an Apple Developer ID (for notarization) and a Windows
   code-signing certificate?
 - **What the client contributes,** under that plan: the desktop jar and its `ciris-holon` jars, or a
