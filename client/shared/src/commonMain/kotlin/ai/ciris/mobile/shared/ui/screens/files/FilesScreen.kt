@@ -177,6 +177,12 @@ fun FilesScreen(
     moderation: FileModeration? = null,
     /** Set while choosing a file for a chat message: a row then picks instead of opening. */
     onPick: ((DriveEntry) -> Unit)? = null,
+    /**
+     * Show an opened file in place of the list, not as its own sheet. A room's files
+     * panel sets it (2026-11-27): there the file view's sheet opened and was never
+     * drawn, and as the top layer it took every click until Esc closed it.
+     */
+    fileViewInline: Boolean = false,
 ) {
     val t = CirisTheme.tokens
     val state by viewModel.state.collectAsState()
@@ -208,6 +214,13 @@ fun FilesScreen(
         LaunchedEffect(household?.familyId) { viewModel.refresh(household?.familyId) }
     } else {
         LaunchedEffect(Unit) { viewModel.refresh() }
+    }
+
+    if (fileViewInline && open !is OpenState.Closed) {
+        androidx.compose.foundation.layout.Box(Modifier.testable(FilesTags.SHEET)) {
+            FileView(open, policy, onClose = { viewModel.closeFile() }, onCheckAgain = { viewModel.openFile(it) })
+        }
+        return
     }
 
     // Streamed, any size: the node refuses what it will not take, by name.
@@ -435,7 +448,7 @@ fun FilesScreen(
         }
     }
 
-    if (open !is OpenState.Closed) FileSheet(open, policy, onClose = { viewModel.closeFile() }, onCheckAgain = { viewModel.openFile(it) })
+    if (!fileViewInline && open !is OpenState.Closed) FileSheet(open, policy, onClose = { viewModel.closeFile() }, onCheckAgain = { viewModel.openFile(it) })
     receiptFor?.let { r -> ReceiptSheet(receipt = r, onDismiss = { receiptFor = null }) }
     custody?.let { FileCustodyHost(it, nodeVersion) }
     FileActDialogs(
@@ -538,10 +551,18 @@ private fun DigestLine(check: DigestCheck) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun FileSheet(open: OpenState, policy: PolicySource, onClose: () -> Unit, onCheckAgain: (DriveEntry) -> Unit) {
+    ModalBottomSheet(onDismissRequest = onClose, modifier = Modifier.testable(FilesTags.SHEET)) {
+        FileView(open, policy, onClose, onCheckAgain)
+    }
+}
+
+/** An opened file: in its own sheet on the Files tab, in place of the list in a room's panel. */
+@Composable
+private fun FileView(open: OpenState, policy: PolicySource, onClose: () -> Unit, onCheckAgain: (DriveEntry) -> Unit) {
     val t = CirisTheme.tokens
     var savedTo by remember(open) { mutableStateOf<String?>(null) }
     var saveFailed by remember(open) { mutableStateOf(false) }
-    ModalBottomSheet(onDismissRequest = onClose, modifier = Modifier.testable(FilesTags.SHEET)) {
+    run {
         // THE SHEET SCROLLS. On a short desktop window the 360 dp preview pushed
         // "Save a copy" and Close below the sheet's visible edge, with no way to
         // reach them (2026-11-18, Windows, a 49 KB text file in a room).

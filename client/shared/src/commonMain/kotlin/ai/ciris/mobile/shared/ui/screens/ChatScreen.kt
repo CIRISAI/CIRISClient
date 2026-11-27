@@ -580,6 +580,8 @@ fun ChatScreen(
                         isReviewer = holdsDuty("review", listingDuties ?: viewerDuties, viewModel.messages.value),
                         onModerateAuthor = { e -> closePanel(); onModerateItem(room, e.authorKeyId) },
                     ),
+                    // The opened file shows in the panel, not as a sheet over it (2026-11-27).
+                    fileViewInline = true,
                     onPick = if (!attaching) null else ({ e ->
                         viewModel.attach(ai.ciris.mobile.shared.viewmodels.AttachedFile(e.attestationId, e.filename))
                         closePanel()
