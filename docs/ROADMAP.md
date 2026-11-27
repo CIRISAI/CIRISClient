@@ -7,6 +7,13 @@ and the plan now lives here and in backlog issue #71. The Card Atlas, the execut
 handoff are still the design's own documents; this page records only what order they are built in
 and how far along each part is. The item IDs (F, S, N, B, G) are the execution plan's.
 
+## Next: client 0.5.244
+
+**[PLAN-0.5.244.md](PLAN-0.5.244.md)** (2026-11-27): harden against what the first real day on
+0.5.243 showed (a call that looked open and sent nothing, a frozen desktop window, two Pythons on a
+machine), with CIRISServer's and CIRISAgent's halves, and dedicated platform installers. The
+section below is the redesign's history as of 2026-09-29.
+
 ## Where we are
 
 - **Released:** client **0.5.224** is still the latest tag. **0.5.225 is PR #131** (the `VERSION`
