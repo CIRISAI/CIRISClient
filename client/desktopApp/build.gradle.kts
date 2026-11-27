@@ -97,7 +97,9 @@ compose.desktop {
             windows {
                 iconFile.set(project.file("icons/icon.ico"))
                 menuGroup = "CIRIS"
-                upgradeUuid = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+                // The MSI upgrade code. Generated once (2026-11-27) and NEVER changed: a new value makes
+                // Windows install the next version beside the old one instead of upgrading it.
+                upgradeUuid = "bad3cd23-412a-45b8-a0d6-764e61616723"
             }
 
             linux {
