@@ -566,7 +566,10 @@ fun ChatScreen(
         val closePanel = { filesOpen = false; attaching = false; openingAttachment = null; viewModel.refreshRoomFiles() }
         val listingDuties by filesVm.viewerDuties.collectAsState()
         LaunchedEffect(openingAttachment) { openingAttachment?.let(filesVm::openAttachment) }
-        androidx.compose.material3.ModalBottomSheet(onDismissRequest = closePanel) {
+        // NOT a ModalBottomSheet: the Files screen inside opens its own sheets (the file
+        // view, its receipt, custody), and a sheet inside a sheet froze the desktop
+        // window (Eric, 2026-11-27). RoomPanel keeps every one of those the only sheet.
+        ai.ciris.mobile.shared.ui.primitives.RoomPanel(onDismiss = closePanel) {
             androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().height(560.dp).testable("chat_room_files_panel")) {
                 ai.ciris.mobile.shared.ui.screens.files.FilesScreen(
                     viewModel = filesVm,
@@ -577,6 +580,8 @@ fun ChatScreen(
                         isReviewer = holdsDuty("review", listingDuties ?: viewerDuties, viewModel.messages.value),
                         onModerateAuthor = { e -> closePanel(); onModerateItem(room, e.authorKeyId) },
                     ),
+                    // The opened file shows in the panel, not as a sheet over it (2026-11-27).
+                    fileViewInline = true,
                     onPick = if (!attaching) null else ({ e ->
                         viewModel.attach(ai.ciris.mobile.shared.viewmodels.AttachedFile(e.attestationId, e.filename))
                         closePanel()
