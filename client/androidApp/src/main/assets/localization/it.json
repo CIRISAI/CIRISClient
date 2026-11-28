@@ -6622,7 +6622,8 @@
       "none_available": "Nessuno nella chiamata si è offerto di trasmetterla.",
       "refused_by_policy": "Solo un server pubblico CIRIS avrebbe potuto trasmetterla, e i server pubblici CIRIS non inoltrano mai le chiamate."
     },
-    "decline_reason_unknown": "Questo non è un motivo per rifiutare una chiamata."
+    "decline_reason_unknown": "Questo non è un motivo per rifiutare una chiamata.",
+    "no_answer": "Nessuno ha risposto."
   },
   "decisions": {
     "not_found": "Questa decisione non è più aperta per te.",

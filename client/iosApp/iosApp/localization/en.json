@@ -6622,7 +6622,8 @@
       "none_available": "No one in the call offered to relay it.",
       "refused_by_policy": "Only a CIRIS public server could relay it, and the CIRIS public servers never relay calls."
     },
-    "decline_reason_unknown": "That isn't a reason for declining a call."
+    "decline_reason_unknown": "That isn't a reason for declining a call.",
+    "no_answer": "Nobody answered."
   },
   "decisions": {
     "not_found": "That decision isn't open for you any more.",

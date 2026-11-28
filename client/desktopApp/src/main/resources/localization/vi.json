@@ -6622,7 +6622,8 @@
       "none_available": "Không ai trong cuộc gọi đề nghị chuyển tiếp nó.",
       "refused_by_policy": "Chỉ một máy chủ công khai của CIRIS mới có thể chuyển tiếp nó, nhưng các máy chủ công khai của CIRIS không bao giờ chuyển tiếp cuộc gọi."
     },
-    "decline_reason_unknown": "Đó không phải là lý do để từ chối một cuộc gọi."
+    "decline_reason_unknown": "Đó không phải là lý do để từ chối một cuộc gọi.",
+    "no_answer": "Không ai trả lời."
   },
   "decisions": {
     "not_found": "Quyết định đó không còn mở cho bạn nữa.",

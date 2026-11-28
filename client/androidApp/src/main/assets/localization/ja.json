@@ -6622,7 +6622,8 @@
       "none_available": "通話中の誰も中継を申し出ませんでした。",
       "refused_by_policy": "それを中継できるのはCIRISパブリックサーバーだけですが、CIRISパブリックサーバーは通話を中継しません。"
     },
-    "decline_reason_unknown": "それは通話を拒否する理由ではありません。"
+    "decline_reason_unknown": "それは通話を拒否する理由ではありません。",
+    "no_answer": "誰も応答しませんでした。"
   },
   "decisions": {
     "not_found": "その決定は、もうあなたに対して開かれていません。",

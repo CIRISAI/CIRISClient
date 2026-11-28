@@ -6622,7 +6622,8 @@
       "none_available": "Hakuna aliyeko kwenye simu aliyejitolea kuisambaza.",
       "refused_by_policy": "Ni seva ya umma ya CIRIS pekee ingeweza kuisambaza, na seva za umma za CIRIS hazipitishi simu kamwe."
     },
-    "decline_reason_unknown": "Hiyo si sababu ya kukataa simu."
+    "decline_reason_unknown": "Hiyo si sababu ya kukataa simu.",
+    "no_answer": "Hakuna aliyejibu."
   },
   "decisions": {
     "not_found": "Uamuzi huo haupo wazi kwako tena.",

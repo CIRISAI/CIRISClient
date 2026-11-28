@@ -314,7 +314,7 @@ private fun LiveCall(
             modifier = Modifier.testable("state_call_refused", s.reasonId),
         )
         is ai.ciris.mobile.shared.calls.CallState.Left -> {
-            s.noAnswer?.let { NoAnswerLine(it) }
+            if (s.reason != ai.ciris.mobile.shared.calls.LeaveReason.NO_ANSWER) s.noAnswer?.let { NoAnswerLine(it) }
             Text(
                 if (s.reason == ai.ciris.mobile.shared.calls.LeaveReason.FULL) fullText(s.maxPeople) else localizedString(youLeftKey(s.reason)),
                 modifier = Modifier.testable("state_call_left", s.reason.wire),
@@ -528,6 +528,7 @@ private fun youLeftKey(r: ai.ciris.mobile.shared.calls.LeaveReason) = when (r) {
     ai.ciris.mobile.shared.calls.LeaveReason.SHAPED_ONLY -> "call.shaped_only"
     ai.ciris.mobile.shared.calls.LeaveReason.ANONYMOUS -> "call.anonymous_mode"
     ai.ciris.mobile.shared.calls.LeaveReason.FULL -> ai.ciris.mobile.shared.calls.CallSession.CALL_FULL
+    ai.ciris.mobile.shared.calls.LeaveReason.NO_ANSWER -> "call.no_answer"
 }
 
 /**
@@ -550,7 +551,8 @@ private fun memberLeftKey(r: ai.ciris.mobile.shared.calls.LeaveReason) = when (r
     ai.ciris.mobile.shared.calls.LeaveReason.EXPIRED,
     ai.ciris.mobile.shared.calls.LeaveReason.SHAPED_ONLY,
     ai.ciris.mobile.shared.calls.LeaveReason.ANONYMOUS,
-    ai.ciris.mobile.shared.calls.LeaveReason.FULL -> "mobile.call_member_left"
+    ai.ciris.mobile.shared.calls.LeaveReason.FULL,
+    ai.ciris.mobile.shared.calls.LeaveReason.NO_ANSWER -> "mobile.call_member_left"
 }
 
 /**

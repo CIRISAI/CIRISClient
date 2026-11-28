@@ -6622,7 +6622,8 @@
       "none_available": "통화 중인 누구도 중계를 제안하지 않았습니다.",
       "refused_by_policy": "CIRIS 공개 서버만이 이를 중계할 수 있었지만, CIRIS 공개 서버는 통화를 절대 중계하지 않습니다."
     },
-    "decline_reason_unknown": "그것은 통화를 거절하는 사유가 아닙니다."
+    "decline_reason_unknown": "그것은 통화를 거절하는 사유가 아닙니다.",
+    "no_answer": "아무도 응답하지 않았습니다."
   },
   "decisions": {
     "not_found": "그 결정은 더 이상 사용자에게 열려 있지 않습니다.",

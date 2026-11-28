@@ -6622,7 +6622,8 @@
       "none_available": "Kò sí ẹnikẹ́ni nínú ìpè náà tí ó fi ara rẹ̀ lélẹ̀ láti gbé e kọjá.",
       "refused_by_policy": "Sáfà gbangba CIRIS kan ṣoṣo ni ó lè gbé e kọjá, àwọn sáfà gbangba CIRIS kò sì gbé àwọn ìpè kọjá rárá."
     },
-    "decline_reason_unknown": "Èyí kì í ṣe ìdí fún kíkọ̀ ìpè."
+    "decline_reason_unknown": "Èyí kì í ṣe ìdí fún kíkọ̀ ìpè.",
+    "no_answer": "Kò sí ẹni tí ó dáhùn."
   },
   "decisions": {
     "not_found": "Ìpinnu yẹn kò sí ní ṣíṣí fún ọ mọ́.",

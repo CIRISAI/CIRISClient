@@ -6622,7 +6622,8 @@
       "none_available": "Aramadaki kimse bunu aktarmayı teklif etmedi.",
       "refused_by_policy": "Bunu yalnızca bir CIRIS genel sunucusu aktarabilirdi, ancak CIRIS genel sunucuları aramaları hiçbir zaman aktarmaz."
     },
-    "decline_reason_unknown": "Bu, bir aramayı reddetmek için bir neden değil."
+    "decline_reason_unknown": "Bu, bir aramayı reddetmek için bir neden değil.",
+    "no_answer": "Kimse yanıtlamadı."
   },
   "decisions": {
     "not_found": "Bu karar artık sizin için açık değil.",

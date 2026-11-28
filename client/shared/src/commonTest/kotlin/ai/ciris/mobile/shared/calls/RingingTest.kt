@@ -176,6 +176,19 @@ class RingingTest {
         assertEquals(NoAnswer.TIMEOUT, assertIs<CallState.Left>(s.state.value).noAnswer)
     }
 
+    /** The node's own end after 45 s (CIRISServer 0.5.255 `call_ended_values.no_answer`). */
+    @Test fun theNodesNoAnswerEndIsNotALostCall() = runTest {
+        val t = FakeCall()
+        val s = CallSession("r", t, backgroundScope)
+        s.join(video = false); runCurrent()
+        t.socket.inbox.send(CallSocketMessage.Text("""{"type":"no_answer","why":"timeout"}"""))
+        t.socket.inbox.send(CallSocketMessage.Text("""{"type":"call_ended","ended":"no_answer","reason_id":"call.no_answer"}"""))
+        runCurrent()
+        val left = assertIs<CallState.Left>(s.state.value)
+        assertEquals(LeaveReason.NO_ANSWER, left.reason)
+        assertEquals(NoAnswer.TIMEOUT, left.noAnswer)
+    }
+
     @Test fun anUnknownRungStateIsOther() {
         assertEquals(RungState.OTHER, RungState.of("teleported"))
     }

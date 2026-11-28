@@ -6622,7 +6622,8 @@
       "none_available": "Babu wanda a cikin kiran ya bayar da kansa don wucewa da shi.",
       "refused_by_policy": "Sai sabobin jama'a na CIRIS kaɗai za su iya wucewa da shi, kuma sabobin jama'a na CIRIS ba sa taɓa wucewa da kiraye-kiraye."
     },
-    "decline_reason_unknown": "Wannan ba dalili ba ne na ƙin amsa kira."
+    "decline_reason_unknown": "Wannan ba dalili ba ne na ƙin amsa kira.",
+    "no_answer": "Babu wanda ya amsa."
   },
   "decisions": {
     "not_found": "Wannan shawarar ba ta ƙara buɗewa gare ku ba.",

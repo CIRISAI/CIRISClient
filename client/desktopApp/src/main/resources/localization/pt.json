@@ -6622,7 +6622,8 @@
       "none_available": "Ninguém na chamada se ofereceu para retransmiti-la.",
       "refused_by_policy": "Somente um servidor público do CIRIS poderia retransmiti-la, e os servidores públicos do CIRIS nunca retransmitem chamadas."
     },
-    "decline_reason_unknown": "Isso não é um motivo para recusar uma chamada."
+    "decline_reason_unknown": "Isso não é um motivo para recusar uma chamada.",
+    "no_answer": "Ninguém atendeu."
   },
   "decisions": {
     "not_found": "Essa decisão não está mais aberta para você.",

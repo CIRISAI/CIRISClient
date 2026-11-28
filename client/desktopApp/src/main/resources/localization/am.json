@@ -6622,7 +6622,8 @@
       "none_available": "በጥሪው ውስጥ ያለ ማንም ሰው ለማስተላለፍ አላቀረበም።",
       "refused_by_policy": "ሊያስተላልፈው የሚችለው አንድ የCIRIS የህዝብ ሰርቨር ብቻ ነው፣ እና የCIRIS የህዝብ ሰርቨሮች ጥሪዎችን ፈጽሞ አያስተላልፉም።"
     },
-    "decline_reason_unknown": "ያ ጥሪን ለመሻር ምክንያት አይደለም።"
+    "decline_reason_unknown": "ያ ጥሪን ለመሻር ምክንያት አይደለም።",
+    "no_answer": "ማንም መልስ አልሰጠም።"
   },
   "decisions": {
     "not_found": "ያ ውሳኔ ለእርስዎ ከዚህ በኋላ ክፍት አይደለም።",

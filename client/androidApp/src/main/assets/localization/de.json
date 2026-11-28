@@ -6622,7 +6622,8 @@
       "none_available": "Niemand im Anruf hat angeboten, ihn weiterzuleiten.",
       "refused_by_policy": "Nur die öffentlichen CIRIS-Server könnten ihn weiterleiten, und die öffentlichen CIRIS-Server leiten Anrufe nie weiter."
     },
-    "decline_reason_unknown": "Das ist kein Grund, einen Anruf abzulehnen."
+    "decline_reason_unknown": "Das ist kein Grund, einen Anruf abzulehnen.",
+    "no_answer": "Niemand hat abgenommen."
   },
   "decisions": {
     "not_found": "Diese Entscheidung steht für Sie nicht mehr offen.",

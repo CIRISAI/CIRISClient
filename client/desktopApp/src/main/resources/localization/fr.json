@@ -6622,7 +6622,8 @@
       "none_available": "Personne dans l'appel n'a proposé de le relayer.",
       "refused_by_policy": "Seul un serveur public CIRIS aurait pu le relayer, et les serveurs publics CIRIS ne relaient jamais les appels."
     },
-    "decline_reason_unknown": "Ce n'est pas une raison valable pour refuser un appel."
+    "decline_reason_unknown": "Ce n'est pas une raison valable pour refuser un appel.",
+    "no_answer": "Personne n'a répondu."
   },
   "decisions": {
     "not_found": "Cette décision n'est plus ouverte pour vous.",

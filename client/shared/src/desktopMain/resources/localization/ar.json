@@ -6622,7 +6622,8 @@
       "none_available": "لم يعرض أحد في المكالمة ترحيلها.",
       "refused_by_policy": "خادم CIRIS عام وحده يمكنه ترحيلها، لكن خوادم CIRIS العامة لا تُرحِّل المكالمات أبداً."
     },
-    "decline_reason_unknown": "هذا ليس سبباً لرفض مكالمة."
+    "decline_reason_unknown": "هذا ليس سبباً لرفض مكالمة.",
+    "no_answer": "لم يرد أحد."
   },
   "decisions": {
     "not_found": "هذا القرار لم يعد مفتوحاً لك.",

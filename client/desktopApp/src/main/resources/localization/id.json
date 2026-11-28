@@ -6622,7 +6622,8 @@
       "none_available": "Tidak ada orang dalam panggilan yang menawarkan untuk meneruskannya.",
       "refused_by_policy": "Hanya server publik CIRIS yang dapat meneruskannya, dan server publik CIRIS tidak pernah meneruskan panggilan."
     },
-    "decline_reason_unknown": "Itu bukan alasan untuk menolak panggilan."
+    "decline_reason_unknown": "Itu bukan alasan untuk menolak panggilan.",
+    "no_answer": "Tidak ada yang menjawab."
   },
   "decisions": {
     "not_found": "Keputusan itu tidak lagi terbuka untuk Anda.",

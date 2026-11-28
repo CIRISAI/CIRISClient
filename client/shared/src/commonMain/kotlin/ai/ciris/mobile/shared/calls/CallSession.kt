@@ -484,7 +484,13 @@ enum class LeaveReason(val wire: String) {
      * 0.5.254: four). The people already there stay. Rejoining may work: two who
      * joined in the same seconds can both be turned away.
      */
-    FULL("call_full");
+    FULL("call_full"),
+
+    /**
+     * The call rang and nobody joined within 45 s, so the node left it (CIRISServer
+     * 0.5.255: `call_ended {ended: "no_answer", reason_id: "call.no_answer"}`).
+     */
+    NO_ANSWER("no_answer");
 
     companion object {
         /**

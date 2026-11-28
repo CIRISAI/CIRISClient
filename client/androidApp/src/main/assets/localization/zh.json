@@ -6622,7 +6622,8 @@
       "none_available": "通话中没有人提供中继。",
       "refused_by_policy": "只有 CIRIS 公共服务器才能中继它，而 CIRIS 公共服务器从不中继通话。"
     },
-    "decline_reason_unknown": "这不是拒接通话的理由。"
+    "decline_reason_unknown": "这不是拒接通话的理由。",
+    "no_answer": "无人接听。"
   },
   "decisions": {
     "not_found": "该决定对您已不再开放。",
