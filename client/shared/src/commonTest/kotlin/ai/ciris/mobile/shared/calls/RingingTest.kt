@@ -266,6 +266,36 @@ class RingingTest {
         assertEquals("native-me", a.inCall?.meNode)
     }
 
+    /** CIRISServer 0.5.255 vectors, events.in_call_example (fe941545). */
+    @Test fun theVectorsInCallParses() {
+        val a = CallJoinAnswer.parse(obj("""{"call_id":"c","in_call":{"me":{"node":"native-alice-ubcv3slgha",
+            "person":"alice-person-user-dep4jeokqy"},"people":[{"person":"bob-person-user-n7utwedh3z",
+            "nodes":["native-bob-v5lo2uulck"],"connected":true}]}}"""))
+        assertEquals(InCallPeople("native-alice-ubcv3slgha", "alice-person-user-dep4jeokqy",
+            listOf(InCallPerson("bob-person-user-n7utwedh3z", listOf("native-bob-v5lo2uulck"), true))), a.inCall)
+        // GET call state carries it under `joined`.
+        assertEquals("native-alice-ubcv3slgha",
+            CallJoinAnswer.parse(obj("""{"joined":{"in_call":{"me":{"node":"native-alice-ubcv3slgha"},"people":[]}}}""")).inCall?.meNode)
+    }
+
+    @Test fun someoneNotYetSeenIsATileUntilTheirNodeJoins() = runTest {
+        val t = object : CallTransport {
+            val socket = FakeSocket()
+            override suspend fun join(room: String, video: Boolean) = CallJoinAnswer(
+                "c1", "s-me", 1, 244, null, emptyList(),
+                inCall = InCallPeople("native-me", "me-person", listOf(InCallPerson("bob-person", emptyList(), false))),
+            )
+            override suspend fun leave(room: String) = Unit
+            override suspend fun openFrames(room: String): CallSocket = socket
+        }
+        val s = CallSession("r", t, backgroundScope)
+        s.join(video = false); runCurrent()
+        assertEquals(setOf("bob-person"), assertIs<CallState.InCall>(s.state.value).attendees.keys)
+        t.socket.inbox.send(CallSocketMessage.Text("""{"type":"attendee_joined","member":"native-bob","person":"bob-person"}"""))
+        runCurrent()
+        assertEquals(setOf("native-bob"), assertIs<CallState.InCall>(s.state.value).attendees.keys)
+    }
+
     @Test fun beforeInCallTheAttendeeNodesAreTheTiles() {
         val a = CallJoinAnswer.parse(obj("""{"call_id":"c","attendees":["bob-person","me-person"],
             "attendee_people":[{"member":"native-bob","person":"bob-person"}]}"""))

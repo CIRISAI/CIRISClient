@@ -222,7 +222,7 @@ class CallSession(
                 is CallEvent.Ready -> call.copy(ready = true, frameBudgetBytes = event.frameBudgetBytes, fragmenting = event.fragmenting)
                 // This device's own attendance is not a tile: you are not someone else in the call.
                 is CallEvent.AttendeeJoined -> if (event.member == myNode) call else
-                    call.copy(attendees = call.attendees + (event.member to Attendee(event.member, streamId = streamIdBytes(event.streamId), person = event.person)))
+                    call.copy(attendees = call.attendees - (event.person ?: "") + (event.member to Attendee(event.member, streamId = streamIdBytes(event.streamId), person = event.person)))
                 is CallEvent.AttendeeLeft ->
                     call.copy(
                         attendees = call.attendees - event.member,
@@ -327,7 +327,12 @@ class CallSession(
          */
         internal fun tilesOf(answer: CallJoinAnswer): Map<String, Attendee> {
             answer.inCall?.let { inCall ->
-                return inCall.people.flatMap { p -> p.nodes.map { n -> n to Attendee(n, person = p.person) } }.toMap()
+                // A person whose node is not seen yet keeps a tile under their person key, so
+                // they read as connecting rather than vanish; their node's attendee_joined replaces it.
+                return inCall.people.flatMap { p ->
+                    if (p.nodes.isEmpty()) listOf(p.person to Attendee(p.person, person = p.person))
+                    else p.nodes.map { n -> n to Attendee(n, person = p.person) }
+                }.toMap()
             }
             if (answer.attendeePeople.isNotEmpty()) {
                 val persons = answer.attendeePeople.values.toSet()
@@ -782,7 +787,8 @@ data class CallJoinAnswer(
                         m to who
                     }.toMap(),
                 alert = CallAlert.of(str("alert")),
-                inCall = (o["in_call"] as? JsonObject)?.let { InCallPeople.parse(it) },
+                inCall = ((o["in_call"] ?: (o["joined"] as? JsonObject)?.get("in_call")) as? JsonObject)
+                    ?.let { InCallPeople.parse(it) },
             )
         }
     }
