@@ -15,6 +15,9 @@ class NodeFeaturesTest {
 
     @Test fun conferredAuthorityIsNotARoute() {
         assertFalse(read("""{"capabilities":["chat:call"]}""").hasFeature(Capability.CHAT_CALL))
+        // Ringing is its own feature: a node with calls and without it (0.5.254) rings nobody.
+        assertFalse(read("""{"capabilities":[],"features":["chat:call"]}""").hasFeature(Capability.CHAT_CALL_RING))
+        assertTrue(read("""{"capabilities":[],"features":["chat:call","chat:call:ring"]}""").hasFeature(Capability.CHAT_CALL_RING))
     }
 
     @Test fun aNodeWithNoFeatureListServesNoCall() {

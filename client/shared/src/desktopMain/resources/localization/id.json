@@ -1153,6 +1153,18 @@
     "accord_new_halt": "Hentikan mesh",
     "accord_new_remint_trust_root": "Cetak ulang trust root yang ada",
     "accord_new_rescrub_trust_root": "Scrub ulang akar kepercayaan (amandemen 2-dari-3)",
+    "call_no_answer_declined": "Tidak ada yang dapat menerima panggilan.",
+    "call_no_answer_timeout": "Tidak ada yang menjawab.",
+    "call_notice": "{who} memulai panggilan",
+    "call_notice_join": "Gabung",
+    "call_notice_dismiss": "Nanti saja",
+    "call_alert_ring": "Panggil mereka",
+    "call_alert_notify": "Beri tahu mereka",
+    "call_alert_open": "Langsung mulai",
+    "call_alert_ring_says": "Semua orang lain di ruang ini akan didering sampai seseorang menjawab, selama maksimal 45 detik.",
+    "call_alert_notify_says": "Semua orang lain di ruang ini diberi tahu bahwa panggilan dimulai. Tidak ada yang berdering.",
+    "call_alert_open_says": "Tidak ada yang diberi tahu. Siapa pun yang membuka panggilan ini di ruang akan bergabung ke dalamnya.",
+    "call_rung_notified": "{who} telah diberi tahu.",
     "claim_node_cohort_biosphere": "Semua makhluk hidup (biosfer)",
     "claim_node_cohort_federation": "Seluruh federasi (federasi)",
     "claim_node_cohort_more": "Lebih banyak opsi",
@@ -4640,7 +4652,17 @@
     "wa_identity_profile_mismatch": "Identitas agen ini tidak cocok dengan template yang telah disetujui. Tidak ada perubahan identitas yang berlaku sampai hal ini diselesaikan.",
     "wa_identity_profile_contested": "Identitas agen ini sedang disengketakan. Tidak ada perubahan identitas yang berlaku sampai hal ini diselesaikan.",
     "wa_identity_profile_unknown": "Agen ini melaporkan status identitas yang tidak dikenali oleh aplikasi ini.",
-    "wa_identity_open_base_link": "Buka permintaan tautan dasar"
+    "wa_identity_open_base_link": "Buka permintaan tautan dasar",
+    "call_incoming_voice": "{who} menelepon",
+    "call_incoming_video": "{who} menelepon dengan video",
+    "call_incoming_leaves_current": "Menjawab akan meninggalkan panggilan yang sedang Anda ikuti.",
+    "call_answer": "Jawab",
+    "call_decline": "Tolak",
+    "call_rung_ringing": "Menghubungi {who}…",
+    "call_rung_busy": "{who} sedang dalam panggilan lain.",
+    "call_rung_declined": "{who} menolak.",
+    "call_rung_unreachable": "{who} tidak dapat dihubungi saat ini.",
+    "call_rung_refused": "Perangkat {who} tidak dapat menerima panggilan ini. Perangkat itu mungkin belum memiliki ruang ini."
   },
   "moderation": {
     "ladder": {
@@ -6609,7 +6631,10 @@
       "peer_relay_in_use": "Orang lain dalam panggilan sedang meneruskannya.",
       "none_available": "Tidak ada orang dalam panggilan yang menawarkan untuk meneruskannya.",
       "refused_by_policy": "Hanya server publik CIRIS yang dapat meneruskannya, dan server publik CIRIS tidak pernah meneruskan panggilan."
-    }
+    },
+    "decline_reason_unknown": "Itu bukan alasan untuk menolak panggilan.",
+    "no_answer": "Tidak ada yang menjawab.",
+    "alert_unknown": "Itu bukan cara untuk memberi tahu ruang tentang panggilan."
   },
   "decisions": {
     "not_found": "Keputusan itu tidak lagi terbuka untuk Anda.",

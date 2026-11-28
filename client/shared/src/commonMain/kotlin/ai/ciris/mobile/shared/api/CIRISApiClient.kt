@@ -1,5 +1,9 @@
 package ai.ciris.mobile.shared.api
 
+import io.ktor.client.plugins.timeout
+import io.ktor.utils.io.readUTF8Line
+import io.ktor.client.statement.bodyAsChannel
+import io.ktor.client.request.prepareGet
 import ai.ciris.mobile.shared.models.drive.DriveListing
 import ai.ciris.mobile.shared.models.drive.FileCustody
 import ai.ciris.mobile.shared.models.drive.FileWrite
@@ -1319,6 +1323,9 @@ class CIRISApiClient internal constructor(
             }
         }
 
+    /** The ring stream is reopened after this long with nothing on it. */
+    private val RING_STREAM_QUIET_MS = 120_000L
+
     /** A streamed upload fails only when nothing moves for this long. */
     private val UPLOAD_STALL_MS = 120_000L
 
@@ -2150,6 +2157,95 @@ class CIRISApiClient internal constructor(
         scope: kotlinx.coroutines.CoroutineScope,
     ): ai.ciris.mobile.shared.calls.CallTransport = NodeCallTransport(nodeUrl, scope)
 
+    /**
+     * Ringing on [nodeUrl] (CSD-134; CIRISServer 0.5.255): the ring stream
+     * `GET /v1/calls/events`, `GET /v1/calls/ringing` and `POST /v1/chat/{room}/call/decline`.
+     */
+    fun ringTransport(nodeUrl: String): ai.ciris.mobile.shared.calls.RingTransport = NodeRingTransport(nodeUrl)
+
+    private inner class NodeRingTransport(private val nodeUrl: String) : ai.ciris.mobile.shared.calls.RingTransport {
+        override suspend fun stream(onEvent: suspend (ai.ciris.mobile.shared.calls.RingEvent) -> Unit) {
+            // Open-ended: the stream lives as long as the session. A socket quiet for
+            // RING_STREAM_QUIET_MS is reopened, and its opening frame says what is ringing.
+            val client = federationHttpClient(requestTimeoutMillis = Long.MAX_VALUE)
+            try {
+                client.prepareGet("$nodeUrl/v1/calls/events") {
+                    authHeader()?.let { header("Authorization", it) }
+                    header("Accept", "text/event-stream")
+                    timeout { socketTimeoutMillis = RING_STREAM_QUIET_MS }
+                }.execute { response ->
+                    if (!response.status.isSuccess()) {
+                        // 404: a node before 0.5.255 has no ring stream. Retried slowly by the watcher.
+                        throw IllegalStateException("ring stream HTTP ${response.status.value}")
+                    }
+                    logInfo("ringStream", "open on $nodeUrl")
+                    val body = response.bodyAsChannel()
+                    var event: String? = null
+                    val data = StringBuilder()
+                    while (!body.isClosedForRead) {
+                        val line = body.readUTF8Line() ?: break
+                        when {
+                            line.isEmpty() -> {
+                                if (data.isNotEmpty()) {
+                                    val o = runCatching { jsonConfig.parseToJsonElement(data.toString()) as? JsonObject }.getOrNull()
+                                    o?.let { ai.ciris.mobile.shared.calls.RingEvent.parse(event, it) }?.let { onEvent(it) }
+                                }
+                                event = null
+                                data.clear()
+                            }
+                            line.startsWith(":") -> Unit
+                            line.startsWith("event:") -> event = line.substring(6).trim()
+                            line.startsWith("data:") -> {
+                                if (data.isNotEmpty()) data.append('\n')
+                                data.append(line.substring(5).trim())
+                            }
+                        }
+                    }
+                }
+            } finally {
+                client.close()
+            }
+        }
+
+        override suspend fun ringingNow(): List<ai.ciris.mobile.shared.calls.IncomingRing> {
+            val client = federationHttpClient()
+            try {
+                val response = client.get("$nodeUrl/v1/calls/ringing") { authHeader()?.let { header("Authorization", it) } }
+                if (!response.status.isSuccess()) throw IllegalStateException("HTTP ${response.status.value}")
+                val o = jsonConfig.parseToJsonElement(response.bodyAsText()) as JsonObject
+                return ai.ciris.mobile.shared.calls.IncomingRing.parseList(o)
+            } finally {
+                client.close()
+            }
+        }
+
+        override suspend fun decline(
+            room: String,
+            reason: ai.ciris.mobile.shared.calls.DeclineReason,
+        ): ai.ciris.mobile.shared.calls.DeclineAnswer {
+            val method = "declineCall"
+            val path = "/v1/chat/${room.encodeURLPathPart()}/call/decline"
+            logInfo(method, "POST $nodeUrl$path reason=${reason.wire}")
+            val client = federationHttpClient()
+            try {
+                val response = client.post("$nodeUrl$path") {
+                    authHeader()?.let { header("Authorization", it) }
+                    contentType(ContentType.Application.Json)
+                    setBody(buildJsonObject { put("reason", reason.wire) }.toString())
+                }
+                val raw = response.bodyAsText()
+                if (!response.status.isSuccess()) {
+                    val r = NodeRefusal.fromBody(response.status.value, raw)
+                    logInfo(method, "refused ${response.status.value} reason_id=${r.reasonId}")
+                    throw ai.ciris.mobile.shared.calls.CallRefusal(r.reasonId ?: "call.plumbing", r.detail)
+                }
+                return ai.ciris.mobile.shared.calls.DeclineAnswer.parse(jsonConfig.parseToJsonElement(raw) as JsonObject)
+            } finally {
+                client.close()
+            }
+        }
+    }
+
     private inner class NodeCallTransport(
         private val nodeUrl: String,
         private val scope: kotlinx.coroutines.CoroutineScope,
@@ -2164,15 +2260,25 @@ class CIRISApiClient internal constructor(
 
         // `relay` is the person's choice for this node, or what a phone carrying its own
         // call says about its network (calls/RelayChoice.kt). Omitted, the node decides.
-        override suspend fun join(room: String, video: Boolean, relay: Boolean?): ai.ciris.mobile.shared.calls.CallJoinAnswer {
+        override suspend fun join(room: String, video: Boolean, relay: Boolean?): ai.ciris.mobile.shared.calls.CallJoinAnswer =
+            join(room, video, relay, null)
+
+        // `alert` is the opener's choice of how the room hears of the call (CIRISServer 0.5.255).
+        // Omitted, the node decides by the room's size.
+        override suspend fun join(
+            room: String,
+            video: Boolean,
+            relay: Boolean?,
+            alert: ai.ciris.mobile.shared.calls.CallAlert?,
+        ): ai.ciris.mobile.shared.calls.CallJoinAnswer {
             val method = "joinCall"
-            logInfo(method, "POST $nodeUrl${callPath(room)} video=$video relay=${relay ?: "-"}")
+            logInfo(method, "POST $nodeUrl${callPath(room)} video=$video relay=${relay ?: "-"} alert=${alert?.wire ?: "-"}")
             val client = federationHttpClient()
             try {
                 val response = client.post("$nodeUrl${callPath(room)}") {
                     authHeader()?.let { header("Authorization", it) }
                     contentType(ContentType.Application.Json)
-                    setBody(buildJsonObject { put("video", video); relay?.let { put("relay", it) } }.toString())
+                    setBody(buildJsonObject { put("video", video); relay?.let { put("relay", it) }; alert?.let { put("alert", it.wire) } }.toString())
                 }
                 val raw = response.bodyAsText()
                 if (!response.status.isSuccess()) {

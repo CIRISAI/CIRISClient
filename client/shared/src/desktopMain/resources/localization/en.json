@@ -4735,7 +4735,29 @@
     "wa_identity_profile_mismatch": "This agent's identity doesn't match its approved template. No identity change applies until that is settled.",
     "wa_identity_profile_contested": "This agent's identity is contested. No identity change applies until that is settled.",
     "wa_identity_profile_unknown": "This agent reported an identity status this app doesn't know.",
-    "wa_identity_open_base_link": "Open the base-link request"
+    "wa_identity_open_base_link": "Open the base-link request",
+    "call_incoming_voice": "{who} is calling",
+    "call_incoming_video": "{who} is calling with video",
+    "call_incoming_leaves_current": "Answering leaves the call you are in.",
+    "call_answer": "Answer",
+    "call_decline": "Decline",
+    "call_rung_ringing": "Ringing {who}…",
+    "call_rung_busy": "{who} is in another call.",
+    "call_rung_declined": "{who} declined.",
+    "call_rung_unreachable": "{who} can't be reached right now.",
+    "call_rung_refused": "{who}'s device couldn't take this call. It may not have this room yet.",
+    "call_no_answer_declined": "Nobody could take the call.",
+    "call_no_answer_timeout": "Nobody answered.",
+    "call_notice": "{who} started a call",
+    "call_notice_join": "Join",
+    "call_notice_dismiss": "Not now",
+    "call_alert_ring": "Ring them",
+    "call_alert_notify": "Let them know",
+    "call_alert_open": "Just start",
+    "call_alert_ring_says": "Everyone else in the room is rung until someone answers, for up to 45 seconds.",
+    "call_alert_notify_says": "Everyone else in the room is told a call started. Nothing rings.",
+    "call_alert_open_says": "Nobody is told. Anyone who opens the call in this room joins it.",
+    "call_rung_notified": "{who} was told."
   },
   "moderation": {
     "ladder": {
@@ -6609,7 +6631,10 @@
       "peer_relay_in_use": "Another person in the call is relaying it.",
       "none_available": "No one in the call offered to relay it.",
       "refused_by_policy": "Only a CIRIS public server could relay it, and the CIRIS public servers never relay calls."
-    }
+    },
+    "decline_reason_unknown": "That isn't a reason for declining a call.",
+    "no_answer": "Nobody answered.",
+    "alert_unknown": "That isn't a way of letting the room know about a call."
   },
   "decisions": {
     "not_found": "That decision isn't open for you any more.",

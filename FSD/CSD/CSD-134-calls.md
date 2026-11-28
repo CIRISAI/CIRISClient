@@ -214,6 +214,44 @@ while sharing. CIRISServer 0.5.246 refuses a share by name (`call.share_unavaila
 shown at `txt_call_share_refused`) until Edge 45.1. Where this device cannot share:
 `txt_call_share_unavailable_here`.
 
+**Ringing (CIRISServer 0.5.255; Eric, 2026-11-27).** Someone who joins a call in a room
+with nobody else in it rings every other person in the room. While signed in to a node
+that declares the feature `chat:call:ring`, the client holds `GET /v1/calls/events`.
+A node without it (0.5.254) rings nobody, so the client offers no alert choice there
+and holds no ring stream. A ring shows as a banner
+over whatever screen is open, never a dialog (`card_call_incoming`,
+`row_call_incoming_<room>`, with `video` or `voice`): "{who} is calling", Answer
+(`btn_call_answer_<room>`, which opens this room's call and joins it at once, voice or
+video as the caller asked) and Decline (`btn_call_decline_<room>`). Already in another
+call, the banner says answering leaves it (`txt_call_incoming_leaves_current`), there is
+no sound, and Decline tells the caller "busy". Otherwise the banner plays a two-tone ring
+(440 and 480 Hz, 2 s on, 4 s off) through the call speaker. A ring that is answered on
+another of the person's devices, cancelled or timed out leaves the banner by the node's
+`call_ring_ended`. The caller sees each person rung (`row_call_rung_<person>`, with the
+node's state): "Ringing {who}…", in another call, declined, can't be reached right now,
+or their device couldn't take the call. While someone is still ringing, the 20-second
+"hasn't reached anyone" line waits. Nobody answering is `txt_call_no_answer`
+(`declined` or `timeout`), and it stays on the screen after the node ends the call at
+45 s, which the node reports as `call_ended {ended: no_answer}` ("Nobody answered.").
+
+**Whether it rings is the opener's choice (Eric, 2026-11-27; CIRISServer 0.5.255 `alert`).**
+Before a call starts, `opt_call_alert` offers Ring them (`btn_call_alert_ring`), Let them
+know (`btn_call_alert_notify`) and Just start (`btn_call_alert_open`), with one line saying
+what the choice does (`txt_call_alert_says`). The node's default is picked to begin with:
+a room of at most four people rings, a bigger one is told. Answering a ring or joining a
+call already going alerts nobody, whatever is picked. Told rather than rung, the others
+see a quieter notice, "{who} started a call", with Join and Not now
+(`row_call_notice_<room>`, `btn_call_notice_join_<room>`, `btn_call_notice_dismiss_<room>`).
+It has no sound, sends nothing back, and is put away after two minutes. The caller sees
+"{who} was told". For a call the room was told of, or not told of, the 20-second "hasn't
+reached anyone" line does not show: nobody is expected yet.
+
+**Not built:** a receiver lowering an alert for themselves (ring to notify to nothing, per
+room or per caller). That is local policy and needs nothing from the node.
+
+**Limit:** it rings only while the app is running. Waking a backgrounded phone is
+CIRISServer#24, where the wake carries nothing but "wake".
+
 **Not built.** The participants list as its own element, receive quality per member
 (`…/call/layers`), the two facts before joining, an active-speaker view, and saving
 (`opt_call_save_mine` disabled, `txt_call_save_unavailable`, until CIRISPersist#1067).
@@ -445,8 +483,8 @@ so Edge's `is_base_or_audio` must agree. Device coverage is unmeasured.
 | 9 | **Capture on desktop.** Closed: Java Sound for audio, the bundled FFmpeg for the camera and the screen. Echo cancellation: built in the client (above). Open: screen share on Wayland (needs the PipeWire portal), which waits with share for 45.1 | CIRISClient |
 | 2 | Does a saved call count against the room's files and quota, and where does it show? | CIRISServer |
 | 3 | Screen sharing is the same wire (CC 5.3.3.2) | Built in the client; refused by CIRISServer 0.5.246 until Edge 45.1 |
-| 4 | No ad-hoc call outside a room: `Edge::ring` is documented but not in the code | Later |
-| 5 | The row travels the room's normal path, so at Hide when I talk it waits for the gap. Don't promise "rings instantly" until measured | Measure |
+| 4 | No ad-hoc call outside a room: `Edge::ring` is documented but not in the code. Ringing inside a room is built (§2, CIRISServer 0.5.255) | Later |
+| 5 | Measured on CIRISServer's native harness with a warm link: ring 0.1 s, a busy decline 0.16 s, an answer clears the ring in 0.13 s. A cold first ring adds a path seek, not yet measured | Measure cold |
 
 **Measured (CIRISServer native harness, 2026-11-10, edge v44.1.1, three standalone nodes, no retries).** Per publisher, delay p50 7–14 ms, p95 18–24 ms; every phase-2 frame received bar about three, 0 forged, 0 unbound; a late joiner's first frame in 2.1 s. The frames socket adds a loopback hop, which the route's own test measures with audio.
 

@@ -410,6 +410,77 @@ def grant_media(platform: str, *, package: str = "", bundle_id: str = "", serial
     return said
 
 
+RING_FEATURE = "chat:call:ring"
+
+
+def rings(party: Party) -> bool:
+    """The node declares ringing (CIRISServer 0.5.255), read from its features, never its version."""
+    status, body = two_node.http("GET", f"{party.url}/v1/federation/conformance", party.token)
+    feats = body.get("features") if isinstance(body, dict) else None
+    return isinstance(feats, list) and RING_FEATURE in feats
+
+
+def start_call(drv: TestAutomationServer, contact_key: str) -> None:
+    """As open_call, but the caller: 'Ring them' is the default for a pair, so nothing is picked."""
+    open_call(drv, contact_key)
+
+
+def wait_tag(drv: TestAutomationServer, pred: Callable[[Any], bool], timeout: float) -> Optional[Any]:
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            for e in drv.tree():
+                if pred(e):
+                    return e
+        except DriverError:
+            pass
+        time.sleep(1.0)
+    return None
+
+
+def ring_answered(caller: TestAutomationServer, callee: TestAutomationServer, *, caller_key_on_callee: str,
+                  callee_key: str, room: str) -> List[Check]:
+    """The caller starts the call and it RINGS the callee, who answers from the banner (CSD-134 §2)."""
+    start_call(caller, callee_key)
+    banner = wait_tag(callee, lambda e: e.test_tag == f"row_call_incoming_{room}", 60)
+    if banner is None:
+        return [Check("ring", FAIL, f"no ring reached the other client within 60 s (row_call_incoming_{room})")]
+    rung = wait_tag(caller, lambda e: e.test_tag.startswith("row_call_rung_"), 20)
+    out = [Check("ring", PASS, f"the callee's banner showed ({banner.text or 'voice'}); the caller sees "
+                               f"{(rung.text if rung else 'no ring state yet')}")]
+    callee.click(f"btn_call_answer_{room}")
+    return out
+
+
+def ring_declined(caller: TestAutomationServer, callee: TestAutomationServer, *, room: str) -> List[Check]:
+    """A second ring, declined: the caller is told, and no call is left ringing on the callee."""
+    for d in (caller, callee):
+        try:
+            if "btn_call_leave" in d.tags():
+                d.click("btn_call_leave")
+        except DriverError:
+            pass
+    time.sleep(3.0)
+    rejoin = wait_tag(caller, lambda e: e.test_tag == "btn_call_rejoin", 20)
+    if rejoin is None:
+        return [Check("ring-decline", FAIL, "the caller had no 'call again' after leaving")]
+    caller.click("btn_call_rejoin")
+    if wait_tag(callee, lambda e: e.test_tag == f"row_call_incoming_{room}", 60) is None:
+        return [Check("ring-decline", FAIL, "the second ring did not reach the other client within 60 s")]
+    callee.click(f"btn_call_decline_{room}")
+    said = wait_tag(caller, lambda e: e.test_tag.startswith("row_call_rung_") and (e.text or "") in ("declined", "busy"), 30)
+    gone = wait_tag(callee, lambda e: e.test_tag == "card_call_incoming", 1) is None
+    if said is None:
+        return [Check("ring-decline", FAIL, "the caller was not told of the decline within 30 s")]
+    try:
+        if "btn_call_leave" in caller.tags():
+            caller.click("btn_call_leave")
+    except DriverError:
+        pass
+    return [Check("ring-decline", PASS if gone else FAIL,
+                  f"the caller sees {said.text}; the callee's banner {'went' if gone else 'is still up'}")]
+
+
 def run_node_call(drv: TestAutomationServer, *, binary: Path, jar: Path, node_url: str,
                   username: str, password: str, work: Path, server_version: str, xvfb: bool,
                   shots: Path, leg: str, measure_for: float = 90.0,
@@ -442,8 +513,20 @@ def run_node_call(drv: TestAutomationServer, *, binary: Path, jar: Path, node_ur
         granted = grant()
         if granted:
             checks.append(Check("permissions", PASS, "; ".join(granted)))
-        open_call(peer_drv, v.local_key_on_peer)
-        open_call(drv, v.peer_key_id)
+        # On a node that rings (0.5.255), the peer CALLS and the leg ANSWERS from the
+        # banner: the ring is part of the check. Before it, both open the call.
+        ringing = rings(local) and rings(remote)
+        if ringing:
+            ring_checks = ring_answered(peer_drv, drv, caller_key_on_callee=v.peer_key_id,
+                                        callee_key=v.local_key_on_peer, room=v.room_id)
+            checks += ring_checks
+            if any(c.status == FAIL for c in ring_checks):
+                return checks
+        else:
+            checks.append(Check("ring", REFUSED, f"not run: the node does not declare {RING_FEATURE} "
+                                                 f"(ciris-server {server_version or '?'}), so it rings nobody"))
+            open_call(peer_drv, v.local_key_on_peer)
+            open_call(drv, v.peer_key_id)
         deadline = time.monotonic() + 120
         states: Dict[str, Optional[str]] = {"leg": None, "peer": None}
         while time.monotonic() < deadline and not all(states.values()):
@@ -484,6 +567,8 @@ def run_node_call(drv: TestAutomationServer, *, binary: Path, jar: Path, node_ur
                 pass
         checks += judge("leg-hears-peer", leg_seen, video_gated, server_version)
         checks += judge("peer-hears-leg", peer_seen, video_gated, server_version)
+        if ringing:
+            checks += ring_declined(peer_drv, drv, room=v.room_id)
         for d in (drv, peer_drv):
             try:
                 if "btn_call_leave" in d.tags():

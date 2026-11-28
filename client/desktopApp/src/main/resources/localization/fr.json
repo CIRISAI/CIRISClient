@@ -1153,6 +1153,12 @@
     "accord_new_halt": "Arrêter le maillage",
     "accord_new_remint_trust_root": "Réémettre la racine de confiance existante",
     "accord_new_rescrub_trust_root": "Relancer le scrub de la racine de confiance (amendement 2 sur 3)",
+    "call_alert_notify": "Les informer",
+    "call_alert_open": "Démarrer directement",
+    "call_alert_ring_says": "Les téléphones de tout le monde dans le salon sonnent jusqu'à ce que quelqu'un réponde, pendant 45 secondes au maximum.",
+    "call_alert_notify_says": "Tout le monde dans le salon est informé qu'un appel a commencé. Rien ne sonne.",
+    "call_alert_open_says": "Personne n'est informé. Quiconque ouvre l'appel dans ce salon le rejoint.",
+    "call_rung_notified": "{who} a été informé(e).",
     "contact_requests_heading": "Souhaite se connecter",
     "contact_requests_title_named": "{label} (nom choisi par cette personne) souhaite se connecter",
     "contact_requests_title_someone": "Quelqu'un souhaite se connecter",
@@ -1597,6 +1603,21 @@
     "wa_identity_profile_contested": "L'identité de cet agent est contestée. Aucune modification d'identité ne s'applique tant que cela n'est pas réglé.",
     "wa_identity_profile_unknown": "Cet agent a signalé un état d'identité que cette application ne connaît pas.",
     "wa_identity_open_base_link": "Ouvrir la requête de lien de base",
+    "call_incoming_voice": "{who} vous appelle",
+    "call_incoming_video": "{who} vous appelle en vidéo",
+    "call_incoming_leaves_current": "Répondre vous fait quitter l'appel en cours.",
+    "call_answer": "Répondre",
+    "call_decline": "Refuser",
+    "call_rung_ringing": "Appel vers {who} en cours…",
+    "call_rung_busy": "{who} est dans un autre appel.",
+    "call_rung_declined": "{who} a refusé.",
+    "call_rung_unreachable": "{who} est actuellement injoignable.",
+    "call_rung_refused": "L'appareil de {who} n'a pas pu prendre cet appel. Il n'a peut-être pas encore cette salle.",
+    "call_no_answer_declined": "Personne n'a pu prendre l'appel.",
+    "call_no_answer_timeout": "Personne n'a répondu.",
+    "call_notice": "{who} a démarré un appel",
+    "call_notice_join": "Rejoindre",
+    "call_notice_dismiss": "Pas maintenant",
     "add_fedid_confirm": "Ajouter l'ID de fédération",
     "add_fedid_intro": "Vous êtes déjà connecté — ceci ajoute un ID de fédération à votre compte existant sans le recréer. Votre identifiant de connexion est préservé.",
     "add_fedid_label_heading": "Nommez votre ID de fédération",
@@ -4640,7 +4661,8 @@
     "add_device_unreachable_retrying": "Impossible de joindre votre autre appareil pour l'instant — nouvelle tentative en cours. Cela peut prendre quelques minutes après son démarrage.",
     "add_device_cancelling": "Annulation…",
     "add_device_cancel_failed": "La demande n'a pas pu être annulée.",
-    "add_device_cancelled": "Demande annulée. Votre autre appareil a été prévenu de l'abandonner."
+    "add_device_cancelled": "Demande annulée. Votre autre appareil a été prévenu de l'abandonner.",
+    "call_alert_ring": "Les faire sonner"
   },
   "moderation": {
     "ladder": {
@@ -6609,7 +6631,10 @@
       "peer_relay_in_use": "Une autre personne dans l'appel le relaie.",
       "none_available": "Personne dans l'appel n'a proposé de le relayer.",
       "refused_by_policy": "Seul un serveur public CIRIS aurait pu le relayer, et les serveurs publics CIRIS ne relaient jamais les appels."
-    }
+    },
+    "decline_reason_unknown": "Ce n'est pas une raison valable pour refuser un appel.",
+    "no_answer": "Personne n'a répondu.",
+    "alert_unknown": "Ce n'est pas une façon d'informer le salon qu'un appel a lieu."
   },
   "decisions": {
     "not_found": "Cette décision n'est plus ouverte pour vous.",

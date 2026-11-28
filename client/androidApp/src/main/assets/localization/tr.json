@@ -4640,7 +4640,29 @@
     "wa_identity_profile_mismatch": "Bu ajanın kimliği, onaylanmış şablonuyla eşleşmiyor. Bu çözülene kadar hiçbir kimlik değişikliği uygulanmaz.",
     "wa_identity_profile_contested": "Bu ajanın kimliği tartışmalı. Bu çözülene kadar hiçbir kimlik değişikliği uygulanmaz.",
     "wa_identity_profile_unknown": "Bu ajan, bu uygulamanın bilmediği bir kimlik durumu bildirdi.",
-    "wa_identity_open_base_link": "Temel bağlantı isteğini aç"
+    "wa_identity_open_base_link": "Temel bağlantı isteğini aç",
+    "call_incoming_voice": "{who} arıyor",
+    "call_incoming_video": "{who} görüntülü arıyor",
+    "call_incoming_leaves_current": "Yanıtlamak, şu anda içinde bulunduğunuz aramadan ayrılmanıza neden olur.",
+    "call_answer": "Yanıtla",
+    "call_decline": "Reddet",
+    "call_rung_ringing": "{who} aranıyor…",
+    "call_rung_busy": "{who} başka bir aramada.",
+    "call_rung_declined": "{who} reddetti.",
+    "call_rung_unreachable": "{who}'ya şu anda ulaşılamıyor.",
+    "call_rung_refused": "{who} adlı kişinin cihazı bu aramayı alamadı. Cihazında bu oda henüz olmayabilir.",
+    "call_no_answer_declined": "Kimse aramayı yanıtlayamadı.",
+    "call_no_answer_timeout": "Kimse yanıtlamadı.",
+    "call_notice": "{who} bir arama başlattı",
+    "call_notice_join": "Katıl",
+    "call_notice_dismiss": "Şimdi değil",
+    "call_alert_ring": "Onları çaldır",
+    "call_alert_notify": "Haberdar et",
+    "call_alert_open": "Sadece başlat",
+    "call_alert_ring_says": "Odadaki herkes, biri yanıtlayana kadar en fazla 45 saniye boyunca çaldırılır.",
+    "call_alert_notify_says": "Odadaki herkese bir aramanın başladığı bildirilir. Hiçbir şey çalmaz.",
+    "call_alert_open_says": "Kimseye haber verilmez. Bu odada aramayı açan herkes ona katılır.",
+    "call_rung_notified": "{who} adlı kişiye haber verildi."
   },
   "moderation": {
     "ladder": {
@@ -6609,7 +6631,10 @@
       "peer_relay_in_use": "Aramadaki başka bir kişi bunu aktarıyor.",
       "none_available": "Aramadaki kimse bunu aktarmayı teklif etmedi.",
       "refused_by_policy": "Bunu yalnızca bir CIRIS genel sunucusu aktarabilirdi, ancak CIRIS genel sunucuları aramaları hiçbir zaman aktarmaz."
-    }
+    },
+    "decline_reason_unknown": "Bu, bir aramayı reddetmek için bir neden değil.",
+    "no_answer": "Kimse yanıtlamadı.",
+    "alert_unknown": "Bu, odaya bir arama hakkında haber vermenin bir yolu değil."
   },
   "decisions": {
     "not_found": "Bu karar artık sizin için açık değil.",

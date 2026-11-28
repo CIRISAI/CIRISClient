@@ -4640,7 +4640,29 @@
     "wa_identity_profile_mismatch": "此智能体的身份与其已批准的模板不匹配。在此问题解决之前，任何身份更改均不会生效。",
     "wa_identity_profile_contested": "此智能体的身份存在争议。在争议解决之前，任何身份更改均不会生效。",
     "wa_identity_profile_unknown": "此智能体报告了一个本应用无法识别的身份状态。",
-    "wa_identity_open_base_link": "打开基础链接请求"
+    "wa_identity_open_base_link": "打开基础链接请求",
+    "call_incoming_voice": "{who} 正在呼叫您",
+    "call_incoming_video": "{who} 正在发起视频通话",
+    "call_incoming_leaves_current": "接听将离开您当前所在的通话。",
+    "call_answer": "接听",
+    "call_decline": "拒接",
+    "call_rung_ringing": "正在呼叫 {who}……",
+    "call_rung_busy": "{who} 正在另一通通话中。",
+    "call_rung_declined": "{who} 已拒接。",
+    "call_rung_unreachable": "目前无法联系到 {who}。",
+    "call_rung_refused": "{who} 的设备无法接听此通话。该设备上可能尚未有此房间。",
+    "call_no_answer_declined": "没有人能够接听此通话。",
+    "call_no_answer_timeout": "无人接听。",
+    "call_notice": "{who} 发起了一通通话",
+    "call_notice_join": "加入",
+    "call_notice_dismiss": "暂不",
+    "call_alert_ring": "呼叫他们",
+    "call_alert_notify": "通知他们",
+    "call_alert_open": "直接开始",
+    "call_alert_ring_says": "房间中的其他所有人都会被呼叫，直到有人接听为止，最长持续 45 秒。",
+    "call_alert_notify_says": "房间中的其他所有人都会收到通话已开始的通知。不会有任何响铃。",
+    "call_alert_open_says": "不会通知任何人。此房间中打开通话的任何人都会加入其中。",
+    "call_rung_notified": "{who} 已收到通知。"
   },
   "moderation": {
     "ladder": {
@@ -6609,7 +6631,10 @@
       "peer_relay_in_use": "通话中的另一位成员正在中继它。",
       "none_available": "通话中没有人提供中继。",
       "refused_by_policy": "只有 CIRIS 公共服务器才能中继它，而 CIRIS 公共服务器从不中继通话。"
-    }
+    },
+    "decline_reason_unknown": "这不是拒接通话的理由。",
+    "no_answer": "无人接听。",
+    "alert_unknown": "这不是一种让房间知晓通话的方式。"
   },
   "decisions": {
     "not_found": "该决定对您已不再开放。",

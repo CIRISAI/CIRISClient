@@ -183,6 +183,7 @@ class CallViewModel(
     private var cameraFailed = false
     private val videoLock = Mutex()
     private var wantsVideo = false
+    private var wantsAlert: ai.ciris.mobile.shared.calls.CallAlert? = null
     private var share: ai.ciris.mobile.shared.calls.CallShare? = null
     private var shareVideo: ai.ciris.mobile.shared.calls.media.CallVideo? = null
     private var shareCodec: Int? = null
@@ -269,9 +270,11 @@ class CallViewModel(
         }?.launchIn(scope)
     }
 
-    fun join(video: Boolean) {
+    /** [alert] is how the room hears of the call when this join starts it; null leaves it to the node. */
+    fun join(video: Boolean, alert: ai.ciris.mobile.shared.calls.CallAlert? = null) {
         wantsVideo = video
-        session.join(video) { relayForJoin() }
+        wantsAlert = alert
+        session.join(video, alert) { relayForJoin() }
     }
 
     fun setCameraOff(value: Boolean) {
@@ -448,7 +451,7 @@ class CallViewModel(
     /** A new stream after leaving: rejoining is never the old stream resumed. */
     fun rejoin() {
         starting = false
-        session.join(wantsVideo) { relayForJoin() }
+        session.join(wantsVideo, wantsAlert) { relayForJoin() }
     }
 
     fun close() {

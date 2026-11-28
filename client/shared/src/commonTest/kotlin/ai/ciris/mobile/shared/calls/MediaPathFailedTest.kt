@@ -230,8 +230,9 @@ class MediaPathFailedTest {
 
     @Test fun aFullCallRefusesTheJoinWithItsCap() = runTest {
         val t = object : CallTransport by FakeTransport() {
-            // The session joins through the three-argument form; a delegate's default would bypass this.
-            override suspend fun join(room: String, video: Boolean, relay: Boolean?): CallJoinAnswer =
+            // The session joins through the four-argument form (with the opener's alert); a
+            // delegate's default for it would call the delegate, bypassing an override of any other.
+            override suspend fun join(room: String, video: Boolean, relay: Boolean?, alert: CallAlert?): CallJoinAnswer =
                 throw CallRefusal(CallSession.CALL_FULL, "This call already has 4 people.", maxPeople = 4)
         }
         val s = CallSession("r", t, backgroundScope)
