@@ -100,6 +100,14 @@ object Capability {
      * [NodeCapabilities.hasFeature].
      */
     const val CHAT_CALL = "chat:call"
+
+    /**
+     * Ringing and the opener's alert (CIRISServer 0.5.255): `alert` on the join,
+     * `GET /v1/calls/events`, `GET /v1/calls/ringing` and decline. A FEATURE, as
+     * [CHAT_CALL]. Without it the client offers no alert and holds no ring stream,
+     * so it never promises a ring the node will not send.
+     */
+    const val CHAT_CALL_RING = "chat:call:ring"
 }
 
 /**

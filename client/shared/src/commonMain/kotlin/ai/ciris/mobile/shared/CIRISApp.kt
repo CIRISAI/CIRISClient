@@ -2111,7 +2111,8 @@ fun CIRISApp(
             // Ringing (CSD-134; CIRISServer 0.5.255): while signed in to a node that serves
             // calls, this device hears when someone in a room starts one. It rings only
             // while the app runs; waking a backgrounded phone is CIRISServer#24.
-            val callsServed = nodeCapabilities.hasFeature(ai.ciris.mobile.shared.models.capability.Capability.CHAT_CALL)
+            val callsServed = nodeCapabilities.hasFeature(ai.ciris.mobile.shared.models.capability.Capability.CHAT_CALL) &&
+                nodeCapabilities.hasFeature(ai.ciris.mobile.shared.models.capability.Capability.CHAT_CALL_RING)
             val ringScope = rememberCoroutineScope()
             val ringWatcher = remember(effectiveNodeUrl) {
                 ai.ciris.mobile.shared.calls.RingWatcher(apiClient.ringTransport(effectiveNodeUrl), ringScope)
@@ -4639,6 +4640,7 @@ fun CIRISApp(
                 CallScreen(
                     answer = call.answer,
                     roomPeople = call.room.memberCount,
+                    alertOffered = nodeCapabilities.hasFeature(ai.ciris.mobile.shared.models.capability.Capability.CHAT_CALL_RING),
                     roomLabel = call.room.contactLabel,
                     onBack = { currentScreen = call.room },
                     call = callVm,

@@ -58,6 +58,8 @@ fun CallScreen(
     answer: CallKind? = null,
     /** How many people the room has, for how the room hears of the call by default; null for a pair. */
     roomPeople: Int? = null,
+    /** The node declares `chat:call:ring`: only then is there a choice of how the room hears of the call. */
+    alertOffered: Boolean = false,
     onBack: () -> Unit,
     /** The call itself. Null on a node without the call routes: the screen then says it cannot connect. */
     call: ai.ciris.mobile.shared.viewmodels.CallViewModel? = null,
@@ -114,7 +116,7 @@ fun CallScreen(
             when (val s = state) {
                 null -> {
                     CallChoice(onChoose = { advance(it, emptySet()) })
-                    AlertChoice(alert, onChoose = { alert = it })
+                    if (alertOffered) AlertChoice(alert, onChoose = { alert = it })
                 }
                 is CallPermissionState.Asking -> Text(
                     localizedString(
@@ -160,7 +162,7 @@ fun CallScreen(
                             modifier = Modifier.testable("call_not_connecting"),
                         )
                     } else {
-                        androidx.compose.runtime.LaunchedEffect(call) { call.join(video, if (answer != null) null else alert) }
+                        androidx.compose.runtime.LaunchedEffect(call) { call.join(video, if (answer != null || !alertOffered) null else alert) }
                         LiveCall(call, nameOf, onBack)
                     }
                 }

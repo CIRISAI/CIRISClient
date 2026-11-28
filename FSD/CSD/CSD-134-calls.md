@@ -216,7 +216,9 @@ shown at `txt_call_share_refused`) until Edge 45.1. Where this device cannot sha
 
 **Ringing (CIRISServer 0.5.255; Eric, 2026-11-27).** Someone who joins a call in a room
 with nobody else in it rings every other person in the room. While signed in to a node
-that serves calls, the client holds `GET /v1/calls/events`. A ring shows as a banner
+that declares the feature `chat:call:ring`, the client holds `GET /v1/calls/events`.
+A node without it (0.5.254) rings nobody, so the client offers no alert choice there
+and holds no ring stream. A ring shows as a banner
 over whatever screen is open, never a dialog (`card_call_incoming`,
 `row_call_incoming_<room>`, with `video` or `voice`): "{who} is calling", Answer
 (`btn_call_answer_<room>`, which opens this room's call and joins it at once, voice or
