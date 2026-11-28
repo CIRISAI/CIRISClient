@@ -259,7 +259,7 @@ approval_budget_unsupported	client	client	literal	-	-	-	-
 approval_budget_you_approve	client	client	literal	-	-	-	-
 approval_kind_deferral	client	client	literal	-	-	-	-
 approval_kind_proposal	client	client	literal	-	-	-	-
-approval_not_now	client	client	literal	-	15	differs:9	-
+approval_not_now	client	client	literal	-	15	differs:13	-
 approval_over_grant_percent	client	client	literal	-	-	-	-
 approval_over_grant_ratio	client	client	literal	-	-	-	-
 approval_over_grant_slight	client	client	literal	-	-	-	-
@@ -344,6 +344,7 @@ auth.self_login.substrate_error	server	server	-	-	-	-	-
 auth.session.invalid_token	server	server	-	-	-	-	-
 auth.session.missing_bearer	server	server	-	-	-	-	-
 auth.session_expired	server	client,server	literal	-	-	-	-
+call.alert_unknown	unclaimed	-	-	-	-	-	-
 call.anonymous_mode	server	client,server	literal	-	-	-	-
 call.bad_layer_policy	server	server	-	-	-	-	-
 call.cross_origin	server	server	-	-	-	-	-
@@ -1689,6 +1690,12 @@ mobile.billing_packages	client	client	literal	-	-	-	-
 mobile.billing_refresh_failed	client	client	literal	-	-	-	-
 mobile.billing_refresh_node_too_old	client	client	literal	-	-	-	-
 mobile.billing_refresh_write_failed	client	client	literal	-	-	-	-
+mobile.call_alert_notify	client	client	literal	-	-	-	-
+mobile.call_alert_notify_says	client	client	literal	-	-	-	-
+mobile.call_alert_open	client	client	literal	-	-	-	-
+mobile.call_alert_open_says	client	client	literal	-	-	-	-
+mobile.call_alert_ring	client	client	literal	-	-	-	-
+mobile.call_alert_ring_says	client	client	literal	-	-	-	-
 mobile.call_alone	client	client	literal	-	-	-	-
 mobile.call_answer	client	client	literal	-	-	-	-
 mobile.call_asking_camera	client	client	literal	-	-	-	-
@@ -1734,6 +1741,9 @@ mobile.call_no_answer_timeout	client	client	literal	-	29	same	-
 mobile.call_not_connecting	client	client	literal	-	-	-	-
 mobile.call_not_reached	client	client	literal	-	-	-	-
 mobile.call_not_saved	client	client	literal	-	-	-	-
+mobile.call_notice	client	client	literal	-	-	-	-
+mobile.call_notice_dismiss	client	client	literal	-	15	differs:13	-
+mobile.call_notice_join	client	client	literal	-	-	-	-
 mobile.call_path_action_local	client	client	literal	-	-	-	-
 mobile.call_path_action_peer	client	client	literal	-	-	-	-
 mobile.call_path_anonymous_no_direct	client	client	literal	-	-	-	-
@@ -1772,6 +1782,7 @@ mobile.call_relaying_for	client	client	literal	-	-	-	-
 mobile.call_relaying_for_node	client	client	literal	-	-	-	-
 mobile.call_rung_busy	client	client	literal	-	-	-	-
 mobile.call_rung_declined	client	client	literal	-	-	-	-
+mobile.call_rung_notified	client	client	literal	-	-	-	-
 mobile.call_rung_refused	client	client	literal	-	-	-	-
 mobile.call_rung_ringing	client	client	literal	-	-	-	-
 mobile.call_rung_unreachable	client	client	literal	-	-	-	-
@@ -2111,7 +2122,7 @@ mobile.config_no_found	client	client	literal	-	-	-	-
 mobile.config_search_placeholder	client	client	literal	-	-	-	-
 mobile.config_sensitive	client	client	literal	-	-	-	-
 mobile.config_updated	client	client	literal	-	-	-	-
-mobile.confirm_cancel	client	client	literal	-	15	differs:9	-
+mobile.confirm_cancel	client	client	literal	-	15	differs:13	-
 mobile.consent_about_desc	client	client	dynamic	-	-	-	-
 mobile.consent_about_title	client	client	dynamic	-	-	-	-
 mobile.consent_by	client	client	dynamic	-	-	-	-

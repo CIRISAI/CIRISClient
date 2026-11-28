@@ -58,12 +58,19 @@ class CallSession(
      * [relay] is this device's choice to carry others' media (CSD-134 §2.1, the
      * relay switch): null leaves it to the node, which decides by what it is.
      */
-    fun join(video: Boolean, relay: Boolean? = null) {
-        join(video, suspend { relay })
+    fun join(video: Boolean, relay: Boolean? = null, alert: CallAlert? = null) {
+        join(video, alert, suspend { relay })
     }
 
     /** As above, where the answer has to be read first (the person's stored choice). */
-    fun join(video: Boolean, relay: suspend () -> Boolean?) {
+    fun join(video: Boolean, relay: suspend () -> Boolean?) = join(video, null, relay)
+
+    /**
+     * [alert] is how the room's other people hear of the call, the opener's choice
+     * (CIRISServer 0.5.255): null leaves it to the node (a room of at most four rings,
+     * a bigger one is told). Joining a call already live alerts nobody, whatever is asked.
+     */
+    fun join(video: Boolean, alert: CallAlert?, relay: suspend () -> Boolean?) {
         if (_state.value is CallState.Joining || _state.value is CallState.InCall) return
         _state.value = CallState.Joining
         scope.launch {
@@ -71,7 +78,7 @@ class CallSession(
             // Left while it was read: nothing was asked of the node, and nothing is.
             if (_state.value !is CallState.Joining) return@launch
             val answer = try {
-                transport.join(room, video, say)
+                transport.join(room, video, say, alert)
             } catch (e: CallRefusal) {
                 PlatformLogger.w(TAG, "[join] refused reason_id=${e.reasonId}")
                 _state.value = CallState.Refused(e.reasonId, e.maxPeople)
@@ -106,6 +113,7 @@ class CallSession(
                 relaying = answer.relay?.relaying,
                 relayingFor = answer.relay?.relayingFor ?: 0,
                 relaySeat = answer.relay?.serveSeat ?: false,
+                alert = answer.alert,
             )
             reader = scope.launch { s.incoming.collect { onMessage(it) } }
         }
@@ -372,6 +380,8 @@ sealed interface CallState {
         val rung: Map<String, RungState> = emptyMap(),
         /** Nobody answered: everyone rung declined or was busy, or 45 s passed with nobody joining. */
         val noAnswer: NoAnswer? = null,
+        /** How the node told the room, from the join answer; null when this joined a call already going. */
+        val alert: CallAlert? = null,
     ) : CallState
 
     /** The node said no, by id (`call.not_a_member`, `call.anonymous_mode`, …). */
@@ -684,6 +694,14 @@ sealed interface CallEvent {
                         RungMember(member, s("person"), RungState.of(s("state")))
                     },
                 )
+                "notified" -> Rung(
+                    (o["members"] as? kotlinx.serialization.json.JsonArray).orEmpty().mapNotNull { e ->
+                        val m = e as? JsonObject ?: return@mapNotNull null
+                        fun s(k: String) = (m[k] as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
+                        val member = s("member") ?: return@mapNotNull null
+                        RungMember(member, s("person"), RungState.of(s("state")))
+                    },
+                )
                 "declined" -> str("member")?.let { Declined(it, str("person"), str("reason") ?: "declined") }
                 "no_answer" -> NoAnswerEvent(if (str("why") == "timeout") NoAnswer.TIMEOUT else NoAnswer.DECLINED)
                 else -> null
@@ -707,6 +725,8 @@ data class CallJoinAnswer(
     val relay: RelayAnswer? = null,
     /** Each attendee node's owner (`attendee_people`), so a tile can name the person. */
     val attendeePeople: Map<String, String> = emptyMap(),
+    /** The alert the node used (CIRISServer 0.5.255); null for a join into a live call, or from an older node. */
+    val alert: CallAlert? = null,
 ) {
     companion object {
         /**
@@ -737,6 +757,7 @@ data class CallJoinAnswer(
                         val who = (p["person"] as? JsonPrimitive)?.contentOrNull ?: return@mapNotNull null
                         m to who
                     }.toMap(),
+                alert = CallAlert.of(str("alert")),
             )
         }
     }
@@ -751,6 +772,8 @@ interface CallTransport {
 
     /** Join, saying whether this device relays for others; null leaves it to the node. */
     suspend fun join(room: String, video: Boolean, relay: Boolean?): CallJoinAnswer = join(room, video)
+    /** With the opener's [alert] (CIRISServer 0.5.255); a transport that cannot say it leaves it to the node. */
+    suspend fun join(room: String, video: Boolean, relay: Boolean?, alert: CallAlert?): CallJoinAnswer = join(room, video, relay)
     suspend fun leave(room: String)
 
     /** POST …/call/relay `{relay}`: switch relaying live. A node without the route refuses by name. */
@@ -871,6 +894,8 @@ data class RungMember(val member: String, val person: String?, val state: RungSt
 /** How a ring went for one person (CIRISServer 0.5.255 `member_states`). An unknown word is [OTHER]. */
 enum class RungState(val wire: String?) {
     RINGING("ringing"),
+    /** Told of the call, not rung (`alert: notify`). */
+    NOTIFIED("notified"),
     IN_CALL("in_call"),
     BUSY("busy"),
     DECLINED("declined"),
@@ -887,3 +912,21 @@ enum class RungState(val wire: String?) {
 
 /** Why nobody answered: everyone rung declined or was busy, or the 45 s ran out. */
 enum class NoAnswer { DECLINED, TIMEOUT }
+
+/**
+ * How the room's other people hear of a call, the opener's choice (CIRISServer 0.5.255,
+ * Eric's ruling): [RING] rings them, [NOTIFY] tells them without ringing, [OPEN] sends
+ * nothing. An unknown word reads as null, which leaves it to the node.
+ */
+enum class CallAlert(val wire: String) {
+    OPEN("open"), NOTIFY("notify"), RING("ring");
+
+    companion object {
+        fun of(s: String?): CallAlert? = entries.firstOrNull { it.wire == s }
+
+        /** The node's own default when none is asked: a room of at most four rings, a bigger one is told. */
+        const val RING_UP_TO_PEOPLE = 4
+        fun defaultFor(roomPeople: Int?): CallAlert =
+            if ((roomPeople ?: 2) <= RING_UP_TO_PEOPLE) RING else NOTIFY
+    }
+}

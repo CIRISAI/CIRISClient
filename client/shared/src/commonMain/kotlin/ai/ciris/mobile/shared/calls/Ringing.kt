@@ -83,6 +83,8 @@ sealed interface RingEvent {
     /** The stream's first frame: everything ringing right now. It replaces what was held. */
     data class Now(val ringing: List<IncomingRing>) : RingEvent
     data class Ringing(val ring: IncomingRing) : RingEvent
+    /** Someone started a call and the room is told, not rung (`alert: notify`): no decline, no timeout. */
+    data class Notice(val ring: IncomingRing) : RingEvent
     data class Ended(val room: String, val callId: String, val why: RingEndReason) : RingEvent
     /** The stream fell behind: fetch GET /v1/calls/ringing and replace. */
     data object Resync : RingEvent
@@ -95,6 +97,7 @@ sealed interface RingEvent {
             return when (type) {
                 "ringing_now" -> Now(IncomingRing.parseList(o))
                 "call_ringing" -> IncomingRing.parse(o)?.let { Ringing(it) }
+                "call_notice" -> IncomingRing.parse(o)?.let { Notice(it) }
                 "call_ring_ended" -> {
                     val room = str("room") ?: return null
                     Ended(room, str("call_id") ?: "", RingEndReason.of(str("why")))
@@ -148,6 +151,14 @@ class RingWatcher(
     private val handled = mutableSetOf<String>()
     private var job: Job? = null
 
+    /**
+     * Calls the room was told of without a ring. A notice has no end from the node,
+     * so it is shown for [NOTICE_SHOW_MS] and then put away; the call may well go on.
+     */
+    private val _notices = MutableStateFlow<List<IncomingRing>>(emptyList())
+    val notices: StateFlow<List<IncomingRing>> = _notices.asStateFlow()
+    private val noticeTimers = mutableMapOf<String, Job>()
+
     fun start() {
         if (job?.isActive == true) return
         job = scope.launch {
@@ -173,6 +184,9 @@ class RingWatcher(
         job?.cancel()
         job = null
         _ringing.value = emptyList()
+        noticeTimers.values.forEach { it.cancel() }
+        noticeTimers.clear()
+        _notices.value = emptyList()
     }
 
     internal suspend fun apply(event: RingEvent) {
@@ -181,6 +195,15 @@ class RingWatcher(
             is RingEvent.Ringing -> {
                 handled.remove(event.ring.room)
                 _ringing.value = _ringing.value.filterNot { it.room == event.ring.room } + event.ring
+            }
+            is RingEvent.Notice -> {
+                val ring = event.ring
+                _notices.value = _notices.value.filterNot { it.room == ring.room } + ring
+                noticeTimers.remove(ring.room)?.cancel()
+                noticeTimers[ring.room] = scope.launch {
+                    delay(NOTICE_SHOW_MS)
+                    dismissNotice(ring.room)
+                }
             }
             is RingEvent.Ended -> {
                 PlatformLogger.i(TAG, "[ring] ended room=${event.room} why=${event.why.wire ?: "other"}")
@@ -198,6 +221,13 @@ class RingWatcher(
     fun answered(room: String) {
         handled += room
         _ringing.value = _ringing.value.filterNot { it.room == room }
+        dismissNotice(room)
+    }
+
+    /** Put a notice away on this device. Nothing is sent: a notice asks nothing of anyone. */
+    fun dismissNotice(room: String) {
+        noticeTimers.remove(room)?.cancel()
+        _notices.value = _notices.value.filterNot { it.room == room }
     }
 
     /** Declines [room]'s ring. The ring goes from this device at once, whatever the node answers. */
@@ -214,6 +244,8 @@ class RingWatcher(
         private const val TAG = "RingWatcher"
         const val MIN_WAIT_MS = 1_000L
         const val MAX_WAIT_MS = 30_000L
+        /** How long a "started a call" notice stays up when nobody acts on it. */
+        const val NOTICE_SHOW_MS = 120_000L
     }
 }
 

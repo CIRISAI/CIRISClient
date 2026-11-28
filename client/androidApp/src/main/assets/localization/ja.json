@@ -4652,7 +4652,17 @@
     "call_rung_unreachable": "{who}には現在接続できません。",
     "call_rung_refused": "{who}のデバイスはこの通話に応答できませんでした。このルームをまだ持っていない可能性があります。",
     "call_no_answer_declined": "誰も通話に応答できませんでした。",
-    "call_no_answer_timeout": "誰も応答しませんでした。"
+    "call_no_answer_timeout": "誰も応答しませんでした。",
+    "call_notice": "{who}が通話を開始しました",
+    "call_notice_join": "参加",
+    "call_notice_dismiss": "今はしない",
+    "call_alert_ring": "呼び出す",
+    "call_alert_notify": "知らせる",
+    "call_alert_open": "そのまま開始",
+    "call_alert_ring_says": "ルームの他の全員は、誰かが応答するまで、最大45秒間呼び出されます。",
+    "call_alert_notify_says": "ルームの他の全員に、通話が開始されたことが知らされます。着信音は鳴りません。",
+    "call_alert_open_says": "誰にも知らされません。このルームで通話を開く人は誰でも参加します。",
+    "call_rung_notified": "{who}に知らされました。"
   },
   "moderation": {
     "ladder": {
@@ -6623,7 +6633,8 @@
       "refused_by_policy": "それを中継できるのはCIRISパブリックサーバーだけですが、CIRISパブリックサーバーは通話を中継しません。"
     },
     "decline_reason_unknown": "それは通話を拒否する理由ではありません。",
-    "no_answer": "誰も応答しませんでした。"
+    "no_answer": "誰も応答しませんでした。",
+    "alert_unknown": "それは、ルームに通話を知らせる方法ではありません。"
   },
   "decisions": {
     "not_found": "その決定は、もうあなたに対して開かれていません。",

@@ -189,6 +189,70 @@ class RingingTest {
         assertEquals(NoAnswer.TIMEOUT, left.noAnswer)
     }
 
+    // ── The opener's alert (CIRISServer 0.5.255, vectors § ringing.alert) ──
+
+    @Test fun theDefaultAlertFollowsTheNode() {
+        assertEquals(CallAlert.RING, CallAlert.defaultFor(null)) // a pair
+        assertEquals(CallAlert.RING, CallAlert.defaultFor(4))
+        assertEquals(CallAlert.NOTIFY, CallAlert.defaultFor(5))
+        assertNull(CallAlert.of("shout"))
+    }
+
+    private class AlertCall : CallTransport {
+        val socket = FakeSocket()
+        var asked: CallAlert? = null
+        var answerAlert: CallAlert? = CallAlert.NOTIFY
+        override suspend fun join(room: String, video: Boolean) = CallJoinAnswer("c1", "s-me", 1, 244, null, emptyList())
+        override suspend fun join(room: String, video: Boolean, relay: Boolean?, alert: CallAlert?): CallJoinAnswer {
+            asked = alert
+            return CallJoinAnswer("c1", "s-me", 1, 244, null, emptyList(), alert = answerAlert)
+        }
+        override suspend fun leave(room: String) = Unit
+        override suspend fun openFrames(room: String): CallSocket = socket
+    }
+
+    @Test fun theOpenersAlertGoesWithTheJoinAndTheAnswerIsKept() = runTest {
+        val t = AlertCall()
+        val s = CallSession("r", t, backgroundScope)
+        s.join(video = false, alert = CallAlert.NOTIFY); runCurrent()
+        assertEquals(CallAlert.NOTIFY, t.asked)
+        assertEquals(CallAlert.NOTIFY, assertIs<CallState.InCall>(s.state.value).alert)
+    }
+
+    @Test fun theJoinAnswerSaysWhichAlertWasUsed() {
+        assertEquals(CallAlert.RING, CallJoinAnswer.parse(obj("""{"call_id":"c","alert":"ring"}""")).alert)
+        // Joined into a call already live: nobody was alerted.
+        assertNull(CallJoinAnswer.parse(obj("""{"call_id":"c","alert":null}""")).alert)
+    }
+
+    @Test fun aNoticeIsShownWithoutRingingAndPutAway() = runTest {
+        val w = RingWatcher(FakeRing(), backgroundScope)
+        val e = assertIs<RingEvent.Notice>(RingEvent.parse("call_notice", obj(ringJson)))
+        w.apply(e)
+        assertTrue(w.ringing.value.isEmpty())
+        assertEquals(listOf("community-7f3a"), w.notices.value.map { it.room })
+        w.dismissNotice("community-7f3a")
+        assertTrue(w.notices.value.isEmpty())
+    }
+
+    @Test fun aNoticeGoesByItselfAfterAWhile() = runTest {
+        val w = RingWatcher(FakeRing(), backgroundScope)
+        w.apply(RingEvent.Notice(ring("a")))
+        kotlinx.coroutines.delay(RingWatcher.NOTICE_SHOW_MS + 1)
+        assertTrue(w.notices.value.isEmpty())
+    }
+
+    @Test fun theCallerSeesWhoWasTold() = runTest {
+        val t = FakeCall()
+        val s = CallSession("r", t, backgroundScope)
+        s.join(video = false); runCurrent()
+        t.socket.inbox.send(CallSocketMessage.Text(
+            """{"type":"notified","members":[{"member":"native-bob","person":"bob","state":"notified"}]}""",
+        ))
+        runCurrent()
+        assertEquals(mapOf("bob" to RungState.NOTIFIED), assertIs<CallState.InCall>(s.state.value).rung)
+    }
+
     @Test fun anUnknownRungStateIsOther() {
         assertEquals(RungState.OTHER, RungState.of("teleported"))
     }

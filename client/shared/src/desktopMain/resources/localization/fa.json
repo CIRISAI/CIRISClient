@@ -2696,6 +2696,16 @@
     "call_rung_refused": "دستگاه {who} نتوانست این تماس را پاسخ دهد. ممکن است هنوز این اتاق را نداشته باشد.",
     "call_no_answer_declined": "هیچ‌کس نتوانست تماس را پاسخ دهد.",
     "call_no_answer_timeout": "هیچ‌کس پاسخ نداد.",
+    "call_notice": "{who} یک تماس را شروع کرد",
+    "call_notice_join": "پیوستن",
+    "call_notice_dismiss": "الان نه",
+    "call_alert_ring": "به آن‌ها زنگ بزن",
+    "call_alert_notify": "به آن‌ها خبر بده",
+    "call_alert_open": "فقط شروع کن",
+    "call_alert_ring_says": "همهٔ افراد دیگر اتاق تا وقتی کسی پاسخ دهد، حداکثر تا ۴۵ ثانیه، زنگ می‌خورند.",
+    "call_alert_notify_says": "به همهٔ افراد دیگر اتاق گفته می‌شود که تماسی شروع شده. چیزی زنگ نمی‌خورد.",
+    "call_alert_open_says": "به کسی گفته نمی‌شود. هر کسی که این تماس را در این اتاق باز کند، به آن می‌پیوندد.",
+    "call_rung_notified": "به {who} اطلاع داده شد.",
     "yubikey_probe_failed": "وضعیت YubiKey خوانده نشد",
     "yubikey_probe_not_on_this_node": "این گره وضعیت YubiKey را گزارش نمی‌دهد",
     "yubikey_probe_reason": "دلیل: {detail}",
@@ -6629,7 +6639,8 @@
       "refused_by_policy": "فقط یک سرور عمومی CIRIS می‌توانست آن را منتقل کند، و سرورهای عمومی CIRIS هرگز تماس‌ها را منتقل نمی‌کنند."
     },
     "decline_reason_unknown": "این دلیلی برای رد تماس نیست.",
-    "no_answer": "هیچ‌کس پاسخ نداد."
+    "no_answer": "هیچ‌کس پاسخ نداد.",
+    "alert_unknown": "این راهی برای اطلاع‌دادن به اتاق دربارهٔ یک تماس نیست."
   },
   "decisions": {
     "not_found": "آن تصمیم دیگر برای شما باز نیست.",

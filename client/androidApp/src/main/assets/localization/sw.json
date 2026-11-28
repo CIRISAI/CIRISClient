@@ -1307,6 +1307,16 @@
     "call_rung_refused": "Kifaa cha {who} hakikuweza kupokea simu hii. Huenda hakina chumba hiki bado.",
     "call_no_answer_declined": "Hakuna aliyeweza kupokea simu.",
     "call_no_answer_timeout": "Hakuna aliyejibu.",
+    "call_notice": "{who} ameanzisha simu",
+    "call_notice_join": "Jiunge",
+    "call_notice_dismiss": "Si sasa",
+    "call_alert_ring": "Wapigie",
+    "call_alert_notify": "Wajulishe",
+    "call_alert_open": "Anza tu",
+    "call_alert_ring_says": "Kila mtu mwingine katika chumba anapigiwa simu hadi mtu ajibu, kwa hadi sekunde 45.",
+    "call_alert_notify_says": "Kila mtu mwingine katika chumba anajulishwa kuwa simu imeanza. Hakuna kinacholia.",
+    "call_alert_open_says": "Hakuna anayejulishwa. Yeyote anayefungua simu hiyo katika chumba hiki anajiunga nayo.",
+    "call_rung_notified": "{who} alijulishwa.",
     "final_genesis_amend_needed_only": "Idhini {needed} za washikilizi zinahitajika",
     "final_genesis_amend_status_label": "Idhini zilizotolewa hadi sasa",
     "final_genesis_amend_complete": "Washikilizi wa kutosha wameidhinisha. Maliza huandika kifurushi cha toleo la 4.",
@@ -6623,7 +6633,8 @@
       "refused_by_policy": "Ni seva ya umma ya CIRIS pekee ingeweza kuisambaza, na seva za umma za CIRIS hazipitishi simu kamwe."
     },
     "decline_reason_unknown": "Hiyo si sababu ya kukataa simu.",
-    "no_answer": "Hakuna aliyejibu."
+    "no_answer": "Hakuna aliyejibu.",
+    "alert_unknown": "Hiyo si njia ya kujulisha chumba kuhusu simu."
   },
   "decisions": {
     "not_found": "Uamuzi huo haupo wazi kwako tena.",

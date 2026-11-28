@@ -2260,15 +2260,25 @@ class CIRISApiClient internal constructor(
 
         // `relay` is the person's choice for this node, or what a phone carrying its own
         // call says about its network (calls/RelayChoice.kt). Omitted, the node decides.
-        override suspend fun join(room: String, video: Boolean, relay: Boolean?): ai.ciris.mobile.shared.calls.CallJoinAnswer {
+        override suspend fun join(room: String, video: Boolean, relay: Boolean?): ai.ciris.mobile.shared.calls.CallJoinAnswer =
+            join(room, video, relay, null)
+
+        // `alert` is the opener's choice of how the room hears of the call (CIRISServer 0.5.255).
+        // Omitted, the node decides by the room's size.
+        override suspend fun join(
+            room: String,
+            video: Boolean,
+            relay: Boolean?,
+            alert: ai.ciris.mobile.shared.calls.CallAlert?,
+        ): ai.ciris.mobile.shared.calls.CallJoinAnswer {
             val method = "joinCall"
-            logInfo(method, "POST $nodeUrl${callPath(room)} video=$video relay=${relay ?: "-"}")
+            logInfo(method, "POST $nodeUrl${callPath(room)} video=$video relay=${relay ?: "-"} alert=${alert?.wire ?: "-"}")
             val client = federationHttpClient()
             try {
                 val response = client.post("$nodeUrl${callPath(room)}") {
                     authHeader()?.let { header("Authorization", it) }
                     contentType(ContentType.Application.Json)
-                    setBody(buildJsonObject { put("video", video); relay?.let { put("relay", it) } }.toString())
+                    setBody(buildJsonObject { put("video", video); relay?.let { put("relay", it) }; alert?.let { put("alert", it.wire) } }.toString())
                 }
                 val raw = response.bodyAsText()
                 if (!response.status.isSuccess()) {

@@ -4747,7 +4747,17 @@
     "call_rung_unreachable": "{who} can't be reached right now.",
     "call_rung_refused": "{who}'s device couldn't take this call. It may not have this room yet.",
     "call_no_answer_declined": "Nobody could take the call.",
-    "call_no_answer_timeout": "Nobody answered."
+    "call_no_answer_timeout": "Nobody answered.",
+    "call_notice": "{who} started a call",
+    "call_notice_join": "Join",
+    "call_notice_dismiss": "Not now",
+    "call_alert_ring": "Ring them",
+    "call_alert_notify": "Let them know",
+    "call_alert_open": "Just start",
+    "call_alert_ring_says": "Everyone else in the room is rung until someone answers, for up to 45 seconds.",
+    "call_alert_notify_says": "Everyone else in the room is told a call started. Nothing rings.",
+    "call_alert_open_says": "Nobody is told. Anyone who opens the call in this room joins it.",
+    "call_rung_notified": "{who} was told."
   },
   "moderation": {
     "ladder": {
@@ -6623,7 +6633,8 @@
       "refused_by_policy": "Only a CIRIS public server could relay it, and the CIRIS public servers never relay calls."
     },
     "decline_reason_unknown": "That isn't a reason for declining a call.",
-    "no_answer": "Nobody answered."
+    "no_answer": "Nobody answered.",
+    "alert_unknown": "That isn't a way of letting the room know about a call."
   },
   "decisions": {
     "not_found": "That decision isn't open for you any more.",

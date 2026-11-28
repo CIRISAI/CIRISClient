@@ -4652,7 +4652,17 @@
     "call_rung_unreachable": "Hiện không thể liên lạc với {who}.",
     "call_rung_refused": "Thiết bị của {who} không thể nhận cuộc gọi này. Có thể thiết bị đó chưa có phòng này.",
     "call_no_answer_declined": "Không ai có thể nhận cuộc gọi.",
-    "call_no_answer_timeout": "Không ai trả lời."
+    "call_no_answer_timeout": "Không ai trả lời.",
+    "call_notice": "{who} đã bắt đầu một cuộc gọi",
+    "call_notice_join": "Tham gia",
+    "call_notice_dismiss": "Không phải bây giờ",
+    "call_alert_ring": "Đổ chuông cho họ",
+    "call_alert_notify": "Báo cho họ biết",
+    "call_alert_open": "Bắt đầu ngay",
+    "call_alert_ring_says": "Mọi người khác trong phòng sẽ bị đổ chuông cho đến khi có người trả lời, trong tối đa 45 giây.",
+    "call_alert_notify_says": "Mọi người khác trong phòng sẽ được báo rằng một cuộc gọi đã bắt đầu. Không có gì đổ chuông.",
+    "call_alert_open_says": "Không ai được báo. Bất kỳ ai mở cuộc gọi trong phòng này sẽ tham gia vào đó.",
+    "call_rung_notified": "{who} đã được báo."
   },
   "moderation": {
     "ladder": {
@@ -6623,7 +6633,8 @@
       "refused_by_policy": "Chỉ một máy chủ công khai của CIRIS mới có thể chuyển tiếp nó, nhưng các máy chủ công khai của CIRIS không bao giờ chuyển tiếp cuộc gọi."
     },
     "decline_reason_unknown": "Đó không phải là lý do để từ chối một cuộc gọi.",
-    "no_answer": "Không ai trả lời."
+    "no_answer": "Không ai trả lời.",
+    "alert_unknown": "Đó không phải là cách để cho phòng biết về một cuộc gọi."
   },
   "decisions": {
     "not_found": "Quyết định đó không còn mở cho bạn nữa.",

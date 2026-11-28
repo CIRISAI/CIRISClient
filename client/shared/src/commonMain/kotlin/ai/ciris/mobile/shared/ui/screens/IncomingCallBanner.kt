@@ -50,6 +50,9 @@ fun IncomingCallBanner(
     // A ring for the call already open here is not a ring: the node does not send one,
     // and if two people joined at once it would only say the obvious.
     val shown = ringing.filter { it.room != inCallRoom }
+    val notices by watcher.notices.collectAsState()
+    // A room already ringing here says it once.
+    val told = notices.filter { n -> n.room != inCallRoom && shown.none { it.room == n.room } }
     val scope = rememberCoroutineScope()
 
     // The sound, only while something rings and this device is not already in a call
@@ -62,10 +65,10 @@ fun IncomingCallBanner(
         onDispose { tone.stop() }
     }
 
-    if (shown.isEmpty()) return
+    if (shown.isEmpty() && told.isEmpty()) return
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = modifier.padding(12.dp).widthIn(max = 520.dp).testable("card_call_incoming", shown.size.toString()),
+        modifier = modifier.padding(12.dp).widthIn(max = 520.dp).testable("card_call_incoming", (shown.size + told.size).toString()),
     ) {
         shown.forEach { ring ->
             val who = ring.byPerson?.let(nameOf) ?: localizedString("mobile.call_someone")
@@ -107,6 +110,46 @@ fun IncomingCallBanner(
                             onClick = decline,
                             modifier = Modifier.testableClickable("btn_call_decline_${ring.room}") { decline() },
                         ) { Text(localizedString("mobile.call_decline")) }
+                    }
+                }
+            }
+        }
+        told.forEach { ring ->
+            val who = ring.byPerson?.let(nameOf) ?: localizedString("mobile.call_someone")
+            Surface(
+                tonalElevation = 3.dp,
+                shadowElevation = 3.dp,
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.fillMaxWidth().testable("row_call_notice_${ring.room}", if (ring.video) "video" else "voice"),
+            ) {
+                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        localizedString("mobile.call_notice", "who", who),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (inCallRoom != null) {
+                        Text(
+                            localizedString("mobile.call_incoming_leaves_current"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        val join = {
+                            watcher.answered(ring.room)
+                            onAnswer(ring)
+                        }
+                        val dismiss = { watcher.dismissNotice(ring.room) }
+                        Button(
+                            onClick = join,
+                            modifier = Modifier.testableClickable("btn_call_notice_join_${ring.room}") { join() },
+                        ) { Text(localizedString("mobile.call_notice_join")) }
+                        OutlinedButton(
+                            onClick = dismiss,
+                            modifier = Modifier.testableClickable("btn_call_notice_dismiss_${ring.room}") { dismiss() },
+                        ) { Text(localizedString("mobile.call_notice_dismiss")) }
                     }
                 }
             }

@@ -230,7 +230,24 @@ node's state): "Ringing {who}…", in another call, declined, can't be reached r
 or their device couldn't take the call. While someone is still ringing, the 20-second
 "hasn't reached anyone" line waits. Nobody answering is `txt_call_no_answer`
 (`declined` or `timeout`), and it stays on the screen after the node ends the call at
-45 s. **Limit:** it rings only while the app is running. Waking a backgrounded phone is
+45 s, which the node reports as `call_ended {ended: no_answer}` ("Nobody answered.").
+
+**Whether it rings is the opener's choice (Eric, 2026-11-27; CIRISServer 0.5.255 `alert`).**
+Before a call starts, `opt_call_alert` offers Ring them (`btn_call_alert_ring`), Let them
+know (`btn_call_alert_notify`) and Just start (`btn_call_alert_open`), with one line saying
+what the choice does (`txt_call_alert_says`). The node's default is picked to begin with:
+a room of at most four people rings, a bigger one is told. Answering a ring or joining a
+call already going alerts nobody, whatever is picked. Told rather than rung, the others
+see a quieter notice, "{who} started a call", with Join and Not now
+(`row_call_notice_<room>`, `btn_call_notice_join_<room>`, `btn_call_notice_dismiss_<room>`).
+It has no sound, sends nothing back, and is put away after two minutes. The caller sees
+"{who} was told". For a call the room was told of, or not told of, the 20-second "hasn't
+reached anyone" line does not show: nobody is expected yet.
+
+**Not built:** a receiver lowering an alert for themselves (ring to notify to nothing, per
+room or per caller). That is local policy and needs nothing from the node.
+
+**Limit:** it rings only while the app is running. Waking a backgrounded phone is
 CIRISServer#24, where the wake carries nothing but "wake".
 
 **Not built.** The participants list as its own element, receive quality per member

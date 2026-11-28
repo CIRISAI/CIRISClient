@@ -4462,6 +4462,16 @@
     "call_rung_refused": "{who}-এর ডিভাইস এই কলটি নিতে পারেনি। এতে এখনও এই রুম না-ও থাকতে পারে।",
     "call_no_answer_declined": "কেউ কলটি ধরতে পারেননি।",
     "call_no_answer_timeout": "কেউ উত্তর দেননি।",
+    "call_notice": "{who} একটি কল শুরু করেছেন",
+    "call_notice_join": "যোগ দিন",
+    "call_notice_dismiss": "এখন নয়",
+    "call_alert_ring": "তাদের রিং করুন",
+    "call_alert_notify": "তাদের জানিয়ে দিন",
+    "call_alert_open": "শুধু শুরু করুন",
+    "call_alert_ring_says": "কেউ উত্তর না দেওয়া পর্যন্ত রুমের অন্য সবাইকে রিং করা হবে, সর্বোচ্চ ৪৫ সেকেন্ড পর্যন্ত।",
+    "call_alert_notify_says": "রুমের অন্য সবাইকে জানানো হবে যে একটি কল শুরু হয়েছে। কিছুই রিং হবে না।",
+    "call_alert_open_says": "কাউকে জানানো হয় না। এই রুমে যে কেউ কলটি খুললে তাতে যোগ দেয়।",
+    "call_rung_notified": "{who}-কে জানানো হয়েছে।",
     "accord_ceremony_phase_intro": "শুরু করার আগে",
     "accord_ceremony_phase_provision": "ছয়টি কী প্রস্তুত করা হচ্ছে",
     "accord_ceremony_phase_cosign": "পরিবারের এনভেলাপ সহ-স্বাক্ষর করা হচ্ছে",
@@ -6624,7 +6634,8 @@
       "refused_by_policy": "শুধুমাত্র একটি CIRIS পাবলিক সার্ভারই এটি রিলে করতে পারত, এবং CIRIS পাবলিক সার্ভারগুলো কখনও কল রিলে করে না।"
     },
     "decline_reason_unknown": "এটি কল প্রত্যাখ্যান করার কোনো কারণ নয়।",
-    "no_answer": "কেউ উত্তর দেননি।"
+    "no_answer": "কেউ উত্তর দেননি।",
+    "alert_unknown": "এটি রুমকে কল সম্পর্কে জানানোর কোনো উপায় নয়।"
   },
   "decisions": {
     "not_found": "ওই সিদ্ধান্তটি আর আপনার জন্য খোলা নেই।",

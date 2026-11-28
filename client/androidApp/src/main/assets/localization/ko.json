@@ -1315,6 +1315,16 @@
     "call_rung_refused": "{who}님의 기기가 이 통화를 받을 수 없었습니다. 아직 이 룸을 가지고 있지 않을 수 있습니다.",
     "call_no_answer_declined": "아무도 통화를 받을 수 없었습니다.",
     "call_no_answer_timeout": "아무도 응답하지 않았습니다.",
+    "call_notice": "{who}님이 통화를 시작했습니다",
+    "call_notice_join": "참여",
+    "call_notice_dismiss": "지금은 아니요",
+    "call_alert_ring": "벨 울리기",
+    "call_alert_notify": "알리기",
+    "call_alert_open": "바로 시작",
+    "call_alert_ring_says": "룸의 다른 모든 사람에게 누군가 응답할 때까지 최대 45초 동안 벨이 울립니다.",
+    "call_alert_notify_says": "룸의 다른 모든 사람에게 통화가 시작되었음이 알려집니다. 벨은 울리지 않습니다.",
+    "call_alert_open_says": "아무에게도 알려지지 않습니다. 이 룸에서 통화를 여는 사람은 누구나 참여하게 됩니다.",
+    "call_rung_notified": "{who}님에게 알렸습니다.",
     "claim_node_cohort_biosphere": "모든 생명체 (생물권)",
     "claim_node_cohort_federation": "전체 페더레이션 (페더레이션)",
     "claim_node_cohort_more": "옵션 더 보기",
@@ -6623,7 +6633,8 @@
       "refused_by_policy": "CIRIS 공개 서버만이 이를 중계할 수 있었지만, CIRIS 공개 서버는 통화를 절대 중계하지 않습니다."
     },
     "decline_reason_unknown": "그것은 통화를 거절하는 사유가 아닙니다.",
-    "no_answer": "아무도 응답하지 않았습니다."
+    "no_answer": "아무도 응답하지 않았습니다.",
+    "alert_unknown": "그것은 룸에 통화를 알리는 방법이 아닙니다."
   },
   "decisions": {
     "not_found": "그 결정은 더 이상 사용자에게 열려 있지 않습니다.",

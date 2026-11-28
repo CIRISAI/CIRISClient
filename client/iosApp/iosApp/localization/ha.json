@@ -2132,6 +2132,16 @@
     "call_rung_refused": "Na'urar {who} ba ta iya amsa wannan kiran ba. Wataƙila ba ta da wannan ɗaki tukuna.",
     "call_no_answer_declined": "Babu wanda ya iya amsa kiran.",
     "call_no_answer_timeout": "Babu wanda ya amsa.",
+    "call_notice": "{who} ya fara kira",
+    "call_notice_join": "Shiga",
+    "call_notice_dismiss": "Ba yanzu ba",
+    "call_alert_ring": "A kira su",
+    "call_alert_notify": "A sanar da su",
+    "call_alert_open": "Kawai a fara",
+    "call_alert_ring_says": "Ana kiran sauran kowa a cikin ɗakin har sai wani ya amsa, har zuwa daƙiƙa 45.",
+    "call_alert_notify_says": "Ana sanar da sauran kowa a cikin ɗakin cewa an fara kira. Babu abin da zai yi ƙara.",
+    "call_alert_open_says": "Ba a sanar da kowa ba. Duk wanda ya buɗe kiran a cikin wannan ɗaki zai shiga shi.",
+    "call_rung_notified": "An sanar da {who}.",
     "wa_update_not_allowed": "Mai gudanarwa ko Hukumar Hikima kaɗai ne zai iya yanke hukunci kan shawarar da ke jira. Wannan asusun ba zai iya ba.",
     "wa_update_changed": "Wani ya riga ya yanke hukunci kan wannan shawarar kafin ku, don haka babu abin da ya canza. Jerin yanzu yana nuna matsayinta.",
     "wa_update_failed": "Wakili bai karɓi wannan canjin ba. Sake gwadawa.",
@@ -6623,7 +6633,8 @@
       "refused_by_policy": "Sai sabobin jama'a na CIRIS kaɗai za su iya wucewa da shi, kuma sabobin jama'a na CIRIS ba sa taɓa wucewa da kiraye-kiraye."
     },
     "decline_reason_unknown": "Wannan ba dalili ba ne na ƙin amsa kira.",
-    "no_answer": "Babu wanda ya amsa."
+    "no_answer": "Babu wanda ya amsa.",
+    "alert_unknown": "Wannan ba hanyar sanar da ɗakin game da kira ba ce."
   },
   "decisions": {
     "not_found": "Wannan shawarar ba ta ƙara buɗewa gare ku ba.",

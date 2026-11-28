@@ -56,6 +56,8 @@ fun CallScreen(
     roomLabel: String,
     /** Set when the person answered a ring: the screen joins at once, as voice or video. */
     answer: CallKind? = null,
+    /** How many people the room has, for how the room hears of the call by default; null for a pair. */
+    roomPeople: Int? = null,
     onBack: () -> Unit,
     /** The call itself. Null on a node without the call routes: the screen then says it cannot connect. */
     call: ai.ciris.mobile.shared.viewmodels.CallViewModel? = null,
@@ -64,6 +66,9 @@ fun CallScreen(
 ) {
     val media = rememberCallMediaPlatform()
     var state by remember { mutableStateOf<CallPermissionState?>(null) }
+    // How the room hears of the call, the opener's choice; the node's own default
+    // until the person picks (CIRISServer 0.5.255). Answering alerts nobody.
+    var alert by remember(roomPeople) { mutableStateOf(ai.ciris.mobile.shared.calls.CallAlert.defaultFor(roomPeople)) }
 
     // One attempt: ask what is due, then step again with what was asked.
     fun advance(kind: CallKind, asked: Set<MediaSource>) {
@@ -107,7 +112,10 @@ fun CallScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             when (val s = state) {
-                null -> CallChoice(onChoose = { advance(it, emptySet()) })
+                null -> {
+                    CallChoice(onChoose = { advance(it, emptySet()) })
+                    AlertChoice(alert, onChoose = { alert = it })
+                }
                 is CallPermissionState.Asking -> Text(
                     localizedString(
                         if (s.source == MediaSource.MICROPHONE) "mobile.call_asking_microphone"
@@ -152,7 +160,7 @@ fun CallScreen(
                             modifier = Modifier.testable("call_not_connecting"),
                         )
                     } else {
-                        androidx.compose.runtime.LaunchedEffect(call) { call.join(video) }
+                        androidx.compose.runtime.LaunchedEffect(call) { call.join(video, if (answer != null) null else alert) }
                         LiveCall(call, nameOf, onBack)
                     }
                 }
@@ -259,6 +267,46 @@ private fun CallChoice(onChoose: (CallKind) -> Unit) {
             onClick = { onChoose(CallKind.VIDEO) },
             modifier = Modifier.weight(1f).testableClickable("btn_call_video") { onChoose(CallKind.VIDEO) },
         ) { Text(localizedString("mobile.call_video")) }
+    }
+}
+
+/**
+ * How the room's other people hear of this call, if it starts one (CIRISServer 0.5.255,
+ * Eric: the opener's choice). The node's default is picked to begin with: a room of at
+ * most four rings, a bigger one is told. Joining a call already going alerts nobody.
+ */
+@Composable
+private fun AlertChoice(
+    chosen: ai.ciris.mobile.shared.calls.CallAlert,
+    onChoose: (ai.ciris.mobile.shared.calls.CallAlert) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.testable("opt_call_alert", chosen.wire)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(
+                ai.ciris.mobile.shared.calls.CallAlert.RING to "mobile.call_alert_ring",
+                ai.ciris.mobile.shared.calls.CallAlert.NOTIFY to "mobile.call_alert_notify",
+                ai.ciris.mobile.shared.calls.CallAlert.OPEN to "mobile.call_alert_open",
+            ).forEach { (a, key) ->
+                androidx.compose.material3.FilterChip(
+                    selected = a == chosen,
+                    onClick = { onChoose(a) },
+                    label = { Text(localizedString(key)) },
+                    modifier = Modifier.testableClickable("btn_call_alert_${a.wire}") { onChoose(a) },
+                )
+            }
+        }
+        Text(
+            localizedString(
+                when (chosen) {
+                    ai.ciris.mobile.shared.calls.CallAlert.RING -> "mobile.call_alert_ring_says"
+                    ai.ciris.mobile.shared.calls.CallAlert.NOTIFY -> "mobile.call_alert_notify_says"
+                    ai.ciris.mobile.shared.calls.CallAlert.OPEN -> "mobile.call_alert_open_says"
+                }
+            ),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.testable("txt_call_alert_says"),
+        )
     }
 }
 
@@ -372,8 +420,13 @@ private fun LiveCall(
                 if (!s.ready) { kotlinx.coroutines.delay(CONNECT_PATIENCE_MS); slow = true }
             }
             // A call still ringing someone has not failed to reach them: the ring says where it is.
+            // Nor has a call the room was only told of, or not told of at all: nobody is
+            // expected yet, and "Waiting for others to join" says so.
             val ringing = s.rung.values.any { it == ai.ciris.mobile.shared.calls.RungState.RINGING } && s.noAnswer == null
-            if (!s.ready && !(ringing && s.attendees.isEmpty())) {
+            val waitingOnPeople = ringing ||
+                s.rung.values.any { it == ai.ciris.mobile.shared.calls.RungState.NOTIFIED } ||
+                s.alert == ai.ciris.mobile.shared.calls.CallAlert.OPEN
+            if (!s.ready && !(waitingOnPeople && s.attendees.isEmpty())) {
                 val notReached = slow && s.pathFailures.isEmpty()
                 Text(
                     localizedString(if (notReached) "mobile.call_not_reached" else "mobile.call_connecting"),
@@ -734,6 +787,7 @@ private fun RungLines(s: ai.ciris.mobile.shared.calls.CallState.InCall, nameOf: 
     s.rung.filterKeys { it !in joined }.toList().sortedBy { it.first }.forEach { (person, state) ->
         val key = when (state) {
             ai.ciris.mobile.shared.calls.RungState.RINGING -> "mobile.call_rung_ringing"
+            ai.ciris.mobile.shared.calls.RungState.NOTIFIED -> "mobile.call_rung_notified"
             ai.ciris.mobile.shared.calls.RungState.BUSY -> "mobile.call_rung_busy"
             ai.ciris.mobile.shared.calls.RungState.DECLINED -> "mobile.call_rung_declined"
             ai.ciris.mobile.shared.calls.RungState.UNREACHABLE -> "mobile.call_rung_unreachable"

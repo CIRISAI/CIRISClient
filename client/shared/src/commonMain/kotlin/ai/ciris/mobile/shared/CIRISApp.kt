@@ -4638,6 +4638,7 @@ fun CIRISApp(
                 val contacts by contactsViewModel.contacts.collectAsState()
                 CallScreen(
                     answer = call.answer,
+                    roomPeople = call.room.memberCount,
                     roomLabel = call.room.contactLabel,
                     onBack = { currentScreen = call.room },
                     call = callVm,

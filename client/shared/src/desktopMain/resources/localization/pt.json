@@ -4631,6 +4631,16 @@
     "call_rung_refused": "O dispositivo de {who} não conseguiu atender a esta chamada. Ele pode ainda não ter esta sala.",
     "call_no_answer_declined": "Ninguém pôde atender a chamada.",
     "call_no_answer_timeout": "Ninguém atendeu.",
+    "call_notice": "{who} iniciou uma chamada",
+    "call_notice_join": "Entrar",
+    "call_notice_dismiss": "Agora não",
+    "call_alert_ring": "Chamar",
+    "call_alert_notify": "Avisar",
+    "call_alert_open": "Apenas iniciar",
+    "call_alert_ring_says": "Todos os outros na sala são chamados até que alguém atenda, por até 45 segundos.",
+    "call_alert_notify_says": "Todos os outros na sala são avisados de que uma chamada começou. Nada toca.",
+    "call_alert_open_says": "Ninguém é avisado. Qualquer pessoa que abrir a chamada nesta sala entra nela.",
+    "call_rung_notified": "{who} foi avisado.",
     "data_erase_self_label": "Apagar você",
     "data_erase_self_blocked": "Ainda não é possível a partir deste aplicativo. O nó só apaga uma pessoa mediante uma solicitação que essa pessoa assina, e este aplicativo não assina (CIRISServer#677). Apagar traços não apaga você.",
     "data_erase_agent_id_label": "ID do agente",
@@ -6623,7 +6633,8 @@
       "refused_by_policy": "Somente um servidor público do CIRIS poderia retransmiti-la, e os servidores públicos do CIRIS nunca retransmitem chamadas."
     },
     "decline_reason_unknown": "Isso não é um motivo para recusar uma chamada.",
-    "no_answer": "Ninguém atendeu."
+    "no_answer": "Ninguém atendeu.",
+    "alert_unknown": "Essa não é uma forma de avisar a sala sobre uma chamada."
   },
   "decisions": {
     "not_found": "Essa decisão não está mais aberta para você.",

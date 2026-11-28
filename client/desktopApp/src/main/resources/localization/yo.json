@@ -2754,6 +2754,16 @@
     "call_rung_refused": "Ẹ̀rọ {who} kò lè gba ìpè yìí. Ó lè jẹ́ pé kò tíì ní yàrá yìí.",
     "call_no_answer_declined": "Kò sí ẹni tí ó lè gba ìpè náà.",
     "call_no_answer_timeout": "Kò sí ẹni tí ó dáhùn.",
+    "call_notice": "{who} bẹ̀rẹ̀ ìpè kan",
+    "call_notice_join": "Dara pọ̀",
+    "call_notice_dismiss": "Kì í ṣe nísinsìnyí",
+    "call_alert_ring": "Dún fún wọn",
+    "call_alert_notify": "Jẹ́ kí wọ́n mọ̀",
+    "call_alert_open": "Bẹ̀rẹ̀ nìkan",
+    "call_alert_ring_says": "A máa dún fún gbogbo àwọn yòókù tí ó wà nínú yàrá náà títí tí ẹnikan yóò fi dáhùn, fún ìgbà tí ó lè ga tó ìṣẹ́jú-àáyá 45.",
+    "call_alert_notify_says": "A máa sọ fún gbogbo àwọn yòókù tí ó wà nínú yàrá náà pé ìpè kan bẹ̀rẹ̀. Kò sí ohun tí ó dún.",
+    "call_alert_open_says": "A kò sọ fún ẹnikẹ́ni. Ẹnikẹ́ni tí ó bá ṣí ìpè náà nínú yàrá yìí yóò dara pọ̀ mọ́ ọn.",
+    "call_rung_notified": "A sọ fún {who}.",
     "wa_update_changed": "Ẹnì kan ti pinnu lórí àbá yìí kí o tó ṣe bẹ́ẹ̀, nítorí náà kò sí ohun tí ó yí padà. Àkọsílẹ̀ náà ń fi ipò tí ó wà hàn nísinsìnyí.",
     "wa_update_failed": "Aṣojú kò gba àyípadà náà. Gbìyànjú lẹ́ẹ̀kan síi.",
     "trace_consent_unanswered_note": "O lè fi èyí sílẹ̀ láìdáhùn. A kò níí fi ohunkóhun ránṣẹ́ títí o fi sọ bẹ́ẹ̀ni, o sì lè dáhùn nígbà mìíràn.",
@@ -6623,7 +6633,8 @@
       "refused_by_policy": "Sáfà gbangba CIRIS kan ṣoṣo ni ó lè gbé e kọjá, àwọn sáfà gbangba CIRIS kò sì gbé àwọn ìpè kọjá rárá."
     },
     "decline_reason_unknown": "Èyí kì í ṣe ìdí fún kíkọ̀ ìpè.",
-    "no_answer": "Kò sí ẹni tí ó dáhùn."
+    "no_answer": "Kò sí ẹni tí ó dáhùn.",
+    "alert_unknown": "Èyí kì í ṣe ọ̀nà láti jẹ́ kí yàrá náà mọ̀ nípa ìpè kan."
   },
   "decisions": {
     "not_found": "Ìpinnu yẹn kò sí ní ṣíṣí fún ọ mọ́.",

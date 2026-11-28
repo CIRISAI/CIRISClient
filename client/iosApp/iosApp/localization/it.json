@@ -4652,7 +4652,17 @@
     "call_rung_unreachable": "Al momento non è possibile raggiungere {who}.",
     "call_rung_refused": "Il dispositivo di {who} non è riuscito a prendere questa chiamata. Potrebbe non avere ancora questa stanza.",
     "call_no_answer_declined": "Nessuno ha potuto rispondere alla chiamata.",
-    "call_no_answer_timeout": "Nessuno ha risposto."
+    "call_no_answer_timeout": "Nessuno ha risposto.",
+    "call_notice": "{who} ha avviato una chiamata",
+    "call_notice_join": "Partecipa",
+    "call_notice_dismiss": "Non ora",
+    "call_alert_ring": "Falli squillare",
+    "call_alert_notify": "Avvisali",
+    "call_alert_open": "Avvia e basta",
+    "call_alert_ring_says": "Tutti gli altri nella stanza vengono fatti squillare finché qualcuno non risponde, per un massimo di 45 secondi.",
+    "call_alert_notify_says": "A tutti gli altri nella stanza viene detto che è iniziata una chiamata. Niente squilla.",
+    "call_alert_open_says": "Nessuno viene avvisato. Chiunque apra la chiamata in questa stanza vi partecipa.",
+    "call_rung_notified": "È stato detto a {who}."
   },
   "moderation": {
     "ladder": {
@@ -6623,7 +6633,8 @@
       "refused_by_policy": "Solo un server pubblico CIRIS avrebbe potuto trasmetterla, e i server pubblici CIRIS non inoltrano mai le chiamate."
     },
     "decline_reason_unknown": "Questo non è un motivo per rifiutare una chiamata.",
-    "no_answer": "Nessuno ha risposto."
+    "no_answer": "Nessuno ha risposto.",
+    "alert_unknown": "Questo tipo di avviso non è un modo per far sapere alla stanza di una chiamata."
   },
   "decisions": {
     "not_found": "Questa decisione non è più aperta per te.",
