@@ -438,6 +438,41 @@ def wait_tag(drv: TestAutomationServer, pred: Callable[[Any], bool], timeout: fl
     return None
 
 
+def leave(d: TestAutomationServer, timeout: float = 20.0) -> Optional[str]:
+    """Press Leave and wait until the client is off the call screen. None when it left, else why not."""
+    last = "btn_call_leave was never on screen"
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            if d.screen() != "Call":
+                return None
+            if "btn_call_leave" in d.tags():
+                d.click("btn_call_leave")
+                last = "pressed Leave and the call screen stayed"
+        except DriverError as e:
+            last = f"{type(e).__name__}: {e}"
+        time.sleep(2.0)
+    return last
+
+
+def tiles_of(d: TestAutomationServer) -> List[str]:
+    """The call's tiles as the screen shows them: one per attendee the session holds."""
+    try:
+        return sorted(e.test_tag[len("row_call_tile_"):] for e in d.tree() if e.test_tag.startswith("row_call_tile_"))
+    except DriverError:
+        return []
+
+
+def screen_of(d: TestAutomationServer) -> str:
+    """Where a client is, for a failure's detail: its screen and its call and chat tags."""
+    try:
+        tags = sorted(f"{e.test_tag}={e.text}" if e.text else e.test_tag
+                      for e in d.tree() if "call" in e.test_tag or "chat" in e.test_tag)
+        return f"screen={d.screen()!r} tags={tags[:24]}"
+    except DriverError as e:
+        return f"unreadable: {e}"
+
+
 def ring_answered(caller: TestAutomationServer, callee: TestAutomationServer, *, caller_key_on_callee: str,
                   callee_key: str, room: str) -> List[Check]:
     """The caller starts the call and it RINGS the callee, who answers from the banner (CSD-134 §2)."""
@@ -454,17 +489,16 @@ def ring_answered(caller: TestAutomationServer, callee: TestAutomationServer, *,
 
 def ring_declined(caller: TestAutomationServer, callee: TestAutomationServer, *, room: str) -> List[Check]:
     """A second ring, declined: the caller is told, and no call is left ringing on the callee."""
-    for d in (caller, callee):
-        try:
-            if "btn_call_leave" in d.tags():
-                d.click("btn_call_leave")
-        except DriverError:
-            pass
-    time.sleep(3.0)
-    rejoin = wait_tag(caller, lambda e: e.test_tag == "btn_call_rejoin", 20)
-    if rejoin is None:
-        return [Check("ring-decline", FAIL, "the caller had no 'call again' after leaving")]
-    caller.click("btn_call_rejoin")
+    for who, d in (("caller", caller), ("callee", callee)):
+        err = leave(d)
+        if err:
+            return [Check("ring-decline", FAIL, f"the {who} could not leave the first call: {err}; {screen_of(d)}")]
+    # Leave returns to the room's chat: the second call starts from its Call button.
+    if wait_tag(caller, lambda e: e.test_tag == "btn_chat_call", 20) is None:
+        return [Check("ring-decline", FAIL, "the caller was not back in the room after leaving: "
+                                            + screen_of(caller))]
+    caller.click("btn_chat_call")
+    caller.click(caller.wait_for_element("btn_call_video", timeout=30).test_tag)
     if wait_tag(callee, lambda e: e.test_tag == f"row_call_incoming_{room}", 60) is None:
         return [Check("ring-decline", FAIL, "the second ring did not reach the other client within 60 s")]
     callee.click(f"btn_call_decline_{room}")
@@ -547,6 +581,13 @@ def run_node_call(drv: TestAutomationServer, *, binary: Path, jar: Path, node_ur
         while time.monotonic() < deadline and not (legs_joined(local, v.room_id) and legs_joined(remote, v.room_id)):
             time.sleep(2.0)
         checks.append(Check("join", PASS, "both clients joined, and both nodes show the leg"))
+        # One tile for the other person, and none for yourself: a tile per key the
+        # node names, if it names people as well as nodes, would be one per person too many.
+        time.sleep(5.0)
+        for who, d, other in (("leg", drv, v.peer_node_key_id), ("peer", peer_drv, v.local_node_key_id)):
+            t = tiles_of(d)
+            checks.append(Check(f"{who}-tiles", PASS if t == [other] else FAIL,
+                                f"{who} shows tiles {t}; expected only the other node {other}"))
 
         # Measure: give the decoders and the playout buffer time, then read.
         end = time.monotonic() + measure_for

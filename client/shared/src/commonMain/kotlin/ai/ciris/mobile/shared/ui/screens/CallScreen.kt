@@ -91,7 +91,10 @@ fun CallScreen(
         if (answer != null && state == null) advance(answer, emptySet())
     }
 
+    val inCall = call?.state?.collectAsState()?.value is ai.ciris.mobile.shared.calls.CallState.InCall &&
+        state is CallPermissionState.Ready
     Scaffold(
+        bottomBar = { if (inCall && call != null) CallControls(call, onBack) },
         topBar = {
             ScreenTopBar(
                 title = { Text(roomLabel.ifBlank { localizedString("mobile.call_title") }) },
@@ -539,23 +542,39 @@ private fun LiveCall(
                     modifier = Modifier.testable("row_call_departed_$member", reason.wire),
                 )
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                val cameraOff by call.cameraOff.collectAsState()
-                if (!videoUnavailable) {
-                    OutlinedButton(
-                        onClick = { call.setCameraOff(!cameraOff) },
-                        modifier = Modifier.weight(1f).testableClickable("btn_call_camera") { call.setCameraOff(!cameraOff) },
-                    ) { Text(localizedString(if (cameraOff) "mobile.call_camera_on" else "mobile.call_camera_off")) }
-                }
+        }
+    }
+}
+
+/**
+ * Camera, mute and Leave, in the screen's bottom bar while in a call: always on screen,
+ * however long the call's content grows (the two-node ring run found Leave scrolled
+ * out of reach behind extra tiles).
+ */
+@Composable
+private fun CallControls(call: ai.ciris.mobile.shared.viewmodels.CallViewModel, onBack: () -> Unit) {
+    val muted by call.muted.collectAsState()
+    val videoUnavailable by call.videoUnavailable.collectAsState()
+    val cameraOff by call.cameraOff.collectAsState()
+    androidx.compose.material3.Surface(tonalElevation = 3.dp) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp).testable("bar_call_controls"),
+        ) {
+            if (!videoUnavailable) {
                 OutlinedButton(
-                    onClick = { call.setMuted(!muted) },
-                    modifier = Modifier.weight(1f).testableClickable("btn_call_mute") { call.setMuted(!muted) },
-                ) { Text(localizedString(if (muted) "mobile.call_unmute" else "mobile.call_mute")) }
-                Button(
-                    onClick = { call.leave(); onBack() },
-                    modifier = Modifier.weight(1f).testableClickable("btn_call_leave") { call.leave(); onBack() },
-                ) { Text(localizedString("mobile.call_leave")) }
+                    onClick = { call.setCameraOff(!cameraOff) },
+                    modifier = Modifier.weight(1f).testableClickable("btn_call_camera") { call.setCameraOff(!cameraOff) },
+                ) { Text(localizedString(if (cameraOff) "mobile.call_camera_on" else "mobile.call_camera_off")) }
             }
+            OutlinedButton(
+                onClick = { call.setMuted(!muted) },
+                modifier = Modifier.weight(1f).testableClickable("btn_call_mute") { call.setMuted(!muted) },
+            ) { Text(localizedString(if (muted) "mobile.call_unmute" else "mobile.call_mute")) }
+            Button(
+                onClick = { call.leave(); onBack() },
+                modifier = Modifier.weight(1f).testableClickable("btn_call_leave") { call.leave(); onBack() },
+            ) { Text(localizedString("mobile.call_leave")) }
         }
     }
 }

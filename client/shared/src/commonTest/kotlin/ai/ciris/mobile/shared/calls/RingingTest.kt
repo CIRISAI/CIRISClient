@@ -253,6 +253,45 @@ class RingingTest {
         assertEquals(mapOf("bob" to RungState.NOTIFIED), assertIs<CallState.InCall>(s.state.value).rung)
     }
 
+    // ── Tiles: one per other person's node, never you (CIRISServer 0.5.255 `in_call`) ──
+
+    /** The two-node ring run: three tiles in a two-person call, two of them persons from the attendance record. */
+    @Test fun theAttendanceRecordIsNotTheTiles() {
+        val a = CallJoinAnswer.parse(obj("""{"call_id":"c","attendees":["bob-person","me-person","native-bob"],
+            "in_call":{"me":{"node":"native-me","person":"me-person"},
+                       "people":[{"person":"bob-person","nodes":["native-bob"],"connected":true}]}}"""))
+        val tiles = CallSession.tilesOf(a)
+        assertEquals(setOf("native-bob"), tiles.keys)
+        assertEquals("bob-person", tiles["native-bob"]?.person)
+        assertEquals("native-me", a.inCall?.meNode)
+    }
+
+    @Test fun beforeInCallTheAttendeeNodesAreTheTiles() {
+        val a = CallJoinAnswer.parse(obj("""{"call_id":"c","attendees":["bob-person","me-person"],
+            "attendee_people":[{"member":"native-bob","person":"bob-person"}]}"""))
+        assertEquals(setOf("native-bob"), CallSession.tilesOf(a).keys)
+    }
+
+    private class InCallTransport : CallTransport {
+        val socket = FakeSocket()
+        override suspend fun join(room: String, video: Boolean) = CallJoinAnswer(
+            "c1", "s-me", 1, 244, null, listOf("me-person"),
+            inCall = InCallPeople("native-me", "me-person", emptyList()),
+        )
+        override suspend fun leave(room: String) = Unit
+        override suspend fun openFrames(room: String): CallSocket = socket
+    }
+
+    @Test fun yourOwnAttendanceIsNeverATile() = runTest {
+        val t = InCallTransport()
+        val s = CallSession("r", t, backgroundScope)
+        s.join(video = false); runCurrent()
+        t.socket.inbox.send(CallSocketMessage.Text("""{"type":"attendee_joined","member":"native-me","person":"me-person"}"""))
+        t.socket.inbox.send(CallSocketMessage.Text("""{"type":"attendee_joined","member":"native-bob","person":"bob-person"}"""))
+        runCurrent()
+        assertEquals(setOf("native-bob"), assertIs<CallState.InCall>(s.state.value).attendees.keys)
+    }
+
     @Test fun anUnknownRungStateIsOther() {
         assertEquals(RungState.OTHER, RungState.of("teleported"))
     }

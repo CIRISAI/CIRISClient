@@ -53,6 +53,8 @@ class CallSession(
 
     private var socket: CallSocket? = null
     private var reader: Job? = null
+    /** This device's node, when the node says (`in_call.me`): its own attendance is never a tile. */
+    private var myNode: String? = null
 
     /**
      * [relay] is this device's choice to carry others' media (CSD-134 §2.1, the
@@ -107,7 +109,7 @@ class CallSession(
                 epoch = answer.epoch,
                 frameBudgetBytes = answer.frameBudgetBytes,
                 serviceTier = answer.serviceTier,
-                attendees = answer.attendees.associateWith { Attendee(it, person = answer.attendeePeople[it]) },
+                attendees = tilesOf(answer),
                 videoAllowed = answer.videoAllowed,
                 videoMaxPeople = answer.videoMaxPeople,
                 relaying = answer.relay?.relaying,
@@ -115,6 +117,7 @@ class CallSession(
                 relaySeat = answer.relay?.serveSeat ?: false,
                 alert = answer.alert,
             )
+            myNode = answer.inCall?.meNode
             reader = scope.launch { s.incoming.collect { onMessage(it) } }
         }
     }
@@ -217,7 +220,8 @@ class CallSession(
         updateCall { call ->
             when (event) {
                 is CallEvent.Ready -> call.copy(ready = true, frameBudgetBytes = event.frameBudgetBytes, fragmenting = event.fragmenting)
-                is CallEvent.AttendeeJoined ->
+                // This device's own attendance is not a tile: you are not someone else in the call.
+                is CallEvent.AttendeeJoined -> if (event.member == myNode) call else
                     call.copy(attendees = call.attendees + (event.member to Attendee(event.member, streamId = streamIdBytes(event.streamId), person = event.person)))
                 is CallEvent.AttendeeLeft ->
                     call.copy(
@@ -314,6 +318,24 @@ class CallSession(
          * characters. Anything else leaves the tile's stream unset until its first
          * frame names it, so a format we did not expect costs nothing.
          */
+        /**
+         * The tiles a join starts with: one per NODE of each OTHER person in the call.
+         * `attendees` is edge's attendance record, signed by persons and holding this
+         * device's own (CIRISServer, 2026-11-28), so a tile per key in it drew the other
+         * person twice and drew you. 0.5.255's `in_call.people` names the others and their
+         * nodes; before it, `attendee_people` maps each attendee NODE to its person.
+         */
+        internal fun tilesOf(answer: CallJoinAnswer): Map<String, Attendee> {
+            answer.inCall?.let { inCall ->
+                return inCall.people.flatMap { p -> p.nodes.map { n -> n to Attendee(n, person = p.person) } }.toMap()
+            }
+            if (answer.attendeePeople.isNotEmpty()) {
+                val persons = answer.attendeePeople.values.toSet()
+                return answer.attendeePeople.filterKeys { it !in persons }.mapValues { (n, p) -> Attendee(n, person = p) }
+            }
+            return answer.attendees.associateWith { Attendee(it) }
+        }
+
         internal fun streamIdBytes(text: String?): ByteArray? {
             if (text == null || text.length != 64 || !text.all { it in '0'..'9' || it in 'a'..'f' }) return null
             return ByteArray(32) { text.substring(2 * it, 2 * it + 2).toInt(16).toByte() }
@@ -727,6 +749,8 @@ data class CallJoinAnswer(
     val attendeePeople: Map<String, String> = emptyMap(),
     /** The alert the node used (CIRISServer 0.5.255); null for a join into a live call, or from an older node. */
     val alert: CallAlert? = null,
+    /** Who else is in the call, by person with their nodes, and which node is this device (CIRISServer 0.5.255). */
+    val inCall: InCallPeople? = null,
 ) {
     companion object {
         /**
@@ -758,6 +782,7 @@ data class CallJoinAnswer(
                         m to who
                     }.toMap(),
                 alert = CallAlert.of(str("alert")),
+                inCall = (o["in_call"] as? JsonObject)?.let { InCallPeople.parse(it) },
             )
         }
     }
@@ -930,3 +955,29 @@ enum class CallAlert(val wire: String) {
             if ((roomPeople ?: 2) <= RING_UP_TO_PEOPLE) RING else NOTIFY
     }
 }
+
+/**
+ * The join answer's `in_call` (CIRISServer 0.5.255): this device, and one entry per OTHER
+ * person in the call with the nodes they are in it from. [InCallPerson.connected] is
+ * whether a leg to one of those nodes is up.
+ */
+data class InCallPeople(val meNode: String?, val mePerson: String?, val people: List<InCallPerson>) {
+    companion object {
+        fun parse(o: JsonObject): InCallPeople {
+            fun str(x: JsonObject?, k: String) = (x?.get(k) as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull
+            val me = o["me"] as? JsonObject
+            val people = (o["people"] as? JsonArray).orEmpty().mapNotNull { e ->
+                val p = e as? JsonObject ?: return@mapNotNull null
+                val person = str(p, "person") ?: return@mapNotNull null
+                InCallPerson(
+                    person = person,
+                    nodes = (p["nodes"] as? JsonArray).orEmpty().mapNotNull { (it as? JsonPrimitive)?.takeIf { it.isString }?.contentOrNull },
+                    connected = (p["connected"] as? JsonPrimitive)?.takeIf { !it.isString }?.contentOrNull?.toBooleanStrictOrNull() ?: false,
+                )
+            }
+            return InCallPeople(str(me, "node"), str(me, "person"), people)
+        }
+    }
+}
+
+data class InCallPerson(val person: String, val nodes: List<String>, val connected: Boolean)
